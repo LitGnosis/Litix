@@ -1,0 +1,1 @@
+export default function InfoPage({kicker,title,children}){return <main className="shell"><section className="page"><a className="back" href="/">← Back to Litix</a><span className="kicker">{kicker}</span><h1>{title}</h1><div className="pageCard prose">{children}</div></section></main>}
