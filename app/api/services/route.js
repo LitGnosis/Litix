@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
 import { getServices } from '../../../lib/provider';
 export const dynamic='force-dynamic';
-function pub(s){return {id:s.publicId||s.id,platform:s.platform,kind:s.kind,quality:s.quality,name:s.name,min:s.min,max:s.max,deliveryLabel:s.deliveryLabel,refill:s.refill,cancel:s.cancel,dripfeed:s.dripfeed,subscription:s.subscription,rateUsd:Number(s.retailRateUsd.toFixed(6))}}
+function pub(s){return {id:s.publicId||s.id,platform:s.platform,kind:s.kind,quality:s.quality,name:s.name,min:s.min,max:s.max,deliveryLabel:s.deliveryLabel,refill:s.refill,refillTermDays:s.refillTermDays||0,cancel:s.cancel,dripfeed:s.dripfeed,subscription:s.subscription,rateUsd:Number(s.retailRateUsd.toFixed(6))}}
 export async function GET(req){try{const q=new URL(req.url).searchParams.get('q')?.trim().toLowerCase();const services=(await getServices()).map(pub);if(!services.length)throw new Error('Supplier catalog empty or unavailable');const filtered=q?services.filter(s=>`${s.platform} ${s.kind} ${s.quality} ${s.name}`.toLowerCase().includes(q)):services;return NextResponse.json({services:filtered})}catch(err){console.error('services_error',err?.message||err);return NextResponse.json({error:'Service catalog is temporarily unavailable.'},{status:503})}}
