@@ -19,3 +19,11 @@ test('reject invalid inputs and unavailable add-on prices',()=>{
  assert.throws(()=>calculatePreviewQuote({likes:50,shares:-1}),/non-negative/);
  assert.throws(()=>calculatePreviewQuote({likes:50,saves:20},{shares:1,reposts:1}),/unavailable/);
 });
+
+test('confirmed coverage allows ninety posts across thirty days',()=>{
+ const q=calculatePreviewQuote({likes:100});
+ assert.equal(q.postLimit,90);
+ assert.equal(q.baseCents,700);
+ assert.equal(q.paymentReady,false);
+ assert.throws(()=>calculatePreviewQuote({likes:100,postLimit:91}),/90/);
+});

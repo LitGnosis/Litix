@@ -9,7 +9,9 @@ export const AUTO_LIKES_TIERS = Object.freeze([
   {likes:1000,priceCents:4000},
   {likes:2000,priceCents:7000},
 ]);
-export const DEFAULT_POST_LIMIT = 30; // Current Litix form default; billing coverage must be confirmed.
+export const TERM_DAYS = 30;
+export const MAX_POSTS_PER_DAY = 3;
+export const DEFAULT_POST_LIMIT = TERM_DAYS * MAX_POSTS_PER_DAY;
 export const VIDEO_VIEW_MULTIPLIER = 3;
 export const OPTIONAL_METRICS = Object.freeze(['shares','reposts','saves']);
 export const KNOWN_RETAIL_RATES_USD_PER_1000 = Object.freeze({
@@ -21,7 +23,7 @@ export function calculatePreviewQuote(input, rates=KNOWN_RETAIL_RATES_USD_PER_10
   const likes=Number(input.likes), tier=AUTO_LIKES_TIERS.find(x=>x.likes===likes);
   if (!tier) throw new Error('Choose one of the listed automatic-likes packages.');
   const postLimit=Number(input.postLimit ?? DEFAULT_POST_LIMIT);
-  if (!Number.isInteger(postLimit) || postLimit < 1 || postLimit > 30) throw new Error('Post limit must be between 1 and 30.');
+  if (!Number.isInteger(postLimit) || postLimit < 1 || postLimit > DEFAULT_POST_LIMIT) throw new Error('Post limit must be between 1 and 90.');
   let addonsCents=0;
   const addons={};
   for (const key of OPTIONAL_METRICS) {
