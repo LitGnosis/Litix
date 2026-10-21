@@ -1,0 +1,23 @@
+// Run with PGLITE_MODULE pointing to an isolated @electric-sql/pglite installation.
+const {PGlite}=await import(process.env.PGLITE_MODULE||'@electric-sql/pglite');
+import {readFileSync} from 'node:fs';
+import assert from 'node:assert/strict';
+const db=new PGlite();
+await db.exec(`create table litix_supplier_orders(id text primary key,customer_id text,customer_email text,retail_cents integer,payment_provider text,payment_status text,payment_reference text);
+create table litix_paykings_checkout_orders(order_id text primary key,customer_id text,billing_email text,amount_cents integer,currency text,payment_state text,gateway_transaction_id text);`);
+const root=new URL('../../',import.meta.url).pathname;
+await db.exec(readFileSync(root+'/migrations/008_special_packages.sql','utf8'));
+await db.exec(readFileSync(root+'/migrations/009_verified_bundle_activation.sql','utf8'));
+await db.exec(`insert into litix_supplier_orders values('ltx_order','customer','a@example.com',4485,'paykings','pending','123456');
+insert into litix_paykings_checkout_orders values('ltx_order','customer','a@example.com',4485,'USD','awaiting_settlement','123456');
+insert into litix_package_purchases(id,customer_id,email,package_id,package_name,platform,price_cents,reference_price_cents,payment_provider,payment_reference,status,advertised_items) values('pkg_test','customer','a@example.com','ig_launch','Instagram Launch Bundle','Instagram',4485,2990,'paykings','ltx_order','pending_payment','{"Likes":25000,"Views":100000,"Impressions":10000,"Shares":1000,"Saves":1000,"Reposts":100}');`);
+await assert.rejects(db.query("select litix_activate_paid_bundle('pkg_test')"));
+assert.equal((await db.query('select * from litix_package_balances')).rows.length,0);
+await db.exec("update litix_supplier_orders set payment_status='paid';update litix_paykings_checkout_orders set payment_state='settled'");
+assert.equal((await db.query("select litix_activate_paid_bundle('pkg_test') as activated")).rows[0].activated,true);
+const balances=(await db.query('select kind,remaining_quantity from litix_package_balances')).rows;
+assert.equal(balances.length,6);assert.equal(Number(balances.find(x=>x.kind==='Likes').remaining_quantity),25000);
+assert.equal((await db.query("select litix_activate_paid_bundle('pkg_test') as activated")).rows[0].activated,false);
+assert.equal((await db.query('select * from litix_package_balances')).rows.length,6);
+console.log('PASS: additive migration, unpaid rejection, exact credits, replay rejection');
+await db.close();
