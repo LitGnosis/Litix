@@ -45,6 +45,6 @@ test('final overlay installs tested gateway after all legacy overlays', async()=
   for(let i=0;i<2;i++)execFileSync(process.execPath,[apply.pathname],{cwd:root});
   assert.equal(readFileSync(join(root,'lib/paymentGateway.js'),'utf8'),readFileSync(new URL('../patches/checkout-handoff/paymentGateway.js',import.meta.url),'utf8'));
   const build=readFileSync(new URL('../scripts/vercel-build.sh',import.meta.url),'utf8');
-  assert.match(build,/protected-refill\/apply\.cjs && node patches\/checkout-handoff\/apply\.cjs && node --test/);
+  assert.match(build,/protected-refill\/apply\.cjs && node patches\/checkout-handoff\/apply\.cjs && node patches\/follower-offers\/apply\.cjs && node --test/);
  }finally{rmSync(root,{recursive:true,force:true})}
 });

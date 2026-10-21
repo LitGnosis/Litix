@@ -1,7 +1,8 @@
+import {followerOffers,validateFollowerOffer} from './followerOffers.mjs';
 import crypto from 'crypto';
 import { db, audit } from './db';
 import { currentUser } from './auth';
-import { getServices, normalizeTarget } from './provider';
+import { getServices, getServiceById, normalizeTarget } from './provider';
 import { encodedServiceKey } from './serviceKey';
 import { fulfillPaidOrder, getOrderById } from './orders';
 
@@ -66,7 +67,8 @@ function canFullyRedeem(total,min,max){
 }
 export async function packageCatalog(){
   const [prices,services]=await Promise.all([currentReferencePrices(),getServices()]); if(!services.length)throw new Error('Supplier catalog unavailable');
-  return SPECIAL_PACKAGES.map(p=>{
+  const followers=await Promise.all(followerOffers.map(async p=>{const service=await getServiceById(p.serviceKey);return {...p,items:[{kind:"Followers",quantity:p.quantity}],available:validateFollowerOffer(p,service),missing:validateFollowerOffer(p,service)?[]:["Followers"],profitProtected:true,checkoutMode:"direct"}}));
+  return [...followers,...SPECIAL_PACKAGES.filter(p=>!["ig_launch","ig_momentum"].includes(p.id)).map(p=>{
     const routes=Object.fromEntries(Object.keys(p.items).map(k=>[k,chooseRoute(services,p.platform,k)]));
     const missing=Object.entries(routes).filter(([,v])=>!v).map(([k])=>k);
     const unredeemable=Object.entries(routes).filter(([kind,route])=>route&&!canFullyRedeem(p.items[kind],route.min,route.max)).map(([kind])=>kind);
@@ -75,7 +77,7 @@ export async function packageCatalog(){
     const estimatedCostCents=moneyCents(Object.entries(routes).reduce((sum,[kind,route])=>sum+(route?Number(route.providerRateUsd||0)*Number(p.items[kind])/1000:0),0));
     const profitable=missing.length===0&&unredeemable.length===0&&priceCents>estimatedCostCents;
     return {id:p.id,platform:p.platform,tier:p.tier,name:packageName(p),priceCents,referencePriceCents:moneyCents(referencePrice),markupPercent:50,items:publicItems(p.items),available:profitable,missing:[...new Set([...missing,...unredeemable])],profitProtected:true};
-  });
+  })];
 }
 export async function packageById(id){return (await packageCatalog()).find(p=>p.id===String(id))||null}
 function requireUser(req){const u=currentUser(req);if(!u){const e=new Error('Sign in required');e.status=401;throw e;}return u}
@@ -94,6 +96,7 @@ export async function packagePurchases(user){
 
 export async function purchasePackageWithWallet(user,packageId){
   const pkg=await packageById(packageId); if(!pkg){const e=new Error('Package not found');e.status=404;throw e;}
+  if(pkg.checkoutMode==='direct'){const e=new Error('Use secure follower checkout for this package.');e.status=400;throw e;}
   if(!pkg.available){const e=new Error('This package is temporarily unavailable while fulfillment routes are being verified.');e.status=503;throw e;}
   const sql=db();
   await sql`insert into litix_wallets (customer_id,currency,balance_cents,created_at,updated_at) values (${user.sub},'USD',0,now(),now()) on conflict(customer_id) do nothing`;
