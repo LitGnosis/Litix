@@ -27,3 +27,11 @@ test('final overlay restores automatic pages after legacy patches and is idempot
   for(const file of ['app/CheckoutConfirmation.js','app/track/page.js','app/success/page.js','lib/orderConfirmation.mjs'])assert.equal(readFileSync(join(root,file),'utf8'),readFileSync(new URL('../'+file,import.meta.url),'utf8'));
  }finally{rmSync(root,{force:true,recursive:true})}
 });
+
+test('success page has no manual tracking and redirects only after verified confirmation',()=>{
+ const component=readFileSync(new URL('../app/CheckoutConfirmation.js',import.meta.url),'utf8');
+ const success=readFileSync(new URL('../app/success/page.js',import.meta.url),'utf8');
+ assert.match(success,/allowManualTracking=\{false\}/);
+ assert.match(component,/if\(state==='manual'&&!allowManualTracking\)return/);
+ assert.match(component,/if\(next==='confirmed'\|\|next==='completed'\)\{\s*redirect=setTimeout\(\(\)=>\{window.location.replace\('\/'\)\},2000\);/);
+});
