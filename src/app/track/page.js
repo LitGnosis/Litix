@@ -1,0 +1,2 @@
+import OrderStatus from '../OrderStatus';
+export default function Track(){return <main className="shell"><section className="page"><a className="back" href="/">← Back to Litix</a><span className="kicker">ORDER TRACKING</span><h1>Track your order.</h1><p>Enter the Litix Order ID shown after checkout and the email used for payment. Signed-in customers can also view all orders from Account.</p><OrderStatus/></section></main>}
