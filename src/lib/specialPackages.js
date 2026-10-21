@@ -1,3 +1,4 @@
+import {bundleReadiness} from './productReadiness.mjs';
 import crypto from 'crypto';
 import { db, audit } from './db';
 import { currentUser } from './auth';
@@ -73,8 +74,9 @@ export async function packageCatalog(){
     const referencePrice=prices[p.id]||p.fallback;
     const priceCents=moneyCents(referencePrice*PRICE_MULTIPLIER);
     const estimatedCostCents=moneyCents(Object.entries(routes).reduce((sum,[kind,route])=>sum+(route?Number(route.providerRateUsd||0)*Number(p.items[kind])/1000:0),0));
-    const profitable=missing.length===0&&unredeemable.length===0&&priceCents>estimatedCostCents;
-    return {id:p.id,platform:p.platform,tier:p.tier,name:packageName(p),priceCents,referencePriceCents:moneyCents(referencePrice),markupPercent:50,items:publicItems(p.items),available:profitable,missing:[...new Set([...missing,...unredeemable])],profitProtected:true};
+    const readiness=bundleReadiness({missing,unredeemable,priceCents,estimatedCostCents});
+    const profitable=readiness.ready;
+    return {id:p.id,platform:p.platform,tier:p.tier,name:packageName(p),priceCents,referencePriceCents:moneyCents(referencePrice),markupPercent:50,items:publicItems(p.items),available:profitable,readiness,missing:[...new Set([...missing,...unredeemable])],profitProtected:true};
   });
 }
 export async function packageById(id){return (await packageCatalog()).find(p=>p.id===String(id))||null}
