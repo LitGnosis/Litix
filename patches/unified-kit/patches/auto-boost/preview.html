@@ -1,0 +1,52 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><title>Litix Automatic — Simplified Preview</title><style>
+:root{color-scheme:dark;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#061322;color:#ecf8ff}*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse 100% 65% at 75% -10%,#264d73 0%,#0b1e32 57%,#05111d 100%);min-height:100vh}.shell{width:min(100%,610px);padding:24px 18px 70px;margin:auto}.brand{font-size:17px;font-weight:900;letter-spacing:.2em;color:#78d9ff;display:flex;align-items:center;gap:10px}.dot{width:15px;height:15px;background:linear-gradient(130deg,white,#57bcff,#aee9ff);border-radius:50%;box-shadow:0 0 17px #39b2ff}.sub{font-size:11px;letter-spacing:.25em;color:#9bd9fb;text-transform:uppercase;margin:10px 0 20px}.panel{border:1px solid #476981;background:linear-gradient(155deg,rgba(41,78,112,.47),rgba(6,22,39,.97) 40%);border-radius:25px;padding:27px;box-shadow:0 0 30px #007ce017, inset 0 1px #a2d7ff55}h1{font-size:32px;margin:0 0 5px}p{color:#bad2e2;line-height:1.5}.section{margin:22px 0}.section label{display:block;color:#d2e8f5;font-weight:700;margin:0 0 9px;font-size:14px}input,select{width:100%;background:#061625;border:1px solid #355879;border-radius:14px;color:white;padding:16px 14px;font:inherit;outline:none}input:focus,select:focus{border-color:#71d8ff;box-shadow:0 0 0 3px #2fb5fd29}.tiers{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}.tier{border:1px solid #3a7298;border-radius:13px;padding:13px 3px;background:#112840;color:white;cursor:pointer;font:inherit;font-weight:750;text-align:center}.tier span{display:block;color:#a4c9e2;font-size:12px;margin-top:3px}.tier[aria-pressed=true]{background:linear-gradient(125deg,#75dfff,#177fe0);border-color:#c4f5ff;color:#051827;box-shadow:0 0 20px #2bc5f744}.tier[aria-pressed=true] span{color:#123d63}.extras{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.extras input{padding:12px 10px}.chip{background:#0e2b3e;border:1px solid #336680;border-radius:15px;padding:14px}.chip b{font-size:21px;color:#adf0ff}.price{margin:22px 0 12px;background:linear-gradient(135deg,#102e4e,#0b2037);border:1px solid #51758a;border-radius:16px;padding:19px}.price .amount{font-size:36px;font-weight:900;color:#fff}.muted{font-size:12px;color:#a9becd}.breakdown{display:flex;justify-content:space-between;font-size:13px;margin:8px 0}.btn{display:block;width:100%;padding:17px;border-radius:14px;background:linear-gradient(110deg,#a7ebff,#17a7f0);font:inherit;font-weight:900;color:#061727;text-align:center;border:0;cursor:not-allowed;opacity:.8}.warn{font-size:12px;color:#ffdfaa;margin-top:11px}.pill{display:inline-block;font-size:11px;letter-spacing:.09em;text-transform:uppercase;border:1px solid #4c849b;border-radius:50px;padding:6px 10px;color:#9be7ff;margin:15px 0 4px}@media(max-width:450px){.panel{padding:19px}.tiers{grid-template-columns:repeat(3,minmax(0,1fr))}.extras{grid-template-columns:1fr 1fr 1fr}h1{font-size:28px}}
+</style></head><body><div class="shell"><div class="brand"><span class="dot"></span>LITIX</div><div class="sub">Automatic engagement · Simplified</div><main class="panel"><span class="pill">Instagram · Automatic Likes</span><h1>Set it once.<br/>Boost each new post.</h1><p>Choose your likes. Automatic views on eligible video posts are included at 3× the likes you select.</p><section class="section"><label for="handle">Account name</label><input type="text" id="handle" placeholder="@youraccount" autocomplete="off"/></section><section class="section"><label>Likes delivered per new post</label><div class="tiers" id="tiers" role="group" aria-label="Likes per post"></div></section><section class="section"><div class="extras"><div class="chip"><label for="shares">Shares / post</label><input type="number" id="shares" value="0" min="0" step="10" /></div><div class="chip"><label for="reposts">Reposts / post</label><input type="number" id="reposts" value="0" min="0" step="100" /></div><div class="chip"><label for="saves">Saves / post</label><input type="number" id="saves" value="0" min="0" step="10" /></div></div><p class="muted">Optional add-ons. Estimates use a snapshot of Litix retail service rates, not a live checkout quote.</p></section><section class="section"><div class="extras"><div class="chip"><label>Likes per post</label><b id="likes">100</b></div><div class="chip"><label>Video views / post</label><b id="views">300</b></div><div class="chip"><label>Delivery</label><b style="font-size:13px">New posts</b></div></div></section><div class="price"><div class="muted">Illustrative package price</div><div class="amount" id="total">$7.00</div><div class="breakdown"><span>Automatic likes + eligible video views</span><strong id="base">$7.00</strong></div><div class="breakdown"><span>Optional add-ons (up to 30 posts, estimate)</span><strong id="addons">$0.00</strong></div><div class="muted">Pricing scope and fulfillment eligibility require server confirmation before taking payment.</div></div><button class="btn" disabled>Preview only — Checkout not enabled</button><div class="warn">This preview never charges customers or submits orders. Production must verify Instagram discovery, supplier routing, 3× view dispatch and package billing first.</div></main></div><script type="module">
+// Litix Automatic customer offer. Price points verified from leofame.com/instagram-automatic-likes on 2026-10-19.
+// These are quoted *retail* prices. Supplier costs and fulfillment must be validated before activation.
+const AUTO_LIKES_TIERS = Object.freeze([
+  {likes:50, priceCents:400},
+  {likes:100,priceCents:700},
+  {likes:150,priceCents:1000},
+  {likes:250,priceCents:1500},
+  {likes:500,priceCents:2400},
+  {likes:1000,priceCents:4000},
+  {likes:2000,priceCents:7000},
+]);
+const DEFAULT_POST_LIMIT = 30; // Current Litix form default; billing coverage must be confirmed.
+const VIDEO_VIEW_MULTIPLIER = 3;
+const OPTIONAL_METRICS = Object.freeze(['shares','reposts','saves']);
+const KNOWN_RETAIL_RATES_USD_PER_1000 = Object.freeze({
+  // Snapshot only, NOT authoritative for the payment service. Source: production /api/services on 2026-10-19.
+  shares: .0315, reposts: .7125, saves: 1.6035,
+});
+const whole = x => Number.isSafeInteger(x) && x >= 0 && x <= 1_000_000;
+function calculatePreviewQuote(input, rates=KNOWN_RETAIL_RATES_USD_PER_1000) {
+  const likes=Number(input.likes), tier=AUTO_LIKES_TIERS.find(x=>x.likes===likes);
+  if (!tier) throw new Error('Choose one of the listed automatic-likes packages.');
+  const postLimit=Number(input.postLimit ?? DEFAULT_POST_LIMIT);
+  if (!Number.isInteger(postLimit) || postLimit < 1 || postLimit > 30) throw new Error('Post limit must be between 1 and 30.');
+  let addonsCents=0;
+  const addons={};
+  for (const key of OPTIONAL_METRICS) {
+    const qty=Number(input[key]??0);
+    if(!whole(qty)) throw new Error(`${key} must be a non-negative whole number.`);
+    if(qty===0){addons[key]={quantity:0,estimateCents:0};continue;}
+    const rate=Number(rates[key]);
+    if(!Number.isFinite(rate)||rate<0)throw new Error(`Live ${key} price unavailable. No order can be quoted.`);
+    // Per-post rounding prevents total from underquoting very small add-on orders.
+    const perPostCents=Math.ceil(qty * rate / 1000 * 100);
+    const cost=perPostCents*postLimit;
+    addonsCents+=cost;
+    addons[key]={quantity:qty,estimateCents:cost};
+  }
+  return {likes,viewsForEligibleVideoPosts:likes*VIDEO_VIEW_MULTIPLIER,
+    baseCents:tier.priceCents, addOnsEstimateCents:addonsCents,
+    previewTotalCents:tier.priceCents+addonsCents,postLimit,addons,
+    paymentReady:false, fulfillmentReady:false};
+}
+const dollars = cents => new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(cents/100);
+
+let selected=100;const nf=new Intl.NumberFormat('en-US');const els=Object.fromEntries(['tiers','shares','reposts','saves','likes','views','total','base','addons'].map(k=>[k,document.getElementById(k)]));
+function render(){els.tiers.innerHTML='';for(const tier of AUTO_LIKES_TIERS){const b=document.createElement('button');b.className='tier';b.type='button';b.setAttribute('aria-pressed',String(selected===tier.likes));b.innerHTML=`${nf.format(tier.likes)}<span>${dollars(tier.priceCents)}</span>`;b.addEventListener('click',()=>{selected=tier.likes;render()});els.tiers.appendChild(b)}const qty=key=>Number(els[key].value||0);try{const q=calculatePreviewQuote({likes:selected,shares:qty('shares'),reposts:qty('reposts'),saves:qty('saves')});els.likes.textContent=nf.format(q.likes);els.views.textContent=nf.format(q.viewsForEligibleVideoPosts);els.total.textContent=dollars(q.previewTotalCents);els.base.textContent=dollars(q.baseCents);els.addons.textContent=dollars(q.addOnsEstimateCents)}catch(e){els.total.textContent='Unavailable';els.addons.textContent=e.message}}
+for(const key of ['shares','reposts','saves'])els[key].addEventListener('input',render);render();
+</script></body></html>

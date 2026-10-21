@@ -26,5 +26,5 @@ test('funded and reserve routing cannot fall back to unprotected services', () =
 test('last build overlay contains exactly the tested production policy', () => {
   const files = ['lib/provider.js','lib/orders.js','lib/litixRefillPolicy.mjs','app/api/services/route.js','app/api/internal/checkout-canary/route.js'];
   for (const file of files) assert.equal(read('patches/protected-refill/assets/'+file),read(file));
-  assert.match(read('scripts/vercel-build.sh'),/retire-integrations\/apply.cjs && node patches\/protected-refill\/apply.cjs && node --test/);
+  assert.match(read('scripts/vercel-build.sh'),/retire-integrations\/apply.cjs && node patches\/protected-refill\/apply.cjs && node patches\/unified-kit\/patches\/notifications\/scripts\/install.cjs \. && node --test/);
 });
