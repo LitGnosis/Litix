@@ -2,7 +2,7 @@
 import {useEffect,useState} from 'react';
 import OrderStatus from './OrderStatus';
 import {checkoutReferenceKey,confirmationState,savedCheckoutReference} from '../lib/orderConfirmation.mjs';
-export default function CheckoutConfirmation({initialSession='',initialOrderId='',initialToken=''}) {
+export default function CheckoutConfirmation({initialSession='',initialOrderId='',initialToken='',allowManualTracking=true}) {
   const [state,setState]=useState('loading');
   useEffect(()=>{
     let stopped=false,timer,redirect,controller;
@@ -21,7 +21,7 @@ export default function CheckoutConfirmation({initialSession='',initialOrderId='
         const next=response.ok?confirmationState(data.order):'pending';
         setState(next);
         if(next==='confirmed'||next==='completed'){
-          redirect=setTimeout(()=>{window.location.replace('/')},4000);
+          redirect=setTimeout(()=>{window.location.replace('/')},2000);
           return;
         }
         if(next==='failed')return;
@@ -33,6 +33,7 @@ export default function CheckoutConfirmation({initialSession='',initialOrderId='
     poll();
     return()=>{stopped=true;clearTimeout(timer);clearTimeout(redirect);controller?.abort()};
   },[initialSession,initialOrderId,initialToken]);
+  if(state==='manual'&&!allowManualTracking)return <div className="pageCard" role="status"><h1>Payment confirmation unavailable</h1><p>Open your payment receipt link or contact support. Do not pay again.</p><a href="/">Back to home</a> · <a href="/support">Support</a></div>;
   if(state==='manual')return <><h1>Track your order</h1><p>Open your receipt link to check automatically, or enter your details below.</p><OrderStatus/></>;
   return <div className="pageCard" role="status" aria-live="polite">
     <h1>{state==='completed'?'Order completed':state==='confirmed'?'Order confirmed':state==='failed'?'Payment not completed':state==='delayed'?'Confirmation is taking longer':'Confirming your order…'}</h1>
