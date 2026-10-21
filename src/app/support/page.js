@@ -1,0 +1,2 @@
+import InfoPage from '../InfoPage';
+export default function Support(){return <InfoPage kicker="SUPPORT" title="We’re here to help."><p>For order help, include your Litix Order ID and the receipt email used at checkout. Never send your social-media password.</p><p>Email: <a href="mailto:support@litix.net">support@litix.net</a></p><p>You can also check live order status from the <a href="/track">Track Order</a> page.</p></InfoPage>}
