@@ -1,0 +1,32 @@
+LITIX.NET — ONE ZIP / VERCEL BOT EXECUTION PROMPT
+
+Use the uploaded Litix-UNIFIED-VERCEL-BOT-KIT-2026-10-20.zip as a source-update kit, NOT as a new standalone website.
+
+TARGETS:
+- Existing repository: LitGnosis/Litix
+- Existing Vercel storefront project: litix_final_logo_corrected_vercel_ready
+- Existing Vercel team: litgnosisllc-9049
+- Storefront domain: litix.net
+- The separate litix-paykings-webhook project is NOT the storefront.
+- Protect the existing premium platinum/metallic-blue frontend, logos, animations, product catalog, packages, pricing, order history, checkout, suppliers, database, and domains.
+- Customer-facing platforms are Instagram, TikTok, YouTube (not X).
+
+ACTION:
+1) Identify the currently deployed READY PRODUCTION storefront commit from Vercel; use its complete Git source as baseline. The uploaded Litix-main 2/3/4 ZIP files are README-only placeholders, not source backups.
+2) Unzip this update kit OUTSIDE the repository. Work on a safe Git branch. Inspect files in patches/ and README.md.
+3) Run: node <unpacked-kit>/scripts/apply-to-repo.cjs --check <repo-root>
+   This stages notification and SEO patches in a temporary directory; no writes to the real source.
+4) Review exact proposed changes and existing environment-dependent Vercel build overlays. The existing build script may re-apply patches dynamically; avoid double application. If source signatures differ, resolve carefully; don't bypass checks or overwrite newer production code.
+5) Run: node <unpacked-kit>/scripts/apply-to-repo.cjs --apply <repo-root>
+   This applies the compatible notification + SEO patch in a guarded manner.
+6) 365-day refill/CICD patch is INCLUDED but requires explicit review: it enforces an 8x custom-order supplier rate and hides non-365-day services. Apply ONLY if confirmed as the requested current catalog policy: node <kit>/scripts/apply-to-repo.cjs --check <repo-root> --include-refill. If compatible, rerun with --apply --include-refill. Review the patch's README and any excluded service IDs first.
+7) Auto Boost upgrade is INCLUDED as preview, pricing logic, tests, handoff. NOT a complete backend. Do not publish the preview page as a replacement for the existing Auto Boost production feature or promise guaranteed Instagram new-post detection. Merge only after verifying real provider support, price rules, and duplicate safety.
+8) Existing production vercel.json cron entries must be preserved. Confirm added /api/cron/order-notifications every 5 minutes. The notification module depends on existing tracking token, database and email credentials; never commit or display secrets.
+9) Run Node tests (including patches/auto-boost/tests/offer.test.mjs), npm ci, npm test where supported, and npm run build from the actual Next.js app root (typically repo/src). Verify latest build path and avoid the prior src/services/paykings root-path confusion.
+10) Deploy a PREVIEW of the STOREFRONT, not the payment bridge. Smoke-test product pages, pricing, social platform selector, /track, cron auth, email outbox, SEO routes and receipt/fulfilled order handling using isolated Neon staging data. Do not charge actual cards or submit SmmGlob orders.
+11) If tests and security verification pass, report Preview URL, changed files, tests and rollback instructions. Do not promote to production or enable live charges without my explicit approval.
+12) On success, produce a true FULL SOURCE ZIP from that tested merged Git checkout (with src/, public/, package.json, vercel.json, appropriate project root). Never call this patch-only kit a full-site archive.
+
+Current known separate issue: production checkout POST /api/checkout logs 'Invalid gateway response' for PayKings/NMI. This kit does not itself verify or fix live card payments. Keep charge activation disabled until verified.
+
+DO THE WORK WITH CONNECTED TOOLS. If code checkout cannot be accessed, say precisely what operation is blocked; do not deploy a placeholder site, do not request repeated GitHub setup, and do not claim production was fixed.

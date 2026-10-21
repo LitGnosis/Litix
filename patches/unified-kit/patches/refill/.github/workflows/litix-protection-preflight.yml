@@ -1,0 +1,27 @@
+name: Litix Protected-Services Preflight
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Verify protection/pricing and no-charge simulation
+        run: node --test tests/policy.test.mjs tests/source-patch.test.mjs
+      - name: Check source integration and build
+        run: |
+          if [ -f src/package.json ]; then
+            cd src
+          fi
+          npm ci
+          npm run build
+# No deployment or Slack notifications are claimed here.
+# Vercel Git integration should deploy only after project checks pass.

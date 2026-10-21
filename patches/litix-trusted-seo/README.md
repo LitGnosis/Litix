@@ -5,7 +5,7 @@ Growth Bundles or Auto Boost modules. It targets the existing Next.js App Router
 
 ## Metadata
 - Title (50 characters): `Litix | Marketing Automation & Campaign Management`
-- Description (122 characters): `Manage social campaign orders, scheduled delivery, tracking, and API workflows across Instagram, TikTok, and X with Litix.`
+- Description (122 characters): `Manage social campaign orders, scheduled delivery, tracking, and API workflows across Instagram, TikTok, and YouTube with Litix.`
 - Canonical host: `https://www.litix.net/`
 - Organization, WebSite and SoftwareApplication JSON-LD use only observable features and do not invent endorsements, reviews, certifications, or prices.
 

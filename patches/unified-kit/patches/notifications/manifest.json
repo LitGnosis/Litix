@@ -1,0 +1,16 @@
+{
+  "name": "Litix-Vercel-DEFAULT-UPDATE-KIT-2026-10-20",
+  "kind": "source patch kit - not standalone website",
+  "status": "not deployed",
+  "upstream_uploaded_archives": [
+    "Litix-main 2.zip",
+    "Litix-Email-Tracking-Fix-FRESH(1).zip",
+    "Litix-Source-Notification-Fix-2026-10-19(1).zip"
+  ],
+  "patch_sha256": {
+    "patch/README.md": "6f3a1c75595c82d00ad3683080d3ff49fb243931b58f8c76d19543e9432334ca",
+    "patch/app/api/cron/order-notifications/route.js": "6372b513b2ad4978f9a47c1a989511db0342230a76a8f30737a4282c49b95f05",
+    "patch/lib/orderNotifications.js": "5a26e6e8003b13d9d85e198893e0c66b394fc1a61d7614a59ebe9dbeef63860d",
+    "patch/schema.sql": "29e9626d6d5b3651043e6cff4beb12c88669cbd1b7ca57475bcdd2941de70737"
+  }
+}
