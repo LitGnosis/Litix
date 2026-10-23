@@ -41,7 +41,7 @@ function verifySessionToken(token) {
 function normalizeTarget(raw) {
   if (typeof raw !== "string" || raw.length > 2048) return null;
   let url;
-  try { url = new URL(/^https?:\\/\\//i.test(raw) ? raw : `https://${raw}`); } catch { return null; }
+  try { url = new URL(/^https?:\/\//i.test(raw) ? raw : \`https://\${raw}\`); } catch { return null; }
   if (url.protocol !== "https:" && url.protocol !== "http:") return null;
   if (url.username || url.password || url.port) return null;
   const host = url.hostname.toLowerCase();
@@ -52,7 +52,7 @@ function normalizeTarget(raw) {
     "youtube.com", "www.youtube.com", "youtu.be",
   ]);
   if (!allowed.has(host)) return null;
-  if (!/^\\/[a-zA-Z0-9_./%~-]*$/.test(url.pathname) || url.pathname.includes("..")) return null;
+  if (!/^\/[a-zA-Z0-9_./%~-]*$/.test(url.pathname) || url.pathname.includes("..")) return null;
   if (url.search.length > 500 || url.hash) return null;
   return url.toString();
 }
@@ -102,11 +102,13 @@ export async function POST(request) {
     const row = rows[index];
     const serviceId = Number(row?.resolvedClusterID);
     const quantity = Number(row?.quantity);
+    const targetLink = normalizeTarget(row?.targetLink);
+    if (!targetLink) return send({ error: "A target URL is invalid or uses an unsupported platform.", row: index + 1 }, 422);
     if (!Number.isSafeInteger(serviceId) || serviceId <= 0 ||
         !Number.isSafeInteger(quantity) || quantity < 1 || quantity > 10000000) {
       return send({ error: "A service ID or quantity is invalid.", row: index + 1 }, 422);
     }
-    normalizedRows.push({ targetLink: String(row?.targetLink || ""), resolvedClusterID: serviceId, quantity });
+    normalizedRows.push({ targetLink, resolvedClusterID: serviceId, quantity });
   }
 
   const canonicalRequest = JSON.stringify(canonicalize({ workspaceId, csvRows: normalizedRows }));
