@@ -38,6 +38,24 @@ function verifySessionToken(token) {
     return null;
   }
 }
+function normalizeTarget(raw) {
+  if (typeof raw !== "string" || raw.length > 2048) return null;
+  let url;
+  try { url = new URL(/^https?:\\/\\//i.test(raw) ? raw : `https://${raw}`); } catch { return null; }
+  if (url.protocol !== "https:" && url.protocol !== "http:") return null;
+  if (url.username || url.password || url.port) return null;
+  const host = url.hostname.toLowerCase();
+  const allowed = new Set([
+    "instagram.com", "www.instagram.com",
+    "tiktok.com", "www.tiktok.com",
+    "facebook.com", "www.facebook.com", "m.facebook.com",
+    "youtube.com", "www.youtube.com", "youtu.be",
+  ]);
+  if (!allowed.has(host)) return null;
+  if (!/^\\/[a-zA-Z0-9_./%~-]*$/.test(url.pathname) || url.pathname.includes("..")) return null;
+  if (url.search.length > 500 || url.hash) return null;
+  return url.toString();
+}
 function canonicalize(value) {
   if (Array.isArray(value)) return value.map(canonicalize);
   if (value && typeof value === "object") {
