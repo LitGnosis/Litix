@@ -3,16 +3,20 @@ export const LITIX_BRAND_MANIFEST = {
     corporateName: "Litix",
     productionDomain: "litix.net",
     coreVersion: "2026.10.Platinum",
-    title: "Litix | The Platinum Standard in Social Growth",
+    title: "Litix | Analytics Amplified · Innovation Ignited",
     description: "Instant Delivery. Programmatic Refills. Stealth Execution."
   },
   presentation: {
-    heroMainSlogan: "The Platinum Standard in Social Growth.",
+    heroMainSlogan: "Analytics Amplified. Innovation Ignited.",
     heroSubTagline: "Instant Delivery. Programmatic Refills. Stealth Execution.",
     brandedPhrases: [
-      "Stealth Multiplier Delivery Nodes Enabled",
-      "Programmatic 30-Day Anti-Drop Matrix Active",
-      "Abstracted Backend Upstream Footprint Protected"
+      "Analytics Amplified",
+      "Innovation Ignited",
+      "Metrics that Move",
+      "Data Driven Discovery",
+      "Instant Delivery",
+      "Programmatic Refills",
+      "Stealth Execution"
     ],
     assets: {
       vectorLogoPath: "/assets/brand/logo.svg",
