@@ -37,3 +37,21 @@ input,select{background:#07162b;border-color:#b9cce34d}input:focus,select:focus{
 .whatsapp-icon{display:grid;place-items:center;width:24px;height:24px;border:2px solid currentColor;border-radius:50%;font-size:17px;line-height:1}
 @media(max-width:575px){.whatsapp-float{right:12px;bottom:12px;padding:12px 15px;font-size:13px}}
 @media(prefers-reduced-motion:reduce){.whatsapp-float{transition:none}}
+
+/* Platinum service guide, support center, and accessibility refinements */
+.trust-panel,.faq-panel{margin-top:24px}
+.trust-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:20px}
+.trust-grid article{padding:18px;border:1px solid #c9d7e53d;border-radius:13px;background:linear-gradient(145deg,#ffffff08,#ffffff02)}
+.trust-symbol{display:inline-grid;place-items:center;width:34px;height:34px;border-radius:10px;background:#ffe07118;border:1px solid #ffe07150;color:#ffe071;font-size:12px;font-weight:850}
+.trust-grid h3{margin:13px 0 7px;font-size:15px;color:#f4f7fc}
+.trust-grid p,.faq-panel details p{margin:0;color:#b8c9df;font-size:13px;line-height:1.75}
+.service-note{margin-top:16px;padding:14px 16px;border-left:2px solid var(--gold);background:#ffe07109;color:#c1cfe0;font-size:12px;line-height:1.7}
+.service-note strong{color:#ffe071}
+.faq-panel details{padding:16px 2px;border-bottom:1px solid #c9d7e52a}
+.faq-panel details:last-of-type{border-bottom:0}
+.faq-panel summary{cursor:pointer;color:#edf3fc;font-weight:750;font-size:14px;line-height:1.6;list-style-position:outside}
+.faq-panel details p{padding-top:10px}
+.faq-links{display:flex;flex-wrap:wrap;gap:18px;margin-top:22px;padding-top:18px;border-top:1px solid #c9d7e52a;font-size:12px}
+.faq-links a{color:#ffe071;text-decoration:none}
+.faq-links a:hover{text-decoration:underline}
+@media(max-width:720px){.trust-grid{grid-template-columns:1fr}.trust-grid article{padding:15px}}
