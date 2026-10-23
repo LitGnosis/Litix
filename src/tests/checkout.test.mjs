@@ -10,6 +10,7 @@ const cases=[
  ['price changed', {expectedAmountCents:799}, 409, 0, 0],
  ['price omitted', {expectedAmountCents:undefined}, 409, 0, 0],
  ['approved', {}, 200, 1, 1],
+ ['approved without transaction ID', {gateway:'missing-transaction'}, 202, 1, 0],
  ['declined', {gateway:'declined'}, 402, 1, 0],
  ['uncertain payment', {gateway:'timeout'}, 202, 1, 0],
  ['duplicate checkout', {duplicate:true}, 409, 0, 0],
@@ -28,7 +29,7 @@ for(const [label,options,status,payments,orders] of cases){
    if(String(url)==='https://paykings.transactiongateway.com/api/transact.php'){
     paymentCalls++;
     if(options.gateway==='timeout')throw Error('simulated timeout');
-    return new Response(options.gateway==='declined'?'response=2&responsetext=Declined':'response=1&transactionid=test-only');
+    return new Response(options.gateway==='declined'?'response=2&responsetext=Declined':options.gateway==='missing-transaction'?'response=1&responsetext=Approved':'response=1&transactionid=test-only');
    }
    assert.equal(String(url),'https://smmglob.com/api/v2');
    const action=init.body.get('action');
@@ -44,7 +45,7 @@ for(const [label,options,status,payments,orders] of cases){
   assert.equal(response.status,status);
   assert.equal(paymentCalls,payments);assert.equal(orderCalls,orders);
   if(label.startsWith('price'))assert.equal(dbCalls,0,'price mismatch must not create an order');
-  if(label==='uncertain payment')assert.equal((await response.json()).payment,'review');
+  if(label==='uncertain payment'||label==='approved without transaction ID')assert.equal((await response.json()).payment,'review');
  });
 }
 test('browser submits the displayed total for server confirmation',()=>{
