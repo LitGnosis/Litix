@@ -62,3 +62,53 @@ input,select{background:#07162b;border-color:#b9cce34d}input:focus,select:focus{
 .status-dot.error{background:#fb7185;box-shadow:0 0 0 3px #fb71851c}
 .catalog-retry{margin-left:auto;border:1px solid #ffe07155;border-radius:7px;padding:6px 9px;background:#ffe0710b;color:#ffe071;font-size:11px;font-weight:750;cursor:pointer}
 .catalog-retry:hover{background:#ffe0711b}
+
+
+/* Litix blue-platinum metallic identity: mobile-first, animated, logo-forward. */
+:root{--gold:#76c9ff;--blue:#42b9ff;--platinum:#e8f5ff;--litix-blue:#168de0;--litix-deep:#061321}
+body{background:radial-gradient(ellipse at 8% 2%,#126bb34a,transparent 42%),radial-gradient(ellipse at 88% 18%,#45c5ff18,transparent 38%),radial-gradient(ellipse at 50% 100%,#174a7930,transparent 45%),linear-gradient(150deg,#030810,#071727 48%,#030912);background-attachment:fixed}
+.nav{position:sticky;top:0;z-index:50;backdrop-filter:blur(18px);background:linear-gradient(100deg,#050c16ed,#0a1c2def);border:1px solid #8ed8ff35;border-radius:0 0 18px 18px;box-shadow:0 10px 32px #0007,inset 0 1px #fff2}
+.nav .brand{display:flex;align-items:center;gap:10px;text-decoration:none}
+.brand-logo{display:block;width:44px;height:44px;object-fit:contain;filter:drop-shadow(0 0 12px #36b8ff55)}
+.brand-wordmark{display:flex;flex-direction:column;font-size:26px;line-height:.9;font-weight:950;letter-spacing:.09em;background:linear-gradient(115deg,#fff,#a7dfff 45%,#eff8ff 62%,#55baff);background-clip:text;color:transparent}
+.brand-submark{font-size:7px;letter-spacing:.16em;margin-top:7px;color:#9ac9e8}
+.nav a:hover{color:#b8e6ff}
+.hero{overflow:hidden;border:1px solid #8bd5ff55;border-radius:25px;background:radial-gradient(ellipse at 95% 5%,#198bd32c,transparent 48%),linear-gradient(135deg,#0c2033ed,#07111fee 65%,#102c42e8);box-shadow:0 22px 70px #0006,inset 0 1px #ffffff24;position:relative}
+.hero:before{content:"";position:absolute;inset:0;pointer-events:none;border-radius:inherit;background:linear-gradient(115deg,transparent 20%,#9fe2ff08 40%,#c8edff20 50%,#9fe2ff08 60%,transparent 80%);background-size:240% 100%;animation:litix-sheen 9s linear infinite}
+.hero:after{background:linear-gradient(90deg,transparent,#38baff,#d8f1ff,#38baff,transparent);background-size:220% 100%;height:2px}
+.hero-brandline{display:flex;align-items:center;gap:12px;margin-bottom:18px;position:relative}
+.hero-orb{display:grid;place-items:center;width:46px;height:46px;border-radius:15px;color:#041423;font-size:25px;font-weight:950;background:linear-gradient(135deg,#f4fbff,#80d1ff 45%,#168de0);box-shadow:0 0 28px #38baff40,inset 0 1px #fff}
+.hero-motto{font-size:10px;font-weight:800;letter-spacing:.19em;color:#a6dfff}
+.eyebrow,.kicker{color:#8bd7ff}
+.hero h1{background:linear-gradient(110deg,#fff 0%,#d8efff 28%,#78caff 52%,#f7fcff 73%,#8bcfff 100%);background-size:220% auto;background-clip:text;animation:litix-text-shine 8s linear infinite}
+.hero p{color:#c0d9eb}
+.tags span{border-color:#85d4ff45;background:linear-gradient(135deg,#49baff12,#fff08);box-shadow:inset 0 1px #fff1}
+.panel{border-color:#8bcfff45;background:linear-gradient(145deg,#0b1d2cf2,#07121ff5 55%,#0b2030f2);box-shadow:0 20px 65px #0007,inset 0 1px #ffffff1c;backdrop-filter:blur(14px);border-radius:20px}
+.item{background:linear-gradient(135deg,#0d2335,#081421);border-color:#8bd5ff35}
+.item:hover:not(:disabled){border-color:#72caff;box-shadow:0 8px 30px #168de030,0 0 0 1px #8bd5ff30}
+.item.active{border-color:#72caff;background:linear-gradient(145deg,#124a70,#10283e);box-shadow:inset 3px 0 #9be0ff,0 0 28px #168de020}
+.cat{color:#9bdcff}
+.price,.total{color:#a9e0ff}
+.tag{border-color:#8bd5ff40;color:#c7eaff}
+.primary{border-color:#d4f1ff;background:linear-gradient(125deg,#eaf8ff,#85d3ff 48%,#218bd0);color:#061827;box-shadow:0 4px 24px #1e9de632,inset 0 1px #fff}
+.primary:hover:not(:disabled){box-shadow:0 5px 30px #1e9de655}
+.alt{border-color:#8bcfff66;background:linear-gradient(135deg,#173e5a,#0b2135);color:#e2f4ff}
+input,select{background:#040d16;border-color:#8bcfff60;color:#eff9ff}
+input:focus,select:focus{outline-color:#83d4ff}
+.totalbox{border-color:#8bd5ff70;background:linear-gradient(130deg,#1a5d823d,#39b5ff0b)}
+.msg{border-color:#8bcfff50;background:#0d2a40}
+.premium-inline-checkout{border-color:#8bcfff65;background:linear-gradient(145deg,#0e2638,#06111d)}
+.premium-checkout-mark{background:linear-gradient(135deg,#eaf8ff,#7dcfff 50%,#208bd0);color:#061827}
+.premium-checkout-badge{border-color:#8bcfff70;color:#9bdfff}
+.trust-symbol{background:#3bb8ff18;border-color:#8bd5ff50;color:#a4e0ff}
+.service-note{border-left-color:#72caff;background:#48baff0b}.service-note strong,.faq-links a{color:#9bdcff}
+.catalog-retry{border-color:#8bcfff66;background:#38baff0d;color:#a7e1ff}
+.status-dot.ready{background:#4ade80}.support-banner{display:flex;align-items:center;justify-content:space-between;gap:24px;overflow:hidden;position:relative;background:radial-gradient(ellipse at 85% 50%,#168de033,transparent 42%),linear-gradient(120deg,#0b1d2c,#102d43);margin:24px 0}
+.support-copy{max-width:560px}.support-copy h2{margin:8px 0 10px}.support-copy p{color:#b9d4e8;line-height:1.7;max-width:520px}
+.support-link{display:inline-flex;margin-top:10px;padding:12px 18px;border:1px solid #a9e4ff;border-radius:12px;background:linear-gradient(120deg,#eaf8ff,#7dcfff,#208bd0);color:#061827;text-decoration:none;font-weight:850;box-shadow:0 5px 25px #168de033}
+.support-emblem{position:relative;display:grid;place-items:center;flex:0 0 110px;width:110px;height:110px;border:1px solid #a4e0ff90;border-radius:30px;transform:rotate(-8deg);background:linear-gradient(145deg,#ffffff20,#158cd82b);box-shadow:inset 0 1px #fff5,0 0 48px #168de025;color:#dff5ff;font-size:62px;font-weight:950}
+.support-emblem span{position:absolute;right:8px;top:4px;color:#82d2ff;font-size:20px}
+@keyframes litix-sheen{0%{background-position:150% 0}100%{background-position:-150% 0}}
+@keyframes litix-text-shine{0%,100%{background-position:0% center}50%{background-position:100% center}}
+@media(max-width:575px){.nav{padding:10px 12px}.brand-logo{width:34px;height:34px}.brand-wordmark{font-size:21px}.brand-submark{font-size:6px}.nav a:not(.brand){font-size:12px;margin-left:8px}.hero{border-radius:19px}.hero-orb{width:40px;height:40px}.support-banner{align-items:flex-start}.support-emblem{flex-basis:68px;width:68px;height:68px;border-radius:20px;font-size:40px}.support-copy h2{font-size:21px}.support-copy p{font-size:13px}}
+@media(prefers-reduced-motion:reduce){.hero:before,.hero h1{animation:none!important}}
