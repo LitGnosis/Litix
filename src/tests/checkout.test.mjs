@@ -20,7 +20,7 @@ for(const [label,options,status,payments,orders] of cases){
  test(label,async t=>{
   const originalFetch=globalThis.fetch;
   const originalDatabase=globalThis.__litixTestDatabase;
-  const keys=['DATABASE_URL','SMMGLOB_API_KEY','NMI_SECURITY_KEY','PAYKINGS_NMI_COLLECT_PUBLIC_KEY'];
+  const keys=['DATABASE_URL','SMMFOLLOWOM_API_KEY','NMI_SECURITY_KEY','PAYKINGS_NMI_COLLECT_PUBLIC_KEY'];
   const previous=Object.fromEntries(keys.map(k=>[k,process.env[k]]));
   keys.forEach(k=>process.env[k]='test-only');
   let paymentCalls=0,orderCalls=0,dbCalls=0;
@@ -31,7 +31,7 @@ for(const [label,options,status,payments,orders] of cases){
     if(options.gateway==='timeout')throw Error('simulated timeout');
     return new Response(options.gateway==='declined'?'response=2&responsetext=Declined':options.gateway==='missing-transaction'?'response=1&responsetext=Approved':'response=1&transactionid=test-only');
    }
-   assert.equal(String(url),'https://smmglob.com/api/v2');
+   assert.equal(String(url),'https://smmfollowom.com/api/v2');
    const action=init.body.get('action');
    if(action==='services')return Response.json([{service:1,name:'Test service',rate:1,min:100,max:10000,type:'Default'}]);
    assert.equal(action,'add');orderCalls++;
