@@ -1,7 +1,8 @@
 
 "use client";
 import {useEffect,useRef,useState} from "react";
-const money=n=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(n/100);\nconst whatsappNumber=(process.env.NEXT_PUBLIC_WHATSAPP_NUMBER||"").replace(/\\D/g,"");
+const money=n=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(n/100);
+const whatsappNumber=(process.env.NEXT_PUBLIC_WHATSAPP_NUMBER||"").replace(/\D/g,"");
 export default function Home(){
  const [services,setServices]=useState([]),[categories,setCategories]=useState([]),[cat,setCat]=useState(""),[query,setQuery]=useState(""),[pg,setPg]=useState(1),[count,setCount]=useState(0),[total,setTotal]=useState(0),[selected,setSelected]=useState(null),[qty,setQty]=useState(100),[email,setEmail]=useState(""),[link,setLink]=useState(""),[config,setConfig]=useState({ready:false}),[cardReady,setCardReady]=useState(false),[busy,setBusy]=useState(false),[notice,setNotice]=useState(""),[receipt,setReceipt]=useState(null),[privateUrl,setPrivateUrl]=useState(""),[tracked,setTracked]=useState(null),[key,setKey]=useState("");const done=useRef(null);
  useEffect(()=>{setKey(crypto.randomUUID());fetch("/api/config").then(r=>r.json()).then(setConfig).catch(()=>{})},[]);
