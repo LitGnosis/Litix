@@ -41,7 +41,7 @@ function verifySessionToken(token) {
 function normalizeTarget(raw) {
   if (typeof raw !== "string" || raw.length > 2048) return null;
   let url;
-  try { url = new URL(/^https?:\/\//i.test(raw) ? raw : \`https://\${raw}\`); } catch { return null; }
+  try { url = new URL(/^https?:\/\//i.test(raw) ? raw : `https://${raw}`); } catch { return null; }
   if (url.protocol !== "https:" && url.protocol !== "http:") return null;
   if (url.username || url.password || url.port) return null;
   const host = url.hostname.toLowerCase();
