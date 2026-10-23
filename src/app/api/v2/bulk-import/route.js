@@ -21,6 +21,35 @@ function canonicalize(value) {
 function sha256(value) {
   return createHash("sha256").update(value).digest("hex");
 }
+function decodeBase64Url(value) {
+  const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = normalized + "=".repeat((4 - (normalized.length % 4)) % 4);
+  return Buffer.from(padded, "base64");
+}
+function verifySessionToken(token) {
+  const secret = process.env.JWT_SECRET;
+  const parts = String(token || "").split(".");
+  if (!secret || parts.length !== 3) return null;
+  try {
+    const header = JSON.parse(decodeBase64Url(parts[0]).toString("utf8"));
+    const payload = JSON.parse(decodeBase64Url(parts[1]).toString("utf8"));
+    if (header.alg !== "HS256" || (header.typ && header.typ !== "JWT")) return null;
+    const signature = createHash("sha256").update(parts[0] + "." + parts[1]).digest();
+    const { createHmac } = require("node:crypto");
+    const hmacSignature = createHmac("sha256", secret).update(parts[0] + "." + parts[1]).digest();
+    const supplied = decodeBase64Url(parts[2]);
+    if (hmacSignature.length !== supplied.length || !timingSafeEqual(hmacSignature, supplied)) return null;
+    const now = Math.floor(Date.now() / 1000);
+    if (typeof payload.exp !== "number" || payload.exp <= now) return null;
+    if (payload.nbf != null && (typeof payload.nbf !== "number" || payload.nbf > now)) return null;
+    if (process.env.JWT_ISSUER && payload.iss !== process.env.JWT_ISSUER) return null;
+    if (process.env.JWT_AUDIENCE) {
+      const aud = Array.isArray(payload.aud) ? payload.aud : [payload.aud];
+      if (!aud.includes(process.env.JWT_AUDIENCE)) return null;
+    }
+    return typeof payload.userId === "string" && payload.userId ? payload : null;
+  } catch { return null; }
+}
 function safeEqual(a, b) {
   const left = Buffer.from(String(a));
   const right = Buffer.from(String(b));
@@ -49,8 +78,11 @@ export async function POST(request) {
   let payload;
   try { payload = await request.json(); } catch { return send({ error: "Request body must be valid JSON." }, 400); }
 
-  const workspaceId = String(payload?.workspaceId || request.headers.get("x-authorized-workspace-id") || "").trim();
-  const userId = String(request.headers.get("x-authenticated-user-id") || "").trim();
+  const auth = request.headers.get("authorization") || "";
+  const session = auth.startsWith("Bearer ") ? verifySessionToken(auth.slice(7).trim()) : null;
+  if (!session) return send({ error: "A valid signed session token is required." }, 401);
+  const workspaceId = String(payload?.workspaceId || "").trim();
+  const userId = session.userId;
   const rows = payload?.csvRows;
   const previewOnly = payload?.isPreviewOnly === true;
   if (!userId || !workspaceId) return send({ error: "Authenticated user and workspace scope are required." }, 401);
