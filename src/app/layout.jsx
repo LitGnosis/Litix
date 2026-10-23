@@ -1,0 +1,1 @@
+import "./style.css";import "./metallic.css";export const metadata={title:"Litix — Metrics That Move",description:"SmmGlob-connected digital services. PayKings checkout and private order tracking."};export default function Layout({children}){return <html lang="en"><body>{children}</body></html>}
