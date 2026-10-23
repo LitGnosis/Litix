@@ -1,1 +1,11 @@
-{"framework":"nextjs","buildCommand":"npm run build","installCommand":"npm ci --no-audit --no-fund"}
+{
+  "framework": "nextjs",
+  "buildCommand": "npm run build",
+  "installCommand": "npm ci --no-audit --no-fund",
+  "crons": [
+    {
+      "path": "/api/v2/cron/sync-catalog",
+      "schedule": "0 0 * * *"
+    }
+  ]
+}
