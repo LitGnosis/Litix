@@ -34,7 +34,6 @@ function verifySessionToken(token) {
     const header = JSON.parse(decodeBase64Url(parts[0]).toString("utf8"));
     const payload = JSON.parse(decodeBase64Url(parts[1]).toString("utf8"));
     if (header.alg !== "HS256" || (header.typ && header.typ !== "JWT")) return null;
-    const signature = createHash("sha256").update(parts[0] + "." + parts[1]).digest();
     const { createHmac } = require("node:crypto");
     const hmacSignature = createHmac("sha256", secret).update(parts[0] + "." + parts[1]).digest();
     const supplied = decodeBase64Url(parts[2]);
