@@ -157,3 +157,17 @@ button:disabled{filter:saturate(.55)}
 /* Litix customer workspace */
 .workspace{margin:24px 0}.workspace>h2{margin-bottom:6px}.workspace-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:18px 0}.workspace-grid article{min-width:0;border:1px solid #82d5ff2c;border-radius:14px;padding:14px;background:#0614219c}.workspace-grid h3{margin:0 0 12px;font-size:15px;color:#d9f3ff}.workspace-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 0;border-bottom:1px solid #8bd5ff1c}.workspace-link{display:flex;flex:1;flex-direction:column;align-items:flex-start;gap:4px;min-width:0;text-align:left;background:transparent;border:0;color:#dff5ff;overflow-wrap:anywhere}.workspace-link small{font-size:11px;color:#91bad2}.icon-action{flex:0 0 32px;border:1px solid #8bd5ff44;border-radius:8px;background:#38baff12;color:#bdeaff;padding:5px}.save-service{display:block;width:100%;margin-top:6px;padding:7px 8px;text-align:left;font-size:11px;border:1px solid #8bd5ff20;border-radius:8px;background:#38baff09;color:#a9ddf5}.workspace-link:hover,.save-service:hover{color:#fff;border-color:#8bd5ff66}
 @media(max-width:760px){.workspace-grid{grid-template-columns:1fr}.workspace-grid article{padding:12px}}
+
+/* Audience landing pages */
+.audience-page{max-width:1120px;margin:0 auto;padding:24px clamp(16px,4vw,40px) 36px;min-height:100vh}
+.audience-header{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:10px 0 28px;border-bottom:1px solid #dce6f02e}
+.audience-brand{font-size:28px;font-weight:900;letter-spacing:.1em;text-decoration:none;background:linear-gradient(115deg,#fff,#b7d9ff 45%,#ffe071);background-clip:text;color:transparent}
+.audience-header nav{display:flex;gap:clamp(10px,2vw,24px);flex-wrap:wrap}.audience-header nav a,.audience-footer a{color:#dce8f8;text-decoration:none;font-size:13px}.audience-header nav a:hover,.audience-footer a:hover{color:#ffe071}
+.audience-hero{margin:32px 0 18px;padding:clamp(24px,5vw,56px);border:1px solid #b8d1ed32;border-radius:22px}
+.audience-hero h1{font-size:clamp(38px,7vw,72px);line-height:1.03;letter-spacing:-.045em;max-width:850px;margin:12px 0 20px;background:linear-gradient(115deg,#fff 5%,#b7d9ff 48%,#fff0ae 85%);background-clip:text;color:transparent}
+.audience-intro{font-size:clamp(16px,2vw,20px);line-height:1.7;color:#b8c9df;max-width:760px}
+.audience-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:28px}.audience-actions a{text-decoration:none;display:inline-flex;align-items:center;justify-content:center}
+.audience-content{padding:clamp(22px,4vw,38px);border:1px solid #b8d1ed32;border-radius:18px}.audience-content h2{font-size:22px;margin:0 0 14px;color:#eef5ff}.audience-content ul{display:grid;gap:12px;padding-left:22px;color:#d4e2f4;line-height:1.6}.audience-content li::marker{color:#ffe071}
+.audience-roadmap{border-top:1px solid #c9d7e53d;margin-top:26px;padding-top:24px}.audience-roadmap p{color:#b8c9df;line-height:1.75;max-width:850px}.audience-phrase{color:#ffe071;font-weight:800;letter-spacing:.04em;margin-top:28px}
+.audience-footer{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:24px 2px;color:#aec0d6;font-size:12px}
+@media(max-width:620px){.audience-header{align-items:flex-start;flex-direction:column}.audience-header nav{gap:12px}.audience-actions{flex-direction:column}.audience-actions a{width:100%;box-sizing:border-box}.audience-footer{flex-direction:column}}
