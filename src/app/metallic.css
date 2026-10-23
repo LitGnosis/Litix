@@ -55,3 +55,10 @@ input,select{background:#07162b;border-color:#b9cce34d}input:focus,select:focus{
 .faq-links a{color:#ffe071;text-decoration:none}
 .faq-links a:hover{text-decoration:underline}
 @media(max-width:720px){.trust-grid{grid-template-columns:1fr}.trust-grid article{padding:15px}}
+
+.catalog-status{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin:10px 0 16px;padding:10px 12px;border:1px solid #c9d7e526;border-radius:10px;background:#ffffff04;color:#b8c9df;font-size:11px}
+.status-dot{width:7px;height:7px;display:inline-block;flex:0 0 7px;border-radius:50%;background:#d6b75b;box-shadow:0 0 0 3px #d6b75b1c}
+.status-dot.ready{background:#4ade80;box-shadow:0 0 0 3px #4ade801c}
+.status-dot.error{background:#fb7185;box-shadow:0 0 0 3px #fb71851c}
+.catalog-retry{margin-left:auto;border:1px solid #ffe07155;border-radius:7px;padding:6px 9px;background:#ffe0710b;color:#ffe071;font-size:11px;font-weight:750;cursor:pointer}
+.catalog-retry:hover{background:#ffe0711b}
