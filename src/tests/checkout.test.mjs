@@ -40,7 +40,7 @@ for(const [label,options,status,payments,orders] of cases){
   };
   t.after(()=>{globalThis.fetch=originalFetch;globalThis.__litixTestDatabase=originalDatabase;for(const k of keys){if(previous[k]===undefined)delete process.env[k];else process.env[k]=previous[k];}});
   const {POST}=await import('data:text/javascript;base64,'+Buffer.from(source+'\n// '+label).toString('base64'));
-  const request=new Request('https://example.test/api/checkout',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({serviceId:'1',quantity:1000,email:'test@example.test',link:'https://example.test/post',paymentToken:'test-token-only',idempotencyKey:'12345678-1234-1234-1234-123456789abc',expectedAmountCents:800,...options})});
+  const request=new Request('https://example.test/api/checkout',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({serviceId:'1',quantity:1000,email:'test@example.test',link:'https://example.test/post',paymentToken:'test-token-only',idempotencyKey:'12345678-1234-1234-1234-123456789abc',expectedAmountCents:1100,...options})});
   const response=await POST(request);
   assert.equal(response.status,status);
   assert.equal(paymentCalls,payments);assert.equal(orderCalls,orders);
