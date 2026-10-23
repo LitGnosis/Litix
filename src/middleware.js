@@ -58,8 +58,11 @@ export async function middleware(request) {
       if (!tenant || tenant.isProvisioned !== true || typeof tenant.tenantId !== "string" || !/^[a-zA-Z0-9_-]{1,100}$/.test(tenant.tenantId)) {
         return NextResponse.rewrite(new URL("/404", request.url));
       }
-      if (pathname.startsWith("/api/") || pathname.startsWith("/_next/")) return NextResponse.next();
-      return NextResponse.rewrite(new URL("/_storefronts/" + tenant.tenantId + pathname + request.nextUrl.search, request.url));
+      if (pathname.startsWith("/api/") || pathname.startsWith("/_next/")) {
+        // API routes must continue through authorization below; never bypass workspace checks on custom hosts.
+      } else {
+        return NextResponse.rewrite(new URL("/_storefronts/" + tenant.tenantId + pathname + request.nextUrl.search, request.url));
+      }
     } catch {
       return new NextResponse("Tenant resolution failed.", { status: 503 });
     }
