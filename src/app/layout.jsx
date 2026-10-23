@@ -2,41 +2,85 @@ import "./style.css";
 import "./metallic.css";
 import { LITIX_BRAND_MANIFEST } from "../config/brandEngine";
 
-const keywords = ["SaaS", "digital marketing", "social engagement", "marketing", "promotions", "social media growth"];
+const keywords = [
+  "SaaS",
+  "digital marketing",
+  "social engagement",
+  "marketing",
+  "promotions",
+  "social media growth",
+];
+const siteUrl = "https://litix.net/";
+const description =
+  "Litix provides social media promotion services with a live service catalog, secure tokenized checkout, and order tracking.";
 
 export const metadata = {
-  metadataBase: new URL("https://litix.net"),
+  metadataBase: new URL(siteUrl),
   title: LITIX_BRAND_MANIFEST.metadata.title,
-  description: LITIX_BRAND_MANIFEST.metadata.description,
+  description,
   keywords,
   applicationName: "Litix",
-  alternates: { canonical: "https://litix.net/" },
+  category: "Business",
+  creator: "Litix",
+  publisher: "Litix",
+  authors: [{ name: "Litix" }],
+  alternates: { canonical: siteUrl },
   openGraph: {
     title: LITIX_BRAND_MANIFEST.metadata.title,
-    description: LITIX_BRAND_MANIFEST.metadata.description,
-    url: "https://litix.net/",
+    description,
+    url: siteUrl,
     siteName: "Litix",
+    locale: "en_US",
     type: "website",
   },
-  robots: { index: true, follow: true, googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1, "max-video-preview": -1 } },
+  twitter: {
+    card: "summary",
+    title: LITIX_BRAND_MANIFEST.metadata.title,
+    description,
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
 };
 
 const schema = {
   "@context": "https://schema.org",
-  "@type": "SoftwareApplication",
-  name: "Litix",
-  url: "https://litix.net/",
-  applicationCategory: "BusinessApplication",
-  operatingSystem: "Web",
-  description: LITIX_BRAND_MANIFEST.metadata.description,
-  publisher: { "@type": "Organization", name: "Litix", url: "https://litix.net/" },
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": siteUrl + "#organization",
+      name: "Litix",
+      url: siteUrl,
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": siteUrl + "#application",
+      name: "Litix",
+      url: siteUrl,
+      applicationCategory: "BusinessApplication",
+      operatingSystem: "Web",
+      description,
+      publisher: { "@id": siteUrl + "#organization" },
+    },
+  ],
 };
 
-export default function Layout({ children }) {
+export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body>
-        <script type="application/ld+json">{JSON.stringify(schema)}</script>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+        />
         {children}
       </body>
     </html>
