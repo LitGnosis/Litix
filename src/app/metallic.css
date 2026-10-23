@@ -112,3 +112,36 @@ input:focus,select:focus{outline-color:#83d4ff}
 @keyframes litix-text-shine{0%,100%{background-position:0% center}50%{background-position:100% center}}
 @media(max-width:575px){.nav{padding:10px 12px}.brand-logo{width:34px;height:34px}.brand-wordmark{font-size:21px}.brand-submark{font-size:6px}.nav a:not(.brand){font-size:12px;margin-left:8px}.hero{border-radius:19px}.hero-orb{width:40px;height:40px}.support-banner{align-items:flex-start}.support-emblem{flex-basis:68px;width:68px;height:68px;border-radius:20px;font-size:40px}.support-copy h2{font-size:21px}.support-copy p{font-size:13px}}
 @media(prefers-reduced-motion:reduce){.hero:before,.hero h1{animation:none!important}}
+
+
+/* Final futuristic Litix signature pass — platinum blue, not gold. */
+:root{--gold:#8ddaff;--platinum:#eff9ff;--blue:#42baff;--line:rgba(133,213,255,.32)}
+html{scroll-padding-top:90px}
+body{isolation:isolate}
+body:before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.18;background-image:linear-gradient(#6ecbff12 1px,transparent 1px),linear-gradient(90deg,#6ecbff12 1px,transparent 1px);background-size:44px 44px;mask-image:linear-gradient(to bottom,#000,transparent 78%)}
+.nav{border-color:#8bd8ff58;box-shadow:0 12px 40px #0008,inset 0 1px #fff2,0 1px 0 #58bdff12}
+.brand-logo{animation:litix-logo-float 5s ease-in-out infinite;filter:drop-shadow(0 0 10px #46baff66)}
+.brand-wordmark{letter-spacing:.13em;text-shadow:0 0 25px #62c7ff22}
+.brand-submark{color:#9edfff}
+.hero{min-height:300px}
+.hero-orb{position:relative;overflow:hidden;box-shadow:0 0 0 5px #50bfff0b,0 0 30px #32a9ff42,inset 0 1px #fff}
+.hero-orb:after{content:"";position:absolute;inset:-50%;background:linear-gradient(115deg,transparent 38%,#fff9 49%,transparent 60%);transform:translateX(-90%);animation:litix-orb-glint 6s ease-in-out infinite}
+.hero .eyebrow{letter-spacing:.18em;text-shadow:0 0 18px #52c3ff36}
+.hero h1{filter:drop-shadow(0 0 25px #43b8ff16)}
+.hero .tags{position:relative;z-index:1}
+.tags span{transition:transform .25s ease,border-color .25s ease,box-shadow .25s ease}
+.tags span:hover{transform:translateY(-2px);border-color:#a5e5ff;box-shadow:0 0 18px #38aaff1c}
+.panel{position:relative;overflow:hidden}
+.panel:before{content:"";position:absolute;inset:0;pointer-events:none;border-radius:inherit;border-top:1px solid #e5f7ff16;background:linear-gradient(125deg,#fff05,transparent 24%,transparent 78%,#4ebdff08)}
+.primary,.support-link{position:relative;overflow:hidden;isolation:isolate}
+.primary:after,.support-link:after{content:"";position:absolute;z-index:-1;inset:-100% auto -100% -35%;width:24%;transform:rotate(20deg);background:linear-gradient(90deg,transparent,#fff9,transparent);animation:litix-button-glint 5.8s ease-in-out infinite}
+.support-banner{border-color:#80d4ff66;box-shadow:0 18px 60px #0005,inset 0 1px #fff2,0 0 35px #168de010}
+.support-emblem{animation:litix-logo-float 6s ease-in-out infinite;box-shadow:inset 0 1px #fff5,0 0 48px #168de025,0 0 0 8px #43baff08}
+.whatsapp-float{z-index:60;box-shadow:0 12px 35px #0008,0 0 0 1px #8bd8ff66,0 0 28px #27b5ff33;transition:transform .2s ease,box-shadow .2s ease}
+.whatsapp-float:hover{transform:translateY(-3px);box-shadow:0 15px 38px #0009,0 0 35px #27b5ff55}
+.end{border-top:1px solid #8bd5ff35}
+@keyframes litix-logo-float{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+@keyframes litix-orb-glint{0%,60%,100%{transform:translateX(-100%)}30%{transform:translateX(100%)}}
+@keyframes litix-button-glint{0%,65%,100%{left:-35%}35%{left:130%}}
+@media(max-width:575px){.hero{min-height:unset}.hero-brandline{margin-bottom:14px}.hero h1{line-height:1.06}.tags{gap:7px}.tags span{font-size:11px}.whatsapp-float{bottom:18px;right:14px}}
+@media(prefers-reduced-motion:reduce){.brand-logo,.hero-orb:after,.primary:after,.support-link:after,.support-emblem{animation:none!important}.tags span,.whatsapp-float{transition:none}}
