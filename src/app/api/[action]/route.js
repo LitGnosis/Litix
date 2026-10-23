@@ -7,12 +7,12 @@ const send=(v,s=200)=>Response.json(v,{status:s,headers:{"cache-control":"no-sto
 const hash=v=>createHash("sha256").update(String(v)).digest("hex");
 const conn=()=>process.env.LITIX_V2_DATABASE_URL||process.env.DATABASE_URL||process.env.POSTGRES_URL||process.env.POSTGRES_PRISMA_URL;
 const db=()=>neon(conn());
-const conf=()=>({database:!!conn(),supplier:!!process.env.SMMGLOB_API_KEY,payment:!!(process.env.NMI_SECURITY_KEY&&process.env.PAYKINGS_NMI_COLLECT_PUBLIC_KEY)});
+const conf=()=>({database:!!conn(),supplier:!!process.env.SMMFOLLOWOM_API_KEY,payment:!!(process.env.NMI_SECURITY_KEY&&process.env.PAYKINGS_NMI_COLLECT_PUBLIC_KEY)});
 const name=req=>new URL(req.url).pathname.split("/").pop();
 async function smm(action,params={}){
- const u=new URL(process.env.SMMGLOB_API_URL||"https://smmglob.com/api/v2");
- if(!process.env.SMMGLOB_API_KEY||u.protocol!=="https:"||!["smmglob.com","www.smmglob.com"].includes(u.hostname))throw Error("Supplier configuration invalid");
- const r=await fetch(u,{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded"},body:new URLSearchParams({key:process.env.SMMGLOB_API_KEY,action,...params}),cache:"no-store",signal:AbortSignal.timeout(16000)});
+ const u=new URL(process.env.SMMFOLLOWOM_API_URL||"https://smmfollowom.com/api/v2");
+ if(!process.env.SMMFOLLOWOM_API_KEY||u.protocol!=="https:"||!["smmfollowom.com","www.smmfollowom.com"].includes(u.hostname))throw Error("Supplier configuration invalid");
+ const r=await fetch(u,{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded"},body:new URLSearchParams({key:process.env.SMMFOLLOWOM_API_KEY,action,...params}),cache:"no-store",signal:AbortSignal.timeout(16000)});
  if(!r.ok)throw Error("Supplier returned HTTP "+r.status);const obj=await r.json();if(obj?.error)throw Error(String(obj.error).slice(0,160));return obj;
 }
 async function getServices(){
@@ -20,7 +20,7 @@ async function getServices(){
  try{const s=await smm("services");if(!Array.isArray(s))throw Error("Invalid service response");servicesCache=s.filter(x=>x.service!=null&&Number.isFinite(Number(x.rate))&&Number(x.rate)>=0&&Number(x.min)>0&&Number(x.max)>=Number(x.min));updated=Date.now();return servicesCache;}
  catch(e){if(servicesCache.length&&Date.now()-updated<1200000)return servicesCache;throw e}
 }
-function shape(x){return {id:String(x.service),name:String(x.name||"Service"),category:String(x.category||"Other"),type:String(x.type||"Default"),min:Number(x.min),max:Number(x.max),per1000:Number(x.rate)*8,refill:!!x.refill,purchasable:/^(default|package)$/i.test(String(x.type||"Default"))}}
+function shape(x){return {id:String(x.service),name:String(x.name||"Service"),category:String(x.category||"Other"),type:String(x.type||"Default"),min:Number(x.min),max:Number(x.max),per1000:Number(x.rate)*11,refill:!!x.refill,purchasable:/^(default|package)$/i.test(String(x.type||"Default"))}}
 export async function GET(req){
  const op=name(req),flags=conf(),p=new URL(req.url).searchParams;
  if(op==="config")return send({ready:flags.database&&flags.supplier&&flags.payment,publicKey:flags.payment?process.env.PAYKINGS_NMI_COLLECT_PUBLIC_KEY:null});
@@ -48,7 +48,7 @@ export async function POST(req){
  if(!/^[0-9]+$/.test(id)||!Number.isSafeInteger(qty)||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||email.length>250||!target||target.protocol!=="https:"||!target.hostname.includes(".")||link.length>1200||token.length<10||token.length>500||!/^[a-f0-9-]{36}$/.test(idem))return send({error:"Invalid service, quantity, public URL, email or payment information"},400);
  let service;try{service=(await getServices()).find(s=>String(s.service)===id)}catch{return send({error:"Supplier prices unavailable; no charge submitted"},503)}
  if(!service||!/^(default|package)$/i.test(String(service.type||"Default"))||qty<Number(service.min)||qty>Number(service.max))return send({error:"This service needs additional order information or a different quantity"},422);
- const cents=Math.max(100,Math.ceil(Number(service.rate)*qty/1000*800));
+ const cents=Math.max(100,Math.ceil(Number(service.rate)*qty/1000*1100));
  if(!Number.isSafeInteger(x.expectedAmountCents)||x.expectedAmountCents!==cents)return send({error:"The price has changed. Refresh the catalog and confirm the new total before paying."},409);
  const orderId="ltx2_"+randomUUID(),secret=randomUUID()+"-"+randomUUID(),sql=db();
  try{const rows=await sql.query("insert into litix_v2_orders(id,email,service_id,service_name,category,destination,quantity,amount_cents,supplier_cost_cents,idempotency_key,tracking_token_hash,metadata) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12::jsonb) on conflict(idempotency_key) do nothing returning id",[orderId,email,id,String(service.name),String(service.category||"Other"),link,qty,cents,Math.ceil(Number(service.rate)*qty/10),idem,hash(secret),JSON.stringify({refill:!!service.refill})]);if(!rows.length)return send({error:"Payment already submitted; do not retry the same checkout"},409);await sql.query("update litix_v2_orders set payment_state='processing',payment_attempted_at=now() where id=$1",[orderId]);}catch{return send({error:"Database unavailable; no charge submitted"},503)}
