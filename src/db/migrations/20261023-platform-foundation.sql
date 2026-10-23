@@ -28,3 +28,18 @@ create table if not exists litix_idempotency_records (
   updated_at timestamptz not null default now()
 );
 create index if not exists litix_idempotency_created_idx on litix_idempotency_records(created_at);
+
+-- A recurring billing item must be current and successfully paid before watcher events are accepted.
+create table if not exists litix_recurring_subscriptions (
+  id text primary key,
+  workspace_id text not null references litix_workspaces(id) on delete cascade,
+  provider text not null,
+  provider_subscription_item_id text not null unique,
+  status text not null check (status in ('ACTIVE_PAID','PAST_DUE','CANCELLED','EXPIRED','PENDING')),
+  last_successful_payment_at timestamptz,
+  current_period_end timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists litix_recurring_subscriptions_workspace_status_idx
+  on litix_recurring_subscriptions(workspace_id,status,current_period_end);
