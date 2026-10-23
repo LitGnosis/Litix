@@ -136,11 +136,11 @@ export async function POST(request) {
       const baseRate = Number(item.base_rate);
       const storedRetailRate = Number(item.retail_rate);
       if (!Number.isFinite(baseRate) || baseRate < 0 || !Number.isFinite(storedRetailRate) ||
-          Math.abs(storedRetailRate - baseRate * 11) > 0.0001) {
+          Math.abs(storedRetailRate - Math.round((baseRate * 11 + Number.EPSILON) * 100) / 100) > 0.0001) {
         return send({ error: "Catalog pricing requires administrator reconciliation before checkout.", serviceId: row.resolvedClusterID }, 503);
       }
-      const retailRate = baseRate * 11;
-      const lineTotal = Math.round(retailRate * row.quantity) / 1000;
+      const retailRate = Math.round((baseRate * 11 + Number.EPSILON) * 100) / 100;
+      const lineTotal = Math.round((retailRate * row.quantity / 1000 + Number.EPSILON) * 100) / 100;
       total += lineTotal;
       pricedRows.push({
         row: index + 1,
