@@ -9,3 +9,22 @@ create table if not exists litix_profile_events (event_id text primary key,works
 create index if not exists litix_profile_events_queue_idx on litix_profile_events(state,received_at);
 create table if not exists litix_bulk_batches (id text primary key,workspace_id text not null references litix_workspaces(id) on delete cascade,created_by text not null,state text not null default 'draft' check(state in ('draft','validated','approved','processing','completed','cancelled','review')),row_count integer not null default 0 check(row_count between 0 and 500),estimated_total_cents bigint check(estimated_total_cents is null or estimated_total_cents>=0),approved_by text,approved_at timestamptz,created_at timestamptz not null default now());
 create table if not exists litix_bulk_batch_rows (batch_id text not null references litix_bulk_batches(id) on delete cascade,row_number integer not null,target_url text not null,quantity integer not null check(quantity>0),cluster_token_hash text not null,state text not null default 'pending' check(state in ('pending','validated','rejected','submitted','review')),error_code text,created_at timestamptz not null default now(),primary key(batch_id,row_number));
+
+-- Persistent importer pricing and idempotency records. Retail prices are server-owned.
+create table if not exists litix_catalog_prices (
+  service_id integer primary key,
+  service_name text not null,
+  base_rate numeric(18,6) not null check (base_rate >= 0),
+  retail_rate numeric(18,6) not null check (retail_rate >= 0),
+  updated_at timestamptz not null default now(),
+  constraint litix_catalog_markup_check check (retail_rate >= base_rate)
+);
+create table if not exists litix_idempotency_records (
+  request_hash char(64) primary key check (request_hash ~ '^[a-f0-9]{64}$'),
+  workspace_id text not null references litix_workspaces(id) on delete cascade,
+  status text not null check (status in ('PROCESSING','SUCCESS','FAILED')),
+  response_log jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists litix_idempotency_created_idx on litix_idempotency_records(created_at);
