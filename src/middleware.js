@@ -47,7 +47,7 @@ export async function middleware(request) {
 
   // Custom domains are opt-in. Do not trust arbitrary Host headers or silently serve another tenant.
   if (!primaryHosts.has(host) && !vercelHost) {
-    const resolver = process.env.LITIX_DOMAIN_RESOLUTION_URL;
+    const resolver = process.env.LITIX_DOMAIN_RESOLUTION_URL || "https://litix.net/api/v2/tenant/resolve";
     if (!resolver) return new NextResponse("Custom domains are not configured.", { status: 503 });
     try {
       const resolutionUrl = new URL(resolver);
@@ -55,13 +55,14 @@ export async function middleware(request) {
       const response = await fetch(resolutionUrl.toString(), { headers: { accept: "application/json" }, cache: "no-store" });
       if (!response.ok) return new NextResponse("Tenant resolution unavailable.", { status: 503 });
       const tenant = await response.json();
-      if (!tenant || tenant.isProvisioned !== true || typeof tenant.tenantId !== "string" || !/^[a-zA-Z0-9_-]{1,100}$/.test(tenant.tenantId)) {
+      const tenantId = tenant?.tenantId || tenant?.tenant;
+      if (!tenant || (tenant.isProvisioned !== true && tenant.customDomain !== true) || typeof tenantId !== "string" || !/^[a-zA-Z0-9_-]{1,100}$/.test(tenantId)) {
         return NextResponse.rewrite(new URL("/404", request.url));
       }
       if (pathname.startsWith("/api/") || pathname.startsWith("/_next/")) {
         // API routes must continue through authorization below; never bypass workspace checks on custom hosts.
       } else {
-        return NextResponse.rewrite(new URL("/_storefronts/" + tenant.tenantId + pathname + request.nextUrl.search, request.url));
+        return NextResponse.rewrite(new URL("/_storefronts/" + tenantId + pathname + request.nextUrl.search, request.url));
       }
     } catch {
       return new NextResponse("Tenant resolution failed.", { status: 503 });
