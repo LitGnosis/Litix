@@ -33,7 +33,7 @@ export async function GET(request) {
   let upstreamUrl;
   try {
     upstreamUrl = new URL(endpoint);
-    if (upstreamUrl.protocol !== "https:" || !["smmfollowom.com", "www.smmfollowom.com"].includes(upstreamUrl.hostname.toLowerCase())) throw new Error("Supplier HTTPS host required");
+    if (upstreamUrl.protocol !== "https:" || !["smmfollowom.com", "www.smmfollowom.com", "my.smmfollowom.com"].includes(upstreamUrl.hostname.toLowerCase())) throw new Error("Supplier HTTPS host required");
   } catch {
     return send({ error: "SMMFOLLOWOM_API_URL must be a valid HTTPS API endpoint." }, 503);
   }
