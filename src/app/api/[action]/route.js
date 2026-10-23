@@ -8,19 +8,19 @@ const send = (v,s=200) => Response.json(v,{status:s,headers:{"cache-control":"no
 const hash = v => createHash("sha256").update(String(v)).digest("hex");
 const conn = () => process.env.LITIX_V2_DATABASE_URL || process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.POSTGRES_PRISMA_URL;
 const db = () => neon(conn());
-const conf = () => ({database:!!conn(),supplier:!!process.env.SMMFOLLOWOM_API_KEY,payment:!!(process.env.NMI_SECURITY_KEY&&process.env.PAYKINGS_NMI_COLLECT_PUBLIC_KEY)});
+const conf = () => ({database:!!conn(),supplier:!!process.env.SMMGLOB_API_KEY,payment:!!(process.env.NMI_SECURITY_KEY&&process.env.PAYKINGS_NMI_COLLECT_PUBLIC_KEY)});
 const name = req => new URL(req.url).pathname.split("/").pop();
 const bounded = (v,n=120) => String(v??"").trim().slice(0,n);
 async function smm(action,params={}) {
- const u = new URL(process.env.SMMFOLLOWOM_API_URL || "https://smmfollowom.com/api/v2");
- if (!process.env.SMMFOLLOWOM_API_KEY || u.protocol!=="https:" || !["smmfollowom.com","www.smmfollowom.com","my.smmfollowom.com"].includes(u.hostname)) throw Error("Supplier configuration invalid");
- const r = await fetch(u,{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded"},body:new URLSearchParams({key:process.env.SMMFOLLOWOM_API_KEY,action,...params}),cache:"no-store",signal:AbortSignal.timeout(16000)});
+ const u = new URL(process.env.SMMGLOB_API_URL || "https://smmglob.com/api/v2");
+ if (!process.env.SMMGLOB_API_KEY || u.protocol!=="https:" || !["smmglob.com","www.smmglob.com","my.smmglob.com"].includes(u.hostname)) throw Error("SmmGlob supplier configuration invalid");
+ const r = await fetch(u,{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded"},body:new URLSearchParams({key:process.env.SMMGLOB_API_KEY,action,...params}),cache:"no-store",signal:AbortSignal.timeout(16000)});
  if(!r.ok) throw Error("Supplier returned HTTP "+r.status);
  const obj=await r.json(); if(obj?.error) throw Error(String(obj.error).slice(0,160)); return obj;
 }
 async function getServices(){
  if(servicesCache.length&&Date.now()-updated<300000)return servicesCache;
- try { const s=await smm("services"); if(!Array.isArray(s))throw Error("Invalid service response"); servicesCache=s.filter(x=>x.service!=null&&Number.isFinite(Number(x.rate))&&Number(x.rate)>=0&&Number(x.min)>0&&Number(x.max)>=Number(x.min)); updated=Date.now(); return servicesCache; }
+ try { const s=await smm("services"); if(!Array.isArray(s))throw Error("Invalid service response"); servicesCache=s.filter(x=>{const label=String(x.name||"")+" "+String(x.category||"");const regular=/^(default|package)$/i.test(String(x.type||"Default"));const usa=/(\busa\b|u\.s\.a\.|united states|american)/i.test(label);const refill=x.refill===true||String(x.refill).toLowerCase()==="true"||String(x.refill)==="1";const noDrop=/(no[ -]?drop|drop[ -]?protection|no[ -]?drop guarantee)/i.test(label);return x.service!=null&&Number.isFinite(Number(x.rate))&&Number(x.rate)>0&&Number(x.min)>0&&Number(x.max)>=Number(x.min)&&regular&&usa&&refill&&noDrop;}); updated=Date.now(); return servicesCache; }
  catch(e){if(servicesCache.length&&Date.now()-updated<1200000)return servicesCache;throw e}
 }
 function shape(x){return {id:String(x.service),name:String(x.name||"Service"),category:String(x.category||"Other"),type:String(x.type||"Default"),min:Number(x.min),max:Number(x.max),per1000:Number(x.rate)*11,refill:!!x.refill,purchasable:/^(default|package)$/i.test(String(x.type||"Default"))};}
@@ -32,7 +32,7 @@ export async function GET(req){
  if(op==="smmservices"){
   const cat=bounded(p.get("category"),100),term=bounded(p.get("q"),120).toLowerCase(),page=Math.max(1,Math.min(10000,Number(p.get("page"))||1));
   try{const all=await getServices(),filtered=all.filter(x=>(!cat||String(x.category||"Other")===cat)&&(!term||[x.service,x.name,x.category].some(z=>String(z||"").toLowerCase().includes(term))));return send({items:filtered.slice((page-1)*24,page*24).map(shape),categories:[...new Set(all.map(x=>String(x.category||"Other")))].sort(),total:filtered.length,allCount:all.length,page})}
-  catch(e){console.error("supplier catalog unavailable",String(e?.message||"").slice(0,100));return send({error:"Live supplier catalog unavailable",items:[],categories:[],total:0},503)}
+  catch(e){console.error("SmmGlob catalog unavailable",String(e?.message||"").slice(0,100));return send({error:"Live supplier catalog unavailable",items:[],categories:[],total:0},503)}
  }
  if(op==="track"){
   const id=bounded(p.get("id"),80),secret=bounded(p.get("token"),150);
@@ -49,7 +49,7 @@ export async function POST(req){
  let x;try{x=await req.json()}catch{return send({error:"Invalid JSON"},400)}
  const id=bounded(x.serviceId,32),qty=Number(x.quantity),email=bounded(x.email,250).toLowerCase(),link=bounded(x.link,1200),token=bounded(x.paymentToken,500),idem=bounded(x.idempotencyKey,36);let target;try{target=new URL(link)}catch{}
  if(!/^[0-9]+$/.test(id)||!Number.isSafeInteger(qty)||qty<1||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||!target||target.protocol!=="https:"||!target.hostname.includes(".")||token.length<10||!/^[a-f0-9-]{36}$/.test(idem))return send({error:"Invalid service, quantity, public URL, email or payment information"},400);
- let service;try{service=(await getServices()).find(s=>String(s.service)===id)}catch{return send({error:"Supplier prices unavailable; no charge submitted"},503)}
+ let service;try{service=(await getServices()).find(s=>String(s.service)===id)}catch{return send({error:"SmmGlob prices unavailable; no charge submitted"},503)}
  if(!service||!/^(default|package)$/i.test(String(service.type||"Default"))||qty<Number(service.min)||qty>Number(service.max))return send({error:"This service needs additional order information or a different quantity"},422);
  const cents=Math.max(100,Math.ceil(Number(service.rate)*qty/1000*1100));if(!Number.isSafeInteger(cents)||cents>100000000)return send({error:"Order total is outside supported limits"},422);
  if(!Number.isSafeInteger(x.expectedAmountCents)||x.expectedAmountCents!==cents)return send({error:"The price has changed. Refresh the catalog and confirm the new total before paying."},409);
