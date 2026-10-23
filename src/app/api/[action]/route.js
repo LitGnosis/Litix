@@ -11,7 +11,7 @@ const conf=()=>({database:!!conn(),supplier:!!process.env.SMMFOLLOWOM_API_KEY,pa
 const name=req=>new URL(req.url).pathname.split("/").pop();
 async function smm(action,params={}){
  const u=new URL(process.env.SMMFOLLOWOM_API_URL||"https://smmfollowom.com/api/v2");
- if(!process.env.SMMFOLLOWOM_API_KEY||u.protocol!=="https:"||!["smmfollowom.com","www.smmfollowom.com"].includes(u.hostname))throw Error("Supplier configuration invalid");
+ if(!process.env.SMMFOLLOWOM_API_KEY||u.protocol!=="https:"||!["smmfollowom.com","www.smmfollowom.com","my.smmfollowom.com"].includes(u.hostname))throw Error("Supplier configuration invalid");
  const r=await fetch(u,{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded"},body:new URLSearchParams({key:process.env.SMMFOLLOWOM_API_KEY,action,...params}),cache:"no-store",signal:AbortSignal.timeout(16000)});
  if(!r.ok)throw Error("Supplier returned HTTP "+r.status);const obj=await r.json();if(obj?.error)throw Error(String(obj.error).slice(0,160));return obj;
 }
