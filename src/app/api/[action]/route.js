@@ -20,10 +20,10 @@ async function smm(action,params={}) {
 }
 async function getServices(){
  if(servicesCache.length&&Date.now()-updated<300000)return servicesCache;
- try { const s=await smm("services"); if(!Array.isArray(s))throw Error("Invalid service response"); servicesCache=s.filter(x=>{const label=String(x.name||"")+" "+String(x.category||"");const regular=/^(default|package)$/i.test(String(x.type||"Default"));const usa=/(\busa\b|u\.s\.a\.|united states|american)/i.test(label);const refill=x.refill===true||String(x.refill).toLowerCase()==="true"||String(x.refill)==="1";const noDrop=/(no[ -]?drop|drop[ -]?protection|no[ -]?drop guarantee)/i.test(label);return x.service!=null&&Number.isFinite(Number(x.rate))&&Number(x.rate)>0&&Number(x.min)>0&&Number(x.max)>=Number(x.min)&&regular&&usa&&refill&&noDrop;}); updated=Date.now(); return servicesCache; }
+ try { const s=await smm("services"); if(!Array.isArray(s))throw Error("Invalid service response"); servicesCache=s.filter(x=>{const label=String(x.name||"")+" "+String(x.category||"");const regular=/^default$/i.test(String(x.type||"Default"));const usa=/(\busa\b|u\.s\.a\.|united states|american)/i.test(label);const refill=x.refill===true||String(x.refill).toLowerCase()==="true"||String(x.refill)==="1";const noDrop=/(no[ -]?drop|drop[ -]?protection|no[ -]?drop guarantee)/i.test(label);return x.service!=null&&Number.isFinite(Number(x.rate))&&Number(x.rate)>0&&Number(x.min)>0&&Number(x.max)>=Number(x.min)&&regular&&usa&&refill&&noDrop;}); updated=Date.now(); return servicesCache; }
  catch(e){if(servicesCache.length&&Date.now()-updated<1200000)return servicesCache;throw e}
 }
-function shape(x){return {id:String(x.service),name:String(x.name||"Service"),category:String(x.category||"Other"),type:String(x.type||"Default"),min:Number(x.min),max:Number(x.max),per1000:Number(x.rate)*11,refill:!!x.refill,purchasable:/^(default|package)$/i.test(String(x.type||"Default"))};}
+function shape(x){return {id:String(x.service),name:String(x.name||"Service"),category:String(x.category||"Other"),type:String(x.type||"Default"),min:Number(x.min),max:Number(x.max),per1000:Number(x.rate)*11,refill:!!x.refill,purchasable:/^default$/i.test(String(x.type||"Default"))};}
 export async function GET(req){
  const op=name(req),flags=conf(),p=new URL(req.url).searchParams;
  if(!["config","health","smmservices","track"].includes(op))return send({error:"Unknown route"},404);
@@ -50,7 +50,7 @@ export async function POST(req){
  const id=bounded(x.serviceId,32),qty=Number(x.quantity),email=bounded(x.email,250).toLowerCase(),link=bounded(x.link,1200),token=bounded(x.paymentToken,500),idem=bounded(x.idempotencyKey,36);let target;try{target=new URL(link)}catch{}
  if(!/^[0-9]+$/.test(id)||!Number.isSafeInteger(qty)||qty<1||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||!target||target.protocol!=="https:"||!target.hostname.includes(".")||token.length<10||!/^[a-f0-9-]{36}$/.test(idem))return send({error:"Invalid service, quantity, public URL, email or payment information"},400);
  let service;try{service=(await getServices()).find(s=>String(s.service)===id)}catch{return send({error:"SmmGlob prices unavailable; no charge submitted"},503)}
- if(!service||!/^(default|package)$/i.test(String(service.type||"Default"))||qty<Number(service.min)||qty>Number(service.max))return send({error:"This service needs additional order information or a different quantity"},422);
+ if(!service||!/^default$/i.test(String(service.type||"Default"))||qty<Number(service.min)||qty>Number(service.max))return send({error:"This service needs additional order information or a different quantity"},422);
  const cents=Math.max(100,Math.ceil(Number(service.rate)*qty/1000*1100));if(!Number.isSafeInteger(cents)||cents>100000000)return send({error:"Order total is outside supported limits"},422);
  if(!Number.isSafeInteger(x.expectedAmountCents)||x.expectedAmountCents!==cents)return send({error:"The price has changed. Refresh the catalog and confirm the new total before paying."},409);
  const orderId="ltx2_"+randomUUID(),secret=randomUUID()+"-"+randomUUID(),sql=db();
