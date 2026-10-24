@@ -36,3 +36,13 @@ Internal cancellation adapter added based on NMI Classic recurring documentation
 User permission to prepare a controlled live test does not approve any particular charge. Before a test, disclose exact amount, first charge date, subsequent charge schedule and cancellation method, then obtain explicit approval. Supplier fulfillment stays off. Do not use creation acknowledgement as evidence of a paid billing period. Creation/verified settlement and durable authenticated cancellation remain unfinished; this adapter alone does not make the product ready.
 
 Temporary owner-requested test override: the simulator 100-likes tier is $0.50 USD/month instead of $5.60. Other tiers unchanged. This does not authorize or submit a live charge, and does not change production pricing.
+
+## Durable management implementation (disabled)
+
+Added a dedicated unapplied monthly migration: immutable amount/consent fields, token expiry/hash, per-provider subscription identity, unique settled transaction IDs and three unique UTC-day post slots. Tables alone do not process settlement or enforce entitlement; workers must use atomic transactions. No migration was executed.
+
+Management uses a random 256-bit bearer capability scoped to one subscription, not an email address or caller-provided subscription ID. Private management links must carry the token in a URL fragment, never a query parameter. The page removes that fragment immediately, keeps it in memory, and sends it only in Authorization headers. Reload requires the original link again. Anyone possessing the link can manage/cancel that one subscription: authenticated account login and secure email delivery/token issuance remain separate unfinished work.
+
+GET/POST /api/subscriptions/v1/manage are disabled unless LITIX_MONTHLY_MANAGEMENT_ENABLED=true and dedicated LITIX_MONTHLY_DATABASE_URL is configured. Do not enable before schema review, private-link delivery and integration testing. Cancellation atomically claims none→dispatching before gateway I/O; concurrent attempts do not dispatch again. Acknowledged cancellation becomes confirmed; all uncertain/rejected outcomes require review. Process death after claim leaves dispatching for operator reconciliation, not automatic retry. Cancellation does not erase verified paid-through data. Gateway success is not a payment or entitlement claim.
+
+Still incomplete: subscription creation, secure initial management-token delivery, verified renewal/settlement consumer, atomic paid-post claim worker, real account sign-in and billing receipts. The management page is not launch approval and no credentials or production settings were changed.
