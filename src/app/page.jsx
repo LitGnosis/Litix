@@ -29,12 +29,14 @@ export default function Home(){
    // Use explicit attribute names: Collect.js reads these attributes during
    // script initialization, so they must exist before the script is inserted.
    script.setAttribute("data-litix-paykings-collect","true");
+   // NMI's JavaScript-based activation expects the tokenization key on the
+   // script tag; the remaining settings and hosted-field selectors are passed
+   // to CollectJS.configure below. Avoid mixing auto-activation attributes
+   // with the explicit JavaScript configuration path.
    script.setAttribute("data-tokenization-key",config.publicKey);
-   script.setAttribute("data-variant","inline");
-   script.setAttribute("data-style-sniffer","false");
-   script.setAttribute("data-field-ccnumber-selector","#ccnumber");
-   script.setAttribute("data-field-ccexp-selector","#ccexp");
-   script.setAttribute("data-field-cvv-selector","#cvv");
+   for (const attr of ["data-variant","data-style-sniffer","data-field-ccnumber-selector","data-field-ccexp-selector","data-field-cvv-selector"]) {
+    script.removeAttribute(attr);
+   }
    return script;
   };
 
