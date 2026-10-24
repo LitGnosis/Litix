@@ -126,6 +126,7 @@ export default function Home(){
   };
 
   let script=document.querySelector('script[data-litix-paykings-collect="true"]');
+  const scriptWasAlreadyPresent=!!script;
   // Cover download stalls as well as iframe initialization.
   timeoutId=window.setTimeout(()=>{
    if(script)script.dataset.litixFailed="true";
@@ -161,6 +162,10 @@ export default function Home(){
    script.addEventListener("load",onLoad,{once:true});
    script.addEventListener("error",onError,{once:true});
    if(!script.isConnected)document.head.appendChild(script);
+   // If an earlier render inserted this script, its load event may already
+   // have fired before this effect attached listeners. Start the bounded API
+   // poll immediately rather than waiting for an event that will never recur.
+   if(scriptWasAlreadyPresent)configureCollectJS();
   }
 
   return ()=>{
