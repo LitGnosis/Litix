@@ -59,7 +59,7 @@ export default function Home(){
      initializeCollectJS();
      return;
     }
-    if(Date.now()-pollStartedAt>=3000){
+    if(Date.now()-pollStartedAt>=12000){
      if(pollId!==null)window.clearInterval(pollId);
      pollId=null;
      fail(!apiReady
@@ -145,6 +145,10 @@ export default function Home(){
    // effect attached listeners, or may lack the key attribute entirely.
    // Replace only that stale, not-yet-initialized script, then set every
    // required data attribute BEFORE inserting the script into the document.
+   // A previously loaded script can fire "load" without exposing CollectJS.configure
+   // (for example, an interrupted/partially initialized stale copy). Do not reuse
+   // a completed script that has no API or was loaded with a different key.
+   if(script && !window.CollectJS?.configure && (script.dataset.tokenizationKey!==config.publicKey || script.dataset.litixLoaded==="true")){script.remove();script=null;}
    if(script?.dataset.litixFailed==="true"){script.remove();script=null;}
    if(!script){
     const stale=document.querySelector('script[src="'+scriptUrl+'"]');
