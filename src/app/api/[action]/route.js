@@ -18,12 +18,33 @@ async function smm(action,params={}) {
  if(!r.ok) throw Error("Supplier returned HTTP "+r.status);
  const obj=await r.json(); if(obj?.error) throw Error(String(obj.error).slice(0,160)); return obj;
 }
+const truth = v => v === true || String(v).toLowerCase() === "true" || String(v) === "1";
+const hasRefill = x => truth(x.refill) || truth(x.refillable) || truth(x.auto_refill) || truth(x.autorefill);
+const hasNoDrop = x => {
+ const evidence = [x.name,x.category,x.description,x.desc,x.notes,x.terms].map(v=>String(v||"")).join(" ");
+ return /no[ -]?drop|drop[ -]?protection|no[ -]?drop guarantee/i.test(evidence) ||
+   truth(x.no_drop) || truth(x.noDrop) || truth(x.drop_protection) || truth(x.no_drop_guarantee);
+};
 async function getServices(){
  if(servicesCache.length&&Date.now()-updated<300000)return servicesCache;
- try { const s=await smm("services"); if(!Array.isArray(s))throw Error("Invalid service response"); servicesCache=s.filter(x=>{const label=String(x.name||"")+" "+String(x.category||"");const meta=[x.country,x.region,x.location,x.geo,x.audience,x.target,x.service_type].map(v=>String(v||"")).join(" ");const regular=/^(default|regular|standard)$/i.test(String(x.type||"Default"))||/\b(regular|standard)\b/i.test(label);const usa=/(\busa\b|u\.s\.a\.|united states|american|\busa\b|\bus\b)/i.test(label+" "+meta);const truth=v=>v===true||String(v).toLowerCase()==="true"||String(v)==="1";const refill=truth(x.refill)||truth(x.refillable)||truth(x.auto_refill)||truth(x.autorefill);const noDrop=/(no[ -]?drop|drop[ -]?protection|no[ -]?drop guarantee)/i.test(label)||truth(x.no_drop)||truth(x.noDrop)||truth(x.drop_protection)||truth(x.no_drop_guarantee);return x.service!=null&&Number.isFinite(Number(x.rate))&&Number(x.rate)>0&&Number(x.min)>0&&Number(x.max)>=Number(x.min)&&regular&&usa&&refill&&noDrop;}); updated=Date.now(); return servicesCache; }
- catch(e){if(servicesCache.length&&Date.now()-updated<1200000)return servicesCache;throw e}
+ try {
+  const s=await smm("services");
+  if(!Array.isArray(s))throw Error("Invalid service response");
+  servicesCache=s.filter(x=>{
+   const label=[x.name,x.category,x.description,x.desc,x.platform].map(v=>String(v||"")).join(" ");
+   const meta=[x.country,x.region,x.location,x.geo,x.audience,x.target,x.service_type].map(v=>String(v||"")).join(" ");
+   const regular=/^(default|regular|standard)$/i.test(String(x.type||"Default"))||/\b(regular|standard)\b/i.test(label);
+   const usa=/(\busa\b|u\.s\.a\.|united states|american|\bus\b)/i.test(label+" "+meta);
+   return x.service!=null&&Number.isFinite(Number(x.rate))&&Number(x.rate)>0&&Number(x.min)>0&&Number(x.max)>=Number(x.min)&&regular&&usa&&hasRefill(x);
+  });
+  updated=Date.now();
+  return servicesCache;
+ } catch(e) {
+  if(servicesCache.length&&Date.now()-updated<1200000)return servicesCache;
+  throw e;
+ }
 }
-function shape(x){return {id:String(x.service),name:String(x.name||"Service"),category:String(x.category||"Other"),type:String(x.type||"Default"),min:Number(x.min),max:Number(x.max),per1000:Number(x.rate)*11,refill:(x.refill===true||String(x.refill).toLowerCase()==="true"||String(x.refill)==="1"),purchasable:/^default$/i.test(String(x.type||"Default"))};}
+function shape(x){return {id:String(x.service),name:String(x.name||"Service"),category:String(x.category||"Other"),type:String(x.type||"Default"),min:Number(x.min),max:Number(x.max),per1000:Number(x.rate)*11,refill:hasRefill(x),noDrop:hasNoDrop(x),purchasable:/^default$/i.test(String(x.type||"Default"))};}
 export async function GET(req){
  const op=name(req),flags=conf(),p=new URL(req.url).searchParams;
  if(!["config","health","smmservices","track"].includes(op))return send({error:"Unknown route"},404);
