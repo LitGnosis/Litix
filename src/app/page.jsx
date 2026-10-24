@@ -173,10 +173,10 @@ export default function Home(){
    script.addEventListener("load",onLoad,{once:true});
    script.addEventListener("error",onError,{once:true});
    if(!script.isConnected)document.head.appendChild(script);
-   // If an earlier render inserted this script, its load event may already
-   // have fired before this effect attached listeners. Start the bounded API
-   // poll immediately rather than waiting for an event that will never recur.
-   if(scriptWasAlreadyPresent)configureCollectJS();
+   // Begin bounded polling immediately after insertion. Do not depend on the
+   // load event to kick off readiness checks: a cached/SPA-loaded script can
+   // complete before listeners attach, and some builds expose the API later.
+   configureCollectJS();
   }
 
   return ()=>{
