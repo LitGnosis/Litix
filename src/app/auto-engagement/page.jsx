@@ -14,7 +14,7 @@ export default function AutoEngagement() {
  }
  return <main className="wrap"><nav className="nav"><a href="/">← Single-order storefront</a></nav>
   <section className="panel" style={{maxWidth:720,margin:'24px auto'}}>
-   <div className="kicker">PREVIEW · NOT ACTIVE</div><h1>Auto Engagement setup</h1>
+   <div className="kicker">PREVIEW · NOT ACTIVE</div><h1>Auto Engagement setup</h1><p><a href="/auto-engagement/sandbox">Test monthly plans, daily limits and cancellation — sandbox only →</a></p>
    <p>Plan likes and views for future posts. This draft tool does not monitor profiles, charge cards, or create supplier subscriptions.</p>
    <p className="small">The 3:1 views-to-likes ratio is a quantity preference—not evidence of organic activity, natural timing, or improved algorithmic reach. Supplier limits and eligibility are not yet verified.</p>
    <form className="form" onSubmit={review}>

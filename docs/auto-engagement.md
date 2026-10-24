@@ -22,3 +22,9 @@ PR #16 prepares subscription modules against an older follower-checkout branch. 
 No activation switch is included: setting an environment variable cannot bypass these missing integrations. A separate reviewed implementation and approval are required before production changes.
 
 Public provider evidence checked 2026-10-24: https://smmglob.com/api-docs documents POST /api/v2 with action=add, service, link, quantity and optional runs/interval. The retrieved documentation does not establish username/min/max/posts subscription semantics. This is a verification gap, not proof the provider cannot support subscriptions. Obtain the exact subscription-specific contract and eligible services before quoting or dispatching.
+
+## Monthly simulator
+
+/auto-engagement/sandbox is an in-memory, browser-only simulation, not NMI sandbox integration. Prices approved from owner screenshots: 100 likes $5.60, 150 $8.00, 250 $12.00, 1,000 $32.00, 2,000 $56.00 USD/month. Do not infer missing 50/500 tier prices or claim Leofame uses recurring billing. Supplier margins remain unverified. This simulation includes likes only; it makes no promise of included views.
+
+Proposed allowance: three eligible posts per UTC calendar day. Explicit monthly renewal consent; cancel anytime stops future simulated renewals and preserves current-period simulated coverage. Calendar month ends clamp to the final day when necessary. These are proposed semantics, not production billing guarantees. Cancellation is idempotent within the simulation, declined renewals do not add coverage, and duplicate post IDs do not consume allowance twice. No account, billing email, durable ledger, authenticated cancellation endpoint or real recurring gateway call is implemented. Refreshing erases the simulation. Never treat client state as a paid entitlement.
