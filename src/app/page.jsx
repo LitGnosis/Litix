@@ -5,7 +5,7 @@ import PremiumInlineCheckout from "../components/PremiumInlineCheckout";
 const money=n=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(n/100);
 // Collect.js is documented as a global named CollectJS. Some script builds expose
 // that binding without a window property, so resolve both forms consistently.
-const getCollectJS=()=>{try{if(typeof CollectJS!=="undefined")return CollectJS}catch{};return typeof window!=="undefined"?getCollectJS():undefined};
+const getCollectJS=()=>{try{if(typeof CollectJS!=="undefined")return CollectJS}catch{};return typeof window!=="undefined"?window.CollectJS:undefined};
 const whatsappNumber=(process.env.NEXT_PUBLIC_WHATSAPP_NUMBER||"").replace(/\D/g,"");
 export default function Home(){
  const GenUIcopy=text=>{if(navigator.clipboard?.writeText)navigator.clipboard.writeText(text)};
