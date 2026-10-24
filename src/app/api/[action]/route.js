@@ -9,13 +9,13 @@ const hash = v => createHash("sha256").update(String(v)).digest("hex");
 const conn = () => process.env.LITIX_V2_DATABASE_URL || process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.POSTGRES_PRISMA_URL;
 const db = () => neon(conn());
 const publicCollectKey = () => process.env.NEXT_PUBLIC_PAYKINGS_NMI_COLLECT_PUBLIC_KEY || process.env.PAYKINGS_NMI_COLLECT_PUBLIC_KEY;
-const conf = () => ({database:!!conn(),supplier:!!process.env.SMMFOLLOWOM_API_KEY,payment:!!(process.env.NMI_SECURITY_KEY&&publicCollectKey())});
+const conf = () => ({database:!!conn(),supplier:!!process.env.SMMGLOB_API_KEY,payment:!!(process.env.NMI_SECURITY_KEY&&publicCollectKey())});
 const name = req => new URL(req.url).pathname.split("/").pop();
 const bounded = (v,n=120) => String(v??"").trim().slice(0,n);
 async function smm(action,params={}) {
- const u = new URL(process.env.SMMFOLLOWOM_API_URL || "https://my.smmfollowom.com/api/v2");
- if (!process.env.SMMFOLLOWOM_API_KEY || u.protocol!=="https:" || !["my.smmfollowom.com","smmfollowom.com","www.smmfollowom.com"].includes(u.hostname)) throw Error("SMMFOLLOWOM supplier configuration invalid");
- const r = await fetch(u,{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded"},body:new URLSearchParams({key:process.env.SMMFOLLOWOM_API_KEY,action,...params}),cache:"no-store",signal:AbortSignal.timeout(16000)});
+ const u = new URL(process.env.SMMGLOB_API_URL || "https://smmglob.com/api/v2");
+ if (!process.env.SMMGLOB_API_KEY || u.protocol!=="https:" || !["smmglob.com","www.smmglob.com"].includes(u.hostname)) throw Error("SMMGLOB supplier configuration invalid");
+ const r = await fetch(u,{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded"},body:new URLSearchParams({key:process.env.SMMGLOB_API_KEY,action,...params}),cache:"no-store",signal:AbortSignal.timeout(16000)});
  if(!r.ok) throw Error("Supplier returned HTTP "+r.status);
  const obj=await r.json(); if(obj?.error) throw Error(String(obj.error).slice(0,160)); return obj;
 }
@@ -36,9 +36,9 @@ async function getServices(){
    const label=[x.name,x.category,x.description,x.desc,x.platform].map(v=>String(v||"")).join(" ");
    const meta=[x.country,x.region,x.location,x.geo,x.audience,x.target,x.service_type].map(v=>String(v||"")).join(" ");
    const regular=/^(default|regular|standard)$/i.test(String(x.type||"Default"))||/\b(regular|standard)\b/i.test(label);
-   const usa=/(\busa\b|u\.s\.a\.|united states|american|\bus\b)/i.test(label+" "+meta);const outsideUS = /(?:usa\s*mix|mix\s*usa|worldwide|global|international|(?:usa|u\.s\.a\.|united states|\bus\b)\s*[/,+&-]\s*(?:uk|u\.k\.|united kingdom|asia|europe|canada|australia|worldwide|global)|(?:uk|u\.k\.|united kingdom|asia|europe|canada|australia)\s*[/,+&-]\s*(?:usa|u\.s\.a\.|united states|\bus\b))/i;
+   const usa=/(\busa\b|u\.s\.a\.|united states|american|\bus\b)/i.test(label+" "+meta);const outsideUS = /(?:usa\s*mix|mix\s*usa|worldwide|global|international|(?:usa|u\.s\.a\.|united states|\bus\b)\s*[/,+&-]\s*(?:uk|u\.k|united kingdom|asia|europe|canada|australia|worldwide|global)|(?:uk|u\.k|united kingdom|asia|europe|canada|australia)\s*[/,+&-]\s*(?:usa|u\.s\.a\.|united states|\bus\b))/i;
    const mixedGeography = outsideUS.test(label+" "+meta);
-   return x.service!=null&&Number.isFinite(Number(x.rate))&&Number(x.rate)>0&&Number(x.min)>0&&Number(x.max)>=Number(x.min)&&regular&&usa&&!mixedGeography&&hasRefill(x)&&hasNoDrop(x);
+   const socialRequested=/(?:instagram|(?:^|[^a-z])ig(?:[^a-z]|$)|tik[\s-]*tok)/i.test(label)&&/\b(?:likes?|views?|shares?|reposts?|comments?)\b/i.test(label);return x.service!=null&&Number.isFinite(Number(x.rate))&&Number(x.rate)>0&&Number(x.min)>0&&Number(x.max)>=Number(x.min)&&regular&&(socialRequested||(usa&&!mixedGeography&&hasRefill(x)&&hasNoDrop(x)));
   });
   updated=Date.now();
   return servicesCache;
@@ -47,16 +47,36 @@ async function getServices(){
   throw e;
  }
 }
-function shape(x){return {id:String(x.service),name:String(x.name||"Service"),category:String(x.category||"Other"),type:String(x.type||"Default"),min:Number(x.min),max:Number(x.max),per1000:Number(x.rate)*5,refill:hasRefill(x),noDrop:hasNoDrop(x),purchasable:/^default$/i.test(String(x.type||"Default"))};}
+// Geographic order uses supplier targeting labels, not delivery/refill claims.
+// Explicit lower-priority targeting wins for mixed USA/country listings.
+const geographyRank=x=>{
+ const label=[x.name,x.category,x.platform,x.country,x.region,x.location,x.geo,x.audience,x.target].map(v=>String(v||"")).join(" ").normalize("NFKD").replace(/[\u0300-\u036f]/g,"");
+ const last=/\b(?:turkey|turkiye|turkish|uk|u\.k|united kingdom|british|ireland|irish|bangladesh|bangladeshi|kenya|kenyan|germany|german|india|indian|france|french|spain|spanish|italy|italian|belgium|belgian|czech republic|czechia|czech|denmark|danish|greece|greek|malaysia|malaysian|mexico|mexican|morocco|moroccan|pakistan|pakistani|poland|polish|portugal|portuguese|south africa|south african|south korea|south korean|sweden|swedish|ukraine|ukrainian|uae|u\.a\.e|united arab emirates|emirati|vietnam|vietnamese|australia|australian|indonesia|indonesian)\b|🇹🇷|🇬🇧|🇮🇪|🇧🇩|🇰🇪|🇩🇪|🇮🇳|🇫🇷|🇪🇸|🇮🇹|🇧🇪|🇨🇿|🇩🇰|🇬🇷|🇲🇾|🇲🇽|🇲🇦|🇵🇰|🇵🇱|🇵🇹|🇿🇦|🇰🇷|🇸🇪|🇺🇦|🇦🇪|🇻🇳|🇦🇺|🇮🇩/i;
+ if(last.test(label))return 2;
+ return /\b(?:usa|united states(?: of america)?|american|us)\b|u\.s\.a?\.|🇺🇸/i.test(label)?0:1;
+};
+const platformRank=x=>{const z=String(x.name||"")+" "+String(x.category||"");return /instagram|(?:^|[^a-z])ig(?:[^a-z]|$)/i.test(z)?0:/tik[\s-]*tok/i.test(z)?1:/youtube|\byt\b/i.test(z)?2:/facebook|\bfb\b/i.test(z)?3:/spotify/i.test(z)?4:5};
+const platformName=x=>["Instagram","TikTok","YouTube","Facebook","Spotify","Other"][platformRank(x)];
+// Supplier metadata determines pricing; client-provided labels never set markup.
+const retailMultiplier=x=>{const label=[x.name,x.category].map(v=>String(v||"" )).join(" ");return platformName(x)==="TikTok"&&/\blikes?\b/i.test(label)?9:5;};
+// These service-specific profits are USD per 1,000 above the live wholesale rate.
+// Equivalent markup percentage = profit / wholesale × 100; bypass the general discount.
+const profitPer1000=Object.freeze({"33677":10,"33516":5,"33337":7.5,"33338":7.5});
+const retailPer1000=x=>{
+ const profit=profitPer1000[String(x.service)];
+ if(profit!==undefined)return Number(x.rate)+profit;
+ const rate=Number(x.rate)*retailMultiplier(x);return rate>30?rate/2:rate;
+};
+function shape(x){return {id:String(x.service),name:String(x.name||"Service"),category:String(x.category||"Other"),type:String(x.type||"Default"),min:Number(x.min),max:Number(x.max),per1000:retailPer1000(x),refill:hasRefill(x),noDrop:hasNoDrop(x),purchasable:/^default$/i.test(String(x.type||"Default"))};}
 export async function GET(req){
  const op=name(req),flags=conf(),p=new URL(req.url).searchParams;
  if(!["config","health","smmservices","track"].includes(op))return send({error:"Unknown route"},404);
  if(op==="config")return send({ready:flags.database&&flags.supplier&&flags.payment,publicKey:publicCollectKey()||null});
  if(op==="health"){let database=false;if(flags.database)try{await db().query("select 1",[]);database=true}catch{}const gatewayMode=process.env.NMI_GATEWAY_MODE==="TEST"?"TEST":"PRODUCTION";const gatewayConfigured=gatewayMode==="TEST"?!!(process.env.NMI_TEST_SECURITY_KEY&&process.env.NMI_TEST_GATEWAY_URL):!!process.env.NMI_SECURITY_KEY;return send({service:"litix-v2",database,supplierConfigured:flags.supplier,paykingsConfigured:flags.payment,gatewayMode,testGatewayConfigured:gatewayMode==="TEST"?gatewayConfigured:undefined,liveTransactionVerified:false,ready:database&&flags.supplier&&flags.payment},database?200:503)}
  if(op==="smmservices"){
-  const cat=bounded(p.get("category"),100),term=bounded(p.get("q"),120).toLowerCase(),page=Math.max(1,Math.min(10000,Number(p.get("page"))||1));
-  try{const all=await getServices(),filtered=all.filter(x=>(!cat||String(x.category||"Other")===cat)&&(!term||[x.service,x.name,x.category].some(z=>String(z||"").toLowerCase().includes(term))));return send({items:filtered.slice((page-1)*24,page*24).map(shape),categories:[...new Set(all.map(x=>String(x.category||"Other")))].sort(),total:filtered.length,allCount:all.length,page})}
-  catch(e){console.error("SMMFOLLOWOM catalog unavailable",String(e?.message||"").slice(0,100));return send({error:"Live supplier catalog unavailable",items:[],categories:[],total:0},503)}
+  const cat=bounded(p.get("category"),100),platform=bounded(p.get("platform"),30),term=bounded(p.get("q"),120).toLowerCase(),page=Math.max(1,Math.min(10000,Number(p.get("page"))||1));
+  try{const all=await getServices(),filtered=all.filter(x=>(!cat||String(x.category||"Other")===cat)&&(!platform||platform==="All platforms"||platformName(x)===platform)&&(!term||[x.service,x.name,x.category].some(z=>String(z||"").toLowerCase().includes(term)))).sort((a,b)=>geographyRank(a)-geographyRank(b)||platformRank(a)-platformRank(b)||String(a.name||"").localeCompare(String(b.name||"")));return send({items:filtered.slice((page-1)*24,page*24).map(shape),categories:[...new Set(all.map(x=>String(x.category||"Other")))].sort(),total:filtered.length,allCount:all.length,page})}
+  catch(e){console.error("SMMGLOB catalog unavailable",String(e?.message||"").slice(0,100));return send({error:"Live supplier catalog unavailable",items:[],categories:[],total:0},503)}
  }
  if(op==="track"){
   const id=bounded(p.get("id"),80),secret=bounded(p.get("token"),150);
@@ -80,9 +100,9 @@ export async function POST(req){
  let x;try{x=await req.json()}catch{return send({error:"Invalid JSON"},400)}
  const id=bounded(x.serviceId,32),qty=Number(x.quantity),email=bounded(x.email,250).toLowerCase(),link=bounded(x.link,1200),token=bounded(x.paymentToken,500),idem=bounded(x.idempotencyKey,36);let target;try{target=new URL(link)}catch{}
  if(!/^[0-9]+$/.test(id)||!Number.isSafeInteger(qty)||qty<1||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||!target||target.protocol!=="https:"||!target.hostname.includes(".")||token.length<10||!/^[a-f0-9-]{36}$/.test(idem))return send({error:"Invalid service, quantity, public URL, email or payment information"},400);
- let service;try{service=(await getServices()).find(s=>String(s.service)===id)}catch{return send({error:"SMMFOLLOWOM prices unavailable; no charge submitted"},503)}
+ let service;try{service=(await getServices()).find(s=>String(s.service)===id)}catch{return send({error:"SMMGLOB prices unavailable; no charge submitted"},503)}
  if(!service||!/^default$/i.test(String(service.type||"Default"))||qty<Number(service.min)||qty>Number(service.max))return send({error:"This service needs additional order information or a different quantity"},422);
- const cents=Math.max(100,Math.ceil(Number(service.rate)*qty/1000*500));if(!Number.isSafeInteger(cents)||cents>100000000)return send({error:"Order total is outside supported limits"},422);
+ const cents=Math.max(100,Math.ceil(retailPer1000(service)*qty/1000*100));if(!Number.isSafeInteger(cents)||cents>100000000)return send({error:"Order total is outside supported limits"},422);
  if(!Number.isSafeInteger(x.expectedAmountCents)||x.expectedAmountCents!==cents)return send({error:"The price has changed. Refresh the catalog and confirm the new total before paying."},409);
  const orderId="ltx2_"+randomUUID(),secret=randomUUID()+"-"+randomUUID(),sql=db();
  try{const rows=await sql.query("insert into litix_v2_orders(id,email,service_id,service_name,category,destination,quantity,amount_cents,supplier_cost_cents,idempotency_key,tracking_token_hash,metadata) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12::jsonb) on conflict(idempotency_key) do nothing returning id",[orderId,email,id,String(service.name),String(service.category||"Other"),link,qty,cents,Math.ceil(Number(service.rate)*qty/10),idem,hash(secret),JSON.stringify({refill:!!service.refill})]);if(!rows.length)return send({error:"Payment already submitted; do not retry the same checkout"},409);await sql.query("update litix_v2_orders set payment_state='processing',payment_attempted_at=now() where id=$1",[orderId])}catch{return send({error:"Database unavailable; no charge submitted"},503)}
@@ -91,5 +111,5 @@ export async function POST(req){
  const transactionId=String(payment.transactionid||"").trim();if(!transactionId){await sql.query("update litix_v2_orders set payment_state='review' where id=$1",[orderId]).catch(()=>{});return send({orderId,secret,payment:"review",message:"Gateway reported approval without a transaction ID. Payment requires reconciliation; do not retry or place a second order."},202)}
  try{await sql.query("update litix_v2_orders set payment_state='paid',payment_transaction_id=$2 where id=$1",[orderId,transactionId]);await sql.query("update litix_v2_orders set fulfillment_state='dispatching',supplier_attempted_at=now() where id=$1 and supplier_attempted_at is null",[orderId])}catch{return send({orderId,secret,payment:"paid",fulfillment:"review",message:"Paid; supplier reconciliation required"},202)}
  try{const supplierResult=await smm("add",{service:id,link,quantity:String(qty)});if(!supplierResult?.order)throw Error("No supplier order ID");await sql.query("update litix_v2_orders set supplier_order_id=$2,fulfillment_state='submitted',last_supplier_status=$3::jsonb where id=$1",[orderId,String(supplierResult.order),JSON.stringify(supplierResult)]);return send({orderId,secret,payment:"paid",fulfillment:"submitted",message:"Payment approved and supplier order submitted"})}
- catch{await sql.query("update litix_v2_orders set fulfillment_state='manual_review' where id=$1",[orderId]).catch(()=>{});return send({orderId,secret,payment:"paid",fulfillment:"review",message:"Payment approved, but supplier outcome requires review. Do not reorder."},202)}
+ catch{await sql.query("update litix_v2_orders set fulfillment_state='manual_review' where id=$1",[orderId]).catch(()=>{});return send({orderId,secret,payment:"paid",fulfillment:"manual_review",message:"Payment approved, but supplier outcome requires review. Do not reorder."},202)}
 }
