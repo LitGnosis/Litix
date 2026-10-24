@@ -31,6 +31,7 @@ async function getServices(){
   const s=await smm("services");
   if(!Array.isArray(s))throw Error("Invalid service response");
   servicesCache=s.filter(x=>{
+   if(["33771","33772","33773"].includes(String(x.service)))return false;
    const label=[x.name,x.category,x.description,x.desc,x.platform].map(v=>String(v||"")).join(" ");
    const meta=[x.country,x.region,x.location,x.geo,x.audience,x.target,x.service_type].map(v=>String(v||"")).join(" ");
    const regular=/^(default|regular|standard)$/i.test(String(x.type||"Default"))||/\b(regular|standard)\b/i.test(label);
