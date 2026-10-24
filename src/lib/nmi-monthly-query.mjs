@@ -19,9 +19,9 @@ export function verifyMonthlyTransaction(xml,{transactionId,subscription}){
  if(action.action_type!=='sale'||action.source!=='recurring'||action.success!=='1'||action.response_code!=='100'||cents(action.amount)!==subscription.amount_cents)throw Error('Recurring sale not verified');
  return {transactionId:row.transaction_id,subscriptionId:subscription.provider_subscription_id,amountCents:subscription.amount_cents,currency:'USD',approved:true};
 }
-export async function queryMonthlyTransaction({transactionId,subscription,securityKey,fetchImpl=fetch}){
+export async function queryMonthlyTransaction({transactionId,subscription,securityKey,endpoint='https://sandbox.nmi.com/api/query.php',fetchImpl=fetch}){
  if(!/^[1-9][0-9]{0,19}$/.test(transactionId)||! /^[1-9][0-9]{0,19}$/.test(subscription?.provider_subscription_id||'')||!securityKey)throw Error('Invalid payment query configuration');
- const response=await fetchImpl('https://paykings.transactiongateway.com/api/query.php',{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:new URLSearchParams({security_key:securityKey,transaction_id:transactionId,subscription_id:subscription.provider_subscription_id,source:'recurring'}),redirect:'error',cache:'no-store',signal:AbortSignal.timeout(15000)});
+ const response=await fetchImpl(endpoint,{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:new URLSearchParams({security_key:securityKey,transaction_id:transactionId,subscription_id:subscription.provider_subscription_id,source:'recurring'}),redirect:'error',cache:'no-store',signal:AbortSignal.timeout(15000)});
  if(!response.ok)throw Error('Gateway query unavailable');
  return verifyMonthlyTransaction(await response.text(),{transactionId,subscription});
 }

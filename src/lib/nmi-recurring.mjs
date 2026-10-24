@@ -1,7 +1,7 @@
 // Internal adapter only. Not a public endpoint or an activation switch.
 // Caller must authenticate ownership, persist intent/attempt, and reconcile outcomes.
-const endpoint='https://paykings.transactiongateway.com/api/transact.php';
-export async function cancelRecurring({subscriptionId,securityKey,fetchImpl=fetch}){
+
+export async function cancelRecurring({subscriptionId,securityKey,endpoint='https://sandbox.nmi.com/api/transact.php',fetchImpl=fetch}){
  if(!/^[1-9][0-9]{0,19}$/.test(String(subscriptionId))||!securityKey)throw Error('Invalid recurring cancellation configuration');
  try{
   const response=await fetchImpl(endpoint,{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:new URLSearchParams({security_key:securityKey,recurring:'delete_subscription',subscription_id:String(subscriptionId)}),signal:AbortSignal.timeout(15000),cache:'no-store',redirect:'error'});

@@ -10,6 +10,7 @@ test('unknown gateway outcome remains review and cannot blindly retry',async()=>
 test('management route is disabled by default even with existing live credentials',async()=>{
  const {readFileSync}=await import('node:fs');
  const source=readFileSync(new URL('../app/api/subscriptions/v1/manage/route.js',import.meta.url),'utf8')
+ .replace("import {monthlySandboxConfig} from '../../../../../lib/monthly-gateway-config.mjs';","const monthlySandboxConfig=()=>{throw Error('Unexpected configuration access')};")
  .replace("import {neon} from '@neondatabase/serverless';","const neon=()=>{throw Error('Database must not be accessed')};")
  .replace("import {bearer,manageSubscription} from '../../../../../lib/subscription-management.mjs';","const bearer=()=>{throw Error('Unexpected auth access')};")
  .replace("import {cancelRecurring} from '../../../../../lib/nmi-recurring.mjs';","const cancelRecurring=()=>{throw Error('Gateway must not be accessed')};");

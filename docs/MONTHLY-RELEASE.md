@@ -28,3 +28,22 @@
 - Only after integration evidence, explicit release approval, backups and rollback target: apply additive production migrations/config, deploy without alias switch, verify, then promote. Monitor verified billing/fulfillment and email failures.
 
 No live subscription activation, transaction, email, supplier order, destructive migration or production promotion occurred during this work.
+
+## Component evidence update
+
+| Component | Status | Evidence / remaining requirement |
+|---|---|---|
+| Auth0 server-session/account source | IMPLEMENTED — TEST PENDING | Verified-email and subject-isolation local tests; real login/callback/recovery/session-expiry not exercised. Requires existing Auth0 application callback/logout settings and provider verification/recovery configuration. |
+| Isolated local migrations/repository | VERIFIED WORKING | PGlite integration executes migrations, duplicate handling, customer isolation and daily-post claims. Does not establish remote Neon results. |
+| Remote Neon migration | NOT IMPLEMENTED | Isolated resource connected to Preview with unique prefix; no remote SQL executed. |
+| Recurring creation/cancellation | IMPLEMENTED — TEST PENDING | Adapter and disabled route tests only. Repaired routes to require NMI_GATEWAY_MODE=TEST, dedicated test key and exact sandbox.nmi.com transact endpoint; no fallback to live keys. |
+| Hosted-card monthly purchase UI | NOT IMPLEMENTED | Existing one-time hosted fields are not represented as a completed monthly checkout. |
+| Settlement application/query adapters | IMPLEMENTED — TEST PENDING | Synthetic XML matching and SQL replay tests only. Query adapter is not a scheduled worker and has not queried merchant data. |
+| Scheduled refund/dispute reconciliation | NOT IMPLEMENTED | Requires event history and verified merchant transaction outcomes; no entitlement changes inferred from build success. |
+| Customer management email adapter | IMPLEMENTED — TEST PENDING | Mocked HTTP only. Authorized recipient not supplied; sender authentication and delivery not tested. |
+| Full transactional email lifecycle/outbox | NOT IMPLEMENTED | Welcome/receipt/failure/fulfillment notifications are not all wired. |
+| Meta/TikTok account linking/post discovery | BLOCKED BY EXTERNAL ACCESS | No approved app credentials, OAuth scopes, test users or ownership-verified accounts provided. OAuth callback/refresh adapters also remain unimplemented. No scraping workaround. |
+| Supplier automated fulfillment | NOT IMPLEMENTED | Historical errors identified, no successful authenticated supplier request. Provider service/price/contract and scanner integration unverified. |
+| Existing one-time checkout regressions | VERIFIED WORKING | Mocked local payment and Collect.js lifecycle tests; no real purchase performed. |
+
+This is a partial implementation. Neither tests nor a Ready deployment establish customer readiness. The latest sandbox-only repair changes source, not any live environment or production gateway. All external integration gates remain off.
