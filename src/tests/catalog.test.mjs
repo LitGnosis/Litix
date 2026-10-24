@@ -56,3 +56,21 @@ test('catalog discounts above $30 once and labels USD explicitly',async t=>{
  assert.equal(rates['1'],30);assert.ok(Math.abs(rates['2']-15.025)<1e-9);assert.equal(rates['3'],18);assert.equal(rates['4'],50);
  const page=read('app/page.jsx');assert.match(page,/All prices are in USD/);assert.match(page,/currencyDisplay:"code"/);
 });
+
+test('Instagram and TikTok followers are discoverable without USA/refill/no-drop claims',async t=>{
+ const oldFetch=globalThis.fetch,oldKey=process.env.SMMGLOB_API_KEY;
+ process.env.SMMGLOB_API_KEY='mock-only';
+ t.after(()=>{globalThis.fetch=oldFetch;if(oldKey===undefined)delete process.env.SMMGLOB_API_KEY;else process.env.SMMGLOB_API_KEY=oldKey;});
+ const item=(service,name,extra={})=>({service,name,category:name,rate:2,min:100,max:10000,type:'Default',...extra});
+ const rows=[item(1,'Instagram followers'),item(2,'TikTok followers'),item(3,'IG global followers'),item(4,'Tik Tok worldwide followers'),item(5,'Instagram followers',{rate:0}),item(6,'TikTok followers',{type:'Custom Comments'}),item(7,'Facebook followers'),item(33771,'Instagram followers')];
+ globalThis.fetch=async(url,init)=>{assert.equal(init.body.get('action'),'services');return Response.json(rows);};
+ const {GET}=await import('data:text/javascript;base64,'+Buffer.from(source+'\n// followers regression').toString('base64'));
+ const get=async q=>(await GET(new Request('https://example.test/api/smmservices?'+q))).json();
+ assert.equal((await get('')).total,4);
+ for(const [platform,ids] of [['Instagram',['1','3']],['TikTok',['2','4']]]){
+  const result=await get('platform='+platform+'&q=followers');
+  assert.deepEqual(new Set(result.items.map(x=>x.id)),new Set(ids));
+  for(const x of result.items){assert.equal(x.per1000,10);assert.equal(x.purchasable,true);assert.equal(x.refill,false);assert.equal(x.noDrop,false);}
+ }
+ const page=read('app/page.jsx');assert.match(page,/aria-label="Follower services"/);assert.match(page,/setQuery\("followers"\)/);
+});
