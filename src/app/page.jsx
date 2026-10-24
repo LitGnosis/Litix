@@ -17,6 +17,7 @@ export default function Home(){
   let configured=false;
   let failed=false;
   let timeoutId=null;
+  let apiWaitAttempts=0;
 
   setCardReady(false);
   setNotice("");
@@ -46,7 +47,16 @@ export default function Home(){
   const configureCollectJS=()=>{
    if(!active)return;
    if(!window.CollectJS||typeof window.CollectJS.configure!=="function"){
-    fail("PayKings loaded, but Collect.js did not expose its configuration API.");
+    // A downloaded bootstrap script can finish before its API is available.
+    // Keep payment disabled and wait a bounded interval rather than treating
+    // the load event as either API readiness or an immediate gateway failure.
+    if(timeoutId!==null)window.clearTimeout(timeoutId);
+    if(apiWaitAttempts++<150){
+     timeoutId=window.setTimeout(configureCollectJS,100);
+    }else{
+     if(script)script.dataset.litixFailed="true";
+     fail("PayKings loaded, but Collect.js did not expose its configuration API. Retry secure fields; if this persists, contact support to verify the gateway configuration.");
+    }
     return;
    }
 
@@ -138,6 +148,7 @@ export default function Home(){
    script.addEventListener("load",onLoad,{once:true});
    script.addEventListener("error",onError,{once:true});
    if(!script.isConnected)document.head.appendChild(script);
+   else if(script.dataset.litixLoaded==="true")configureCollectJS();
   }
 
   return ()=>{

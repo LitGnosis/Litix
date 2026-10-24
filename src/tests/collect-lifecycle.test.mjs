@@ -20,7 +20,8 @@ function harness() {
  const context={window,document,config:{ready:true,publicKey:'test-public-tokenization-key'},setCardReady:v=>ready=v,setNotice:v=>notice=v,setBusy:()=>{},done:{current:()=>{}}};
  return {window,scripts,timers,get ready(){return ready;},get notice(){return notice;},get options(){return options;},
   run(){return vm.runInNewContext('(function(){if(!config.ready'+effect+'})()',context);},
-  load(){window.CollectJS={configure:o=>options=o};scripts.at(-1).listeners.load();},
+  exposeAPI(){window.CollectJS={configure:o=>options=o};},
+  load(){this.exposeAPI();scripts.at(-1).listeners.load();},
   timeout(){const callbacks=[...timers.values()];timers.clear();callbacks.forEach(fn=>fn());}
  };
 }
@@ -44,4 +45,30 @@ test('cleanup ignores obsolete callbacks and reuses already loaded gateway',()=>
  const h=harness();const cleanup=h.run();h.load();const old=h.options;cleanup();
  old.fieldsAvailableCallback();assert.equal(h.ready,false);h.run();h.options.fieldsAvailableCallback();
  assert.equal(h.ready,true);assert.equal(h.scripts.length,1);
+});
+
+test('download completion waits for the gateway API rather than failing immediately',()=>{
+ const h=harness();h.run();h.scripts[0].listeners.load();
+ assert.equal(h.ready,false);assert.equal(h.notice,'');
+ h.exposeAPI();h.timeout();assert.ok(h.options);
+ h.options.fieldsAvailableCallback();assert.equal(h.ready,true);assert.equal(h.notice,'');
+});
+test('missing gateway API reaches a bounded deadline and retry replaces its script',()=>{
+ const h=harness();const cleanup=h.run();const original=h.scripts[0];
+ original.listeners.load();
+ for(let i=0;i<151;i++)h.timeout();
+ assert.equal(h.ready,false);assert.match(h.notice,/configuration API/);
+ assert.equal(h.timers.size,0);
+ cleanup();h.run();assert.equal(original.isConnected,false);
+ h.load();h.options.fieldsAvailableCallback();assert.equal(h.ready,true);
+});
+test('cleanup cancels pending API readiness checks',()=>{
+ const h=harness();const cleanup=h.run();h.scripts[0].listeners.load();
+ cleanup();assert.equal(h.timers.size,0);h.exposeAPI();h.timeout();
+ assert.equal(h.options,undefined);assert.equal(h.ready,false);
+});
+test('remount resumes API readiness after the script load event already fired',()=>{
+ const h=harness();const cleanup=h.run();h.scripts[0].listeners.load();cleanup();
+ h.run();h.exposeAPI();h.timeout();assert.ok(h.options);
+ h.options.fieldsAvailableCallback();assert.equal(h.ready,true);assert.equal(h.scripts.length,1);
 });
