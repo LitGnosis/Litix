@@ -43,3 +43,16 @@ test('USA first, general next, all requested countries last with platform order 
  for(const id of [...countries.map((_,i)=>100+i),5,6,7])assert.ok(ids.indexOf(id)>=5);
  const filtered=await get('platform=Instagram&q=Germany');assert.deepEqual(filtered.items.map(x=>x.id),['105']);
 });
+
+test('catalog discounts above $30 once and labels USD explicitly',async t=>{
+ const oldFetch=globalThis.fetch,oldKey=process.env.SMMGLOB_API_KEY;
+ process.env.SMMGLOB_API_KEY='mock-only';
+ t.after(()=>{globalThis.fetch=oldFetch;if(oldKey===undefined)delete process.env.SMMGLOB_API_KEY;else process.env.SMMGLOB_API_KEY=oldKey;});
+ const rows=[[1,'Instagram likes',6],[2,'Instagram views',6.01],[3,'TikTok likes',4],[4,'Instagram shares',20]].map(([service,name,rate])=>({service,name,rate,min:100,max:10000,type:'Default'}));
+ globalThis.fetch=async(url,init)=>{assert.equal(init.body.get('action'),'services');return Response.json(rows);};
+ const {GET}=await import('data:text/javascript;base64,'+Buffer.from(source+'\n// discounted catalog').toString('base64'));
+ const result=await (await GET(new Request('https://example.test/api/smmservices'))).json();
+ const rates=Object.fromEntries(result.items.map(x=>[x.id,x.per1000]));
+ assert.equal(rates['1'],30);assert.ok(Math.abs(rates['2']-15.025)<1e-9);assert.equal(rates['3'],18);assert.equal(rates['4'],50);
+ const page=read('app/page.jsx');assert.match(page,/All prices are in USD/);assert.match(page,/currencyDisplay:"code"/);
+});
