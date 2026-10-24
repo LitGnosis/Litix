@@ -8,7 +8,8 @@ const send = (v,s=200) => Response.json(v,{status:s,headers:{"cache-control":"no
 const hash = v => createHash("sha256").update(String(v)).digest("hex");
 const conn = () => process.env.LITIX_V2_DATABASE_URL || process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.POSTGRES_PRISMA_URL;
 const db = () => neon(conn());
-const conf = () => ({database:!!conn(),supplier:!!process.env.SMMGLOB_API_KEY,payment:!!(process.env.NMI_SECURITY_KEY&&process.env.PAYKINGS_NMI_COLLECT_PUBLIC_KEY)});
+const publicCollectKey = () => process.env.NEXT_PUBLIC_PAYKINGS_NMI_COLLECT_PUBLIC_KEY || process.env.PAYKINGS_NMI_COLLECT_PUBLIC_KEY;
+const conf = () => ({database:!!conn(),supplier:!!process.env.SMMGLOB_API_KEY,payment:!!(process.env.NMI_SECURITY_KEY&&publicCollectKey())});
 const name = req => new URL(req.url).pathname.split("/").pop();
 const bounded = (v,n=120) => String(v??"").trim().slice(0,n);
 async function smm(action,params={}) {
@@ -50,7 +51,7 @@ function shape(x){return {id:String(x.service),name:String(x.name||"Service"),ca
 export async function GET(req){
  const op=name(req),flags=conf(),p=new URL(req.url).searchParams;
  if(!["config","health","smmservices","track"].includes(op))return send({error:"Unknown route"},404);
- if(op==="config")return send({ready:flags.database&&flags.supplier&&flags.payment,publicKey:flags.payment?process.env.PAYKINGS_NMI_COLLECT_PUBLIC_KEY:null});
+ if(op==="config")return send({ready:flags.database&&flags.supplier&&flags.payment,publicKey:flags.payment?publicCollectKey():null});
  if(op==="health"){let database=false;if(flags.database)try{await db().query("select 1",[]);database=true}catch{}const gatewayMode=process.env.NMI_GATEWAY_MODE==="TEST"?"TEST":"PRODUCTION";const gatewayConfigured=gatewayMode==="TEST"?!!(process.env.NMI_TEST_SECURITY_KEY&&process.env.NMI_TEST_GATEWAY_URL):!!process.env.NMI_SECURITY_KEY;return send({service:"litix-v2",database,supplierConfigured:flags.supplier,paykingsConfigured:flags.payment,gatewayMode,testGatewayConfigured:gatewayMode==="TEST"?gatewayConfigured:undefined,liveTransactionVerified:false,ready:database&&flags.supplier&&flags.payment},database?200:503)}
  if(op==="smmservices"){
   const cat=bounded(p.get("category"),100),term=bounded(p.get("q"),120).toLowerCase(),page=Math.max(1,Math.min(10000,Number(p.get("page"))||1));
