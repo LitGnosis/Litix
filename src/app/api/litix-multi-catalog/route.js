@@ -39,6 +39,7 @@ async function getCatalog() {
   const raw = await response.json();
   if (!Array.isArray(raw)) throw new Error("Supplier catalog response is invalid");
   const items = raw.filter(x => {
+    if (["33771","33772","33773"].includes(String(x.service))) return false;
     const label = labelOf(x);
     const meta = [x.country, x.region, x.location, x.geo, x.audience, x.target, x.service_type].map(v => String(v || "")).join(" ");
     const regular = /^(default|regular|standard)$/i.test(String(x.type || "Default")) || /\b(regular|standard)\b/i.test(label);
