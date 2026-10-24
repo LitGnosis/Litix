@@ -58,7 +58,7 @@ async function getCatalog() {
     max: Number(x.max),
     refill: hasRefill(x),
     noDrop: hasNoDrop(x),
-    retailPer1000Cents: Math.ceil(Number(x.rate) * 1100)
+    retailPer1000Cents: Math.ceil(Number(x.rate) * 800)
   }));
   cache = { at: Date.now(), items };
   return items;
