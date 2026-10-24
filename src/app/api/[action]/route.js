@@ -36,7 +36,7 @@ async function getServices(){
    const label=[x.name,x.category,x.description,x.desc,x.platform].map(v=>String(v||"")).join(" ");
    const meta=[x.country,x.region,x.location,x.geo,x.audience,x.target,x.service_type].map(v=>String(v||"")).join(" ");
    const regular=/^(default|regular|standard)$/i.test(String(x.type||"Default"))||/\b(regular|standard)\b/i.test(label);
-   const usa=/(\busa\b|u\.s\.a\.|united states|american|\bus\b)/i.test(label+" "+meta);const outsideUS = /(?:usa\s*mix|mix\s*usa|worldwide|global|international|(?:usa|u\.s\.a\.|united states|\bus\b)\s*[/,+&-]\s*(?:uk|u\.k\.|united kingdom|asia|europe|canada|australia|worldwide|global)|(?:uk|u\.k\.|united kingdom|asia|europe|canada|australia)\s*[/,+&-]\s*(?:usa|u\.s\.a\.|united states|\bus\b))/i;
+   const usa=/(\busa\b|u\.s\.a\.|united states|american|\bus\b)/i.test(label+" "+meta);const outsideUS = /(?:usa\s*mix|mix\s*usa|worldwide|global|international|(?:usa|u\.s\.a\.|united states|\bus\b)\s*[/,+&-]\s*(?:uk|u\.k|united kingdom|asia|europe|canada|australia|worldwide|global)|(?:uk|u\.k|united kingdom|asia|europe|canada|australia)\s*[/,+&-]\s*(?:usa|u\.s\.a\.|united states|\bus\b))/i;
    const mixedGeography = outsideUS.test(label+" "+meta);
    const socialRequested=/(?:instagram|(?:^|[^a-z])ig(?:[^a-z]|$)|tik[\s-]*tok)/i.test(label)&&/\b(?:likes?|views?|shares?|reposts?|comments?)\b/i.test(label);return x.service!=null&&Number.isFinite(Number(x.rate))&&Number(x.rate)>0&&Number(x.min)>0&&Number(x.max)>=Number(x.min)&&regular&&(socialRequested||(usa&&!mixedGeography&&hasRefill(x)&&hasNoDrop(x)));
   });
@@ -47,6 +47,14 @@ async function getServices(){
   throw e;
  }
 }
+// Geographic order uses supplier targeting labels, not delivery/refill claims.
+// Explicit lower-priority targeting wins for mixed USA/country listings.
+const geographyRank=x=>{
+ const label=[x.name,x.category,x.platform,x.country,x.region,x.location,x.geo,x.audience,x.target].map(v=>String(v||"")).join(" ").normalize("NFKD").replace(/[\u0300-\u036f]/g,"");
+ const last=/\b(?:turkey|turkiye|turkish|uk|u\.k|united kingdom|british|ireland|irish|bangladesh|bangladeshi|kenya|kenyan|germany|german|india|indian|france|french|spain|spanish|italy|italian|belgium|belgian|czech republic|czechia|czech|denmark|danish|greece|greek|malaysia|malaysian|mexico|mexican|morocco|moroccan|pakistan|pakistani|poland|polish|portugal|portuguese|south africa|south african|south korea|south korean|sweden|swedish|ukraine|ukrainian|uae|u\.a\.e|united arab emirates|emirati|vietnam|vietnamese|australia|australian|indonesia|indonesian)\b|🇹🇷|🇬🇧|🇮🇪|🇧🇩|🇰🇪|🇩🇪|🇮🇳|🇫🇷|🇪🇸|🇮🇹|🇧🇪|🇨🇿|🇩🇰|🇬🇷|🇲🇾|🇲🇽|🇲🇦|🇵🇰|🇵🇱|🇵🇹|🇿🇦|🇰🇷|🇸🇪|🇺🇦|🇦🇪|🇻🇳|🇦🇺|🇮🇩/i;
+ if(last.test(label))return 2;
+ return /\b(?:usa|united states(?: of america)?|american|us)\b|u\.s\.a?\.|🇺🇸/i.test(label)?0:1;
+};
 const platformRank=x=>{const z=String(x.name||"")+" "+String(x.category||"");return /instagram|(?:^|[^a-z])ig(?:[^a-z]|$)/i.test(z)?0:/tik[\s-]*tok/i.test(z)?1:/youtube|\byt\b/i.test(z)?2:/facebook|\bfb\b/i.test(z)?3:/spotify/i.test(z)?4:5};
 const platformName=x=>["Instagram","TikTok","YouTube","Facebook","Spotify","Other"][platformRank(x)];
 function shape(x){return {id:String(x.service),name:String(x.name||"Service"),category:String(x.category||"Other"),type:String(x.type||"Default"),min:Number(x.min),max:Number(x.max),per1000:Number(x.rate)*5,refill:hasRefill(x),noDrop:hasNoDrop(x),purchasable:/^default$/i.test(String(x.type||"Default"))};}
@@ -57,7 +65,7 @@ export async function GET(req){
  if(op==="health"){let database=false;if(flags.database)try{await db().query("select 1",[]);database=true}catch{}const gatewayMode=process.env.NMI_GATEWAY_MODE==="TEST"?"TEST":"PRODUCTION";const gatewayConfigured=gatewayMode==="TEST"?!!(process.env.NMI_TEST_SECURITY_KEY&&process.env.NMI_TEST_GATEWAY_URL):!!process.env.NMI_SECURITY_KEY;return send({service:"litix-v2",database,supplierConfigured:flags.supplier,paykingsConfigured:flags.payment,gatewayMode,testGatewayConfigured:gatewayMode==="TEST"?gatewayConfigured:undefined,liveTransactionVerified:false,ready:database&&flags.supplier&&flags.payment},database?200:503)}
  if(op==="smmservices"){
   const cat=bounded(p.get("category"),100),platform=bounded(p.get("platform"),30),term=bounded(p.get("q"),120).toLowerCase(),page=Math.max(1,Math.min(10000,Number(p.get("page"))||1));
-  try{const all=await getServices(),filtered=all.filter(x=>(!cat||String(x.category||"Other")===cat)&&(!platform||platform==="All platforms"||platformName(x)===platform)&&(!term||[x.service,x.name,x.category].some(z=>String(z||"").toLowerCase().includes(term)))).sort((a,b)=>platformRank(a)-platformRank(b)||String(a.name||"").localeCompare(String(b.name||"")));return send({items:filtered.slice((page-1)*24,page*24).map(shape),categories:[...new Set(all.map(x=>String(x.category||"Other")))].sort(),total:filtered.length,allCount:all.length,page})}
+  try{const all=await getServices(),filtered=all.filter(x=>(!cat||String(x.category||"Other")===cat)&&(!platform||platform==="All platforms"||platformName(x)===platform)&&(!term||[x.service,x.name,x.category].some(z=>String(z||"").toLowerCase().includes(term)))).sort((a,b)=>geographyRank(a)-geographyRank(b)||platformRank(a)-platformRank(b)||String(a.name||"").localeCompare(String(b.name||"")));return send({items:filtered.slice((page-1)*24,page*24).map(shape),categories:[...new Set(all.map(x=>String(x.category||"Other")))].sort(),total:filtered.length,allCount:all.length,page})}
   catch(e){console.error("SMMGLOB catalog unavailable",String(e?.message||"").slice(0,100));return send({error:"Live supplier catalog unavailable",items:[],categories:[],total:0},503)}
  }
  if(op==="track"){
