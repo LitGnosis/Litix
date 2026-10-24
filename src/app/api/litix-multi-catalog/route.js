@@ -45,7 +45,7 @@ async function getCatalog() {
     const usa = /(\busa\b|u\\.s\\.a\\.|united states|american|\bus\b)/i.test(label + " " + meta);
     return x.service != null && Number(x.rate) > 0 && Number(x.min) > 0 && Number(x.max) >= Number(x.min) && regular && usa && hasRefill(x);
   }).map(x => ({
-    id: "smmglob:" + String(x.service),
+    id: String(x.service),
     provider: "smmglob",
     service: String(x.service),
     name: String(x.name || "Service").slice(0, 200),
