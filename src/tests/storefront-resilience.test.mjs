@@ -25,3 +25,11 @@ test('concurrent catalog requests share a read-only upstream fetch and recommend
  for(const r of await Promise.all([a,b])){const v=await r.json();assert.deepEqual(v.recommendations.map(s=>s.id),['1']);assert.equal(v.recommendations[0].per1000,5)}
  assert.equal(calls,1);
 });
+
+test('catalog prices show explicit USD rate and minimum-order total',()=>{
+ assert.match(page,/className="price-unit"> per 1,000 units/);
+ assert.match(page,/className="minimum-price">From/);
+ assert.match(source,/action==="services"\?8000:16000/);
+ const css=readFileSync(new URL('../app/metallic.css',import.meta.url),'utf8');
+ assert.match(css,/\.service-option \.foot\{flex-wrap:wrap/);
+});

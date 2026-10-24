@@ -15,7 +15,7 @@ const bounded = (v,n=120) => String(v??"").trim().slice(0,n);
 async function smm(action,params={}) {
  const u = new URL(process.env.SMMGLOB_API_URL || "https://smmglob.com/api/v2");
  if (!process.env.SMMGLOB_API_KEY || u.protocol!=="https:" || !["smmglob.com","www.smmglob.com"].includes(u.hostname)) throw Error("SMMGLOB supplier configuration invalid");
- const r = await fetch(u,{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded"},body:new URLSearchParams({key:process.env.SMMGLOB_API_KEY,action,...params}),cache:"no-store",signal:AbortSignal.timeout(action==="services"?1500:16000)});
+ const r = await fetch(u,{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded"},body:new URLSearchParams({key:process.env.SMMGLOB_API_KEY,action,...params}),cache:"no-store",signal:AbortSignal.timeout(action==="services"?8000:16000)});
  if(!r.ok) throw Error("Supplier returned HTTP "+r.status);
  const obj=await r.json(); if(obj?.error) throw Error(String(obj.error).slice(0,160)); return obj;
 }

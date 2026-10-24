@@ -180,3 +180,10 @@ button:disabled{filter:saturate(.55)}
 .litix-feature-panel .tags{display:flex;flex-wrap:wrap;gap:10px}
 .litix-feature-panel .tags span{padding:10px 14px;border:1px solid #416078;border-radius:24px;background:#172d40}
 @media(max-width:520px){.litix-new-logo{width:110px;max-height:80px}.litix-network-tabs button{font-size:13px;padding:9px 10px}}
+
+/* Keep catalog prices readable at narrow widths and beside long service IDs. */
+.service-option{min-width:0}.service-option>.item{width:100%;min-width:0}
+.service-option .foot{flex-wrap:wrap;align-items:flex-start}
+.service-option .price{display:block;color:#fff3b0;font-size:22px;font-weight:850;line-height:1.4;overflow-wrap:anywhere}
+.price-unit{display:block;color:#c8deef;font-size:12px;font-weight:500}
+.minimum-price{margin:10px 0;color:#f2f8ff;font-size:14px;font-weight:700;line-height:1.5}
