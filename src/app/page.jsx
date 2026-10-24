@@ -10,7 +10,121 @@ export default function Home(){
  useEffect(()=>{setKey(crypto.randomUUID());try{setFavorites(JSON.parse(localStorage.getItem("litix:favorites")||"[]"));setRecentServices(JSON.parse(localStorage.getItem("litix:recent-services")||"[]"));setSavedOrders(JSON.parse(localStorage.getItem("litix:saved-orders")||"[]"));setCampaigns(JSON.parse(localStorage.getItem("litix:campaigns")||"[]"))}catch{}setWorkspaceReady(true);fetch("/api/config").then(r=>r.json()).then(setConfig).catch(()=>{})},[]);
  useEffect(()=>{const abort=new AbortController(),p=new URLSearchParams({category:cat,q:query,page:String(pg)});setCatalogState("loading");fetch("/api/smmservices?"+p,{signal:abort.signal}).then(async r=>{const v=await r.json();if(!r.ok)throw Error(v.error||"Supplier catalog temporarily unavailable");return v}).then(v=>{setServices(v.items||[]);setCategories(v.categories||[]);setCount(v.allCount||0);setTotal(v.total||0);setCatalogState("ready");if(v.error)setNotice(v.error)}).catch(e=>{if(e.name!=="AbortError"){setCatalogState("error");setNotice("The supplier catalog is temporarily unavailable. Please retry in a moment; no order has been placed.")}});return()=>abort.abort()},[cat,query,pg,catalogRetry]);
  useEffect(()=>{if(!workspaceReady)return;try{localStorage.setItem("litix:favorites",JSON.stringify(favorites));localStorage.setItem("litix:recent-services",JSON.stringify(recentServices.slice(0,8)));localStorage.setItem("litix:saved-orders",JSON.stringify(savedOrders.slice(0,12)));localStorage.setItem("litix:campaigns",JSON.stringify(campaigns.slice(0,20)))}catch{}},[workspaceReady,favorites,recentServices,savedOrders,campaigns]);
- useEffect(()=>{if(!config.ready)return;let active=true,finished=false;setCardReady(false);setNotice("");const script=document.createElement("script");script.src="https://paykings.transactiongateway.com/token/Collect.js";script.dataset.tokenizationKey=config.publicKey;script.dataset.variant="inline";script.dataset.styleSniffer="false";const timeout=setTimeout(()=>{if(active&&!finished){setNotice("PayKings did not create its hosted card fields. Verify the tokenization key, gateway account, and allowed domain in PayKings.");setCardReady(false)}},15000);script.onload=()=>{if(!active)return;if(!window.CollectJS||typeof window.CollectJS.configure!=="function"){finished=true;clearTimeout(timeout);setNotice("PayKings script loaded but Collect.js is unavailable.");return}try{window.CollectJS.configure({callback:r=>{if(r?.token)done.current?.(r.token);else{setNotice("Secure card tokenization failed. Check the card fields and try again.");setBusy(false)}},fieldsAvailableCallback:()=>{if(!active)return;finished=true;clearTimeout(timeout);setCardReady(true);setNotice("")}});const fieldCheck=setInterval(()=>{if(!active||finished){clearInterval(fieldCheck);return}const ready=["#ccnumber iframe","#ccexp iframe","#cvv iframe"].every(sel=>!!document.querySelector(sel));if(ready){finished=true;clearTimeout(timeout);setCardReady(true);setNotice("");clearInterval(fieldCheck)}},250);setTimeout(()=>clearInterval(fieldCheck),16000)}catch{finished=true;clearTimeout(timeout);setNotice("PayKings loaded but could not initialize. Verify the tokenization key belongs to this PayKings gateway and is enabled for litix.net.")}};script.onerror=()=>{finished=true;clearTimeout(timeout);if(active){setCardReady(false);setNotice("PayKings Collect.js could not load. Verify the gateway URL and network access.")}};document.head.appendChild(script);return()=>{active=false;clearTimeout(timeout);script.remove()}},[config.ready,config.publicKey,cardRetry]);
+ useEffect(()=>{
+  if(!config.ready||!config.publicKey)return;
+
+  let active=true;
+  let configured=false;
+  let timeoutId=null;
+
+  setCardReady(false);
+  setNotice("");
+
+  const scriptUrl="https://paykings.transactiongateway.com/token/Collect.js";
+  let script=document.querySelector('script[data-litix-paykings-collect="true"]');
+
+  const fail=message=>{
+   if(!active||configured)return;
+   configured=true;
+   if(timeoutId!==null)window.clearTimeout(timeoutId);
+   setCardReady(false);
+   setNotice(message);
+  };
+
+  const configureCollectJS=()=>{
+   if(!active)return;
+
+   if(!window.CollectJS||typeof window.CollectJS.configure!=="function"){
+    fail("PayKings loaded, but Collect.js did not expose its configuration API.");
+    return;
+   }
+
+   // Begin the requested 5-second readiness deadline only after the script
+   // has loaded. A successful download alone does not mean fields are ready.
+   timeoutId=window.setTimeout(()=>{
+    fail("PayKings loaded, but its secure input frames did not become ready within 5 seconds. Please retry secure fields.");
+   },5000);
+
+   try{
+    window.CollectJS.configure({
+     variant:"inline",
+     fields:{
+      ccnumber:{selector:"#ccnumber",title:"Card Number",placeholder:"Card number"},
+      ccexp:{selector:"#ccexp",title:"Expiration Date",placeholder:"MM / YY"},
+      cvv:{selector:"#cvv",title:"Security Code",placeholder:"CVV"}
+     },
+     callback:r=>{
+      if(!active)return;
+      if(r?.token)done.current?.(r.token);
+      else{
+       setNotice("Secure card tokenization failed. Check the card fields and try again.");
+       setBusy(false);
+      }
+     },
+     fieldsAvailableCallback:()=>{
+      if(!active||configured)return;
+      configured=true;
+      if(timeoutId!==null)window.clearTimeout(timeoutId);
+      setCardReady(true);
+      setNotice("");
+     }
+    });
+   }catch{
+    fail("PayKings loaded but could not initialize its secure card fields. Verify the tokenization key and gateway configuration.");
+   }
+  };
+
+  const onLoad=()=>{
+   if(!active)return;
+   if(script)script.dataset.litixLoaded="true";
+   configureCollectJS();
+  };
+
+  const onError=()=>{
+   fail("PayKings Collect.js could not load. Check the gateway URL and network access.");
+  };
+
+  if(!script){
+   script=document.createElement("script");
+   script.src=scriptUrl;
+   script.async=true;
+   script.dataset.litixPaykingsCollect="true";
+   script.dataset.tokenizationKey=config.publicKey;
+   script.dataset.variant="inline";
+   script.dataset.styleSniffer="false";
+   // Match the field IDs rendered by PremiumInlineCheckout.jsx.
+   // These attributes are present before Collect.js is inserted.
+   script.dataset.fieldCcnumberSelector="#ccnumber";
+   script.dataset.fieldCcexpSelector="#ccexp";
+   script.dataset.fieldCvvSelector="#cvv";
+  }else if(script.dataset.tokenizationKey&&script.dataset.tokenizationKey!==config.publicKey){
+   setNotice("PayKings is already loaded with a different tokenization key. Refresh checkout to reload the correct configuration.");
+   setCardReady(false);
+   return ()=>{active=false;};
+  }
+
+  script.addEventListener("load",onLoad,{once:true});
+  script.addEventListener("error",onError,{once:true});
+
+  // Reuse an existing script rather than inserting another copy.
+  // If it loaded before this effect attached listeners, configure directly.
+  if(window.CollectJS?.configure){
+   onLoad();
+  }else if(script.dataset.litixLoaded==="true"){
+   fail("PayKings script loaded, but its Collect.js API is unavailable. Retry secure fields.");
+  }else if(!script.isConnected){
+   document.head.appendChild(script);
+  }
+
+  // Do not remove the shared script during cleanup: Strict Mode replays
+  // effects in development and removing it can orphan the next listener.
+  return ()=>{
+   active=false;
+   if(timeoutId!==null)window.clearTimeout(timeoutId);
+   script?.removeEventListener("load",onLoad);
+   script?.removeEventListener("error",onError);
+  };
+ },[config.ready,config.publicKey,cardRetry]);
  const price=selected?Math.max(100,Math.ceil(selected.per1000*qty/1000*100)):0;
  async function purchase(token){try{const r=await fetch("/api/checkout",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({serviceId:selected.id,quantity:qty,email,link,paymentToken:token,idempotencyKey:key,expectedAmountCents:price})});const v=await r.json();if(r.status!==202)setKey(crypto.randomUUID());if(!r.ok&&r.status!==202)throw Error(v.error||"Payment processing failed");setReceipt(v);setNotice(v.message);if(v.orderId&&v.secret){const trackingUrl=location.origin+"/?track="+encodeURIComponent(v.orderId)+"&token="+encodeURIComponent(v.secret);setPrivateUrl(trackingUrl);setSavedOrders(old=>[{id:v.orderId,url:trackingUrl,createdAt:new Date().toISOString(),payment:v.payment,fulfillment:v.fulfillment||"pending"},...old.filter(o=>o.id!==v.orderId)].slice(0,12));}}catch(e){setNotice(e.message)}finally{setBusy(false)}}
  done.current=purchase;
