@@ -3,6 +3,9 @@
 import {useEffect,useRef,useState} from "react";
 import PremiumInlineCheckout from "../components/PremiumInlineCheckout";
 const money=n=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(n/100);
+// Collect.js is documented as a global named CollectJS. Some script builds expose
+// that binding without a window property, so resolve both forms consistently.
+const getCollectJS=()=>{try{if(typeof CollectJS!=="undefined")return CollectJS}catch{};return typeof window!=="undefined"?getCollectJS():undefined};
 const whatsappNumber=(process.env.NEXT_PUBLIC_WHATSAPP_NUMBER||"").replace(/\D/g,"");
 export default function Home(){
  const GenUIcopy=text=>{if(navigator.clipboard?.writeText)navigator.clipboard.writeText(text)};
@@ -50,7 +53,7 @@ export default function Home(){
    pollStartedAt=Date.now();
    const pollForApiAndFields=()=>{
     if(!active||configured){if(pollId!==null)window.clearInterval(pollId);pollId=null;return;}
-    const apiReady=!!window.CollectJS&&typeof window.CollectJS.configure==="function";
+    const apiReady=!!getCollectJS()&&typeof getCollectJS().configure==="function";
     const fields=["ccnumber","ccexp","cvv"].map(id=>document.getElementById(id));
     const fieldsReady=fields.every(el=>el&&el.getClientRects().length>0&&getComputedStyle(el).visibility!=="hidden");
     if(apiReady&&fieldsReady){
@@ -72,7 +75,7 @@ export default function Home(){
   };
 
   const initializeCollectJS=()=>{
-   if(!active||!window.CollectJS||typeof window.CollectJS.configure!=="function")return;
+   if(!active||!getCollectJS()||typeof getCollectJS().configure!=="function")return;
    // Start the readiness deadline after the library is available; downloading
    // Collect.js is not proof that the hosted card iframes have mounted.
    if(timeoutId!==null)window.clearTimeout(timeoutId);
@@ -81,7 +84,7 @@ export default function Home(){
    },15000);
 
    try{
-    window.CollectJS.configure({
+    getCollectJS().configure({
      variant:"inline",
      styleSniffer:false,
      customCss:{"font-size":"16px","font-family":"sans-serif",color:"#ffffff","background-color":"transparent"},
@@ -132,7 +135,7 @@ export default function Home(){
    if(script)script.dataset.litixFailed="true";
    fail("PayKings secure script did not finish loading. Please retry secure fields.");
   },15000);
-  if(window.CollectJS?.configure){
+  if(getCollectJS()?.configure){
    // Reuse the already-loaded library; never inject a second copy.
    if(script?.dataset.tokenizationKey && script.dataset.tokenizationKey!==config.publicKey){
     fail("PayKings is already loaded with a different tokenization key. Refresh checkout to load the correct configuration.");
@@ -148,7 +151,7 @@ export default function Home(){
    // A previously loaded script can fire "load" without exposing CollectJS.configure
    // (for example, an interrupted/partially initialized stale copy). Do not reuse
    // a completed script that has no API or was loaded with a different key.
-   if(script && !window.CollectJS?.configure && (script.dataset.tokenizationKey!==config.publicKey || script.dataset.litixLoaded==="true")){script.remove();script=null;}
+   if(script && !getCollectJS()?.configure && (script.dataset.tokenizationKey!==config.publicKey || script.dataset.litixLoaded==="true")){script.remove();script=null;}
    if(script?.dataset.litixFailed==="true"){script.remove();script=null;}
    if(!script){
     const stale=document.querySelector('script[src="'+scriptUrl+'"]');
@@ -174,7 +177,7 @@ export default function Home(){
 
   return ()=>{
    active=false;
-   if(failed&&script&&!window.CollectJS?.configure)script.dataset.litixFailed="true";
+   if(failed&&script&&!getCollectJS()?.configure)script.dataset.litixFailed="true";
    if(timeoutId!==null)window.clearTimeout(timeoutId);
    if(pollId!==null)window.clearInterval(pollId);
    script?.removeEventListener("load",onLoad);
@@ -184,7 +187,7 @@ export default function Home(){
  const price=selected?Math.max(100,Math.ceil(selected.per1000*qty/1000*100)):0;
  async function purchase(token){try{const r=await fetch("/api/checkout",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({serviceId:selected.id,quantity:qty,email,link,paymentToken:token,idempotencyKey:key,expectedAmountCents:price})});const v=await r.json();if(r.status!==202)setKey(crypto.randomUUID());if(!r.ok&&r.status!==202)throw Error(v.error||"Payment processing failed");setReceipt(v);setNotice(v.message);if(v.orderId&&v.secret){const trackingUrl=location.origin+"/?track="+encodeURIComponent(v.orderId)+"&token="+encodeURIComponent(v.secret);setPrivateUrl(trackingUrl);setSavedOrders(old=>[{id:v.orderId,url:trackingUrl,createdAt:new Date().toISOString(),payment:v.payment,fulfillment:v.fulfillment||"pending"},...old.filter(o=>o.id!==v.orderId)].slice(0,12));}}catch(e){setNotice(e.message)}finally{setBusy(false)}}
  done.current=purchase;
- const submit=e=>{e.preventDefault();if(!cardReady||!selected||busy)return;if(!Number.isSafeInteger(qty)||qty<selected.min||qty>selected.max){setNotice("Enter a whole-number quantity within this service’s limits.");return}if(!selected.purchasable){setNotice("This service requires additional supplier fields and cannot be checked out here.");return}setBusy(true);setNotice("");try{window.CollectJS.startPaymentRequest()}catch{setBusy(false);setNotice("Complete your secure card fields before paying")}};
+ const submit=e=>{e.preventDefault();if(!cardReady||!selected||busy)return;if(!Number.isSafeInteger(qty)||qty<selected.min||qty>selected.max){setNotice("Enter a whole-number quantity within this service’s limits.");return}if(!selected.purchasable){setNotice("This service requires additional supplier fields and cannot be checked out here.");return}setBusy(true);setNotice("");try{getCollectJS().startPaymentRequest()}catch{setBusy(false);setNotice("Complete your secure card fields before paying")}};
  const track=async value=>{try{const u=new URL(value,location.origin),id=u.searchParams.get("track"),token=u.searchParams.get("token");if(!id||!token)throw Error("Paste the full private tracking URL");const r=await fetch("/api/track?id="+encodeURIComponent(id)+"&token="+encodeURIComponent(token)),v=await r.json();if(!r.ok)throw Error(v.error||"Tracking failed");setTracked(v.order)}catch(e){setNotice(e.message)}};
  useEffect(()=>{if(location.search.includes("track=")){setPrivateUrl(location.href);track(location.href)}},[]);
  return <main className="wrap"><nav className="nav"><a className="brand" href="/" aria-label="Litix home"><img src="/assets/brand/logo.svg" alt="Litix" className="brand-logo" /><span className="brand-wordmark">LITIX<span className="brand-submark">ANALYTICS AMPLIFIED</span></span></a><div><a href="#services">Services</a><a href="#checkout">Checkout</a><a href="#tracking">Track</a><a href="#growth-studio">Growth OS</a></div></nav>
