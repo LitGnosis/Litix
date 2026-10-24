@@ -45,7 +45,7 @@ async function getCatalog() {
     const usa = /(\busa\b|u\.s\.a\.|united states|american|\bus\b)/i.test(label + " " + meta);
     const outsideUS = /(?:worldwide|global|international|(?:usa|u\.s\.a\.|united states|\bus\b)\s*[/,+&-]\s*(?:uk|u\.k\.|united kingdom|asia|europe|canada|australia|worldwide|global)|(?:uk|u\.k\.|united kingdom|asia|europe|canada|australia)\s*[/,+&-]\s*(?:usa|u\.s\.a\.|united states|\bus\b))/i;
     const mixedGeography = outsideUS.test(label + " " + meta);
-    return x.service != null && Number(x.rate) > 0 && Number(x.min) > 0 && Number(x.max) >= Number(x.min) && regular && usa && !mixedGeography && hasRefill(x);
+    return x.service != null && Number(x.rate) > 0 && Number(x.min) > 0 && Number(x.max) >= Number(x.min) && regular && usa && !mixedGeography && hasRefill(x) && hasNoDrop(x);
   }).map(x => ({
     id: String(x.service),
     provider: "smmglob",
