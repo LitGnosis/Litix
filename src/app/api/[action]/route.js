@@ -63,10 +63,34 @@ const retailMultiplier=x=>{const label=[x.name,x.category].map(v=>String(v||"" )
 // These service-specific profits are USD per 1,000 above the live wholesale rate.
 // Equivalent markup percentage = profit / wholesale × 100; bypass the general discount.
 const profitPer1000=Object.freeze({"33677":10,"33516":5,"33337":7.5,"33338":7.5});
-const retailPer1000=x=>{
+const baseRetailPer1000=x=>{
  const profit=profitPer1000[String(x.service)];
  if(profit!==undefined)return Number(x.rate)+profit;
- const rate=Number(x.rate)*retailMultiplier(x);return rate>30?rate/2:rate;
+ const rate=Number(x.rate)*retailMultiplier(x);return rate>30?rate*0.65:rate;
+};
+// Match only otherwise identical supplier service labels and order constraints.
+// Require an explicit refill claim and a 30-day sibling; do not infer coverage.
+const refillTier=x=>{
+ if(!hasRefill(x))return null;
+ const label=[x.name,x.category].map(v=>String(v||"")).join(" ");
+ const duration=/\b(30|60|90)\s*[- ]?\s*(?:days?|d)\b|\blife[ -]?time\b/gi;
+ const matches=[...label.matchAll(duration)];
+ const tiers=[...new Set(matches.map(m=>m[1]||"lifetime"))];
+ if(tiers.length!==1)return null;
+ return {duration:tiers[0],family:JSON.stringify([platformName(x),label.replace(duration,"{coverage}").toLowerCase().replace(/\s+/g," ").trim(),x.type||"Default",Number(x.min),Number(x.max),x.country||"",x.region||""])};
+};
+const retailPer1000=x=>{
+ const base=baseRetailPer1000(x);
+ if(profitPer1000[String(x.service)]!==undefined)return base;
+ const tier=refillTier(x);
+ if(!tier)return base;
+ const siblings=servicesCache.filter(s=>profitPer1000[String(s.service)]===undefined&&refillTier(s)?.family===tier.family);
+ const thirty=siblings.filter(s=>refillTier(s).duration==="30");
+ if(!thirty.length)return base;
+ const factors={"30":1,"60":1.5,"90":2,"lifetime":3};
+ // A common unit floor covers every sibling's wholesale cost without distorting tiers.
+ const unit=Math.max(...thirty.map(baseRetailPer1000),...siblings.map(s=>Number(s.rate)/factors[refillTier(s).duration]));
+ return unit*factors[tier.duration];
 };
 function shape(x){return {id:String(x.service),name:String(x.name||"Service"),category:String(x.category||"Other"),type:String(x.type||"Default"),min:Number(x.min),max:Number(x.max),per1000:retailPer1000(x),refill:hasRefill(x),noDrop:hasNoDrop(x),purchasable:/^default$/i.test(String(x.type||"Default"))};}
 export async function GET(req){
