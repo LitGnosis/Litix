@@ -22,7 +22,7 @@ const truth = v => v === true || String(v).toLowerCase() === "true" || String(v)
 const hasRefill = x => truth(x.refill) || truth(x.refillable) || truth(x.auto_refill) || truth(x.autorefill);
 const hasNoDrop = x => {
  const evidence = [x.name,x.category,x.description,x.desc,x.notes,x.terms].map(v=>String(v||"")).join(" ");
- return /no[ -]?drop|drop[ -]?protection|no[ -]?drop guarantee/i.test(evidence) ||
+ return /no[ -]?drop|non[ -]?drop|drop[ -]?protection|no[ -]?drop guarantee|non[ -]?drop guarantee/i.test(evidence) ||
    truth(x.no_drop) || truth(x.noDrop) || truth(x.drop_protection) || truth(x.no_drop_guarantee);
 };
 async function getServices(){
