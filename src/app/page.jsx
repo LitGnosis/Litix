@@ -43,13 +43,36 @@ export default function Home(){
    setNotice(message);
   };
 
+  let pollId=null;
+  let pollStartedAt=0;
   const configureCollectJS=()=>{
-   if(!active)return;
-   if(!window.CollectJS||typeof window.CollectJS.configure!=="function"){
-    fail("PayKings loaded, but Collect.js did not expose its configuration API.");
-    return;
-   }
+   if(!active||configured||pollId!==null)return;
+   pollStartedAt=Date.now();
+   const pollForApiAndFields=()=>{
+    if(!active||configured){if(pollId!==null)window.clearInterval(pollId);pollId=null;return;}
+    const apiReady=!!window.CollectJS&&typeof window.CollectJS.configure==="function";
+    const fields=["ccnumber","ccexp","cvv"].map(id=>document.getElementById(id));
+    const fieldsReady=fields.every(el=>el&&el.getClientRects().length>0&&getComputedStyle(el).visibility!=="hidden");
+    if(apiReady&&fieldsReady){
+     if(pollId!==null)window.clearInterval(pollId);
+     pollId=null;
+     initializeCollectJS();
+     return;
+    }
+    if(Date.now()-pollStartedAt>=3000){
+     if(pollId!==null)window.clearInterval(pollId);
+     pollId=null;
+     fail(!apiReady
+      ?"PayKings loaded, but Collect.js did not expose its configuration API after initialization. Retry secure fields."
+      :"Secure card fields are not mounted yet. Retry secure fields when the checkout form is visible.");
+    }
+   };
+   pollForApiAndFields();
+   if(active&&!configured&&pollId===null)pollId=window.setInterval(pollForApiAndFields,100);
+  };
 
+  const initializeCollectJS=()=>{
+   if(!active||!window.CollectJS||typeof window.CollectJS.configure!=="function")return;
    // Start the readiness deadline after the library is available; downloading
    // Collect.js is not proof that the hosted card iframes have mounted.
    if(timeoutId!==null)window.clearTimeout(timeoutId);
@@ -144,6 +167,7 @@ export default function Home(){
    active=false;
    if(failed&&script&&!window.CollectJS?.configure)script.dataset.litixFailed="true";
    if(timeoutId!==null)window.clearTimeout(timeoutId);
+   if(pollId!==null)window.clearInterval(pollId);
    script?.removeEventListener("load",onLoad);
    script?.removeEventListener("error",onError);
   };
