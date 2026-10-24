@@ -7,6 +7,15 @@ import {readFileSync} from 'node:fs';
 const source=readFileSync(new URL('../app/api/[action]/route.js',import.meta.url),'utf8')
  .replace('import { neon } from "@neondatabase/serverless";', 'const neon=()=>globalThis.__litixTestDatabase;');
 const cases=[
+ ['retail exactly 30 unchanged', {supplierRate:6,expectedAmountCents:3000,expectedGatewayAmount:'30.00'}, 200, 1, 1],
+ ['retail above 30 halved', {supplierRate:6.01,expectedAmountCents:1503,expectedGatewayAmount:'15.03'}, 200, 1, 1],
+ ['retail 100 halved only once', {supplierRate:20,expectedAmountCents:5000,expectedGatewayAmount:'50.00'}, 200, 1, 1],
+ ['TikTok likes high rate halved', {supplierName:'TikTok Likes',supplierRate:4,expectedAmountCents:1800,expectedGatewayAmount:'18.00'}, 200, 1, 1],
+ ['reject stale undiscounted price', {supplierRate:20,expectedAmountCents:10000}, 409, 0, 0],
+ ['TikTok likes approved', {supplierName:'TikTok Likes',expectedAmountCents:900}, 200, 1, 1],
+ ['TikTok likes rejects old multiplier', {supplierName:'TikTok Likes',expectedAmountCents:500}, 409, 0, 0],
+ ['TikTok views retains 5x', {supplierName:'TikTok Views'}, 200, 1, 1],
+ ['Instagram likes retains 5x', {supplierName:'Instagram Likes'}, 200, 1, 1],
  ['price changed', {expectedAmountCents:799}, 409, 0, 0],
  ['price omitted', {expectedAmountCents:undefined}, 409, 0, 0],
  ['approved', {}, 200, 1, 1],
@@ -30,13 +39,14 @@ for(const [label,options,status,payments,orders] of cases){
   globalThis.__litixTestDatabase={query:async sql=>{dbCalls++;updates.push(sql);if(options.paidPersistFail&&sql.includes("payment_state='paid'"))throw Error('database unavailable');if(options.supplierPersistFail&&sql.includes('set supplier_order_id='))throw Error('database unavailable');return sql.startsWith('insert')?(options.duplicate?[]:[{id:'test-order'}]):[];}};
   globalThis.fetch=async(url,init)=>{
    if(String(url)==='https://paykings.transactiongateway.com/api/transact.php'){
+    assert.equal(init.body.get('amount'),options.expectedGatewayAmount||(options.supplierName==='TikTok Likes'?'9.00':'5.00'));
     paymentCalls++;
     if(options.gateway==='timeout')throw Error('simulated timeout');
     return new Response(options.gateway==='declined'?'response=2&responsetext=Declined':options.gateway==='missing-transaction'?'response=1&responsetext=Approved':'response=1&transactionid=test-only');
    }
    assert.equal(String(url),'https://smmglob.com/api/v2');
    const action=init.body.get('action');
-   if(action==='services')return Response.json([{service:1,name:'USA No Drop Test service',refill:true,rate:1,min:100,max:10000,type:'Default'}]);
+   if(action==='services')return Response.json([{service:1,name:options.supplierName||'USA No Drop Test service',refill:true,rate:options.supplierRate??1,min:100,max:10000,type:'Default'}]);
    assert.equal(action,'add');orderCalls++;
    if(options.supplierTimeout)throw Error('simulated supplier timeout');
    if(options.supplierReject)return Response.json({error:'Supplier rejected order'});
