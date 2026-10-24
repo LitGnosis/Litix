@@ -10,12 +10,12 @@ const hasNoDrop = x => /no[ -]?drop|non[ -]?drop|drop[ -]?protection|no[ -]?drop
   truth(x.no_drop) || truth(x.noDrop) || truth(x.drop_protection) || truth(x.no_drop_guarantee);
 const platformOf = x => {
   const s = String(x.name || "") + " " + String(x.category || "");
-  if (/instagram|\\big\\b/i.test(s)) return "Instagram";
+  if (/instagram|\big\b/i.test(s)) return "Instagram";
   if (/tiktok/i.test(s)) return "TikTok";
   if (/youtube/i.test(s)) return "YouTube";
-  if (/facebook|\\bfb\\b/i.test(s)) return "Facebook";
+  if (/facebook|\bfb\b/i.test(s)) return "Facebook";
   if (/spotify/i.test(s)) return "Spotify";
-  if (/twitter|\\bx\\b/i.test(s)) return "X";
+  if (/twitter|\bx\b/i.test(s)) return "X";
   if (/linkedin/i.test(s)) return "LinkedIn";
   return "Other";
 };
@@ -41,8 +41,8 @@ async function getCatalog() {
   const items = raw.filter(x => {
     const label = labelOf(x);
     const meta = [x.country, x.region, x.location, x.geo, x.audience, x.target, x.service_type].map(v => String(v || "")).join(" ");
-    const regular = /^(default|regular|standard)$/i.test(String(x.type || "Default")) || /\\b(regular|standard)\\b/i.test(label);
-    const usa = /(\\busa\\b|u\\.s\\.a\\.|united states|american|\\bus\\b)/i.test(label + " " + meta);
+    const regular = /^(default|regular|standard)$/i.test(String(x.type || "Default")) || /\b(regular|standard)\b/i.test(label);
+    const usa = /(\busa\b|u\\.s\\.a\\.|united states|american|\bus\b)/i.test(label + " " + meta);
     return x.service != null && Number(x.rate) > 0 && Number(x.min) > 0 && Number(x.max) >= Number(x.min) && regular && usa && hasRefill(x);
   }).map(x => ({
     id: "smmglob:" + String(x.service),
