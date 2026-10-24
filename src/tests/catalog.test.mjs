@@ -74,3 +74,17 @@ test('Instagram and TikTok followers are discoverable without USA/refill/no-drop
  }
  const page=read('app/page.jsx');assert.match(page,/aria-label="Follower services"/);assert.match(page,/setQuery\("followers"\)/);
 });
+
+test('followers lead each social platform with American, general, then other-country services',async t=>{
+ const oldFetch=globalThis.fetch,oldKey=process.env.SMMGLOB_API_KEY;
+ process.env.SMMGLOB_API_KEY='mock-only';
+ t.after(()=>{globalThis.fetch=oldFetch;if(oldKey===undefined)delete process.env.SMMGLOB_API_KEY;else process.env.SMMGLOB_API_KEY=oldKey;});
+ const rows=['Instagram','TikTok'].flatMap((platform,i)=>['Germany followers','regular followers','American followers','USA likes','USA / India followers','followers'].map((kind,j)=>({service:i*10+j,name:platform+' '+kind,rate:1,min:100,max:10000,type:'Default'})));
+ globalThis.fetch=async(url,init)=>{assert.equal(init.body.get('action'),'services');return Response.json(rows);};
+ const {GET}=await import('data:text/javascript;base64,'+Buffer.from(source+'\n// followers first').toString('base64'));
+ for(const platform of ['Instagram','TikTok']){
+  const result=await (await GET(new Request('https://example.test/api/smmservices?platform='+platform))).json();
+  const names=result.items.map(x=>x.name.replace(platform+' ',''));
+  assert.deepEqual(names,['American followers','followers','regular followers','Germany followers','USA / India followers','USA likes']);
+ }
+});
