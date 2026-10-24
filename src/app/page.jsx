@@ -20,7 +20,7 @@ export default function Home(){
   setCardReady(false);
   setNotice("");
 
-  const scriptUrl="https://paykings.transactiongateway.com/token/Collect.js";
+  const scriptUrl="https://secure.nmi.com/token/Collect.js";
   let script=document.querySelector('script[data-litix-paykings-collect="true"]');
 
   const fail=message=>{
