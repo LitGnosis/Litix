@@ -20,15 +20,17 @@ export default function Home(){
   setCardReady(false);
   setNotice("");
 
-  const scriptUrl="https://paykings.transactiongateway.com/token/Collect.js";
+  const scriptUrl="https://secure.nmi.com/token/Collect.js";
   const prepareScript=script=>{
-   script.dataset.litixPaykingsCollect="true";
-   script.dataset.tokenizationKey=config.publicKey;
-   script.dataset.variant="inline";
-   script.dataset.styleSniffer="false";
-   script.dataset.fieldCcnumberSelector="#ccnumber";
-   script.dataset.fieldCcexpSelector="#ccexp";
-   script.dataset.fieldCvvSelector="#cvv";
+   // Use explicit attribute names: Collect.js reads these attributes during
+   // script initialization, so they must exist before the script is inserted.
+   script.setAttribute("data-litix-paykings-collect","true");
+   script.setAttribute("data-tokenization-key",config.publicKey);
+   script.setAttribute("data-variant","inline");
+   script.setAttribute("data-style-sniffer","false");
+   script.setAttribute("data-field-ccnumber-selector","#ccnumber");
+   script.setAttribute("data-field-ccexp-selector","#ccexp");
+   script.setAttribute("data-field-cvv-selector","#cvv");
    return script;
   };
 
