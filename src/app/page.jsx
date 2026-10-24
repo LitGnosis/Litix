@@ -25,7 +25,8 @@ export default function Home(){
   setCardReady(false);
   setNotice("");
 
-  const scriptUrl="https://secure.nmi.com/token/Collect.js";
+  // Cache-bust Collect.js on each fresh initialization so mobile Safari does not reuse a stale/partial gateway script.
+  const scriptUrl="https://secure.nmi.com/token/Collect.js?v="+Date.now();
   const prepareScript=script=>{
    // Use explicit attribute names: Collect.js reads these attributes during
    // script initialization, so they must exist before the script is inserted.
@@ -159,8 +160,7 @@ export default function Home(){
    if(script && !getCollectJS()?.configure && (script.dataset.tokenizationKey!==config.publicKey || script.dataset.litixLoaded==="true")){script.remove();script=null;}
    if(script?.dataset.litixFailed==="true"){script.remove();script=null;}
    if(!script){
-    const stale=document.querySelector('script[src="'+scriptUrl+'"]');
-    if(stale)stale.remove();
+    document.querySelectorAll('script[src*="secure.nmi.com/token/Collect.js"]').forEach(staleScript=>staleScript.remove());
     script=document.createElement("script");
     script.src=scriptUrl;
     script.async=true;
