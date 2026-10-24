@@ -15,6 +15,7 @@ export default function Home(){
 
   let active=true;
   let configured=false;
+  let failed=false;
   let timeoutId=null;
 
   setCardReady(false);
@@ -36,7 +37,7 @@ export default function Home(){
 
   const fail=message=>{
    if(!active||configured)return;
-   configured=true;
+   failed=true;
    if(timeoutId!==null)window.clearTimeout(timeoutId);
    setCardReady(false);
    setNotice(message);
@@ -51,13 +52,19 @@ export default function Home(){
 
    // Start the readiness deadline after the library is available; downloading
    // Collect.js is not proof that the hosted card iframes have mounted.
+   if(timeoutId!==null)window.clearTimeout(timeoutId);
    timeoutId=window.setTimeout(()=>{
-    fail("PayKings loaded, but its secure input frames did not become ready within 5 seconds. Please retry secure fields.");
-   },5000);
+    fail("PayKings loaded, but its secure input frames did not become ready within 15 seconds. Please retry secure fields.");
+   },15000);
 
    try{
     window.CollectJS.configure({
      variant:"inline",
+     styleSniffer:false,
+     customCss:{"font-size":"16px","font-family":"sans-serif",color:"#ffffff","background-color":"transparent"},
+     placeholderCss:{color:"#aebfd4"},
+     validCss:{color:"#4ade80"},
+     invalidCss:{color:"#fb7185"},
      fields:{
       ccnumber:{selector:"#ccnumber",title:"Card Number",placeholder:"Card number"},
       ccexp:{selector:"#ccexp",title:"Expiration Date",placeholder:"MM / YY"},
@@ -90,9 +97,17 @@ export default function Home(){
    if(loadedScript)loadedScript.dataset.litixLoaded="true";
    configureCollectJS();
   };
-  const onError=()=>fail("PayKings Collect.js could not load. Check the gateway URL and network access.");
+  const onError=()=>{
+   if(script)script.dataset.litixFailed="true";
+   fail("PayKings Collect.js could not load. Check the gateway URL and network access.");
+  };
 
   let script=document.querySelector('script[data-litix-paykings-collect="true"]');
+  // Cover download stalls as well as iframe initialization.
+  timeoutId=window.setTimeout(()=>{
+   if(script)script.dataset.litixFailed="true";
+   fail("PayKings secure script did not finish loading. Please retry secure fields.");
+  },15000);
   if(window.CollectJS?.configure){
    // Reuse the already-loaded library; never inject a second copy.
    if(script?.dataset.tokenizationKey && script.dataset.tokenizationKey!==config.publicKey){
@@ -106,6 +121,7 @@ export default function Home(){
    // effect attached listeners, or may lack the key attribute entirely.
    // Replace only that stale, not-yet-initialized script, then set every
    // required data attribute BEFORE inserting the script into the document.
+   if(script?.dataset.litixFailed==="true"){script.remove();script=null;}
    if(!script){
     const stale=document.querySelector('script[src="'+scriptUrl+'"]');
     if(stale)stale.remove();
@@ -126,6 +142,7 @@ export default function Home(){
 
   return ()=>{
    active=false;
+   if(failed&&script&&!window.CollectJS?.configure)script.dataset.litixFailed="true";
    if(timeoutId!==null)window.clearTimeout(timeoutId);
    script?.removeEventListener("load",onLoad);
    script?.removeEventListener("error",onError);
