@@ -13,7 +13,7 @@ test('supplier-backed social expansion, sorting, filters, IDs, limits and 5x pri
  const {GET}=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
  const get=async query=>{const r=await GET(new Request('https://example.test/api/smmservices?'+query));assert.equal(r.status,200);return r.json();};
  const all=await get('');assert.equal(all.total,10);assert.deepEqual(all.items.map(x=>x.id),['21','2','3','1','20','13','10','12','11','14']);
- for(const x of all.items){assert.equal(x.per1000,6.25);assert.equal(x.min,100);assert.equal(x.max,5000);assert.ok(rows.some(r=>String(r.service)===x.id));}
+ for(const x of all.items){assert.equal(x.per1000,x.id==='10'?11.25:6.25);assert.equal(x.min,100);assert.equal(x.max,5000);assert.ok(rows.some(r=>String(r.service)===x.id));}
  const ig=await get('platform=Instagram');assert.equal(ig.total,2);assert.equal(ig.items.find(x=>x.id==='20').refill,false);assert.equal(ig.items.find(x=>x.id==='20').noDrop,false);
  assert.equal((await get('platform=TikTok')).total,5);
  assert.deepEqual((await get('platform=TikTok&q=shares')).items.map(x=>x.id),['11']);
