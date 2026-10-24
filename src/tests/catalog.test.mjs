@@ -53,7 +53,7 @@ test('catalog discounts above $30 once and labels USD explicitly',async t=>{
  const {GET}=await import('data:text/javascript;base64,'+Buffer.from(source+'\n// discounted catalog').toString('base64'));
  const result=await (await GET(new Request('https://example.test/api/smmservices'))).json();
  const rates=Object.fromEntries(result.items.map(x=>[x.id,x.per1000]));
- assert.equal(rates['1'],30);assert.ok(Math.abs(rates['2']-15.025)<1e-9);assert.equal(rates['3'],18);assert.equal(rates['4'],50);
+ assert.equal(rates['1'],30);assert.ok(Math.abs(rates['2']-19.5325)<1e-9);assert.equal(rates['3'],23.400000000000002);assert.equal(rates['4'],65);
  const page=read('app/page.jsx');assert.match(page,/All prices are in USD/);assert.match(page,/currencyDisplay:"code"/);
 });
 
@@ -87,4 +87,21 @@ test('followers lead each social platform with American, general, then other-cou
   const names=result.items.map(x=>x.name.replace(platform+' ',''));
   assert.deepEqual(names,['American followers','followers','regular followers','Germany followers','USA / India followers','USA likes']);
  }
+});
+
+test('matched refill durations use approved tiers and cover wholesale without guessing unmatched coverage',async t=>{
+ const oldFetch=globalThis.fetch,oldKey=process.env.SMMGLOB_API_KEY;
+ process.env.SMMGLOB_API_KEY='mock-only';
+ t.after(()=>{globalThis.fetch=oldFetch;if(oldKey===undefined)delete process.env.SMMGLOB_API_KEY;else process.env.SMMGLOB_API_KEY=oldKey;});
+ const item=(service,name,rate=1,extra={})=>({service,name,rate,refill:true,min:100,max:10000,type:'Default',...extra});
+ const rows=[item(1,'Instagram followers 30 day refill'),item(2,'Instagram followers 60 day refill'),item(3,'Instagram followers 90 day refill'),item(4,'Instagram followers lifetime refill'),item(5,'TikTok followers 90 day refill'),item(6,'Instagram premium followers 30 day refill'),item(7,'Instagram premium followers 60 day refill',30),item(8,'Instagram premium followers lifetime refill'),item(9,'Instagram followers 60 day refill',1,{refill:false}),item(33677,'Instagram followers 90 day refill',2)];
+ globalThis.fetch=async(url,init)=>{assert.equal(init.body.get('action'),'services');return Response.json(rows);};
+ const {GET}=await import('data:text/javascript;base64,'+Buffer.from(source+'\n// refill tiers').toString('base64'));
+ const result=await (await GET(new Request('https://example.test/api/smmservices'))).json();
+ const rates=Object.fromEntries(result.items.map(x=>[x.id,x.per1000]));
+ assert.deepEqual(['1','2','3','4'].map(id=>rates[id]),[5,7.5,10,15]);
+ assert.equal(rates['5'],5,'unmatched duration keeps independently calculated price');
+ assert.deepEqual(['6','7','8'].map(id=>rates[id]),[20,30,60]);
+ assert.equal(rates['9'],5,'no actual refill eligibility means no tier');
+ assert.equal(rates['33677'],12,'explicit profit override is preserved');
 });

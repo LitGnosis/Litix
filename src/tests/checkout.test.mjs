@@ -6,7 +6,10 @@ import {readFileSync} from 'node:fs';
 // are intercepted; these tests cannot charge a card or submit a supplier order.
 const source=readFileSync(new URL('../app/api/[action]/route.js',import.meta.url),'utf8')
  .replace('import { neon } from "@neondatabase/serverless";', 'const neon=()=>globalThis.__litixTestDatabase;');
+const refillSiblings=['30 day','60 day','90 day','lifetime'].map((duration,i)=>({service:100+i,name:'Instagram followers '+duration+' refill',refill:true,rate:1,min:100,max:10000,type:'Default'}));
 const cases=[
+ ...refillSiblings.map((service,i)=>['refill tier '+service.name,{serviceId:String(service.service),supplierName:service.name,siblings:refillSiblings,expectedAmountCents:[500,750,1000,1500][i],expectedGatewayAmount:['5.00','7.50','10.00','15.00'][i]},200,1,1]),
+ ['reject old halved total',{supplierRate:20,expectedAmountCents:5000},409,0,0],
  ['33677 wholesale plus 10', {serviceId:'33677',supplierRate:3.706,expectedAmountCents:1371,expectedGatewayAmount:'13.71'}, 200, 1, 1],
  ['33516 wholesale plus 5', {serviceId:'33516',supplierRate:0.004,expectedAmountCents:501,expectedGatewayAmount:'5.01'}, 200, 1, 1],
  ['33337 wholesale plus 7.50', {serviceId:'33337',supplierRate:0.226,expectedAmountCents:773,expectedGatewayAmount:'7.73'}, 200, 1, 1],
@@ -14,9 +17,9 @@ const cases=[
  ['override bypasses general high-rate discount', {serviceId:'33677',supplierRate:40,expectedAmountCents:5000,expectedGatewayAmount:'50.00'}, 200, 1, 1],
  ['override rejects previous price', {serviceId:'33677',supplierRate:3.706,expectedAmountCents:1853}, 409, 0, 0],
  ['retail exactly 30 unchanged', {supplierRate:6,expectedAmountCents:3000,expectedGatewayAmount:'30.00'}, 200, 1, 1],
- ['retail above 30 halved', {supplierRate:6.01,expectedAmountCents:1503,expectedGatewayAmount:'15.03'}, 200, 1, 1],
- ['retail 100 halved only once', {supplierRate:20,expectedAmountCents:5000,expectedGatewayAmount:'50.00'}, 200, 1, 1],
- ['TikTok likes high rate halved', {supplierName:'TikTok Likes',supplierRate:4,expectedAmountCents:1800,expectedGatewayAmount:'18.00'}, 200, 1, 1],
+ ['retail above 30 restored by 30 percent', {supplierRate:6.01,expectedAmountCents:1954,expectedGatewayAmount:'19.54'}, 200, 1, 1],
+ ['retail 100 restored to 65', {supplierRate:20,expectedAmountCents:6500,expectedGatewayAmount:'65.00'}, 200, 1, 1],
+ ['TikTok likes high rate restored', {supplierName:'TikTok Likes',supplierRate:4,expectedAmountCents:2340,expectedGatewayAmount:'23.40'}, 200, 1, 1],
  ['reject stale undiscounted price', {supplierRate:20,expectedAmountCents:10000}, 409, 0, 0],
  ['TikTok likes approved', {supplierName:'TikTok Likes',expectedAmountCents:900}, 200, 1, 1],
  ['TikTok likes rejects old multiplier', {supplierName:'TikTok Likes',expectedAmountCents:500}, 409, 0, 0],
@@ -52,7 +55,7 @@ for(const [label,options,status,payments,orders] of cases){
    }
    assert.equal(String(url),'https://smmglob.com/api/v2');
    const action=init.body.get('action');
-   if(action==='services')return Response.json([{service:options.serviceId||1,name:options.supplierName||'USA No Drop Test service',refill:true,rate:options.supplierRate??1,min:100,max:10000,type:'Default'}]);
+   if(action==='services')return Response.json(options.siblings||[{service:options.serviceId||1,name:options.supplierName||'USA No Drop Test service',refill:true,rate:options.supplierRate??1,min:100,max:10000,type:'Default'}]);
    assert.equal(action,'add');orderCalls++;
    if(options.supplierTimeout)throw Error('simulated supplier timeout');
    if(options.supplierReject)return Response.json({error:'Supplier rejected order'});
@@ -60,7 +63,7 @@ for(const [label,options,status,payments,orders] of cases){
   };
   t.after(()=>{globalThis.fetch=originalFetch;globalThis.__litixTestDatabase=originalDatabase;for(const k of keys){if(previous[k]===undefined)delete process.env[k];else process.env[k]=previous[k];}});
   const {POST,GET}=await import('data:text/javascript;base64,'+Buffer.from(source+'\n// '+label).toString('base64'));
-  if(options.serviceId){
+  if(options.serviceId&&!options.siblings){
    const catalog=await (await GET(new Request('https://example.test/api/smmservices'))).json();
    assert.equal(catalog.items[0].per1000,options.supplierRate+({'33677':10,'33516':5,'33337':7.5,'33338':7.5}[options.serviceId]));
   }
