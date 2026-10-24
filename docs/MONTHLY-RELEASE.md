@@ -47,3 +47,7 @@ No live subscription activation, transaction, email, supplier order, destructive
 | Existing one-time checkout regressions | VERIFIED WORKING | Mocked local payment and Collect.js lifecycle tests; no real purchase performed. |
 
 This is a partial implementation. Neither tests nor a Ready deployment establish customer readiness. The latest sandbox-only repair changes source, not any live environment or production gateway. All external integration gates remain off.
+
+## Deployment verification — sandbox safety repair
+
+Published code commit 0bac61ed416d5f120416a8a9e4ea7b98f67f7331: GitHub status `Vercel – litix_final_logo_corrected_vercel_ready` is FAILURE with target https://vercel.link/env-vars-limit. The target project deployment list still ends at 357c013; no new main-project deployment was created for the repaired source. Therefore there is no verified new target-project working preview. Other linked projects reporting success do not verify this project's environment or integrations. Local 84 tests and production build passed. Scoped Preview variable cleanup must precede retry; do not delete existing checkout/auth/provider credentials indiscriminately. Neon connection added 16 prefixed variables and may contribute, but causality has not been established.
