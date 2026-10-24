@@ -1,6 +1,6 @@
 // Pure simulation: no gateway, database, supplier, or network access.
 export const plans=Object.freeze([
- {likes:100,cents:560},{likes:150,cents:800},{likes:250,cents:1200},
+ {likes:100,cents:50},{likes:150,cents:800},{likes:250,cents:1200},
  {likes:1000,cents:3200},{likes:2000,cents:5600}
 ].map(Object.freeze));
 export function nextMonth(value){

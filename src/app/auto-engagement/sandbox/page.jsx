@@ -6,7 +6,7 @@ export default function Sandbox(){
  const [likes,setLikes]=useState(100),[consent,setConsent]=useState(false),[state,setState]=useState(null),[now,setNow]=useState('2026-01-31T12:00:00.000Z'),[message,setMessage]=useState(''),[post,setPost]=useState('post-1');
  function run(fn){try{setState(fn());setMessage('Simulation updated. No real payment or supplier order sent.')}catch(e){setMessage(e.message)}}
  return <main className="wrap"><a href="/auto-engagement">← Draft setup</a><section className="panel" style={{maxWidth:720,margin:'24px auto'}}>
- <div className="kicker">SANDBOX ONLY · NO REAL BILLING</div><h1>Monthly subscription simulator</h1>
+ <div className="kicker">SANDBOX ONLY · NO REAL BILLING</div><h1>Monthly subscription simulator</h1><p><strong>Temporary test price: 100 likes per post is USD $0.50/month in this simulator only. No real charge is submitted.</strong></p>
  <p>Test pricing, renewal, cancellation and daily allowances. Everything stays in this page’s memory and resets on reload. This is not a customer account or a working payment integration.</p>
  <p>Proposed Instagram plans: selected likes per eligible post, up to 3 posts per UTC calendar day. Video views and supplier eligibility remain unverified and are not included in this simulation.</p>
  <label>Monthly plan<select disabled={!!state} value={likes} onChange={e=>setLikes(Number(e.target.value))}>{plans.map(p=><option key={p.likes} value={p.likes}>{p.likes.toLocaleString()} likes/post — {usd(p.cents)}/month</option>)}</select></label>

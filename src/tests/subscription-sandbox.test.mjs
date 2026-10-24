@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {plans,signup,cancel,renew,coverPost,nextMonth} from '../lib/subscription-sandbox.mjs';
 const now='2026-01-31T12:00:00.000Z';
-test('exact screenshot-based monthly prices and explicit renewal consent',()=>{
- assert.deepEqual(plans.map(p=>p.cents),[560,800,1200,3200,5600]);
+test('temporary 50-cent test tier and explicit renewal consent',()=>{
+ assert.deepEqual(plans.map(p=>p.cents),[50,800,1200,3200,5600]);
  assert.throws(()=>signup(100,false,now));assert.throws(()=>signup(500,true,now));
  for(const p of plans)assert.equal(signup(p.likes,true,now).amountCents,p.cents);
 });
