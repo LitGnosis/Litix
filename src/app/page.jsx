@@ -21,7 +21,16 @@ export default function Home(){
   setNotice("");
 
   const scriptUrl="https://paykings.transactiongateway.com/token/Collect.js";
-  let script=document.querySelector('script[data-litix-paykings-collect="true"]');
+  const prepareScript=script=>{
+   script.dataset.litixPaykingsCollect="true";
+   script.dataset.tokenizationKey=config.publicKey;
+   script.dataset.variant="inline";
+   script.dataset.styleSniffer="false";
+   script.dataset.fieldCcnumberSelector="#ccnumber";
+   script.dataset.fieldCcexpSelector="#ccexp";
+   script.dataset.fieldCvvSelector="#cvv";
+   return script;
+  };
 
   const fail=message=>{
    if(!active||configured)return;
@@ -33,14 +42,13 @@ export default function Home(){
 
   const configureCollectJS=()=>{
    if(!active)return;
-
    if(!window.CollectJS||typeof window.CollectJS.configure!=="function"){
     fail("PayKings loaded, but Collect.js did not expose its configuration API.");
     return;
    }
 
-   // Begin the requested 5-second readiness deadline only after the script
-   // has loaded. A successful download alone does not mean fields are ready.
+   // Start the readiness deadline after the library is available; downloading
+   // Collect.js is not proof that the hosted card iframes have mounted.
    timeoutId=window.setTimeout(()=>{
     fail("PayKings loaded, but its secure input frames did not become ready within 5 seconds. Please retry secure fields.");
    },5000);
@@ -70,54 +78,50 @@ export default function Home(){
      }
     });
    }catch{
-    fail("PayKings loaded but could not initialize its secure card fields. Verify the tokenization key and gateway configuration.");
+    fail("PayKings loaded but could not initialize its secure card fields. Verify the public tokenization key and gateway configuration.");
    }
   };
 
   const onLoad=()=>{
    if(!active)return;
-   if(script)script.dataset.litixLoaded="true";
+   const loadedScript=document.querySelector('script[data-litix-paykings-collect="true"]');
+   if(loadedScript)loadedScript.dataset.litixLoaded="true";
    configureCollectJS();
   };
+  const onError=()=>fail("PayKings Collect.js could not load. Check the gateway URL and network access.");
 
-  const onError=()=>{
-   fail("PayKings Collect.js could not load. Check the gateway URL and network access.");
-  };
-
-  if(!script){
-   script=document.createElement("script");
-   script.src=scriptUrl;
-   script.async=true;
-   script.dataset.litixPaykingsCollect="true";
-   script.dataset.tokenizationKey=config.publicKey;
-   script.dataset.variant="inline";
-   script.dataset.styleSniffer="false";
-   // Match the field IDs rendered by PremiumInlineCheckout.jsx.
-   // These attributes are present before Collect.js is inserted.
-   script.dataset.fieldCcnumberSelector="#ccnumber";
-   script.dataset.fieldCcexpSelector="#ccexp";
-   script.dataset.fieldCvvSelector="#cvv";
-  }else if(script.dataset.tokenizationKey&&script.dataset.tokenizationKey!==config.publicKey){
-   setNotice("PayKings is already loaded with a different tokenization key. Refresh checkout to reload the correct configuration.");
-   setCardReady(false);
-   return ()=>{active=false;};
-  }
-
-  script.addEventListener("load",onLoad,{once:true});
-  script.addEventListener("error",onError,{once:true});
-
-  // Reuse an existing script rather than inserting another copy.
-  // If it loaded before this effect attached listeners, configure directly.
+  let script=document.querySelector('script[data-litix-paykings-collect="true"]');
   if(window.CollectJS?.configure){
-   onLoad();
-  }else if(script.dataset.litixLoaded==="true"){
-   fail("PayKings script loaded, but its Collect.js API is unavailable. Retry secure fields.");
-  }else if(!script.isConnected){
-   document.head.appendChild(script);
+   // Reuse the already-loaded library; never inject a second copy.
+   if(script?.dataset.tokenizationKey && script.dataset.tokenizationKey!==config.publicKey){
+    fail("PayKings is already loaded with a different tokenization key. Refresh checkout to load the correct configuration.");
+   }else{
+    if(script)prepareScript(script);
+    configureCollectJS();
+   }
+  }else{
+   // A script added by older code may have already fired load before this
+   // effect attached listeners, or may lack the key attribute entirely.
+   // Replace only that stale, not-yet-initialized script, then set every
+   // required data attribute BEFORE inserting the script into the document.
+   if(!script){
+    const stale=document.querySelector('script[src="'+scriptUrl+'"]');
+    if(stale)stale.remove();
+    script=document.createElement("script");
+    script.src=scriptUrl;
+    script.async=true;
+   }else if(script.dataset.tokenizationKey && script.dataset.tokenizationKey!==config.publicKey){
+    script.remove();
+    script=document.createElement("script");
+    script.src=scriptUrl;
+    script.async=true;
+   }
+   prepareScript(script);
+   script.addEventListener("load",onLoad,{once:true});
+   script.addEventListener("error",onError,{once:true});
+   if(!script.isConnected)document.head.appendChild(script);
   }
 
-  // Do not remove the shared script during cleanup: Strict Mode replays
-  // effects in development and removing it can orphan the next listener.
   return ()=>{
    active=false;
    if(timeoutId!==null)window.clearTimeout(timeoutId);
