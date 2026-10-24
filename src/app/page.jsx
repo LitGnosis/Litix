@@ -34,9 +34,11 @@ export default function Home(){
    // to CollectJS.configure below. Avoid mixing auto-activation attributes
    // with the explicit JavaScript configuration path.
    script.setAttribute("data-tokenization-key",config.publicKey);
-   for (const attr of ["data-variant","data-style-sniffer","data-field-ccnumber-selector","data-field-ccexp-selector","data-field-cvv-selector"]) {
-    script.removeAttribute(attr);
-   }
+   script.setAttribute("data-variant","inline");
+   script.setAttribute("data-style-sniffer","false");
+   script.setAttribute("data-field-ccnumber-selector","#ccnumber");
+   script.setAttribute("data-field-ccexp-selector","#ccexp");
+   script.setAttribute("data-field-cvv-selector","#cvv");
    return script;
   };
 
