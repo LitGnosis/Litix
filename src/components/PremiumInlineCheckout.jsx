@@ -36,11 +36,11 @@ export default function PremiumInlineCheckout({
         <div className="premium-card-row">
           <label className="premium-card-field">
             <span>Expiration</span>
-            <div className="field" id="ccdate" />
+            <div className="field" id="ccexp" />
           </label>
           <label className="premium-card-field">
             <span>Security code</span>
-            <div className="field" id="ccsecurity" />
+            <div className="field" id="cvv" />
           </label>
         </div>
       </div>
