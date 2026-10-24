@@ -15,7 +15,7 @@ export async function createMonthly({input,repository,gateway,mailer,now=new Dat
  if(input.expectedAmountCents!==quote.amountCents)throw Error('Confirm the current monthly price');
  const capability=newManagementToken(),id=randomUUID();
  // No raw token or payment token is stored in the reservation.
- const reservation=await repository.reserve({id,email:input.email.toLowerCase(),idempotencyKey:input.idempotencyKey,quote,managementTokenHash:capability.hash,managementTokenExpiresAt:new Date(now.getTime()+366*86400000).toISOString(),consentAt:now.toISOString()});
+ const reservation=await repository.reserve({id,email:input.email.toLowerCase(),idempotencyKey:input.idempotencyKey,quote,managementTokenHash:capability.hash,managementTokenExpiresAt:new Date(now.getTime()+366*86400000).toISOString(),consentAt:now.toISOString(),customerSubject:input.customerSubject||null});
  if(!reservation.created)return {state:'already_requested',canRetry:false};
  const claimed=await repository.claimCreation(id);
  if(!claimed)return {state:'review',canRetry:false};
