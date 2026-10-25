@@ -33,3 +33,11 @@ test('catalog prices show explicit USD rate and minimum-order total',()=>{
  const css=readFileSync(new URL('../app/metallic.css',import.meta.url),'utf8');
  assert.match(css,/\.service-option \.foot\{flex-wrap:wrap/);
 });
+
+ test('customer storefront uses Litix branding without naming the supplier',()=>{
+ assert.doesNotMatch(page,/smmglob/i);
+ assert.match(page,/Litix services listed/);
+ assert.match(page,/Connecting securely to Litix/);
+ assert.match(page,/Litix · Secure checkout/);
+ assert.doesNotMatch(source,/SMMGLOB prices unavailable/);
+ });
