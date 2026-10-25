@@ -1,3 +1,4 @@
+import { priceCatalog, retailPer1000, supplierPricingInput, validateCheckoutQuote } from "../../../lib/pricing.mjs";
 import { neon } from "@neondatabase/serverless";
 import { randomUUID, createHash } from "node:crypto";
 export const runtime = "nodejs";
@@ -26,11 +27,11 @@ const hasNoDrop = x => {
  return /no[ -]?drop|non[ -]?drop|drop[ -]?protection|no[ -]?drop guarantee|non[ -]?drop guarantee/i.test(evidence) ||
    truth(x.no_drop) || truth(x.noDrop) || truth(x.drop_protection) || truth(x.no_drop_guarantee);
 };
-async function refreshServices(){
+async function refreshServices(allowStale=true){
  try {
   const s=await smm("services");
   if(!Array.isArray(s))throw Error("Invalid service response");
-  servicesCache=s.filter(x=>{
+  const eligible=priceCatalog(s).items.filter(x=>{
    if(["33771","33772","33773"].includes(String(x.service)))return false;
    const label=[x.name,x.category,x.description,x.desc,x.platform].map(v=>String(v||"")).join(" ");
    const meta=[x.country,x.region,x.location,x.geo,x.audience,x.target,x.service_type].map(v=>String(v||"")).join(" ");
@@ -39,10 +40,11 @@ async function refreshServices(){
    const mixedGeography = outsideUS.test(label+" "+meta);
    const socialRequested=/(?:instagram|(?:^|[^a-z])ig(?:[^a-z]|$)|tik[\s-]*tok)/i.test(label)&&/\b(?:followers?|likes?|views?|shares?|reposts?|comments?)\b/i.test(label);return x.service!=null&&Number.isFinite(Number(x.rate))&&Number(x.rate)>0&&Number(x.min)>0&&Number(x.max)>=Number(x.min)&&regular&&(socialRequested||(usa&&!mixedGeography&&hasRefill(x)&&hasNoDrop(x)));
   });
+  servicesCache=eligible;
   updated=Date.now();
   return servicesCache;
  } catch(e) {
-  if(servicesCache.length&&Date.now()-updated<1200000)return servicesCache;
+  if(allowStale&&servicesCache.length&&Date.now()-updated<1200000)return servicesCache;
   throw e;
  }
 }
@@ -65,40 +67,6 @@ const geographyRank=x=>{
 const platformRank=x=>{const z=String(x.name||"")+" "+String(x.category||"");return /instagram|(?:^|[^a-z])ig(?:[^a-z]|$)/i.test(z)?0:/tik[\s-]*tok/i.test(z)?1:/youtube|\byt\b/i.test(z)?2:/facebook|\bfb\b/i.test(z)?3:/spotify/i.test(z)?4:5};
 const followerRank=x=>platformRank(x)<2&&/\bfollowers?\b/i.test([x.name,x.category].join(" "))?0:1;
 const platformName=x=>["Instagram","TikTok","YouTube","Facebook","Spotify","Other"][platformRank(x)];
-// Supplier metadata determines pricing; client-provided labels never set markup.
-const retailMultiplier=x=>{const label=[x.name,x.category].map(v=>String(v||"" )).join(" ");return platformName(x)==="TikTok"&&/\blikes?\b/i.test(label)?9:5;};
-// These service-specific profits are USD per 1,000 above the live wholesale rate.
-// Equivalent markup percentage = profit / wholesale × 100; bypass the general discount.
-const profitPer1000=Object.freeze({"33677":10,"33516":5,"33337":7.5,"33338":7.5});
-const baseRetailPer1000=x=>{
- const profit=profitPer1000[String(x.service)];
- if(profit!==undefined)return Number(x.rate)+profit;
- const rate=Number(x.rate)*retailMultiplier(x);return rate>30?rate*0.65:rate;
-};
-// Match only otherwise identical supplier service labels and order constraints.
-// Require an explicit refill claim and a 30-day sibling; do not infer coverage.
-const refillTier=x=>{
- if(!hasRefill(x))return null;
- const label=[x.name,x.category].map(v=>String(v||"")).join(" ");
- const duration=/\b(30|60|90)\s*[- ]?\s*(?:days?|d)\b|\blife[ -]?time\b/gi;
- const matches=[...label.matchAll(duration)];
- const tiers=[...new Set(matches.map(m=>m[1]||"lifetime"))];
- if(tiers.length!==1)return null;
- return {duration:tiers[0],family:JSON.stringify([platformName(x),label.replace(duration,"{coverage}").toLowerCase().replace(/\s+/g," ").trim(),x.type||"Default",Number(x.min),Number(x.max),x.country||"",x.region||""])};
-};
-const retailPer1000=x=>{
- const base=baseRetailPer1000(x);
- if(profitPer1000[String(x.service)]!==undefined)return base;
- const tier=refillTier(x);
- if(!tier)return base;
- const siblings=servicesCache.filter(s=>profitPer1000[String(s.service)]===undefined&&refillTier(s)?.family===tier.family);
- const thirty=siblings.filter(s=>refillTier(s).duration==="30");
- if(!thirty.length)return base;
- const factors={"30":1,"60":1.5,"90":2,"lifetime":3};
- // A common unit floor covers every sibling's wholesale cost without distorting tiers.
- const unit=Math.max(...thirty.map(baseRetailPer1000),...siblings.map(s=>Number(s.rate)/factors[refillTier(s).duration]));
- return unit*factors[tier.duration];
-};
 function shape(x){return {id:String(x.service),name:String(x.name||"Service"),category:String(x.category||"Other"),type:String(x.type||"Default"),min:Number(x.min),max:Number(x.max),per1000:retailPer1000(x),refill:hasRefill(x),noDrop:hasNoDrop(x),purchasable:/^default$/i.test(String(x.type||"Default"))};}
 export async function GET(req){
  const op=name(req),flags=conf(),p=new URL(req.url).searchParams;
@@ -132,9 +100,11 @@ export async function POST(req){
  let x;try{x=await req.json()}catch{return send({error:"Invalid JSON"},400)}
  const id=bounded(x.serviceId,32),qty=Number(x.quantity),email=bounded(x.email,250).toLowerCase(),link=bounded(x.link,1200),token=bounded(x.paymentToken,500),idem=bounded(x.idempotencyKey,36);let target;try{target=new URL(link)}catch{}
  if(!/^[0-9]+$/.test(id)||!Number.isSafeInteger(qty)||qty<1||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||!target||target.protocol!=="https:"||!target.hostname.includes(".")||token.length<10||!/^[a-f0-9-]{36}$/.test(idem))return send({error:"Invalid service, quantity, public URL, email or payment information"},400);
- let service;try{service=(await getServices()).find(s=>String(s.service)===id)}catch{return send({error:"SMMGLOB prices unavailable; no charge submitted"},503)}
+ let service;try{service=(await refreshServices(false)).find(s=>String(s.service)===id)}catch{return send({error:"SMMGLOB prices unavailable; no charge submitted"},503)}
  if(!service||!/^default$/i.test(String(service.type||"Default"))||qty<Number(service.min)||qty>Number(service.max))return send({error:"This service needs additional order information or a different quantity"},422);
  const cents=Math.max(100,Math.ceil(retailPer1000(service)*qty/1000*100));if(!Number.isSafeInteger(cents)||cents>100000000)return send({error:"Order total is outside supported limits"},422);
+ const quote=validateCheckoutQuote({actualSupplierWholesaleUsd:Number(service.rate)*qty/1000,customerSubtotalCents:cents,service:supplierPricingInput(service)});
+ if(!quote.allowed)return send({error:"Quantity cannot meet wholesale pricing requirements; no charge submitted"},422);
  if(!Number.isSafeInteger(x.expectedAmountCents)||x.expectedAmountCents!==cents)return send({error:"The price has changed. Refresh the catalog and confirm the new total before paying."},409);
  const orderId="ltx2_"+randomUUID(),secret=randomUUID()+"-"+randomUUID(),sql=db();
  try{const rows=await sql.query("insert into litix_v2_orders(id,email,service_id,service_name,category,destination,quantity,amount_cents,supplier_cost_cents,idempotency_key,tracking_token_hash,metadata) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12::jsonb) on conflict(idempotency_key) do nothing returning id",[orderId,email,id,String(service.name),String(service.category||"Other"),link,qty,cents,Math.ceil(Number(service.rate)*qty/10),idem,hash(secret),JSON.stringify({refill:!!service.refill})]);if(!rows.length)return send({error:"Payment already submitted; do not retry the same checkout"},409);await sql.query("update litix_v2_orders set payment_state='processing',payment_attempted_at=now() where id=$1",[orderId])}catch{return send({error:"Database unavailable; no charge submitted"},503)}

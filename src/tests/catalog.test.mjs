@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
 const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
-const source=read('app/api/[action]/route.js').replace('import { neon } from "@neondatabase/serverless";', 'const neon=()=>{throw Error("Catalog must not access database")};');
+const source=read('app/api/[action]/route.js').replace('"../../../lib/pricing.mjs"', JSON.stringify(new URL('../lib/pricing.mjs',import.meta.url).href)).replace('import { neon } from "@neondatabase/serverless";', 'const neon=()=>{throw Error("Catalog must not access database")};');
 test('supplier-backed social expansion, sorting, filters, IDs, limits and 5x pricing',async t=>{
  const oldFetch=globalThis.fetch,oldKey=process.env.SMMGLOB_API_KEY;
  process.env.SMMGLOB_API_KEY='mock-only';
@@ -12,9 +12,9 @@ test('supplier-backed social expansion, sorting, filters, IDs, limits and 5x pri
  globalThis.fetch=async(url,init)=>{assert.equal(String(url),'https://smmglob.com/api/v2');assert.equal(init.body.get('action'),'services','Only read-only supplier catalog requests allowed');return Response.json(rows);};
  const {GET}=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
  const get=async query=>{const r=await GET(new Request('https://example.test/api/smmservices?'+query));assert.equal(r.status,200);return r.json();};
- const all=await get('');assert.equal(all.total,10);assert.deepEqual(all.items.map(x=>x.id),['21','2','3','1','20','13','10','12','11','14']);
- for(const x of all.items){assert.equal(x.per1000,x.id==='10'?11.25:6.25);assert.equal(x.min,100);assert.equal(x.max,5000);assert.ok(rows.some(r=>String(r.service)===x.id));}
- const ig=await get('platform=Instagram');assert.equal(ig.total,2);assert.equal(ig.items.find(x=>x.id==='20').refill,false);assert.equal(ig.items.find(x=>x.id==='20').noDrop,false);
+ const all=await get('');assert.equal(all.total,9);assert.deepEqual(all.items.map(x=>x.id),['2','3','1','20','13','10','12','11','14']);
+ for(const x of all.items){assert.equal(x.per1000,x.id==='10'?11.25:['20','14'].includes(x.id)?6.99:6.25);assert.equal(x.min,100);assert.equal(x.max,5000);assert.ok(rows.some(r=>String(r.service)===x.id));}
+ const ig=await get('platform=Instagram');assert.equal(ig.total,1);assert.equal(ig.items.find(x=>x.id==='20').refill,false);assert.equal(ig.items.find(x=>x.id==='20').noDrop,false);
  assert.equal((await get('platform=TikTok')).total,5);
  assert.deepEqual((await get('platform=TikTok&q=shares')).items.map(x=>x.id),['11']);
  assert.deepEqual((await get('category=Instagram%20views')).items.map(x=>x.id),['20']);
@@ -44,7 +44,7 @@ test('USA first, general next, all requested countries last with platform order 
  const filtered=await get('platform=Instagram&q=Germany');assert.deepEqual(filtered.items.map(x=>x.id),['105']);
 });
 
-test('catalog discounts above $30 once and labels USD explicitly',async t=>{
+test('catalog enforces wholesale brackets and excludes cap conflicts and labels USD explicitly',async t=>{
  const oldFetch=globalThis.fetch,oldKey=process.env.SMMGLOB_API_KEY;
  process.env.SMMGLOB_API_KEY='mock-only';
  t.after(()=>{globalThis.fetch=oldFetch;if(oldKey===undefined)delete process.env.SMMGLOB_API_KEY;else process.env.SMMGLOB_API_KEY=oldKey;});
@@ -53,7 +53,7 @@ test('catalog discounts above $30 once and labels USD explicitly',async t=>{
  const {GET}=await import('data:text/javascript;base64,'+Buffer.from(source+'\n// discounted catalog').toString('base64'));
  const result=await (await GET(new Request('https://example.test/api/smmservices'))).json();
  const rates=Object.fromEntries(result.items.map(x=>[x.id,x.per1000]));
- assert.equal(rates['1'],30);assert.ok(Math.abs(rates['2']-19.5325)<1e-9);assert.equal(rates['3'],23.400000000000002);assert.equal(rates['4'],65);
+ assert.equal(rates['1'],30);assert.equal(rates['2'],undefined,'cap conflict excluded');assert.equal(rates['3'],23.4);assert.equal(rates['4'],40);
  const page=read('app/page.jsx');assert.match(page,/All prices are in USD/);assert.match(page,/currencyDisplay:"code"/);
 });
 
@@ -99,9 +99,9 @@ test('matched refill durations use approved tiers and cover wholesale without gu
  const {GET}=await import('data:text/javascript;base64,'+Buffer.from(source+'\n// refill tiers').toString('base64'));
  const result=await (await GET(new Request('https://example.test/api/smmservices'))).json();
  const rates=Object.fromEntries(result.items.map(x=>[x.id,x.per1000]));
- assert.deepEqual(['1','2','3','4'].map(id=>rates[id]),[5,7.5,10,15]);
- assert.equal(rates['5'],5,'unmatched duration keeps independently calculated price');
- assert.deepEqual(['6','7','8'].map(id=>rates[id]),[20,30,60]);
- assert.equal(rates['9'],5,'no actual refill eligibility means no tier');
- assert.equal(rates['33677'],12,'explicit profit override is preserved');
+ assert.deepEqual(['1','2','3','4'].map(id=>rates[id]),[8.99,10.49,11.99,22.99]);
+ assert.equal(rates['5'],11.99,'independent duration uses verified tier');
+ assert.deepEqual(['6','7','8'].map(id=>rates[id]),[8.99,undefined,22.99]);
+ assert.equal(rates['9'],10.49,'explicit supplier refill label verifies coverage');
+ assert.equal(rates['33677'],11.99,'follower cap and refill ladder supersede override');
 });

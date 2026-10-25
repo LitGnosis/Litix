@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 const page=readFileSync(new URL('../app/page.jsx',import.meta.url),'utf8');
-const source=readFileSync(new URL('../app/api/[action]/route.js',import.meta.url),'utf8').replace('import { neon } from "@neondatabase/serverless";','const neon=()=>{throw Error("Unexpected database access")};');
+const source=readFileSync(new URL('../app/api/[action]/route.js',import.meta.url),'utf8').replace('"../../../lib/pricing.mjs"', JSON.stringify(new URL('../lib/pricing.mjs',import.meta.url).href)).replace('import { neon } from "@neondatabase/serverless";','const neon=()=>{throw Error("Unexpected database access")};');
 test('card prerequisites reject incomplete details, private links, and invalid quantities',()=>{
  const check=vm.runInNewContext(page.slice(page.indexOf('const validOrderDetails='),page.indexOf('const whatsappNumber='))+'validOrderDetails',{URL});
  const s={purchasable:true,min:100,max:1000};
@@ -22,7 +22,7 @@ test('concurrent catalog requests share a read-only upstream fetch and recommend
  const {GET}=await import('data:text/javascript;base64,'+Buffer.from(source+'\n// resilience').toString('base64'));
  const request=()=>GET(new Request('https://example.test/api/smmservices?goal=Launch+a+product&horizon=7'));
  const a=request(),b=request();assert.equal(calls,1);release();
- for(const r of await Promise.all([a,b])){const v=await r.json();assert.deepEqual(v.recommendations.map(s=>s.id),['1']);assert.equal(v.recommendations[0].per1000,5)}
+ for(const r of await Promise.all([a,b])){const v=await r.json();assert.deepEqual(v.recommendations.map(s=>s.id),['1']);assert.equal(v.recommendations[0].per1000,6.99)}
  assert.equal(calls,1);
 });
 
