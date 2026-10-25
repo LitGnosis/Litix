@@ -11,7 +11,7 @@ const send = (v,s=200) => Response.json(v,{status:s,headers:{"cache-control":"no
 const hash = v => createHash("sha256").update(String(v)).digest("hex");
 const conn = () => process.env.LITIX_V2_DATABASE_URL || process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.POSTGRES_PRISMA_URL;
 const db = () => neon(conn());
-// Preview/Development payment requests are sandbox-only; production retains its existing gateway.
+// Every Preview/Development checkout is sandbox-only, regardless of copied live secrets.
 const selectedGatewayMode = () => ["preview","development"].includes(process.env.VERCEL_ENV) || process.env.NMI_GATEWAY_MODE === "TEST" ? "TEST" : "PRODUCTION";
 const publicCollectKey = () => selectedGatewayMode()==="TEST"
   ? (process.env.NEXT_PUBLIC_PAYKINGS_NMI_TEST_COLLECT_PUBLIC_KEY || process.env.NMI_TEST_COLLECT_PUBLIC_KEY)

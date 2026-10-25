@@ -230,7 +230,8 @@ export default function Home(){
   try{
    const r=await fetch("/api/checkout/v1",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({serviceId:selected.id,quantity:qty,email,link:normalizedOrderLink,paymentToken:token,idempotencyKey:key,expectedAmountCents:price})});
    const v=await r.json();
-   // Ambiguous checkout outcomes reuse the original idempotency key to avoid accidental duplicate charges.
+   // Keep the original idempotency key for ambiguous responses and retries.
+   // Generating a fresh key after HTTP 409 can create a second charge.
    if(!r.ok&&r.status!==202)throw Error(v.error||"Payment processing failed");
    setReceipt(v);setNotice(v.message);
    if(v.orderId&&v.secret){

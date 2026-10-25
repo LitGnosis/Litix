@@ -1,6 +1,8 @@
 // Transactional order notifications. Never include raw card data or log private tracking tokens.
 const emailKey=()=>process.env.RESEND_API_KEY||process.env.LITIX_RESEND_API_KEY||"";
-export const notificationsConfigured=()=>Boolean(emailKey());
+const sender=()=>process.env.LITIX_RECEIPT_FROM||"Litix <orders@litix.net>";
+const senderValid=()=>/^(?:[^<>\r\n]{1,60}\s+<)?[a-zA-Z0-9._%+-]+@litix\.net>?$/.test(sender());
+export const notificationsConfigured=()=>Boolean(emailKey())&&senderValid();
 
 const htmlEscape=value=>String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 function safeTrackingURL(orderId,secret){
@@ -11,7 +13,7 @@ async function deliver({key,to,subject,text,html}){
  const response=await fetch("https://api.resend.com/emails",{
   method:"POST",
   headers:{"Authorization":"Bearer "+emailKey(),"Content-Type":"application/json","Idempotency-Key":key},
-  body:JSON.stringify({from:"Litix <orders@litix.net>",to:[to],subject,text,html}),
+  body:JSON.stringify({from:sender(),to:[to],subject,text,html}),
   signal:AbortSignal.timeout(8000),cache:"no-store"
  });
  if(!response.ok)throw Error("Resend returned HTTP "+response.status);
