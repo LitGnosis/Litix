@@ -1,4 +1,4 @@
-import { authenticatedCustomer, customerAuthConfigured, customerSigninUrl, customerSignupUrl, neonSelected } from "../../lib/customerAuth.js";
+import { authenticatedCustomer, customerAuthConfigured } from "../../lib/customerAuth.js";
 import AccountClient from "./AccountClient.jsx";
 export const dynamic="force-dynamic";
 export default async function AccountPage() {
@@ -15,10 +15,10 @@ export default async function AccountPage() {
       <h1>Welcome to your Litix account</h1>
       <p style={{color:"#c2d7e5",lineHeight:1.6}}>Sign in to view orders, save AutoLikes campaign drafts, and manage your settings securely. Monthly billing stays disabled until approved.</p>
       <div style={{display:"flex",gap:12,flexWrap:"wrap",marginTop:22}}>
-        <a href={customerSigninUrl()} style={{padding:"13px 20px",borderRadius:12,background:"#216084",color:"#fff",textDecoration:"none",fontWeight:700}}>Log in</a>
-        <a href={customerSignupUrl()} style={{padding:"13px 20px",borderRadius:12,border:"1px solid #6faed2",color:"#d2f2ff",textDecoration:"none",fontWeight:700}}>Create account</a>
+        <a href="/auth/login?returnTo=%2Faccount" style={{padding:"13px 20px",borderRadius:12,background:"#216084",color:"#fff",textDecoration:"none",fontWeight:700}}>Log in</a>
+        <a href="/auth/login?screen_hint=signup&returnTo=%2Faccount" style={{padding:"13px 20px",borderRadius:12,border:"1px solid #6faed2",color:"#d2f2ff",textDecoration:"none",fontWeight:700}}>Create account</a>
       </div>
     </div>
   </main>;
-  return <AccountClient user={{name:user.name,email:user.email}} provider={neonSelected()?"neon":"auth0"}/>;
+  return <AccountClient user={{name:user.name,email:user.email}}/>;
 }
