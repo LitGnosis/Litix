@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import AutoLikesDrafts from "./AutoLikesDrafts.jsx";
 export default function AccountClient({user}){
   const [data,setData]=useState(null),[error,setError]=useState(""),[loading,setLoading]=useState(true);
   useEffect(()=>{
@@ -20,10 +21,7 @@ export default function AccountClient({user}){
         <section style={panel}><h2>Your orders</h2>{data.orders.length===0?<p>No linked orders yet. Guest orders paid using your verified email will appear here.</p>:data.orders.map(o=><article key={o.id} style={{borderTop:"1px solid #2d5875",padding:"13px 0"}}>
           <strong style={{overflowWrap:"anywhere"}}>{o.id}</strong><p>{o.service} · {o.quantity} units · {o.amount}</p><p>Payment: {o.payment} · Supplier: {o.fulfillment}</p><a style={{color:"#8edfff"}} href={"/track?order="+encodeURIComponent(o.id)}>Track with your checkout email</a>
         </article>)}</section>
-        <section style={panel}><h2>AutoLikes campaigns</h2><p>{data.autoLikes.available?"Campaign management is available.":"AutoLikes subscriptions are not accepting purchases until verified recurring billing, supplier compatibility and retries pass integration tests."}</p>
-          {data.campaigns.map(c=><article key={c.id} style={{borderTop:"1px solid #2d5875",padding:"13px 0"}}>{c.platform} · {c.status} · {c.quantityPerPost} per post</article>)}
-          {!data.campaigns.length&&<p>No active campaigns.</p>}
-        </section>
+        <AutoLikesDrafts/>
       </>}
       <a style={{color:"#a9e3ff"}} href="/track">Track an order</a>
     </div>
