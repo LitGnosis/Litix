@@ -39,3 +39,10 @@ Restore the pinned full source ZIP from GitHub, preserve the existing Vercel pro
 
 ## Chat/ZIP record
 A separate `Litix-NEW-DEFAULT-VERIFIED-LIVE-2026-10-25-RESTORE-KIT.zip` was created in the ChatGPT working artifacts with a detailed reconstructed conversation summary, historical kit, validation notes, scripts and private evidence screenshots. Source archives are pinned externally above and are not themselves embedded in that lightweight recovery kit.
+
+## Neon production database recovery (additional, non-destructive backups)
+- Neon project: `fancy-wave-75069167`.
+- Live production branch preserved unchanged: `br-long-term-awmdp29b`.
+- Verified copy-on-write backup branch READY, with NO compute: `br-small-sea-awybamqq`, name `backup-litix-verified-live-2026-10-25`, parent `br-long-term-awmdp29b`, parent timestamp `2026-10-25T22:04:33Z`.
+- Manual snapshot: `snap-fragrant-hat-awyjlty1`, named "Litix verified live checkout and orders 2026-10-25", created `2026-10-25T22:06:36Z`.
+- This is a database backup in the SAME Neon project; maintain independent exports/longer-term retention separately if required. Never restore over production automatically, and do not expose copied customer records.
