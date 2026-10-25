@@ -19,7 +19,7 @@ function friendlyStatus(order){
  if(["partial","partially_completed"].includes(s))return {title:"Partially completed",description:"The supplier reports partial delivery. Check any remaining quantity below and contact support if progress stops.",kind:"warning",step:2};
  if(["failed","canceled","cancelled","refunded","manual_review","review"].includes(s))return {title:"Delivery needs support",description:"Your payment was recorded, but fulfillment needs review. Do not place a duplicate order.",kind:"warning",step:1};
  if(["in_progress","processing"].includes(s))return {title:"Supplier processing your order",description:"The supplier is processing delivery. Followers may arrive in stages. This is not yet a completed order.",kind:"progress",step:2};
- if(["submitted","dispatching","pending","queued"].includes(s))return {title:"Submitted to supplier",description:"Your order has a supplier reference, but delivery is not confirmed. Check again for a supplier progress update.",kind:"progress",step:1};
+ if(["submitted","dispatching","pending","queued"].includes(s))return {title:"Submitted to supplier",description:"Your order has a supplier reference, but delivery is not confirmed. Check again for a supplier progress update.",kind:"progress",step:2};
  return {title:"Awaiting supplier update",description:"The order has been received. Check again shortly or contact support with your order number.",kind:"pending",step:1};
 }
 export default function OrderTracker(){
@@ -44,7 +44,7 @@ export default function OrderTracker(){
   if(u.searchParams.has("track")&&u.searchParams.has("token")){
    const credentials=privateDetails(u.href);
    // Remove the bearer token from browser address bar and future referrers after reading it.
-   window.history.replaceState({},"","/track");
+   window.history.replaceState(window.history.state,"","/track");
    if(credentials){setOrderId(credentials.id);runStatus({kind:"private",...credentials})}
    else setNotice("This tracking link is incomplete. Paste the full link or enter your order number and checkout email.");
   }
