@@ -79,3 +79,25 @@ Added .github/workflows/litix-preview-smoke.yml and src/scripts/preview-smoke.mj
 Catalog repair: litix_catalog_prices exists in the original platform-foundation migration, but reported production error indicates it was not applied to the database used by catalog sync. Added standalone additive 20261025-catalog-only-repair.sql; local SQL test reruns it, preserves unrelated order rows and validates pricing constraints. Sync now checks to_regclass before supplier download and returns CATALOG_SCHEMA_MISSING without supplier calls if storage is absent. Do not auto-create tables during requests. No production schema change. Production repair requires verifying the intended database, approved migration, and a successful authorized sync afterward; the single-order checkout uses its existing direct catalog path and was not rewired to this table.
 
 CI publication limitation: publisher rejected .github/workflows/litix-preview-smoke.yml with workflow_file_not_allowed (HTTP 403). The publishing token has no workflow-file permission; changing GitHub App access does not fix it. Workflow is provided as docs/ci/litix-preview-smoke.yml for a repository maintainer to copy to .github/workflows/litix-preview-smoke.yml. The smoke script and application tests can be published; no workflow run is claimed.
+
+## Subscription continuation — 2026-10-25
+
+Working smoke workflow/environment/bypass configuration is preserved; no CI installation or protection changes in this update.
+
+New implementation:
+- Preview-only account policy, requiring `LITIX_CUSTOMER_DATABASE_VERIFIED=true` as well as the existing account flag. Do not set either until actual isolated migrations and two-user Auth0 verification/recovery checks pass. Production cannot opt into these experimental routes.
+- Sign-in/registration entry page; registration uses installed Auth0 SDK's supported login authorization parameters. Recovery remains Universal Login's password-recovery flow; tenant settings and actual delivery remain externally unverified.
+- `/account/subscribe`: hosted Collect.js tokenization, explicit displayed price/renewal consent, server-owned quote/session identity, bounded loading and request handling, per-attempt idempotency, no resubmission after an ambiguous server response. Dedicated sandbox public tokenization key required; no live key fallback. Approved first charge must be a future date, day 1–28. UI requires real browser verification; local policy tests do not prove hosted fields work.
+- Customer receipts from verified settlements only, subject-scoped at `/api/account/receipts/[transactionId]`. JSON receipt explicitly marked sandbox; not a live charge receipt.
+- Management-email links now use configured Preview origin rather than production. Real sender authentication/inbox delivery is unverified.
+- Additive settlement-job migration and bounded atomic claim worker, POST `/api/internal/monthly-settlement`. Requires Preview, dedicated worker enable flag, minimum 32-character worker secret supplied as Bearer authorization, isolated database and dedicated NMI TEST configuration. No public enqueue endpoint. Only an authorized operator may insert jobs using confirmed merchant transaction IDs and independently approved billing coverage dates. No guessed coverage or browser payment flags. Unknown outcomes remain review, crashed claims remain processing for manual reconciliation, duplicate settlements remain suppressed by database function.
+
+Not completed: remote Neon migration, actual Auth0 tenant configuration/tests, hosted NMI sandbox/browser tests, automated merchant transaction discovery/renewal schedule persistence, scheduled invocation (worker is wired but intentionally not scheduled), complete transactional notification outbox/failure/cancellation emails, real email delivery. External account access alone does not complete missing code. Supplier automation/live billing remain disabled; production untouched.
+
+Required external steps (do not paste credentials into chat):
+- Auth0 Dashboard → Applications → Applications → Litix application → Settings: approve exact new Preview callback `/auth/callback`, logout origin and web origin; confirm database connection signup/recovery/verification. Set matching APP_BASE_URL securely in Preview. Test two independent users and expiry/recovery before enabling account policy.
+- Isolated Neon project → SQL Editor: review/apply existing four monthly/customer migrations plus `20261025-monthly-settlement-jobs.sql`, then verify constraints/isolation against that remote database. No production migration requested or applied here.
+- Merchant NMI/PayKings portal: obtain dedicated sandbox security and tokenization keys, confirm permitted recurring API and approved first-charge schedule. Store securely as branch Preview variables, never substitute production keys.
+- Email provider: verify sender/domain and explicitly authorize a test inbox before real delivery tests.
+
+New Preview Ready/build status must be recorded separately from exact-deployment HTTP and customer-flow verification. Existing disabled-route smoke success is not Auth0/payment end-to-end evidence.
