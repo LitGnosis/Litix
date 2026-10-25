@@ -1,5 +1,6 @@
 "use client";
 import {useEffect,useMemo,useState} from "react";
+import AutoLikesEnrollment from "./AutoLikesEnrollment.jsx";
 
 const controls={width:"100%",padding:"13px 12px",boxSizing:"border-box",font:"inherit",color:"#eaf4ff",background:"#071624",border:"1px solid #537b96",borderRadius:11};
 const primary={border:"1px solid #7dc7ea",borderRadius:12,padding:"12px 17px",background:"#194b66",color:"#effaff",font:"inherit",fontWeight:700,cursor:"pointer"};
@@ -89,6 +90,7 @@ export default function AutoLikesDrafts(){
      <button style={secondary} type="button" disabled={pending} onClick={()=>update(c,c.status==="draft"?"pause":"resume")}>{c.status==="draft"?"Pause draft":"Resume editing"}</button>
      <button style={secondary} type="button" disabled={pending} onClick={()=>update(c,"cancel")}>Discard draft</button>
     </div>}
+    {c.status==="draft"&&<AutoLikesEnrollment campaign={c} />}
    </article>)}</div>}
   </div>
  </section>;
