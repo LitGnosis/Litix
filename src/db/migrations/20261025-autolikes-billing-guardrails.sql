@@ -17,6 +17,9 @@ create index if not exists litix_recurring_owner_idx
   on litix_recurring_subscriptions(customer_id,created_at desc)
   where customer_id is not null;
 
+create unique index if not exists litix_profile_events_unique_post
+  on litix_profile_events(workspace_id,platform,post_url);
+
 -- A unique post target for each campaign is allowed only one dispatch claim.
 -- UNKNOWN_OUTCOME must be reconciled, never retried with an unrelated idempotency key.
 create table if not exists litix_autolikes_delivery_claims(
