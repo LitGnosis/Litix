@@ -12,7 +12,6 @@ export async function GET(){
   try{
     const sql=neon(connection());
     const orders=await sql.query("select id,service_name,quantity,amount_cents,payment_state,fulfillment_state,created_at from litix_v2_orders where lower(email)=$1 order by created_at desc limit 30",[user.email]);
-    const campaigns=await sql.query("select id,platform,status,quantity_per_post,posts_processed_this_month,next_check_at from litix_auto_boost_campaigns where customer_id=$1 order by created_at desc limit 30",[user.id]);
-    return send({account:{name:user.name,email:user.email},orders:orders.map(o=>({id:o.id,service:o.service_name,quantity:o.quantity,amount:"USD "+(Number(o.amount_cents)/100).toFixed(2),payment:o.payment_state,fulfillment:o.fulfillment_state,createdAt:o.created_at})),campaigns:campaigns.map(c=>({id:c.id,platform:c.platform,status:c.status,quantityPerPost:c.quantity_per_post,postsCompleted:c.posts_processed_this_month,nextCheckAt:c.next_check_at})),autoLikes:{available:false,reason:"Recurring payments and supplier-based automatic delivery are not yet verified."}});
+    return send({account:{name:user.name,email:user.email},orders:orders.map(o=>({id:o.id,service:o.service_name,quantity:o.quantity,amount:"USD "+(Number(o.amount_cents)/100).toFixed(2),payment:o.payment_state,fulfillment:o.fulfillment_state,createdAt:o.created_at})),campaigns:[],autoLikes:{available:false,reason:"Recurring billing is not enabled."}});
   }catch(e){console.error("Litix account lookup failed",String(e?.message||"error").slice(0,90));return send({error:"Customer dashboard is temporarily unavailable."},503)}
 }
