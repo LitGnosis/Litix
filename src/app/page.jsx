@@ -9,7 +9,9 @@ const getCollectJS=()=>{try{if(typeof CollectJS!=="undefined")return CollectJS}c
 const whatsappNumber=(process.env.NEXT_PUBLIC_WHATSAPP_NUMBER||"").replace(/\D/g,"");
 const publicCollectKey=process.env.NEXT_PUBLIC_PAYKINGS_NMI_COLLECT_PUBLIC_KEY||"";
 const socialPlatformForService=service=>{
- const label=String((service?.name||"")+" "+(service?.category||"")).toLowerCase();
+ const name=String(service?.name||"").toLowerCase();
+ if(!/\bfollow(?:er)?s?\b/.test(name))return "";
+ const label=String(name+" "+(service?.category||"")).toLowerCase();
  if(/instagram|\big\b/.test(label))return "instagram";
  if(/tiktok/.test(label))return "tiktok";
  return "";
