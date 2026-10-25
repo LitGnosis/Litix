@@ -23,7 +23,7 @@ export default function AccountClient({user}){
       {error&&<p role="alert">{error}</p>}
       {data&&<>
         <section style={panel}><h2>Your orders</h2>{data.orders.length===0?<p>No linked orders yet. Guest orders paid using your verified email will appear here.</p>:data.orders.map(o=><article key={o.id} style={{borderTop:"1px solid #2d5875",padding:"13px 0"}}>
-          <strong style={{overflowWrap:"anywhere"}}>{o.id}</strong><p>{o.service} · {o.quantity} units · {o.amount}</p><p>Payment: {o.payment} · Supplier: {o.fulfillment}</p><a style={{color:"#8edfff"}} href={"/track?order="+encodeURIComponent(o.id)}>Track with your checkout email</a>
+          <strong style={{overflowWrap:"anywhere"}}>{o.id}</strong><p>{o.service} · {o.quantity} units · {o.amount}</p><p>Payment: {o.payment} · Supplier: {o.fulfillment}</p><a style={{color:"#8edfff"}} href={"/track?order="+encodeURIComponent(o.id)}>Track this order</a>
         </article>)}</section>
         <section style={panel}><h2>Billing and subscriptions</h2>
           <p style={{color:"#bcd3e5"}}>Monthly PayKings/NMI subscriptions are not yet enabled. Preparing a campaign draft never charges your card.</p>
