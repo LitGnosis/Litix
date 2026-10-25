@@ -10,7 +10,7 @@ const whatsappNumber=(process.env.NEXT_PUBLIC_WHATSAPP_NUMBER||"").replace(/\D/g
 const publicCollectKey=process.env.NEXT_PUBLIC_PAYKINGS_NMI_COLLECT_PUBLIC_KEY||"";
 const socialPlatformForService=service=>{
  const label=String((service?.name||"")+" "+(service?.category||"")).toLowerCase();
- if(/instagram|\\big\\b/.test(label))return "instagram";
+ if(/instagram|\big\b/.test(label))return "instagram";
  if(/tiktok/.test(label))return "tiktok";
  return "";
 };
@@ -19,12 +19,12 @@ const normalizeSocialProfileInput=(value,platform)=>{
  if(!platform)return {ok:true,value:raw};
  if(!raw)return {ok:false,error:"Enter the public profile username."};
  let username=raw;
- if(/^https?:\\/\\//i.test(raw)){
+ if(/^https?:\/\//i.test(raw)){
   let url;try{url=new URL(raw)}catch{return {ok:false,error:"Enter a valid public profile URL or @username."}}
-  const host=url.hostname.toLowerCase().replace(/^www\\./,"");
-  if(platform==="instagram"&&!["instagram.com"].includes(host))return {ok:false,error:"Use an Instagram username or instagram.com profile URL."};
-  if(platform==="tiktok"&&!["tiktok.com"].includes(host))return {ok:false,error:"Use a TikTok username or tiktok.com profile URL."};
-  const match=platform==="instagram"?url.pathname.match(/^\\/([A-Za-z0-9._]+)\\/?$/):url.pathname.match(/^\\/@([A-Za-z0-9._]+)\\/?$/);
+  const host=url.hostname.toLowerCase().replace(/^www\./,"");
+  if(platform==="instagram"&&host!=="instagram.com")return {ok:false,error:"Use an Instagram username or instagram.com profile URL."};
+  if(platform==="tiktok"&&host!=="tiktok.com")return {ok:false,error:"Use a TikTok username or tiktok.com profile URL."};
+  const match=platform==="instagram"?url.pathname.match(/^\/([A-Za-z0-9._]+)\/?$/):url.pathname.match(/^\/@([A-Za-z0-9._]+)\/?$/);
   if(!match)return {ok:false,error:"Enter a direct public profile URL, not a post or video URL."};
   username=match[1];
  }else{
