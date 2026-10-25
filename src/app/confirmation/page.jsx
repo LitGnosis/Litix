@@ -8,11 +8,20 @@ export default function ConfirmationPage(){
  const [remaining,setRemaining]=useState(18);
  const [autoHome,setAutoHome]=useState(true);
  const [copied,setCopied]=useState(false);
+ const [emailState,setEmailState]=useState("");
+ const [sendingEmail,setSendingEmail]=useState(false);
  useEffect(()=>{
   document.title="Order confirmation | Litix";
   let stored=null;
   try{stored=JSON.parse(sessionStorage.getItem("litix:last-confirmation")||"null")}catch{}
   const id=new URLSearchParams(window.location.search).get("order");
+  if(!stored?.orderId||!stored?.trackingUrl||(id&&id!==stored.orderId)){
+   try{
+    const history=JSON.parse(localStorage.getItem("litix:saved-orders")||"[]");
+    const prior=history.find(x=>x.id===id&&typeof x.url==="string");
+    if(prior)stored={orderId:prior.id,trackingUrl:prior.url,payment:prior.payment,fulfillment:prior.fulfillment,amountCents:null,service:"Checking service information…",createdAt:prior.createdAt};
+   }catch{}
+  }
   if(!stored?.orderId||!stored?.trackingUrl||(id&&id!==stored.orderId)){setStatus("Your receipt is not available in this browser. Use the private tracking link saved after checkout.");setAutoHome(false);return}
   setReceipt(stored);
   try{
@@ -23,7 +32,7 @@ export default function ConfirmationPage(){
    const timeout=setTimeout(()=>controller.abort(),10000);
    fetch("/api/track?id="+encodeURIComponent(orderId)+"&token="+encodeURIComponent(token),{cache:"no-store",signal:controller.signal})
      .then(async r=>{if(!r.ok)throw Error("Tracking status is temporarily unavailable.");return r.json()})
-     .then(body=>{if(body.order?.payment)setReceipt(old=>old?{...old,payment:body.order.payment,fulfillment:body.order.fulfillment||old.fulfillment}:old)})
+     .then(body=>{if(body.order?.payment)setReceipt(old=>old?{...old,payment:body.order.payment,fulfillment:body.order.fulfillment||old.fulfillment,service:body.order.service||old.service,amountCents:Number(body.order.amount)*100}:old)})
      .catch(()=>setStatus("The tracking service could not refresh yet. Your private tracking link is saved below."))
      .finally(()=>clearTimeout(timeout));
    return()=>{controller.abort();clearTimeout(timeout)};
@@ -35,6 +44,17 @@ export default function ConfirmationPage(){
   const interval=setTimeout(()=>setRemaining(n=>n-1),1000);
   return()=>clearTimeout(interval);
  },[remaining,autoHome,receipt]);
+ async function requestEmails(){
+  if(!receipt?.trackingUrl||sendingEmail)return;
+  setAutoHome(false);setSendingEmail(true);setEmailState("");
+  try{
+   const u=new URL(receipt.trackingUrl);
+   const r=await fetch("/api/resend-confirmation",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({orderId:receipt.orderId,token:u.searchParams.get("token")})});
+   const v=await r.json();if(!r.ok)throw Error(v.error||"Email request could not be processed");
+   setEmailState("Email request accepted. Check the order email inbox and spam folder. Delivery may take a few moments.");
+  }catch(e){setEmailState(e.message||"Could not request the emails.")}
+  finally{setSendingEmail(false)}
+ }
  async function copyTracking(){
   try{await navigator.clipboard.writeText(receipt.trackingUrl);setCopied(true)}catch{setStatus("Select and copy the tracking link shown below.")}
  }
@@ -55,7 +75,7 @@ export default function ConfirmationPage(){
      <div style={{borderTop:"1px solid #375b6b",paddingTop:18,display:"grid",gap:13}}>
       <div><div style={{color:muted,fontSize:13}}>Order number</div><div style={{overflowWrap:"anywhere",fontWeight:700}}>{receipt.orderId}</div></div>
       <div><div style={{color:muted,fontSize:13}}>Payment / supplier</div><div style={{textTransform:"capitalize"}}>{receipt.payment} · {String(receipt.fulfillment||"pending").replaceAll("_"," ")}</div></div>
-      <div><div style={{color:muted,fontSize:13}}>Total</div><div style={{fontSize:27,fontWeight:800}}>USD {new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format((receipt.amountCents||0)/100)}</div></div>
+      <div><div style={{color:muted,fontSize:13}}>Total</div><div style={{fontSize:27,fontWeight:800}}>USD {receipt.amountCents==null?"Checking…":new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(receipt.amountCents/100)}</div></div>
       <div><div style={{color:muted,fontSize:13}}>Service</div><div>{receipt.service}</div></div>
      </div>
      <div style={{marginTop:25,borderTop:"1px solid #375b6b",paddingTop:20}}>
@@ -65,9 +85,11 @@ export default function ConfirmationPage(){
       <div style={{display:"flex",gap:10,flexWrap:"wrap",marginTop:14}}>
        <button style={button} type="button" onClick={copyTracking}>{copied?"Copied":"Copy tracking link"}</button>
        <a href={receipt.trackingUrl} style={button}>Track order</a>
+       <button type="button" onClick={requestEmails} disabled={sendingEmail} style={{...button,background:"#153951",opacity:sendingEmail?.6:1}}>{sendingEmail?"Requesting emails…":"Send confirmation & tracking emails"}</button>
       </div>
      </div>
     </>:<p style={{color:muted}}>{status||"Loading your order details..."}</p>}
+    {emailState&&<p style={{color:blue,fontSize:14,marginTop:18}} role="status">{emailState}</p>}
     {status&&receipt&&<p style={{color:muted,fontSize:14,marginTop:18}}>{status}</p>}
    </section>
    {receipt&&<div style={{...box,marginTop:20}}>
