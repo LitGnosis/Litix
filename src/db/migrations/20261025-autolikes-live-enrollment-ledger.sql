@@ -11,6 +11,8 @@ create table if not exists litix_autolikes_subscription_attempts (
   provider text not null default 'nmi' check (provider='nmi'),
   quote_sha256 char(64) not null check (quote_sha256 ~ '^[a-f0-9]{64}$'),
   monthly_amount_cents integer not null check (monthly_amount_cents between 100 and 2000000),
+  consent_version text not null,
+  consent_at timestamptz not null default now(),
   state text not null default 'INITIATING' check (state in ('INITIATING','AWAITING_VERIFICATION','DECLINED','UNKNOWN_OUTCOME','RECONCILED','CANCELLED')),
   provider_subscription_item_id text,
   last_gateway_code text,
