@@ -14,9 +14,17 @@ export default async function AccountPage() {
       <a href="/" style={{color:"#abe2ff"}}>← Litix Home</a>
       <h1>Welcome to your Litix account</h1>
       <p style={{color:"#c2d7e5",lineHeight:1.6}}>Sign in to view orders, save AutoLikes campaign drafts, and manage your settings securely. Monthly billing stays disabled until approved.</p>
-      <div style={{display:"flex",gap:12,flexWrap:"wrap",marginTop:22}}>
-        <a href="/auth/login?returnTo=%2Faccount" style={{padding:"13px 20px",borderRadius:12,background:"#216084",color:"#fff",textDecoration:"none",fontWeight:700}}>Log in</a>
-        <a href="/auth/login?screen_hint=signup&returnTo=%2Faccount" style={{padding:"13px 20px",borderRadius:12,border:"1px solid #6faed2",color:"#d2f2ff",textDecoration:"none",fontWeight:700}}>Create account</a>
+      <div style={{display:"flex",gap:12,flexWrap:"wrap",marginTop:22,alignItems:"stretch"}}>
+        {/* Native GET forms reliably navigate even when a mobile browser blocks client-side link handlers. */}
+        <form action="/auth/login" method="get" style={{margin:0}}>
+          <input type="hidden" name="returnTo" value="/account"/>
+          <button type="submit" style={{minHeight:52,padding:"13px 20px",borderRadius:12,border:"1px solid #216084",background:"#216084",color:"#fff",fontWeight:700,fontSize:16,touchAction:"manipulation",cursor:"pointer"}}>Log in</button>
+        </form>
+        <form action="/auth/login" method="get" style={{margin:0}}>
+          <input type="hidden" name="screen_hint" value="signup"/>
+          <input type="hidden" name="returnTo" value="/account"/>
+          <button type="submit" style={{minHeight:52,padding:"13px 20px",borderRadius:12,border:"1px solid #6faed2",background:"transparent",color:"#d2f2ff",fontWeight:700,fontSize:16,touchAction:"manipulation",cursor:"pointer"}}>Create account</button>
+        </form>
       </div>
     </div>
   </main>;
