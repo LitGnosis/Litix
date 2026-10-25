@@ -1,0 +1,14 @@
+# Litix Customer Login Preview
+
+Rollback: dpl_Auttc3gpeKVJMCu7X9snz5HtGj9W, https://litixfinallogocorrectedvercelready-f9ob5jk0j-litgnosisllc-9049.vercel.app
+Production main source: a15af00e883f0f6b307b5269bb6451c705080573. New branch feature/litix-customer-login. Unfinished supplier work and subscription work are deliberately separate.
+
+Official Auth0 Next.js SDK 4.33.0, React 19.1.2, secure encrypted SDK sessions, one-hour idle/one-day absolute expiry. Preview-only flag. Exact immutable VERCEL_URL sets SDK app base on Vercel (not incoming Host); APP_BASE_URL is the non-Vercel fallback. APP_BASE_URL should also be stored as the exact selected Preview origin. Each new deployment hostname requires matching Auth0 allowlists.
+
+/auth/login supports signup via screen_hint=signup; /auth/logout ends session; /account requires session; /api/account/profile also requires verified email. Recovery/verification are Auth0 Universal Login/provider emails, not custom password handling. No access token endpoint. No account history claimed: existing orders have private tracking tokens, no verified Auth0 ownership map. Never attach historic orders by email. No database changes. Guest browse/checkout preserved.
+
+Auth0 management access is unavailable. Sign into Auth0 as tenant administrator or ask its administrator to grant your Auth0 user application-management access. Existing tenant: icfg-gze7k29vikshhuni3ydh7fg1-staging.us.auth0.com, existing Client ID ends PNVd. Dashboard → Applications → Applications → matching app → Settings. Confirm Regular Web Application, use display name Litix Customer Login only after ownership confirmation. Add exact Preview /auth/callback to Allowed Callback URLs; exact origin to Allowed Logout URLs and Allowed Web Origins. Authentication → Database → existing connection: confirm signup and application connection enabled. Test verification and password reset delivery. No duplicate app created; no tenant setting applied here. Vercel credentials do not grant tenant-management access; do not paste secrets in chat.
+
+Automated auth policy and checkout mocked route tests pass locally. Main's other baseline tests are stale: Collect.js test cannot extract current effect, presentation tests expect old gold CSS and outdated selector text. No live payment/supplier request, mobile/browser test, actual Auth0 login/callback/reset/email/session-persistence test or remote DB test is claimed. Build skips lint/type checking under existing config; it is not proof of those checks.
+
+Main still has SMMFOLLOWOM supplier calls despite SMMGLOB UI labels. Authentication does not change that or certify live checkout. Reconcile the separate supplier PR before any production rollout. Payment/supplier route source, webhook settings, catalog, credentials and DNS unchanged. No production promotion authorized.

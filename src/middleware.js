@@ -1,3 +1,4 @@
+import {customerAuth} from './lib/customer-auth';
 import { NextResponse } from "next/server";
 
 function decodeBase64Url(value) {
@@ -41,6 +42,11 @@ function requiredPermission(method) {
 
 export async function middleware(request) {
   const { pathname, searchParams } = request.nextUrl;
+  if(pathname.startsWith('/auth/')||pathname==='/account'||pathname.startsWith('/account/')||pathname.startsWith('/api/account/')){
+    const auth=customerAuth();
+    if(!auth)return NextResponse.json({error:'Customer login is not configured on this deployment.'},{status:503,headers:{'cache-control':'no-store'}});
+    return auth.middleware(request);
+  }
   const host = (request.headers.get("host") || "").split(":")[0].toLowerCase().replace(/\.$/, "");
   const primaryHosts = new Set(["litix.net", "www.litix.net", "localhost"]);
   const vercelHost = host.endsWith(".vercel.app");

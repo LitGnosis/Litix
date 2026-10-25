@@ -1,0 +1,2 @@
+export const dynamic='force-dynamic';
+export default function Login(){return <main className="wrap"><section className="panel"><h1>Litix Customer Login</h1><p><a href="/auth/login?returnTo=%2Faccount">Sign in</a></p><p><a href="/auth/login?screen_hint=signup&returnTo=%2Faccount">Create an account</a></p><p>For password reset, choose Sign in, then “Forgot password” in Auth0.</p><p><a href="/">Continue browsing without signing in</a></p></section></main>}
