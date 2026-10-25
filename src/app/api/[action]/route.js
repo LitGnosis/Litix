@@ -22,6 +22,42 @@ async function smm(action,params={}) {
  if(!r.ok) throw Error("Supplier returned HTTP "+r.status);
  const obj=await r.json(); if(obj?.error) throw Error(String(obj.error).slice(0,160)); return obj;
 }
+
+const publicOrderId=id=>/^ltx2_[a-f0-9-]{36}$/.test(id);
+const normalizeSupplierState=(state,current)=>{
+ const s=String(state||"").trim().toLowerCase().replace(/[ _-]+/g," ");
+ if(["completed","complete","finished"].includes(s))return "completed";
+ if(["partial","partially completed"].includes(s))return "partial";
+ if(["canceled","cancelled","refunded","failed","error"].includes(s))return s==="cancelled"?"canceled":s;
+ if(["in progress","inprogress","working"].includes(s))return "in_progress";
+ if(["processing","running"].includes(s))return "processing";
+ if(["pending","waiting","queued","awaiting"].includes(s))return "pending";
+ return current;
+};
+const publicOrder=(x,refresh={})=>{
+ const stat=x.last_supplier_status||{};
+ const remaining=stat.remains==null?null:Number(stat.remains);
+ const validRemaining=Number.isFinite(remaining)&&Number.isInteger(remaining)&&remaining>=0&&remaining<=Number(x.quantity)?remaining:null;
+ const supplierStatus=String(stat.status||"").trim();
+ return {id:x.id,service:x.service_name,quantity:Number(x.quantity),amount:(Number(x.amount_cents)/100).toFixed(2),payment:x.payment_state,fulfillment:x.fulfillment_state,supplierOrderId:x.supplier_order_id||null,status:supplierStatus||null,remains:validRemaining,checkedAt:stat.checked_at||null,liveSupplierStatus:refresh.live===true,deliveryConfirmed:x.fulfillment_state==="completed",statusNote:refresh.warning||(!supplierStatus?"Supplier accepted the order; delivery is not confirmed yet.":"Supplier status is based on its most recent response.")};
+};
+async function refreshSupplierOrder(sql,x){
+ if(!x.supplier_order_id)return {live:false,warning:"Waiting for supplier order assignment."};
+ const last=x.last_supplier_status||{},lastTime=Date.parse(String(last.checked_at||""));
+ if(Number.isFinite(lastTime)&&Date.now()-lastTime<60000)return {live:false,warning:"Showing a supplier update fetched within the last minute."};
+ try{
+  const stat=await smm("status",{order:String(x.supplier_order_id)});
+  if(!stat||typeof stat!=="object"||Array.isArray(stat))throw Error("Invalid supplier status payload");
+  const next={...stat,checked_at:new Date().toISOString()};
+  const state=normalizeSupplierState(next.status,x.fulfillment_state);
+  await sql.query("update litix_v2_orders set last_supplier_status=$2::jsonb,fulfillment_state=$3 where id=$1",[x.id,JSON.stringify(next),state]);
+  x.last_supplier_status=next;x.fulfillment_state=state;
+  return {live:true};
+ }catch(e){
+  console.warn("Litix supplier status refresh unavailable",{orderId:x.id,error:String(e?.message||"supplier status failed").slice(0,100)});
+  return {live:false,warning:"Latest supplier update is temporarily unavailable. Previous order status is shown."};
+ }
+}
 const truth = v => v === true || String(v).toLowerCase() === "true" || String(v) === "1";
 const hasRefill = x => truth(x.refill) || truth(x.refillable) || truth(x.auto_refill) || truth(x.autorefill);
 const hasNoDrop = x => {
@@ -82,11 +118,13 @@ export async function GET(req){
  }
  if(op==="track"){
   const id=bounded(p.get("id"),80),secret=bounded(p.get("token"),150);
-  if(!/^ltx2_[a-f0-9-]{36}$/.test(id)||secret.length<25||secret.length>150)return send({error:"Invalid private tracking link"},400);
-  let rows,sql;try{sql=db();rows=await sql.query("select id,service_name,quantity,amount_cents,payment_state,fulfillment_state,supplier_order_id,last_supplier_status from litix_v2_orders where id=$1 and tracking_token_hash=$2",[id,hash(secret)])}catch{return send({error:"Tracking database temporarily unavailable"},503)}
-  if(!rows.length)return send({error:"Order not found"},404);const x=rows[0];
-  if(x.supplier_order_id)try{const stat=await smm("status",{order:String(x.supplier_order_id)}),status=String(stat.status||"").toLowerCase(),fulfillment=status==="completed"?"completed":status==="partial"?"partial":status==="in progress"?"in_progress":x.fulfillment_state;await sql.query("update litix_v2_orders set last_supplier_status=$2::jsonb,fulfillment_state=$3 where id=$1",[id,JSON.stringify(stat),fulfillment]);x.fulfillment_state=fulfillment;x.last_supplier_status=stat}catch{}
-  return send({order:{id:x.id,service:x.service_name,quantity:x.quantity,amount:(Number(x.amount_cents)/100).toFixed(2),payment:x.payment_state,fulfillment:x.fulfillment_state,status:x.last_supplier_status?.status||"",remains:x.last_supplier_status?.remains??null}});
+  if(!publicOrderId(id)||secret.length<25||secret.length>150)return send({error:"Invalid private tracking link"},400);
+  let rows,sql;
+  try{sql=db();rows=await sql.query("select id,service_name,quantity,amount_cents,payment_state,fulfillment_state,supplier_order_id,last_supplier_status from litix_v2_orders where id=$1 and tracking_token_hash=$2",[id,hash(secret)])}
+  catch{return send({error:"Tracking database temporarily unavailable"},503)}
+  if(!rows.length)return send({error:"Order not found"},404);
+  const x=rows[0],refresh=await refreshSupplierOrder(sql,x);
+  return send({order:publicOrder(x,refresh)});
  }
 }
 async function resendPaidOrderConfirmation(req){
@@ -103,7 +141,22 @@ async function resendPaidOrderConfirmation(req){
  after(()=>sendOrderEmails({orderId:id,secret:token,email:String(order.email),amountCents:Number(order.amount_cents),quantity:Number(order.quantity),serviceName:String(order.service_name),fulfillment:String(order.fulfillment_state)}).catch(e=>console.error("Litix manual resend failed",{orderId:id,error:String(e?.message||"email error").slice(0,100)})));
  return send({queued:true,message:"Confirmation and tracking email request accepted"},202);
 }
+
+async function lookupOrderByEmail(req){
+ let raw;
+ try{raw=await req.text();if(raw.length>1100)throw Error("oversized")}catch{return send({error:"Invalid request"},400)}
+ let data;try{data=JSON.parse(raw)}catch{return send({error:"Invalid request"},400)}
+ const id=bounded(data?.orderId,80),email=bounded(data?.email,254).toLowerCase();
+ if(!publicOrderId(id)||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return send({error:"Enter the order number and checkout email."},400);
+ let rows,sql;
+ try{sql=db();rows=await sql.query("select id,service_name,quantity,amount_cents,payment_state,fulfillment_state,supplier_order_id,last_supplier_status from litix_v2_orders where id=$1 and lower(email)=$2 limit 1",[id,email])}
+ catch{return send({error:"Order lookup is temporarily unavailable"},503)}
+ if(!rows.length)return send({error:"No matching order found. Check the number and email used at checkout."},404);
+ const x=rows[0],refresh=await refreshSupplierOrder(sql,x);
+ return send({order:publicOrder(x,refresh)});
+}
 export async function POST(req){
+ if(name(req)==="lookup-order")return lookupOrderByEmail(req);
  if(name(req)==="resend-confirmation")return resendPaidOrderConfirmation(req);
  if(name(req)!=="checkout")return send({error:"Unknown action"},404);
  const flags=conf();if(!flags.database||!flags.supplier||!flags.payment)return send({error:"Secure checkout is temporarily unavailable"},503);
