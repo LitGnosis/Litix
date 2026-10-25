@@ -5,7 +5,7 @@ import {readFileSync} from 'node:fs';
 // Import the actual route with only its database transport replaced. All fetches
 // are intercepted; these tests cannot charge a card or submit a supplier order.
 const source=readFileSync(new URL('../app/api/[action]/route.js',import.meta.url),'utf8')
- .replace('import {neon} from "@neondatabase/serverless";', 'const neon=()=>globalThis.__litixTestDatabase;');
+ .replace('import { neon } from "@neondatabase/serverless";', 'const neon=()=>globalThis.__litixTestDatabase;');
 const cases=[
  ['price changed', {expectedAmountCents:799}, 409, 0, 0],
  ['price omitted', {expectedAmountCents:undefined}, 409, 0, 0],
@@ -31,16 +31,16 @@ for(const [label,options,status,payments,orders] of cases){
     if(options.gateway==='timeout')throw Error('simulated timeout');
     return new Response(options.gateway==='declined'?'response=2&responsetext=Declined':options.gateway==='missing-transaction'?'response=1&responsetext=Approved':'response=1&transactionid=test-only');
    }
-   assert.equal(String(url),'https://smmfollowom.com/api/v2');
+   assert.equal(String(url),'https://my.smmfollowom.com/api/v2');
    const action=init.body.get('action');
-   if(action==='services')return Response.json([{service:1,name:'Test service',rate:1,min:100,max:10000,type:'Default'}]);
+   if(action==='services')return Response.json([{service:1,name:'USA No Drop Test service',refill:true,rate:1,min:100,max:10000,type:'Default'}]);
    assert.equal(action,'add');orderCalls++;
    if(options.supplierTimeout)throw Error('simulated supplier timeout');
    return Response.json({order:'test-only'});
   };
   t.after(()=>{globalThis.fetch=originalFetch;globalThis.__litixTestDatabase=originalDatabase;for(const k of keys){if(previous[k]===undefined)delete process.env[k];else process.env[k]=previous[k];}});
   const {POST}=await import('data:text/javascript;base64,'+Buffer.from(source+'\n// '+label).toString('base64'));
-  const request=new Request('https://example.test/api/checkout',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({serviceId:'1',quantity:1000,email:'test@example.test',link:'https://example.test/post',paymentToken:'test-token-only',idempotencyKey:'12345678-1234-1234-1234-123456789abc',expectedAmountCents:1100,...options})});
+  const request=new Request('https://example.test/api/checkout',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({serviceId:'1',quantity:1000,email:'test@example.test',link:'https://example.test/post',paymentToken:'test-token-only',idempotencyKey:'12345678-1234-1234-1234-123456789abc',expectedAmountCents:500,...options})});
   const response=await POST(request);
   assert.equal(response.status,status);
   assert.equal(paymentCalls,payments);assert.equal(orderCalls,orders);
