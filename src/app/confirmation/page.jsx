@@ -5,7 +5,7 @@ const ink="#e9f3ff",muted="#a9c4d5",blue="#73c5ed";
 export default function ConfirmationPage(){
  const [receipt,setReceipt]=useState(null);
  const [status,setStatus]=useState("");
- const [remaining,setRemaining]=useState(18);
+ const [remaining,setRemaining]=useState(10);
  const [autoHome,setAutoHome]=useState(true);
  const [copied,setCopied]=useState(false);
  const [emailState,setEmailState]=useState("");
@@ -19,7 +19,7 @@ export default function ConfirmationPage(){
    try{
     const history=JSON.parse(localStorage.getItem("litix:saved-orders")||"[]");
     const prior=history.find(x=>x.id===id&&typeof x.url==="string");
-    if(prior)stored={orderId:prior.id,trackingUrl:prior.url,payment:prior.payment,fulfillment:prior.fulfillment,amountCents:null,service:"Checking service information…",createdAt:prior.createdAt};
+    if(prior)stored={orderId:prior.id,trackingUrl:prior.url,payment:prior.payment,fulfillment:prior.fulfillment,amountCents:null,service:"Checking service information…",quantity:prior.quantity??null,destination:prior.destination??null,createdAt:prior.createdAt};
    }catch{}
   }
   if(!stored?.orderId||!stored?.trackingUrl||(id&&id!==stored.orderId)){setStatus("Your receipt is not available in this browser. Use the private tracking link saved after checkout.");setAutoHome(false);return}
@@ -32,7 +32,7 @@ export default function ConfirmationPage(){
    const timeout=setTimeout(()=>controller.abort(),10000);
    fetch("/api/track?id="+encodeURIComponent(orderId)+"&token="+encodeURIComponent(token),{cache:"no-store",signal:controller.signal})
      .then(async r=>{if(!r.ok)throw Error("Tracking status is temporarily unavailable.");return r.json()})
-     .then(body=>{if(body.order?.payment)setReceipt(old=>old?{...old,payment:body.order.payment,fulfillment:body.order.fulfillment||old.fulfillment,service:body.order.service||old.service,amountCents:Number(body.order.amount)*100}:old)})
+     .then(body=>{if(body.order?.payment)setReceipt(old=>old?{...old,payment:body.order.payment,fulfillment:body.order.fulfillment||old.fulfillment,service:body.order.service||old.service,quantity:body.order.quantity??old.quantity,amountCents:Number(body.order.amount)*100}:old)})
      .catch(()=>setStatus("The tracking service could not refresh yet. Your private tracking link is saved below."))
      .finally(()=>clearTimeout(timeout));
    return()=>{controller.abort();clearTimeout(timeout)};
@@ -77,6 +77,8 @@ export default function ConfirmationPage(){
       <div><div style={{color:muted,fontSize:13}}>Payment / supplier</div><div style={{textTransform:"capitalize"}}>{receipt.payment} · {String(receipt.fulfillment||"pending").replaceAll("_"," ")}</div></div>
       <div><div style={{color:muted,fontSize:13}}>Total</div><div style={{fontSize:27,fontWeight:800}}>USD {receipt.amountCents==null?"Checking…":new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(receipt.amountCents/100)}</div></div>
       <div><div style={{color:muted,fontSize:13}}>Service</div><div>{receipt.service}</div></div>
+      {receipt.quantity!=null&&<div><div style={{color:muted,fontSize:13}}>Quantity</div><div>{Number(receipt.quantity).toLocaleString()}</div></div>}
+      {receipt.destination&&<div><div style={{color:muted,fontSize:13}}>Profile / post submitted</div><div style={{overflowWrap:"anywhere"}}>{receipt.destination}</div></div>}
      </div>
      <div style={{marginTop:25,borderTop:"1px solid #375b6b",paddingTop:20}}>
       <h2 style={{fontSize:21,margin:"0 0 8px"}}>Private tracking link</h2>
