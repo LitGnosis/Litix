@@ -226,7 +226,31 @@ export default function Home(){
   };
  },[config.ready,config.publicKey,cardRetry,detailsReady]);
  const price=selected?Math.max(100,Math.ceil(selected.per1000*qty/1000*100)):0;
- async function purchase(token){try{const r=await fetch("/api/checkout/v1",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({serviceId:selected.id,quantity:qty,email,link:normalizedOrderLink,paymentToken:token,idempotencyKey:key,expectedAmountCents:price})});const v=await r.json();if(r.status!==202)setKey(crypto.randomUUID());if(!r.ok&&r.status!==202)throw Error(v.error||"Payment processing failed");setReceipt(v);setNotice(v.message);if(v.orderId&&v.secret){const trackingUrl=location.origin+"/?track="+encodeURIComponent(v.orderId)+"&token="+encodeURIComponent(v.secret);setPrivateUrl(trackingUrl);setSavedOrders(old=>[{id:v.orderId,url:trackingUrl,createdAt:new Date().toISOString(),payment:v.payment,fulfillment:v.fulfillment||"pending"},...old.filter(o=>o.id!==v.orderId)].slice(0,12));}}catch(e){setNotice(e.message)}finally{setBusy(false)}}
+ async function purchase(token){
+  try{
+   const r=await fetch("/api/checkout/v1",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({serviceId:selected.id,quantity:qty,email,link:normalizedOrderLink,paymentToken:token,idempotencyKey:key,expectedAmountCents:price})});
+   const v=await r.json();
+   if(r.status!==202)setKey(crypto.randomUUID());
+   if(!r.ok&&r.status!==202)throw Error(v.error||"Payment processing failed");
+   setReceipt(v);setNotice(v.message);
+   if(v.orderId&&v.secret){
+    const trackingUrl=location.origin+"/?track="+encodeURIComponent(v.orderId)+"&token="+encodeURIComponent(v.secret);
+    const item={id:v.orderId,url:trackingUrl,createdAt:new Date().toISOString(),payment:v.payment,fulfillment:v.fulfillment||"pending"};
+    setPrivateUrl(trackingUrl);
+    setSavedOrders(old=>[item,...old.filter(o=>o.id!==v.orderId)].slice(0,12));
+    try{const saved=JSON.parse(localStorage.getItem("litix:saved-orders")||"[]");localStorage.setItem("litix:saved-orders",JSON.stringify([item,...saved.filter(o=>o.id!==v.orderId)].slice(0,12)))}catch{}
+    if(v.payment==="paid"){
+     let stored=false;
+     try{
+      sessionStorage.setItem("litix:last-confirmation",JSON.stringify({orderId:v.orderId,trackingUrl,payment:v.payment,fulfillment:v.fulfillment||"pending",amountCents:price,service:selected?.name||"Social media service",createdAt:item.createdAt}));
+      stored=true;
+     }catch{}
+     if(stored){location.assign("/confirmation?order="+encodeURIComponent(v.orderId));return}
+    }
+   }
+  }catch(e){setNotice(e.message)}
+  finally{setBusy(false)}
+ }
  done.current=purchase;
  const submit=e=>{e.preventDefault();if(!detailsReady||!cardReady||!selected||busy)return;if(!Number.isSafeInteger(qty)||qty<selected.min||qty>selected.max){setNotice("Enter a whole-number quantity within this service’s limits.");return}if(!selected.purchasable){setNotice("This service requires additional supplier fields and cannot be checked out here.");return}setBusy(true);setNotice("");try{getCollectJS().startPaymentRequest()}catch{setBusy(false);setNotice("Complete your secure card fields before paying")}};
  const track=async value=>{try{const u=new URL(value,location.origin),id=u.searchParams.get("track"),token=u.searchParams.get("token");if(!id||!token)throw Error("Paste the full private tracking URL");const r=await fetch("/api/track?id="+encodeURIComponent(id)+"&token="+encodeURIComponent(token)),v=await r.json();if(!r.ok)throw Error(v.error||"Tracking failed");setTracked(v.order)}catch(e){setNotice(e.message)}};
