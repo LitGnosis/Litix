@@ -1,0 +1,1 @@
+{"extends":["next"],"ignorePatterns":["node_modules/",".next/","scripts/"]}

@@ -39,6 +39,9 @@ export async function GET(request) {
   }
 
   try {
+    // Fail before downloading a supplier catalog if the additive schema is missing.
+    const available=await getDb().query("select to_regclass('public.litix_catalog_prices') as catalog",[]);
+    if(!available[0]?.catalog)return send({error:"Catalog storage requires the approved catalog-only migration; no supplier request sent.",code:"CATALOG_SCHEMA_MISSING"},503);
     // SMM panel APIs commonly accept URL-encoded form fields. The exact endpoint must be
     // configured from the supplier's account documentation; credentials stay server-side.
     const body = new URLSearchParams({ key: apiKey, action: "services" });

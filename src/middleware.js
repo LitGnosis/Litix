@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import {customerAuth} from "./lib/customer-auth";
 
 function decodeBase64Url(value) {
   const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
@@ -67,6 +68,12 @@ export async function middleware(request) {
     } catch {
       return new NextResponse("Tenant resolution failed.", { status: 503 });
     }
+  }
+
+  if(pathname.startsWith("/auth/")||pathname==="/account"||pathname.startsWith("/account/")||pathname.startsWith("/api/account/")){
+    const auth=customerAuth();
+    if(!auth)return NextResponse.json({error:"Customer accounts are not enabled yet."},{status:503,headers:{"cache-control":"no-store"}});
+    return auth.middleware(request);
   }
 
   if (pathname.startsWith("/api/v2/workspaces")) {
