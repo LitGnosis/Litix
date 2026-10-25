@@ -11,8 +11,18 @@ const send = (v,s=200) => Response.json(v,{status:s,headers:{"cache-control":"no
 const hash = v => createHash("sha256").update(String(v)).digest("hex");
 const conn = () => process.env.LITIX_V2_DATABASE_URL || process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.POSTGRES_PRISMA_URL;
 const db = () => neon(conn());
-const publicCollectKey = () => process.env.NEXT_PUBLIC_PAYKINGS_NMI_COLLECT_PUBLIC_KEY || process.env.PAYKINGS_NMI_COLLECT_PUBLIC_KEY;
-const conf = () => ({database:!!conn(),supplier:!!process.env.SMMGLOB_API_KEY,payment:!!(process.env.NMI_SECURITY_KEY&&publicCollectKey())});
+// Preview/Development payment requests are sandbox-only; production retains its existing gateway.
+const selectedGatewayMode = () => ["preview","development"].includes(process.env.VERCEL_ENV) || process.env.NMI_GATEWAY_MODE === "TEST" ? "TEST" : "PRODUCTION";
+const publicCollectKey = () => selectedGatewayMode()==="TEST"
+  ? (process.env.NEXT_PUBLIC_PAYKINGS_NMI_TEST_COLLECT_PUBLIC_KEY || process.env.NMI_TEST_COLLECT_PUBLIC_KEY)
+  : (process.env.NEXT_PUBLIC_PAYKINGS_NMI_COLLECT_PUBLIC_KEY || process.env.PAYKINGS_NMI_COLLECT_PUBLIC_KEY);
+const sandboxGatewayValid = () => {
+  try { const u=new URL(process.env.NMI_TEST_GATEWAY_URL||"");return u.protocol==="https:"&&u.hostname!=="paykings.transactiongateway.com" }catch{return false}
+};
+const paymentConfigured = () => selectedGatewayMode()==="TEST"
+  ? Boolean(process.env.NMI_TEST_SECURITY_KEY && sandboxGatewayValid() && publicCollectKey())
+  : Boolean(process.env.NMI_SECURITY_KEY && publicCollectKey());
+const conf = () => ({database:!!conn(),supplier:!!process.env.SMMGLOB_API_KEY,payment:paymentConfigured()});
 const name = req => new URL(req.url).pathname.split("/").pop();
 const bounded = (v,n=120) => String(v??"").trim().slice(0,n);
 async function smm(action,params={}) {
@@ -110,7 +120,7 @@ export async function GET(req){
  const op=name(req),flags=conf(),p=new URL(req.url).searchParams;
  if(!["config","health","smmservices","track"].includes(op))return send({error:"Unknown route"},404);
  if(op==="config")return send({ready:flags.database&&flags.supplier&&flags.payment,publicKey:publicCollectKey()||null});
- if(op==="health"){let database=false;if(flags.database)try{await db().query("select 1",[]);database=true}catch{}const gatewayMode=process.env.NMI_GATEWAY_MODE==="TEST"?"TEST":"PRODUCTION";const gatewayConfigured=gatewayMode==="TEST"?!!(process.env.NMI_TEST_SECURITY_KEY&&process.env.NMI_TEST_GATEWAY_URL):!!process.env.NMI_SECURITY_KEY;return send({service:"litix-v2",database,supplierConfigured:flags.supplier,paykingsConfigured:flags.payment,orderEmailConfigured:notificationsConfigured(),gatewayMode,testGatewayConfigured:gatewayMode==="TEST"?gatewayConfigured:undefined,liveTransactionVerified:false,ready:database&&flags.supplier&&flags.payment},database?200:503)}
+ if(op==="health"){let database=false;if(flags.database)try{await db().query("select 1",[]);database=true}catch{}const gatewayMode=selectedGatewayMode();const gatewayConfigured=gatewayMode==="TEST"?!!(process.env.NMI_TEST_SECURITY_KEY&&process.env.NMI_TEST_GATEWAY_URL):!!process.env.NMI_SECURITY_KEY;return send({service:"litix-v2",database,supplierConfigured:flags.supplier,paykingsConfigured:flags.payment,orderEmailConfigured:notificationsConfigured(),gatewayMode,testGatewayConfigured:gatewayMode==="TEST"?gatewayConfigured:undefined,liveTransactionVerified:false,ready:database&&flags.supplier&&flags.payment},database?200:503)}
  if(op==="smmservices"){
   const cat=bounded(p.get("category"),100),platform=bounded(p.get("platform"),30),term=bounded(p.get("q"),120).toLowerCase(),page=Math.max(1,Math.min(10000,Number(p.get("page"))||1));
   try{const all=await getServices(),filtered=all.filter(x=>(!cat||String(x.category||"Other")===cat)&&(!platform||platform==="All platforms"||platformName(x)===platform)&&(!term||[x.service,x.name,x.category].some(z=>String(z||"").toLowerCase().includes(term)))).sort((a,b)=>followerRank(a)-followerRank(b)||geographyRank(a)-geographyRank(b)||platformRank(a)-platformRank(b)||String(a.name||"").localeCompare(String(b.name||"")));const goals={"Grow audience":/followers?|profile/i,"Increase engagement":/likes?|comments?|views?|saves?/i,"Launch a product":/shares?|views?|saves?/i,"Generate leads":/profile|views?/i,"Build brand awareness":/views?|shares?/i};const matcher=goals[p.get("goal")];const recommendations=matcher&&["7","30","90"].includes(p.get("horizon"))?filtered.filter(x=>/^default$/i.test(String(x.type||"Default"))&&matcher.test(String(x.name))).slice(0,3).map(shape):[];return send({recommendations,items:filtered.slice((page-1)*24,page*24).map(shape),categories:[...new Set(all.map(x=>String(x.category||"Other")))].sort(),total:filtered.length,allCount:all.length,page})}
@@ -160,7 +170,7 @@ export async function POST(req){
  if(name(req)==="resend-confirmation")return resendPaidOrderConfirmation(req);
  if(name(req)!=="checkout")return send({error:"Unknown action"},404);
  const flags=conf();if(!flags.database||!flags.supplier||!flags.payment)return send({error:"Secure checkout is temporarily unavailable"},503);
- const gatewayMode=process.env.NMI_GATEWAY_MODE==="TEST"?"TEST":"PRODUCTION";
+ const gatewayMode=selectedGatewayMode();
  // TEST mode is fail-closed: never fall back to production credentials or pretend a transaction was verified.
  const gatewayKey=gatewayMode==="TEST"?process.env.NMI_TEST_SECURITY_KEY:process.env.NMI_SECURITY_KEY;
  const gatewayUrl=gatewayMode==="TEST"?process.env.NMI_TEST_GATEWAY_URL:"https://paykings.transactiongateway.com/api/transact.php";
