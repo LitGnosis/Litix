@@ -100,7 +100,7 @@ export async function POST(req){
  let x;try{x=await req.json()}catch{return send({error:"Invalid JSON"},400)}
  const id=bounded(x.serviceId,32),qty=Number(x.quantity),email=bounded(x.email,250).toLowerCase(),link=bounded(x.link,1200),token=bounded(x.paymentToken,500),idem=bounded(x.idempotencyKey,36);let target;try{target=new URL(link)}catch{}
  if(!/^[0-9]+$/.test(id)||!Number.isSafeInteger(qty)||qty<1||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||!target||target.protocol!=="https:"||!target.hostname.includes(".")||token.length<10||!/^[a-f0-9-]{36}$/.test(idem))return send({error:"Invalid service, quantity, public URL, email or payment information"},400);
- let service;try{service=(await refreshServices(false)).find(s=>String(s.service)===id)}catch{return send({error:"SMMGLOB prices unavailable; no charge submitted"},503)}
+ let service;try{service=(await refreshServices(false)).find(s=>String(s.service)===id)}catch{return send({error:"Litix prices unavailable; no charge submitted"},503)}
  if(!service||!/^default$/i.test(String(service.type||"Default"))||qty<Number(service.min)||qty>Number(service.max))return send({error:"This service needs additional order information or a different quantity"},422);
  const cents=Math.max(100,Math.ceil(retailPer1000(service)*qty/1000*100));if(!Number.isSafeInteger(cents)||cents>100000000)return send({error:"Order total is outside supported limits"},422);
  const quote=validateCheckoutQuote({actualSupplierWholesaleUsd:Number(service.rate)*qty/1000,customerSubtotalCents:cents,service:supplierPricingInput(service)});
