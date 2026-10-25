@@ -230,19 +230,20 @@ export default function Home(){
   try{
    const r=await fetch("/api/checkout/v1",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({serviceId:selected.id,quantity:qty,email,link:normalizedOrderLink,paymentToken:token,idempotencyKey:key,expectedAmountCents:price})});
    const v=await r.json();
-   if(r.status!==202)setKey(crypto.randomUUID());
+   // Keep the original idempotency key for ambiguous responses and retries.
+   // Generating a fresh key after HTTP 409 can create a second charge.
    if(!r.ok&&r.status!==202)throw Error(v.error||"Payment processing failed");
    setReceipt(v);setNotice(v.message);
    if(v.orderId&&v.secret){
     const trackingUrl=location.origin+"/?track="+encodeURIComponent(v.orderId)+"&token="+encodeURIComponent(v.secret);
-    const item={id:v.orderId,url:trackingUrl,createdAt:new Date().toISOString(),payment:v.payment,fulfillment:v.fulfillment||"pending"};
+    const item={id:v.orderId,url:trackingUrl,createdAt:new Date().toISOString(),payment:v.payment,fulfillment:v.fulfillment||"pending",quantity:qty,destination:normalizedOrderLink};
     setPrivateUrl(trackingUrl);
     setSavedOrders(old=>[item,...old.filter(o=>o.id!==v.orderId)].slice(0,12));
     try{const saved=JSON.parse(localStorage.getItem("litix:saved-orders")||"[]");localStorage.setItem("litix:saved-orders",JSON.stringify([item,...saved.filter(o=>o.id!==v.orderId)].slice(0,12)))}catch{}
     if(v.payment==="paid"){
      let stored=false;
      try{
-      sessionStorage.setItem("litix:last-confirmation",JSON.stringify({orderId:v.orderId,trackingUrl,payment:v.payment,fulfillment:v.fulfillment||"pending",amountCents:price,service:selected?.name||"Social media service",createdAt:item.createdAt}));
+      sessionStorage.setItem("litix:last-confirmation",JSON.stringify({orderId:v.orderId,trackingUrl,payment:v.payment,fulfillment:v.fulfillment||"pending",amountCents:price,service:selected?.name||"Social media service",quantity:qty,destination:normalizedOrderLink,createdAt:item.createdAt}));
       stored=true;
      }catch{}
      if(stored){location.assign("/confirmation?order="+encodeURIComponent(v.orderId));return}
