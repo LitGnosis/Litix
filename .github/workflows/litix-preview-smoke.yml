@@ -1,32 +1,73 @@
+
 name: Litix protected Preview smoke
+
 on:
   workflow_dispatch:
-    inputs:
-      preview_url:
-        description: Exact deployment URL for the specified commit
-        required: true
-      commit_sha:
-        description: Full deployed commit SHA
-        required: true
+
 permissions:
   contents: read
+
 jobs:
   smoke:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment: preview-testing
+    timeout-minutes: 5
+
     steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.commit_sha }}
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Verify checkout identity
+
+      - name: Test approved Litix Preview
         env:
-          EXPECTED_SHA: ${{ inputs.commit_sha }}
-        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
-      - name: Protected Preview HTTP tests (disabled billing expected)
-        env:
-          PREVIEW_URL: ${{ inputs.preview_url }}
+          PREVIEW_URL: https://litixfinallogocorrectedvercelready-kvut3gsfo-litgnosisllc-9049.vercel.app
           VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
-        run: node src/scripts/preview-smoke.mjs
+        run: |
+          node --input-type=module <<'NODE'
+          const base = new URL(process.env.PREVIEW_URL);
+          const secret = process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
+
+          if (base.protocol !== 'https:' ||
+              base.hostname !== 'litixfinallogocorrectedvercelready-kvut3gsfo-litgnosisllc-9049.vercel.app' ||
+              base.pathname !== '/' || base.search || base.hash) {
+            throw new Error('Unapproved Preview URL');
+          }
+
+          if (!secret) {
+            throw new Error('Testing secret not configured');
+          }
+
+          const checks = [
+            ['/', 200],
+            ['/account', 503],
+            ['/api/account/dashboard', 503]
+          ];
+
+          for (const [path, expected] of checks) {
+            const response = await fetch(new URL(path, base), {
+              redirect: 'manual',
+              headers: {
+                'x-vercel-protection-bypass': secret
+              },
+              signal: AbortSignal.timeout(15000)
+            });
+
+            console.log(`${path}: HTTP ${response.status}`);
+
+            if (response.status !== expected) {
+              throw new Error(`${path}: unexpected HTTP status`);
+            }
+
+            if (expected === 503) {
+              const data = await response.json();
+              if (data.error !== 'Customer accounts are not enabled yet.') {
+                throw new Error(`${path}: unexpected account restriction`);
+              }
+            }
+          }
+
+          console.log('Preview smoke checks passed.');
+          console.log('Customer accounts remain disabled.');
+          console.log('Subscriptions are NOT launch-ready.');
+          NODE
