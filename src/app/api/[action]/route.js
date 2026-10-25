@@ -89,7 +89,22 @@ export async function GET(req){
   return send({order:{id:x.id,service:x.service_name,quantity:x.quantity,amount:(Number(x.amount_cents)/100).toFixed(2),payment:x.payment_state,fulfillment:x.fulfillment_state,status:x.last_supplier_status?.status||"",remains:x.last_supplier_status?.remains??null}});
  }
 }
+async function resendPaidOrderConfirmation(req){
+ if(!notificationsConfigured())return send({error:"Email sending is temporarily unavailable"},503);
+ let payload;
+ try{payload=await req.json()}catch{return send({error:"Invalid request"},400)}
+ const id=bounded(payload?.orderId,80),token=bounded(payload?.token,150);
+ if(!/^ltx2_[a-f0-9-]{36}$/.test(id)||token.length<25)return send({error:"Invalid private tracking link"},400);
+ let rows;
+ try{rows=await db().query("select id,email,quantity,amount_cents,service_name,fulfillment_state,payment_state from litix_v2_orders where id=$1 and tracking_token_hash=$2",[id,hash(token)])}
+ catch{return send({error:"Tracking is temporarily unavailable"},503)}
+ const order=rows?.[0];
+ if(!order||order.payment_state!=="paid")return send({error:"No paid order found for this tracking link"},404);
+ after(()=>sendOrderEmails({orderId:id,secret:token,email:String(order.email),amountCents:Number(order.amount_cents),quantity:Number(order.quantity),serviceName:String(order.service_name),fulfillment:String(order.fulfillment_state)}).catch(e=>console.error("Litix manual resend failed",{orderId:id,error:String(e?.message||"email error").slice(0,100)})));
+ return send({queued:true,message:"Confirmation and tracking email request accepted"},202);
+}
 export async function POST(req){
+ if(name(req)==="resend-confirmation")return resendPaidOrderConfirmation(req);
  if(name(req)!=="checkout")return send({error:"Unknown action"},404);
  const flags=conf();if(!flags.database||!flags.supplier||!flags.payment)return send({error:"Secure checkout is temporarily unavailable"},503);
  const gatewayMode=process.env.NMI_GATEWAY_MODE==="TEST"?"TEST":"PRODUCTION";
