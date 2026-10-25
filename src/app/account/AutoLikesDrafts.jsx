@@ -31,6 +31,9 @@ export default function AutoLikesDrafts(){
   return()=>ctl.abort();
  },[platform]);
  const estimate=activeService?activeService.per1000*Number(quantity)/1000:0;
+ const handle=target.trim().replace(/^@/,"");
+ const canPreviewProfile=platform==="instagram" ? /^(?!.*\\.\\.)(?!\\.)(?!.*\\.$)[a-zA-Z0-9._]{1,30}$/.test(handle) : /^[a-zA-Z0-9._]{2,24}$/.test(handle);
+ const profilePreview=canPreviewProfile ? (platform==="instagram"?"https://www.instagram.com/"+handle+"/":"https://www.tiktok.com/@"+handle) : null;
  const valid=activeService&&Number.isSafeInteger(Number(quantity))&&quantity>=activeService.min&&quantity<=activeService.max&&Number.isSafeInteger(Number(posts))&&posts>=1&&posts<=60&&target.trim().length>1;
  async function request(path,body){const r=await fetch("/api/account/autolikes",{method:path==="POST"?"POST":"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify(body),cache:"no-store"});const data=await r.json();if(!r.ok)throw Error(data.error||"Campaign update failed");return data}
  async function create(e){
@@ -62,6 +65,7 @@ export default function AutoLikesDrafts(){
    <label style={{display:"grid",gap:7}}>Supplier-backed Likes service<select style={controls} value={serviceId} onChange={e=>{setServiceId(e.target.value);let s=services.find(x=>x.id===e.target.value);if(s)setQuantity(Math.max(s.min,Math.min(s.max,quantity)))}}>{services.length?services.map(s=><option key={s.id} value={s.id}>{s.name} — #{s.id} — {money(s.per1000)} / 1,000</option>):<option value="">No verified Likes services available</option>}</select></label>
    {activeService&&<div style={{fontSize:13,color:"#bfd6e6"}}>Service #{activeService.id} · {activeService.min.toLocaleString()}–{activeService.max.toLocaleString()} likes per post · {activeService.refill?"Refill available":"No refill stated"}</div>}
    <label style={{display:"grid",gap:7}}>Public profile username<input style={controls} value={target} onChange={e=>setTarget(e.target.value)} spellCheck={false} autoCapitalize="none" autoComplete="off" placeholder={platform==="instagram"?"@your.instagram":"@yourtiktok"} required/></label>
+   {profilePreview&&<a href={profilePreview} target="_blank" rel="noopener noreferrer" style={{color:"#8fdafa",fontSize:13}}>Open public profile to check visibility (not automatically verified)</a>}
    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(170px,1fr))",gap:14}}>
     <label style={{display:"grid",gap:7}}>Likes per new post<input style={controls} type="number" inputMode="numeric" min={activeService?.min||1} max={activeService?.max||100000} value={quantity} onChange={e=>setQuantity(Number(e.target.value))} required/></label>
     <label style={{display:"grid",gap:7}}>Maximum posts per month<input style={controls} type="number" inputMode="numeric" min="1" max="60" value={posts} onChange={e=>setPosts(Number(e.target.value))} required/></label>
@@ -80,7 +84,7 @@ export default function AutoLikesDrafts(){
    {!campaigns.length?<p style={{color:"#a9bfce"}}>No drafts yet.</p>:<div style={{display:"grid",gap:12}}>{campaigns.map(c=><article key={c.id} style={{border:"1px solid #3a6681",borderRadius:13,padding:15,background:"#091e2e"}}>
     <div style={{fontWeight:700,overflowWrap:"anywhere"}}>{c.platform.toUpperCase()} — {c.target}</div>
     <div style={{fontSize:13,color:"#bdcfde",marginTop:5}}>{c.quantityPerPost.toLocaleString()} likes/post · up to {c.maxPostsPerMonth} posts/month · Service #{c.serviceId}</div>
-    <p style={{fontSize:13,color:"#b5dafa"}}>Status: <b>{c.status}</b> · No active billing</p>
+    <p style={{fontSize:13,color:"#b5dafa"}}>Status: <b>{c.status}</b> · {["draft","paused","cancelled"].includes(c.status)?"No active billing":"Contact support to verify billing"}</p>
     {["draft","paused"].includes(c.status)&&<div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
      <button style={secondary} type="button" disabled={pending} onClick={()=>update(c,c.status==="draft"?"pause":"resume")}>{c.status==="draft"?"Pause draft":"Resume editing"}</button>
      <button style={secondary} type="button" disabled={pending} onClick={()=>update(c,"cancel")}>Discard draft</button>
