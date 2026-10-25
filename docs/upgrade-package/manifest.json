@@ -1,0 +1,26 @@
+[
+  {
+    "path": "Litix_Update/README.md",
+    "sha256": "189771a2e8c4d0d227f01d439fa750598043d6397a127639fde8f2d21d2bafd4"
+  },
+  {
+    "path": "Litix_Update/public/assets/brand/litix-logo.webp",
+    "sha256": "fac7f3fdf0559b58fbdbc3549179ee45d5001b3f7b110f88147785800b9406e9"
+  },
+  {
+    "path": "Litix_Update/scripts/01-fix-checkout.cjs",
+    "sha256": "237ba55386d9b6493eaa14fa7fdcb60b81eff016c7558d79490bcb28e7e743a0"
+  },
+  {
+    "path": "Litix_Update/scripts/02-storefront.cjs",
+    "sha256": "cdec34cc874c9e816cf8efbebb9afe23aaecdec8fb479d53b8665fe6cce60da7"
+  },
+  {
+    "path": "Litix_Update/scripts/03-catalog.cjs",
+    "sha256": "c1d65f6336b691c0da837798e1994c7b4d09524fa7b80af22d376acc514c3e69"
+  },
+  {
+    "path": "Litix_Update/scripts/apply-all.cjs",
+    "sha256": "df24db50006be6316b2a2b7716c68e4b3c2f9dac4bf52d01e06a6a4a530b7434"
+  }
+]
