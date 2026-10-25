@@ -1,0 +1,14 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';import {PGlite} from '@electric-sql/pglite';
+import {createMonthly,applyVerifiedSettlement} from '../lib/monthly-lifecycle.mjs';import {monthlyRepository} from '../lib/monthly-repository.mjs';import {customerRecords} from '../lib/customer-authorization.mjs';import {manageSubscription} from '../lib/subscription-management.mjs';
+test('fixture journey: verified identity → create → unpaid → settlement → isolated dashboard → cancel',async t=>{
+ const pg=new PGlite();t.after(()=>pg.close());for(const file of ['20261024-monthly-subscriptions.sql','20261024-monthly-lifecycle.sql','20261024-customer-accounts.sql'])await pg.exec(readFileSync(new URL('../db/migrations/'+file,import.meta.url),'utf8'));
+ const sql={query:async(q,p)=>(await pg.query(q,p)).rows},repo=monthlyRepository(sql);let capability,createdId;
+ const input={customerSubject:'auth0|fixture-owner',email:'fixture@example.test',likes:100,consent:true,consentVersion:'monthly-v1',idempotencyKey:'22222222-2222-4222-8222-222222222222',paymentToken:'fixture-token-only',expectedAmountCents:50};
+ const result=await createMonthly({input,test:true,repository:repo,gateway:{create:async x=>{createdId=x.id;return {state:'created',subscriptionId:'123'}}},mailer:{sendManagement:async x=>capability=x.token}});
+ assert.equal(result.state,'created_awaiting_verified_payment');assert.equal((await repo.findById(createdId)).paid_through,null);
+ const evidence={approved:true,subscriptionId:'123',transactionId:'fixture-txn',amountCents:50,currency:'USD',periodStart:new Date(Date.now()-1000).toISOString(),periodEnd:new Date(Date.now()+86400000).toISOString()};
+ assert.equal(await applyVerifiedSettlement({subscriptionId:createdId,repository:repo,queryGateway:async()=>evidence}),true);assert.equal(await applyVerifiedSettlement({subscriptionId:createdId,repository:repo,queryGateway:async()=>evidence}),false);
+ assert.equal((await customerRecords(sql,input.customerSubject)).payments.length,1);assert.equal((await customerRecords(sql,'other')).subscriptions.length,0);
+ let calls=0;const management={find:async hash=>(await sql.query('select * from litix_monthly_subscriptions where management_token_hash=$1',[hash]))[0],claim:async id=>(await sql.query("update litix_monthly_subscriptions set cancellation_state='dispatching' where id=$1 and cancellation_state='none' returning *",[id]))[0],finish:async(id,state)=>sql.query('update litix_monthly_subscriptions set cancellation_state=$2 where id=$1',[id,state])};
+ const cancel=()=>manageSubscription({token:capability,cancel:true,repository:management,gateway:async()=>{calls++;return {state:'renewal_stopped'}}});assert.equal((await cancel()).status,200);await cancel();assert.equal(calls,1);assert.equal((await repo.findById(createdId)).cancellation_state,'confirmed');
+});
