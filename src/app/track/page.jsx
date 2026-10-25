@@ -41,6 +41,10 @@ export default function OrderTracker(){
   const u=new URL(window.location.href);
   const providedId=u.searchParams.get("order");
   if(validId(providedId))setOrderId(providedId);
+  if(validId(providedId)&&!u.searchParams.has("track")&&!u.searchParams.has("token")){
+   // A verified account session is sufficient; no email re-entry or tracking token is required.
+   runStatus({kind:"account",id:providedId});
+  }
   if(u.searchParams.has("track")&&u.searchParams.has("token")){
    const credentials=privateDetails(u.href);
    // Remove the bearer token from browser address bar and future referrers after reading it.
@@ -56,6 +60,9 @@ export default function OrderTracker(){
    let response;
    if(credentials.kind==="private"){
     response=await fetch("/api/track?id="+encodeURIComponent(credentials.id)+"&token="+encodeURIComponent(credentials.token),{cache:"no-store"});
+   }else if(credentials.kind==="account"){
+    response=await fetch("/api/account/order-status?id="+encodeURIComponent(credentials.id),{cache:"no-store",credentials:"same-origin"});
+    if(response.status===401)throw Error("Sign in to track this order directly, or use your checkout email below.");
    }else{
     response=await fetch("/api/order-lookup",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({orderId:credentials.id,email:credentials.email}),cache:"no-store"});
    }
@@ -88,7 +95,7 @@ export default function OrderTracker(){
  return <main className="ltx-track">
   <div className="ltx-track-wrap">
    <header className="ltx-track-nav"><a href="/" aria-label="Litix home"><img src="/assets/brand/litix-logo.webp" width="115" alt="Litix logo"/></a><a href="/" className="ltx-track-home">Home</a></header>
-   <div className="ltx-track-intro"><div className="ltx-track-eyebrow">LITIX ORDER CENTER</div><h1>Track your order</h1><p>See your payment, supplier processing, and delivery status in one place. No account or password required.</p></div>
+   <div className="ltx-track-intro"><div className="ltx-track-eyebrow">LITIX ORDER CENTER</div><h1>Track your order</h1><p>See your payment, supplier processing, and delivery status in one place. Signed-in customers can open their own orders directly; guest orders still support private links and checkout email.</p></div>
    {order&&<section className="ltx-track-card ltx-track-result" aria-label="Order status">
     <div className="ltx-track-kicker">LATEST ORDER STATUS</div>
     <div className={"ltx-track-pill ltx-track-pill-"+status.kind}>{status.title}</div>
