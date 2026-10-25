@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import AutoLikesDrafts from "./AutoLikesDrafts.jsx";
-export default function AccountClient({user}){
+export default function AccountClient({user,provider}){
   const [data,setData]=useState(null),[error,setError]=useState(""),[loading,setLoading]=useState(true);
   useEffect(()=>{
     const controller=new AbortController();
@@ -13,7 +13,14 @@ export default function AccountClient({user}){
   const panel={border:"1px solid #325977",borderRadius:18,padding:22,background:"#122943"};
   return <main style={{minHeight:"100vh",padding:"24px 16px 70px",color:"#edf5ff",background:"linear-gradient(145deg,#071020,#0a2234)",fontFamily:"system-ui"}}>
     <div style={{maxWidth:850,margin:"0 auto",display:"grid",gap:18}}>
-      <nav style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><a style={{color:"#a9e3ff"}} href="/">Litix Home</a><a style={{color:"#a9e3ff"}} href="/auth/logout">Log out</a></nav>
+      <nav style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><a style={{color:"#a9e3ff"}} href="/">Litix Home</a>{provider==="neon"?<button type="button" style={{background:"transparent",border:"1px solid #5986a4",borderRadius:10,color:"#a9e3ff",padding:"10px 14px",cursor:"pointer"}} onClick={async()=>{
+        try{
+          const {neonBrowserAuth}=await import("../../lib/neonBrowserAuth.js");
+          const result=await neonBrowserAuth.signOut();
+          if(result.error){setError("Logout could not be completed; please retry.");return}
+          window.location.assign("/account");
+        }catch{setError("Logout temporarily unavailable.")}
+      }}>Log out</button>:<a style={{color:"#a9e3ff"}} href="/auth/logout">Log out</a>}</nav>
       <div style={panel}><div style={{color:"#84cefb",letterSpacing:2,fontSize:13}}>LITIX CUSTOMER CENTER</div><h1>Welcome, {user.name}</h1><p style={{color:"#c0d6e5"}}>{user.email}</p></div>
       {loading&&<p role="status">Loading your orders and campaigns…</p>}
       {error&&<p role="alert">{error}</p>}
