@@ -1,1 +1,4 @@
-export { runtime, dynamic, maxDuration, POST } from "../bulk-import/route";
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+export const maxDuration = 30;
+export { POST } from '../bulk-import/route';
