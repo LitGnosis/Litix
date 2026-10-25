@@ -1,3 +1,4 @@
+import { priceCatalog } from "../../../lib/pricing.mjs";
 import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
@@ -38,7 +39,7 @@ async function getCatalog() {
   if (!response.ok) throw new Error("Supplier returned HTTP " + response.status);
   const raw = await response.json();
   if (!Array.isArray(raw)) throw new Error("Supplier catalog response is invalid");
-  const items = raw.filter(x => {
+  const eligible = priceCatalog(raw).items.filter(x => {
     if (["33771","33772","33773"].includes(String(x.service))) return false;
     const label = labelOf(x);
     const meta = [x.country, x.region, x.location, x.geo, x.audience, x.target, x.service_type].map(v => String(v || "")).join(" ");
@@ -47,7 +48,8 @@ async function getCatalog() {
     const outsideUS = /(?:usa\s*mix|mix\s*usa|worldwide|global|international|(?:usa|u\.s\.a\.|united states|\bus\b)\s*[/,+&-]\s*(?:uk|u\.k\.|united kingdom|asia|europe|canada|australia|worldwide|global)|(?:uk|u\.k\.|united kingdom|asia|europe|canada|australia)\s*[/,+&-]\s*(?:usa|u\.s\.a\.|united states|\bus\b))/i;
     const mixedGeography = outsideUS.test(label + " " + meta);
     return x.service != null && Number(x.rate) > 0 && Number(x.min) > 0 && Number(x.max) >= Number(x.min) && regular && usa && !mixedGeography && hasRefill(x) && hasNoDrop(x);
-  }).map(x => ({
+  });
+  const items = eligible.map(x => ({
     id: String(x.service),
     provider: "smmglob",
     service: String(x.service),
@@ -59,7 +61,7 @@ async function getCatalog() {
     max: Number(x.max),
     refill: hasRefill(x),
     noDrop: hasNoDrop(x),
-    retailPer1000Cents: Math.ceil(Number(x.rate) * 500)
+    retailPer1000Cents: Math.round(x.pricedRetail * 100)
   }));
   cache = { at: Date.now(), items };
   return items;
