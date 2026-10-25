@@ -40,13 +40,28 @@ test("NMI API responses cannot fake subscription approval or a provider ID",()=>
  const response=parseRecurringGatewayResponse("response=1&response_code=100&subscription_id=malicious");
  assert.equal(response.subscriptionId,null);
 });
-test("billing API is owner-scoped, read-only, and refuses mutations",()=>{
+test("live billing API enforces verified customer ownership, explicit production flags, consent and one-attempt-only network requests",()=>{
  const route=readFileSync(new URL("../app/api/account/billing/route.js",import.meta.url),"utf8");
  assert.match(route,/authenticatedCustomer\(\)/);
  assert.match(route,/where customer_id=\$1/);
- assert.match(route,/where s.customer_id=\$1/);
- assert.match(route,/e.signature_verified=true/);
- assert.match(route,/export async function POST\(\)\{return respond\(/);
- assert.match(route,/export async function PATCH\(\)\{return respond\(/);
- assert.doesNotMatch(route,/NMI_SECURITY_KEY|recurring:"add_subscription"/);
+ assert.match(route,/customer_id=\$2/);
+ assert.match(route,/sameOrigin\(req\)/);
+ assert.match(route,/if\(!live\(\)\)/);
+ assert.match(route,/consentToMonthlyRenewal!==true/);
+ assert.match(route,/accepted|monthly price changed|monthly price changed/i);
+ assert.match(route,/on conflict do nothing returning id/);
+ assert.match(route,/UNKNOWN_OUTCOME/);
+ assert.match(route,/payment_token|paymentToken/);
+ assert.match(route,/export async function POST\(req\)/);
+ assert.match(route,/export async function PATCH\(req\)/);
+ assert.doesNotMatch(route,/ccnumber.*[=:]/);
+});
+test("production recurring payments require merchant approval and explicit rollout flag",()=>{
+ const baseline={VERCEL_ENV:"production",NMI_SECURITY_KEY:secret,NEXT_PUBLIC_PAYKINGS_NMI_COLLECT_PUBLIC_KEY:"public-live-collect-demo-key"};
+ assert.equal(nmiRecurringStatus(baseline).ready,false);
+ assert.equal(nmiRecurringStatus({...baseline,LITIX_NMI_RECURRING_LIVE_ENABLED:"true"}).ready,false);
+ const enabled=nmiRecurringStatus({...baseline,LITIX_NMI_RECURRING_LIVE_ENABLED:"true",LITIX_NMI_RECURRING_MERCHANT_APPROVED:"true"});
+ assert.equal(enabled.ready,true);
+ assert.equal(enabled.mode,"production");
+ assert.equal(enabled.gateway,"https://paykings.transactiongateway.com/api/transact.php");
 });
