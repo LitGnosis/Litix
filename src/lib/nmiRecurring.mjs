@@ -23,7 +23,7 @@ export function validateRecurringRequest(input) {
  const dayOfMonth=Number(input?.dayOfMonth);
  if(!Number.isSafeInteger(amountCents)||amountCents<100||amountCents>2000000)throw Error("Invalid fixed monthly amount");
  if(!Number.isSafeInteger(dayOfMonth)||dayOfMonth<1||dayOfMonth>28)throw Error("Invalid billing day");
- if(!/^[a-zA-Z0-9_.-]{12,300}$/.test(token))throw Error("Expected a single-use gateway token");
+ if(!/^[a-zA-Z0-9_.-]{12,300}$/.test(token)||/^[0-9]{12,19}$/.test(token))throw Error("Expected a single-use gateway token, never a raw card number");
  return {amountCents,paymentToken:token,dayOfMonth};
 }
 export function createRecurringForm(input,securityKey) {
