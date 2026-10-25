@@ -5,7 +5,7 @@ export const notificationsConfigured=()=>Boolean(emailKey());
 const htmlEscape=value=>String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 function safeTrackingURL(orderId,secret){
  if(!/^ltx2_[a-f0-9-]{36}$/.test(orderId)||!secret||secret.length>150)throw Error("Invalid tracking details");
- return "https://www.litix.net/?track="+encodeURIComponent(orderId)+"&token="+encodeURIComponent(secret);
+ return "https://www.litix.net/track?track="+encodeURIComponent(orderId)+"&token="+encodeURIComponent(secret);
 }
 async function deliver({key,to,subject,text,html}){
  const response=await fetch("https://api.resend.com/emails",{
