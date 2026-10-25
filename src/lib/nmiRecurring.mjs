@@ -12,10 +12,16 @@ export function nmiRecurringStatus(env=process.env) {
  }catch{}
  const credential=typeof env.NMI_TEST_SECURITY_KEY==="string"&&env.NMI_TEST_SECURITY_KEY.length>15;
  const collect=typeof env.NEXT_PUBLIC_PAYKINGS_NMI_TEST_COLLECT_PUBLIC_KEY==="string"&&env.NEXT_PUBLIC_PAYKINGS_NMI_TEST_COLLECT_PUBLIC_KEY.length>8;
- const ready=sandbox&&enabled&&Boolean(target)&&credential&&collect;
- return {ready,mode:sandbox?"sandbox":"production",enabled:enabled&&sandbox,
+ const live=env.VERCEL_ENV==="production" &&
+  env.LITIX_NMI_RECURRING_LIVE_ENABLED==="true" &&
+  env.LITIX_NMI_RECURRING_MERCHANT_APPROVED==="true" &&
+  typeof env.NMI_SECURITY_KEY==="string" && env.NMI_SECURITY_KEY.length>15 &&
+  typeof env.NEXT_PUBLIC_PAYKINGS_NMI_COLLECT_PUBLIC_KEY==="string" && env.NEXT_PUBLIC_PAYKINGS_NMI_COLLECT_PUBLIC_KEY.length>8;
+ const liveGateway="https://paykings.transactiongateway.com/api/transact.php";
+ const ready=live || (sandbox&&enabled&&Boolean(target)&&credential&&collect);
+ return {ready,mode:sandbox?"sandbox":"production",enabled:live||(enabled&&sandbox),
   missing:[...(!sandbox?["Vercel Preview environment"]:[]),...(!enabled?["Recurring test-mode authorization"]:[]),...(!target?["Dedicated NMI sandbox transaction endpoint"]:[]),...(!credential?["NMI TEST security key"]:[]),...(!collect?["NMI TEST Collect.js public key"]:[])],
-  gateway:target||null};
+  gateway:live?liveGateway:(target||null)};
 }
 export function validateRecurringRequest(input) {
  const amountCents=Number(input?.amountCents);
@@ -36,7 +42,10 @@ export function createRecurringForm(input,securityKey) {
   plan_amount:(t.amountCents/100).toFixed(2),
   month_frequency:"1",
   day_of_month:String(t.dayOfMonth),
-  payment_token:t.paymentToken
+  payment_token:t.paymentToken,
+  ...(input?.startDate ? {start_date:String(input.startDate)} : {}),
+  ...(input?.orderId ? {orderid:String(input.orderId).slice(0,80)} : {}),
+  ...(input?.email ? {email:String(input.email).slice(0,254)} : {})
  });
 }
 export function cancelRecurringForm(subscriptionId,securityKey){
