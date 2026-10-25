@@ -25,14 +25,14 @@ export default function AutoLikesDrafts(){
   const ctl=new AbortController();
   setServices([]);setServiceId("");setNotice("");setLoading(true);
   fetch("/api/account/autolikes?platform="+encodeURIComponent(platform),{cache:"no-store",signal:ctl.signal})
-   .then(async r=>{const v=await r.json();if(!r.ok)throw Error(v.error||"Supplier services are unavailable");setServices(v.services||[]);setServiceId(v.services?.[0]?.id||"")})
+   .then(async r=>{const v=await r.json();if(!r.ok)throw Error(v.error||"Supplier services are unavailable");setServices(v.services||[]);setServiceId(v.services?.[0]?.id||"");if(v.services?.[0])setQuantity(n=>Math.max(v.services[0].min,Math.min(v.services[0].max,n)))})
    .catch(e=>{if(!ctl.signal.aborted)setError(e.message)})
    .finally(()=>{if(!ctl.signal.aborted)setLoading(false)});
   return()=>ctl.abort();
  },[platform]);
  const estimate=activeService?activeService.per1000*Number(quantity)/1000:0;
  const valid=activeService&&Number.isSafeInteger(Number(quantity))&&quantity>=activeService.min&&quantity<=activeService.max&&Number.isSafeInteger(Number(posts))&&posts>=1&&posts<=60&&target.trim().length>1;
- async function request(path,body){const r=await fetch(path,{method:path==="POST"?"POST":"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify(body),cache:"no-store"});const data=await r.json();if(!r.ok)throw Error(data.error||"Campaign update failed");return data}
+ async function request(path,body){const r=await fetch("/api/account/autolikes",{method:path==="POST"?"POST":"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify(body),cache:"no-store"});const data=await r.json();if(!r.ok)throw Error(data.error||"Campaign update failed");return data}
  async function create(e){
   e.preventDefault();if(pending||!valid||!key)return;
   setPending(true);setError("");setNotice("");
@@ -70,7 +70,7 @@ export default function AutoLikesDrafts(){
     <strong>Planning estimate: {money(estimate)} per post</strong>
     <div style={{color:"#9ac1d7",fontSize:13,marginTop:5}}>At the selected maximum: {money(estimate*posts)} in one-time service value. This is not a subscription quote or a charge.</div>
    </div>}
-   <button type="submit" disabled={pending||loading||!valid||!key} style={{...primary,opacity:pending||loading||!valid?.55:1}}>{pending?"Saving draft…":"Save campaign draft — no payment"}</button>
+   <button type="submit" disabled={pending||loading||!valid||!key} style={{...primary,opacity:(pending||loading||!valid)?0.55:1}}>{pending?"Saving draft…":"Save campaign draft — no payment"}</button>
   </form>
   {loading&&<div role="status">Checking available services…</div>}
   {error&&<p style={{color:"#ffc7c7",padding:12,background:"#482438",borderRadius:12}} role="alert">{error}</p>}
