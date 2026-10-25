@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { auth0 } from "./lib/customerAuth.js";
 
 function decodeBase64Url(value) {
   const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
@@ -97,7 +98,12 @@ export async function middleware(request) {
     }
   }
 
-  return NextResponse.next();
+  if (pathname.startsWith("/auth") && !auth0) {
+    return NextResponse.json({error:"Customer authentication is not configured."},{status:503});
+  }
+  // SDK middleware manages callback, logout, session-cookie renewal and CSRF/state.
+  // Existing custom-domain and workspace security checks above remain enforced.
+  return auth0 ? auth0.middleware(request) : NextResponse.next();
 }
 
 export const config = { matcher: ["/api/v2/workspaces/:path*", "/((?!_next/static|_next/image|favicon.ico).*)"] };
