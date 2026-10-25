@@ -19,7 +19,8 @@ export default function AutoLikesEnrollment({campaign,onComplete}) {
   }catch(e){setError(String(e.message||"Unable to load the monthly price."))}
  };
  const sendToken=useCallback(async(token)=>{
-  if(!quote || !keyRef.current || submissionRef.current)return;\n  submissionRef.current=true;
+  if(!quote || !keyRef.current || submissionRef.current)return;
+  submissionRef.current=true;
   setBusy(true);setError("");
   try{
    const res=await fetch("/api/account/billing",{
