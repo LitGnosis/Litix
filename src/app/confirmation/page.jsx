@@ -84,7 +84,7 @@ export default function ConfirmationPage(){
       <input aria-label="Your private tracking URL" readOnly value={receipt.trackingUrl} onFocus={e=>e.target.select()} style={{width:"100%",boxSizing:"border-box",padding:"15px 12px",background:"#07131d",border:"1px solid #487088",borderRadius:10,color:ink,fontSize:15}}/>
       <div style={{display:"flex",gap:10,flexWrap:"wrap",marginTop:14}}>
        <button style={button} type="button" onClick={copyTracking}>{copied?"Copied":"Copy tracking link"}</button>
-       <a href={receipt.trackingUrl} style={button}>Track order</a>
+       <a href={"/track?order="+encodeURIComponent(receipt.orderId)} style={button}>Track order</a>
        <button type="button" onClick={requestEmails} disabled={sendingEmail} style={{...button,background:"#153951",opacity:sendingEmail?.6:1}}>{sendingEmail?"Requesting emails…":"Send confirmation & tracking emails"}</button>
       </div>
      </div>
