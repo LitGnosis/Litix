@@ -14,7 +14,7 @@ export function parseProfileTarget(raw,platform) {
   try{
    const u=new URL(v);
    const allowed=p==="instagram"?["instagram.com","www.instagram.com"]:["tiktok.com","www.tiktok.com"];
-   if(u.protocol!=="https:"||!allowed.includes(u.hostname.toLowerCase())||u.search||u.hash)return {ok:false,error:"Use a direct public profile URL."};
+   if(u.protocol!=="https:"||!allowed.includes(u.hostname.toLowerCase())||u.username||u.password||u.search||u.hash)return {ok:false,error:"Use a direct public profile URL."};
    const parts=u.pathname.split("/").filter(Boolean);
    if(parts.length!==1)return {ok:false,error:"Enter a profile, not a post URL."};
    handle=parts[0].replace(/^@/,"");
@@ -63,7 +63,7 @@ export function draftPayload(raw,services) {
  const target=parseProfileTarget(raw?.target,platform);
  if(!target.ok)return {ok:false,error:target.error};
  const service=services.find(s=>String(s.service)===String(raw?.serviceId));
- if(!service)return {ok:false,error:"Choose an available SMMGLOB Likes service."};
+ if(!service||!isEligibleLikesService(service,platform))return {ok:false,error:"Choose an available SMMGLOB Likes service."};
  const quantity=Number(raw?.quantityPerPost);
  const maxPosts=Number(raw?.maxPostsPerMonth);
  if(!Number.isSafeInteger(quantity)||quantity<Number(service.min)||quantity>Number(service.max))return {ok:false,error:"Quantity must match the selected supplier service limits."};
