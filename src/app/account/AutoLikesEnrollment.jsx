@@ -7,10 +7,10 @@ export default function AutoLikesEnrollment({campaign,onComplete}) {
  const [quote,setQuote]=useState(null),[available,setAvailable]=useState(false),[busy,setBusy]=useState(false);
  const [ready,setReady]=useState(false),[consent,setConsent]=useState(false),[error,setError]=useState(""),[result,setResult]=useState(null);
  const [opened,setOpened]=useState(false);
- const submitRef=useRef(null),keyRef=useRef(null);
+ const submitRef=useRef(null),keyRef=useRef(null),submissionRef=useRef(false);
  const open=async()=>{
   setError("");setOpened(true);setReady(false);setResult(null);setConsent(false);
-  keyRef.current=crypto.randomUUID();
+  keyRef.current=crypto.randomUUID();submissionRef.current=false;
   try{
    const r=await fetch("/api/account/billing?campaignId="+encodeURIComponent(campaign.id),{cache:"no-store"});
    const d=await r.json();
@@ -19,7 +19,7 @@ export default function AutoLikesEnrollment({campaign,onComplete}) {
   }catch(e){setError(String(e.message||"Unable to load the monthly price."))}
  };
  const sendToken=useCallback(async(token)=>{
-  if(!quote || !keyRef.current || busy)return;
+  if(!quote || !keyRef.current || submissionRef.current)return;\n  submissionRef.current=true;
   setBusy(true);setError("");
   try{
    const res=await fetch("/api/account/billing",{
@@ -35,7 +35,7 @@ export default function AutoLikesEnrollment({campaign,onComplete}) {
    onComplete?.(body);
   }catch(e){setError(String(e.message||"Payment status is unknown. Check your subscriptions before any new attempt."))}
   finally{setBusy(false)}
- },[campaign.id,quote,busy,onComplete]);
+ },[campaign.id,quote,onComplete]);
  submitRef.current=sendToken;
  useEffect(()=>{
   if(!opened||!quote||!available||result)return;
@@ -110,7 +110,7 @@ export default function AutoLikesEnrollment({campaign,onComplete}) {
      <input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)} />
      I authorize Litix to bill my card {money(quote.monthlyCents)} each month until I cancel, and understand I can cancel future renewals in my account.
     </label>
-    <button type="button" disabled={!consent||!ready||busy} onClick={pay} style={{padding:14,borderRadius:9,background:"#236a93",color:"white",fontWeight:800,opacity:!consent||!ready||busy?.6:1}}>
+    <button type="button" disabled={!consent||!ready||busy} onClick={pay} style={{padding:14,borderRadius:9,background:"#236a93",color:"white",fontWeight:800,opacity:(!consent||!ready||busy)?0.6:1}}>
      {busy?"Submitting securely…":"Start monthly subscription — "+money(quote.monthlyCents)}
     </button>
    </>}
