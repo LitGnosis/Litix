@@ -12,6 +12,11 @@ export const maxDuration=30;
 const response=(data,status=200)=>Response.json(data,{status,headers:{"cache-control":"private,no-store","x-content-type-options":"nosniff"}});
 const sql=()=>neon(accountDatabaseURL());
 const live=()=>{const s=nmiRecurringStatus();return s.ready&&s.mode==="production" ? s : null};
+const canEnroll=()=>Boolean(live() &&
+ process.env.LITIX_AUTOLIKES_SOURCE_VERIFIED==="true" &&
+ process.env.LITIX_AUTOLIKES_EVENT_INGEST_ENABLED==="true" &&
+ process.env.LITIX_AUTOLIKES_FULFILLMENT_ENABLED==="true" &&
+ process.env.LITIX_AUTOLIKES_BILLING_RECONCILE_ENABLED==="true");
 const providerKey=()=>process.env.NMI_SECURITY_KEY;
 const uuid=key=>/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(key||""));
 const campaignId=id=>/^al_[a-f0-9]{40}$/.test(String(id||""));
@@ -60,7 +65,7 @@ export async function GET(req){
   if(q){
    if(!campaignId(q))return response({error:"Invalid campaign ID."},400);
    const quote=await currentQuote(db,ctx.user,q);
-   return response({quote,liveSubscriptionsAvailable:Boolean(live()),
+   return response({quote,liveSubscriptionsAvailable:canEnroll(),
     disclosure:"Monthly auto-renewing billing. An enrollment may charge on the date specified by the gateway. Supplier deliveries are disabled until a payment is independently verified."});
   }
   const rows=await db.query("select id,campaign_id,status,last_successful_payment_at,current_period_end,created_at from litix_recurring_subscriptions where customer_id=$1 order by created_at desc limit 50",[ctx.user.id]);
@@ -68,7 +73,7 @@ export async function GET(req){
    from litix_autolikes_billing_events e join litix_recurring_subscriptions s
    on s.provider_subscription_item_id=e.provider_subscription_item_id
    where s.customer_id=$1 and e.signature_verified=true order by e.received_at desc limit 50`,[ctx.user.id]);
-  return response({subscriptions:rows.map(safeSubscription),history:events.map(e=>({id:e.provider_event_id,type:e.event_type,verifiedAt:e.verified_at,campaignId:e.campaign_id})),recurring:{enabled:Boolean(live()),mode:live()?"production":"unavailable"},message:live()?"Customer-authorized recurring billing is available; supplier delivery requires verified payment evidence.":"Recurring payments are not yet enabled; saved drafts remain available."});
+  return response({subscriptions:rows.map(safeSubscription),history:events.map(e=>({id:e.provider_event_id,type:e.event_type,verifiedAt:e.verified_at,campaignId:e.campaign_id})),recurring:{enabled:Boolean(live()),purchaseEnabled:canEnroll(),mode:live()?"production":"unavailable"},message:canEnroll()?"Customer-authorized recurring billing is available; supplier delivery requires verified payment evidence.":"Recurring payments are not yet enabled; saved drafts remain available."});
  }catch(e){
   if(e?.message==="NOT_FOUND")return response({error:"Campaign not found in your account."},404);
   console.error("Litix subscription read failed",String(e?.message||"unavailable").slice(0,120));
@@ -79,7 +84,7 @@ export async function GET(req){
 export async function POST(req){
  if(!sameOrigin(req))return response({error:"Invalid request origin."},403);
  const ctx=await userContext();if(ctx.error)return ctx.error;
- if(!live())return response({error:"Merchant recurring billing has not been enabled. No charge submitted."},503);
+ if(!canEnroll())return response({error:"AutoLikes recurring billing or authorized automatic delivery is not yet enabled. No charge submitted."},503);
  const data=await payload(req);
  if(!data || !campaignId(data.campaignId) || !uuid(data.requestKey) || data.consentToMonthlyRenewal!==true || data.consentToPostMonitoring!==true || data.consentVersion!=="2026-10")return response({error:"Choose a saved campaign and accept the monthly renewal terms."},400);
  const submittedAmount=Number(data.expectedMonthlyCents);
