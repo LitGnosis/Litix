@@ -9,7 +9,7 @@ export const maxDuration=30;
 const send=(v,status=200)=>Response.json(v,{status,headers:{"cache-control":"no-store","x-content-type-options":"nosniff"}});
 function authorized(req){
  const value=(req.headers.get("authorization")||"").replace(/^Bearer\s+/i,"");
- const secret=process.env.LITIX_CRON_SECRET;
+ const secret=process.env.LITIX_CRON_SECRET||process.env.CRON_SECRET;
  if(!secret||!value)return false;
  const h=x=>createHash("sha256").update(x).digest();
  return timingSafeEqual(h(value),h(secret));
@@ -31,10 +31,8 @@ async function queryProvider(providerSubId) {
  if(!response.ok)throw Error("NMI query failed");
  return response.text();
 }
-export async function GET(req){
- if(!authorized(req))return send({error:"Unauthorized"},401);
- return send({enabled:enabled(),method:"authenticated NMI transaction query",chargesCustomers:false});
-}
+// Vercel Cron sends authenticated GET requests. Apply the same checks as POST.
+export async function GET(req){return POST(req)}
 export async function POST(req){
  if(!authorized(req))return send({error:"Unauthorized"},401);
  if(!enabled())return send({enabled:false,error:"Live recurring reconciliation is disabled."},503);
