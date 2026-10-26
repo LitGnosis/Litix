@@ -38,7 +38,7 @@ export function parseNmiTransactionEvidence(xml,subscriptionId,monthlyCents) {
 export function paidPeriodEnd(iso){
  const d=new Date(iso);
  if(Number.isNaN(d.getTime()))throw Error("Invalid payment date");
- const n=new Date(d.getTime());
- n.setUTCMonth(n.getUTCMonth()+1);
- return n.toISOString();
+ const n=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth()+2,0,d.getUTCHours(),d.getUTCMinutes(),d.getUTCSeconds()));
+ const limit=n.getUTCDate(), day=Math.min(d.getUTCDate(),limit);
+ return new Date(Date.UTC(n.getUTCFullYear(),n.getUTCMonth(),day,d.getUTCHours(),d.getUTCMinutes(),d.getUTCSeconds())).toISOString();
 }
