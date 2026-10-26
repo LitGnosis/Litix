@@ -1,0 +1,61 @@
+name: Verify live Litix retail catalog read-only
+on:
+  push:
+    branches: [backup/litix-stable-release-assets-2026-10-26]
+permissions:
+  contents: read
+jobs:
+  audit-readonly:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Read current public catalog and compare older deployment
+        run: |
+          python - <<'PY'
+          import urllib.request,urllib.error,json,math,time
+          current="https://litix.net"
+          previous="https://litixfinallogocorrectedvercelready-cxfun0sl3-litgnosisllc-9049.vercel.app"
+          def fetch_page(origin,p):
+            req=urllib.request.Request(origin+"/api/catalog/v1?page="+str(p),headers={"User-Agent":"LitixReadOnlyRecoveryAudit/1.0","accept":"application/json"})
+            with urllib.request.urlopen(req,timeout=15) as r:
+              if r.status!=200:raise ValueError("HTTP "+str(r.status))
+              obj=json.load(r)
+            if not isinstance(obj.get("items"),list):raise ValueError("Missing catalog items")
+            return obj
+          def collect(origin):
+            first=fetch_page(origin,1)
+            n=int(first.get("total",0));pages=(n+23)//24
+            if pages>1000:raise ValueError("More than 1000 pages: incomplete safe audit")
+            rows=list(first["items"])
+            for page in range(2,pages+1):
+              rows.extend(fetch_page(origin,page)["items"])
+            return n,rows
+          try:
+            total,rows=collect(current)
+          except Exception as ex:
+            print("Live catalog unavailable for full HTTP audit:",type(ex).__name__,str(ex)[:180])
+            raise SystemExit(2)
+          valid=[];bad=[]
+          for item in rows:
+            if not item.get("purchasable"):continue
+            valid.append(item)
+            price=float(item.get("per1000",0))
+            amount=int(item.get("startingAmountCents") or 0)
+            minimum=int(item.get("min") or 0)
+            maximum=int(item.get("max") or 0)
+            if price<5 or amount<500 or minimum<1 or maximum<minimum:
+              bad.append(str(item.get("id")))
+          audit={"rowsListed":total,"rowsReturned":len(rows),"purchasable":len(valid),"floorViolations":bad,"minimumRate":min((float(x["per1000"]) for x in valid),default=None)}
+          try:
+            beforeCount,before=collect(previous)
+            old={str(x["id"]):float(x["per1000"]) for x in before}
+            audit["baselineRows"]=beforeCount
+            audit["comparableServiceIds"]=sum(str(x["id"]) in old for x in rows)
+            audit["raisedPrices"]=sum(float(x["per1000"])>old[str(x["id"])]+1e-7 for x in rows if str(x["id"]) in old)
+            audit["decreasedPrices"]=sum(float(x["per1000"])<old[str(x["id"])]-1e-7 for x in rows if str(x["id"]) in old)
+          except Exception as ex:
+            audit["previousDeploymentComparison"]="Unavailable: "+type(ex).__name__+" "+str(ex)[:100]
+          print("LIVE_AUDIT="+json.dumps(audit,sort_keys=True))
+          with open("litix-live-price-audit.json","w") as f:json.dump(audit,f,indent=2)
+          if bad or (len(rows)!=total) or audit.get("decreasedPrices",0)>0:raise SystemExit(3)
+          PY
