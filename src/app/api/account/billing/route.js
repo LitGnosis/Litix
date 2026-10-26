@@ -81,7 +81,7 @@ export async function POST(req){
  const ctx=await userContext();if(ctx.error)return ctx.error;
  if(!live())return response({error:"Merchant recurring billing has not been enabled. No charge submitted."},503);
  const data=await payload(req);
- if(!data || !campaignId(data.campaignId) || !uuid(data.requestKey) || data.consentToMonthlyRenewal!==true || data.consentVersion!=="2026-10")return response({error:"Choose a saved campaign and accept the monthly renewal terms."},400);
+ if(!data || !campaignId(data.campaignId) || !uuid(data.requestKey) || data.consentToMonthlyRenewal!==true || data.consentToPostMonitoring!==true || data.consentVersion!=="2026-10")return response({error:"Choose a saved campaign and accept the monthly renewal terms."},400);
  const submittedAmount=Number(data.expectedMonthlyCents);
  if(!Number.isSafeInteger(submittedAmount))return response({error:"A confirmed monthly amount is required."},400);
  const token=String(data.paymentToken||"");
@@ -99,8 +99,8 @@ export async function POST(req){
  try{
   await db.query("insert into litix_workspaces(id,name,slug,plan,status) values($1,'Litix customer', $2,'starter','active') on conflict do nothing",[workspaceId,"customer-"+workspaceId.slice(5)]);
   const attempt=await db.query(`insert into litix_autolikes_subscription_attempts
-   (id,campaign_id,customer_id,workspace_id,request_key,quote_sha256,monthly_amount_cents,consent_version)
-   values($1,$2,$3,$4,$5,$6,$7,'2026-10') on conflict do nothing returning id`,
+   (id,campaign_id,customer_id,workspace_id,request_key,quote_sha256,monthly_amount_cents,consent_version,monitoring_consent_at)
+   values($1,$2,$3,$4,$5,$6,$7,'2026-10',now()) on conflict do nothing returning id`,
    [intentId,quote.campaignId,owner.id,workspaceId,data.requestKey,fingerprint,quote.monthlyCents]);
   if(!attempt.length)return response({error:"An enrollment request already exists. Review subscription status; do not submit another payment.",requestId:intentId},409);
  }catch(e){
