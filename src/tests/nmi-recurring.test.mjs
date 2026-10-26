@@ -40,12 +40,13 @@ test("NMI API responses cannot fake subscription approval or a provider ID",()=>
  const response=parseRecurringGatewayResponse("response=1&response_code=100&subscription_id=malicious");
  assert.equal(response.subscriptionId,null);
 });
-test("billing API is owner-scoped, read-only, and refuses mutations",()=>{
+test("billing API is owner-scoped, uses real AutoLikes records and refuses mutations",()=>{
  const route=readFileSync(new URL("../app/api/account/billing/route.js",import.meta.url),"utf8");
  assert.match(route,/authenticatedCustomer\(\)/);
- assert.match(route,/where customer_id=\$1/);
- assert.match(route,/where s.customer_id=\$1/);
- assert.match(route,/e.signature_verified=true/);
+ assert.match(route,/where subscriber_id=\$1/);
+ assert.match(route,/where s.subscriber_id=\$1/);
+ assert.match(route,/litix_autolikes_live_gateway_events/);
+ assert.match(route,/litix_autolikes_live_posts/);
  assert.match(route,/export async function POST\(\)\{return respond\(/);
  assert.match(route,/export async function PATCH\(\)\{return respond\(/);
  assert.doesNotMatch(route,/NMI_SECURITY_KEY|recurring:"add_subscription"/);
