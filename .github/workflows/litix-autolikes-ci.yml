@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - feature/litix-autolikes-subscription-sandbox-20261025
+      - repair/autolikes-recover-live-20261025
   pull_request:
     paths:
       - 'src/app/api/autolikes/**'
