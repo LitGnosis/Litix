@@ -22,33 +22,45 @@ export function normalizedPost(raw,platform,handle) {
   } catch {}
   return null;
 }
-function suppliers(row) {
-  let mapping={};
-  try{mapping=JSON.parse(process.env.LITIX_AUTOLIKES_FALLBACK_SERVICES_JSON||"{}");}catch{}
-  return [
-    {name:"SMMGLOB",url:"https://smmglob.com/api/v2",key:process.env.SMMGLOB_API_KEY,service:String(row.service_id)},
-    {name:"SMMFOLLOWOM",url:"https://my.smmfollowom.com/api/v2",key:process.env.SMMFOLLOWOM_API_KEY,service:String(mapping[row.platform]||"")}
-  ].filter(p=>p.key && /^\d+$/.test(p.service));
-}
 async function place(row) {
-  const configured=suppliers(row);
-  if(!configured.length)return {state:"DECLINED",reason:"NO_CONFIGURED_PROVIDER"};
-  for(const p of configured) {
-    let response;
-    try {
-      response=await fetch(p.url,{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded"},body:new URLSearchParams({key:p.key,action:"add",service:p.service,link:row.post_url,quantity:String(row.likes)}),cache:"no-store",signal:AbortSignal.timeout(17000)});
-    }catch{return {state:"UNKNOWN_OUTCOME",supplier:p.name};}
-    if(!response.ok) return {state:"UNKNOWN_OUTCOME",supplier:p.name};
-    let body;
-    try {body=await response.json();}catch{return {state:"UNKNOWN_OUTCOME",supplier:p.name};}
-    if(/^\d+$/.test(String(body?.order||"")))return {state:"SUBMITTED",supplier:p.name,order:String(body.order)};
-    // Explicit reject with an error means the provider did not accept an order.
-    if(body && typeof body.error==="string")continue;
-    return {state:"UNKNOWN_OUTCOME",supplier:p.name};
-  }
-  return {state:"DECLINED",reason:"ALL_PROVIDERS_REJECTED"};
+  // SMMGLOB is the only authorized supplier. Never cascade an ambiguous order.
+  const key=process.env.SMMGLOB_API_KEY;
+  if(!key)return {state:"DECLINED",reason:"SMMGLOB_NOT_CONFIGURED"};
+  let url;
+  try {
+    url=new URL(process.env.SMMGLOB_API_URL||"https://smmglob.com/api/v2");
+    if(url.protocol!=="https:" || !["smmglob.com","www.smmglob.com"].includes(url.hostname))
+      return {state:"DECLINED",reason:"INVALID_SUPPLIER_HOST"};
+  }catch {return {state:"DECLINED",reason:"INVALID_SUPPLIER_HOST"};}
+  if(!/^[0-9]+$/.test(String(row.service_id||"")) ||
+     !Number.isSafeInteger(Number(row.likes)) || Number(row.likes)<1)
+    return {state:"DECLINED",reason:"INVALID_SUPPLIER_SERVICE"};
+  let response;
+  try{
+    response=await fetch(url.href,{
+      method:"POST",
+      headers:{"content-type":"application/x-www-form-urlencoded"},
+      body:new URLSearchParams({
+        key,action:"add",service:String(row.service_id),
+        link:row.post_url,quantity:String(row.likes)
+      }),
+      cache:"no-store",signal:AbortSignal.timeout(17000)
+    });
+  }catch{return {state:"UNKNOWN_OUTCOME",supplier:"SMMGLOB"};}
+  // A gateway error may happen AFTER order creation. Never auto-resubmit.
+  if(!response.ok)return {state:"UNKNOWN_OUTCOME",supplier:"SMMGLOB"};
+  let payload;
+  try{payload=await response.json()}catch{return {state:"UNKNOWN_OUTCOME",supplier:"SMMGLOB"};}
+  if(/^[0-9]+$/.test(String(payload?.order||"")))
+    return {state:"SUBMITTED",supplier:"SMMGLOB",order:String(payload.order)};
+  if(typeof payload?.error==="string" && payload.error.trim())
+    return {state:"DECLINED",supplier:"SMMGLOB",reason:"SUPPLIER_REJECTED"};
+  return {state:"UNKNOWN_OUTCOME",supplier:"SMMGLOB"};
 }
 export async function dispatchLivePost(postId) {
+  // No external supplier operations from a Preview build or disabled production.
+  if(process.env.VERCEL_ENV!=="production" || process.env.LITIX_AUTOLIKES_DISPATCH_ENABLED!=="true")
+    return {claimed:false,state:"DISABLED"};
   const sql=db();
   const admitted=await sql.query("select * from litix_claim_autolikes_live_post($1)",[postId]);
   if(!admitted.length)return {claimed:false};
