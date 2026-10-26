@@ -26,7 +26,7 @@ const cases=[
  ['override rejects previous price', {serviceId:'33677',supplierRate:3.706,expectedAmountCents:1371}, 409, 0, 0],
  ['retail exactly 30 unchanged', {supplierRate:6,expectedAmountCents:3000,expectedGatewayAmount:'30.00'}, 200, 1, 1],
  ['wholesale 6.01 requires 5x', {supplierRate:6.01,expectedAmountCents:3005,expectedGatewayAmount:'30.05'}, 200, 1, 1],
- ['wholesale 20 requires exactly 2x', {supplierRate:20,expectedAmountCents:4000,expectedGatewayAmount:'40.00'}, 200, 1, 1],
+ ['wholesale 20 keeps existing higher retail', {supplierRate:20,expectedAmountCents:6500,expectedGatewayAmount:'65.00'}, 200, 1, 1],
  ['TikTok likes high rate restored', {supplierName:'TikTok Likes',supplierRate:4,expectedAmountCents:2340,expectedGatewayAmount:'23.40'}, 200, 1, 1],
  ['reject stale undiscounted price', {supplierRate:20,expectedAmountCents:10000}, 409, 0, 0],
  ['TikTok likes approved', {supplierName:'TikTok Likes',expectedAmountCents:900}, 200, 1, 1],
