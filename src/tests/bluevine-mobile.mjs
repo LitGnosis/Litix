@@ -8,7 +8,7 @@ const urls={
  power:["https://pay.bluevine.com/p/5583a248578d48649bb5151c76eb7d4d",19782],
  apex:["https://pay.bluevine.com/p/ae9473e7c1d44aa6bbed123843d945c5",35982]
 };
-const browser=await chromium.launch({headless:true,args:["--no-sandbox"]});
+const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_PATH||undefined,args:["--no-sandbox"]});
 try{
  for(const platform of ["ig","tt"]){
   for(const [tier,[url,amount]] of Object.entries(urls)){
