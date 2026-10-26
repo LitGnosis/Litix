@@ -60,7 +60,7 @@ test("owner token, explicit post approval and unique supplier reservation gate e
  assert.match(admin,/sameOrigin\(req\)/);
  assert.match(admin,/post\.status!=="Under Review"/);
  assert.match(admin,/OWNER_CONFIRMED_MANUAL_DELIVERY/);
- assert.match(admin,/Supplier API dispatch is disabled/);
+ assert.match(admin,/Automated supplier dispatch is disabled/);
  assert.doesNotMatch(admin,/fetch\("https:\/\/smmglob\.com/);
  assert.match(admin,/markManualProcessing/);
  assert.match(admin,/markManualCompleted/);
