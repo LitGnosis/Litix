@@ -76,7 +76,7 @@ for(const [label,options,status,payments,orders] of cases){
    const catalog=await (await GET(new Request('https://example.test/api/smmservices'))).json();
    assert.equal(catalog.items[0].per1000,({'33677':options.supplierRate===40?80:18.53,'33516':5.01,'33337':7.73,'33338':7.78}[options.serviceId]));
   }
-  const request=new Request('https://example.test/api/checkout',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({serviceId:'1',quantity:1000,email:'test@example.test',link:'https://example.test/post',paymentToken:'test-token-only',idempotencyKey:'12345678-1234-1234-1234-123456789abc',expectedAmountCents:500,...options})});
+  const request=new Request('https://example.test/api/checkout',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({serviceId:'1',quantity:1000,email:'test@example.test',link:/\bfollowers?\b/i.test(options.supplierName||"")?'@testprofile':'https://example.test/post',paymentToken:'test-token-only',idempotencyKey:'12345678-1234-1234-1234-123456789abc',expectedAmountCents:500,...options})});
   const response=await POST(request);
   assert.equal(response.status,status);
   assert.equal(paymentCalls,payments);assert.equal(orderCalls,orders);
