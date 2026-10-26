@@ -49,7 +49,7 @@ export async function POST(req){
   await sql.query("update litix_growth_bundle_orders set payment_state='review',order_state='Needs Attention',updated_at=now() where id=$1",[id]).catch(()=>{});
   return response({orderId:id,trackingToken:secret,payment:"review",message:"Gateway approval requires independent reconciliation."},202);
  }
- try{await sql.query("update litix_growth_bundle_orders set payment_state='approved_pending_settlement',gateway_transaction_id=$2,updated_at=now() where id=$1",[id,transactionId]);}
+ try{await sql.query("update litix_growth_bundle_orders set payment_state='approved_pending_settlement',order_state='Awaiting WhatsApp Submission',gateway_transaction_id=$2,updated_at=now() where id=$1",[id,transactionId]);}
  catch{return response({orderId:id,trackingToken:secret,payment:"review",message:"Gateway result must be reconciled. Do not pay twice."},202);}
  const settled=await verifyNmiSettlement({orderId:id,transactionId,priceCents:pkg.priceCents});
  if(settled.settled){
@@ -59,7 +59,7 @@ export async function POST(req){
  // Never call SMMGLOB in this route. Supplier dispatch can ONLY be admin-approved.
  return response({
   orderId:id,trackingToken:secret,payment:settled.settled?"settled":"approved_pending_settlement",
-  status:settled.settled?"Awaiting WhatsApp Submission":"Awaiting Payment",
-  message:settled.settled?"Payment settled. Contact LITIX on WhatsApp to submit up to 10 posts.":"Payment approved but settlement has not yet been confirmed. Do not submit another payment."
+  status:"Awaiting WhatsApp Submission",
+  message:settled.settled?"Payment settled. Contact LITIX on WhatsApp to submit up to 10 posts.":"PayKings approved your payment. Tap WhatsApp on your order confirmation to send the order number and post links. Fulfillment begins only after settlement verification and manual review. Do not pay again."
  },settled.settled?200:202);
 }
