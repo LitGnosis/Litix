@@ -33,6 +33,8 @@ const SORTED_TIERS = Object.freeze([
 ]);
 const MAX_NON_PREMIUM_PER_1000_CENTS = 1500;
 const MIN_INSTAGRAM_TIKTOK_PER_1000_CENTS = 600;
+const MIN_GLOBAL_PER_1000_CENTS = 500;
+const MIN_PURCHASE_CENTS = 500;
 
 function cents(usd) {
   if (typeof usd !== 'number' || !Number.isFinite(usd) || usd < 0) return null;
@@ -74,7 +76,8 @@ function proposeGeneralRetail(wholesaleUsd, existingRetailUsd) {
   const current = cents(existingRetailUsd);
   if (floor === null) return { action: 'review', reason: 'verified supplier wholesale is missing' };
   if (current === null) return { action: 'review', reason: 'existing retail price is missing' };
-  const updated = wholesaleUsd >= 20 ? floor : Math.max(current, floor);
+  // Never reduce a previously higher retail price, even when wholesale >= $20.
+  const updated = Math.max(current, floor, MIN_GLOBAL_PER_1000_CENTS);
   return {
     action: updated === current ? 'unchanged' : 'reprice',
     retailCents: updated,
@@ -133,7 +136,7 @@ function proposeServiceRetail(service, supplierWholesalePer1000, {
     throw Error('precedingTierRetailCents must be a valid amount in cents or null');
 
   const target = cents(RETAIL_USD_PER_1000[tier]);
-  const result = Math.max(target, floor,
+  const result = Math.max(target, floor, MIN_GLOBAL_PER_1000_CENTS,
     precedingTierRetailCents === null ? 0 : precedingTierRetailCents + 1);
   if (result < MIN_INSTAGRAM_TIKTOK_PER_1000_CENTS ||
       (!['365', 'lifetime'].includes(tier) && result > MAX_NON_PREMIUM_PER_1000_CENTS)) {
@@ -168,6 +171,8 @@ function validateCheckoutQuote({
   if (floor === null) return { allowed: false, reason: 'actual order wholesale not verified' };
   if (!Number.isSafeInteger(customerSubtotalCents) || customerSubtotalCents < 0)
     return { allowed: false, reason: 'customer subtotal invalid' };
+  if (customerSubtotalCents < MIN_PURCHASE_CENTS)
+    return { allowed: false, reason: 'minimum service purchase is $5 USD', requiredSubtotalCents: MIN_PURCHASE_CENTS };
   if (customerSubtotalCents < floor)
     return { allowed: false, reason: 'customer charge below required supplier markup', requiredSubtotalCents: floor };
 
@@ -179,6 +184,8 @@ function validateCheckoutQuote({
     if (expected !== customerSubtotalCents)
       return { allowed: false, reason: 'customer subtotal disagrees with advertised quote' };
     const scope = classifyService(service);
+    if (displayCents < MIN_GLOBAL_PER_1000_CENTS)
+      return { allowed: false, reason: 'retail rate below $5 per 1,000 units' };
     if (scope.inScope && (displayCents < 600 ||
         (scope.tier !== '365' && scope.tier !== 'lifetime' && displayCents > 1500)))
       return { allowed: false, reason: 'IG/TikTok follower/view pricing band violated' };
@@ -188,6 +195,25 @@ function validateCheckoutQuote({
   return { allowed: true, requiredSubtotalCents: floor };
 }
 
+/**
+ * Minimum legal supplier quantity at which retail charges at least $5,
+ * without an arbitrary surcharge or changed supplier min/max.
+ */
+function minimumPurchaseQuantity(service, per1000) {
+  const min=Number(service?.min),max=Number(service?.max);
+  const rawStep=service?.quantity_step??service?.quantityStep??service?.step??service?.increment??1;
+  const step=Number(rawStep);
+  if(!Number.isSafeInteger(min)||min<=0||!Number.isSafeInteger(max)||max<min||
+     !Number.isSafeInteger(step)||step<1||!Number.isFinite(per1000)||per1000<5)return null;
+  const threshold=Math.max(min,Math.ceil((MIN_PURCHASE_CENTS*10)/per1000-1e-10));
+  const n=min+Math.max(0,Math.ceil((threshold-min)/step))*step;
+  if(!Number.isSafeInteger(n)||n>max||calculateOrderCents(n,per1000)<MIN_PURCHASE_CENTS)return null;
+  return n;
+}
+function servicePurchaseMinimum(service,per1000) {
+  const quantity=minimumPurchaseQuantity(service,per1000);
+  return quantity===null?null:{quantity,amountCents:calculateOrderCents(quantity,per1000)};
+}
 function calculateOrderCents(quantity, retailPer1000) {
   if (!Number.isSafeInteger(quantity) || quantity <= 0)
     throw Error('quantity must be a positive safe integer');
@@ -266,4 +292,4 @@ function priceCatalog(rows){
 }
 const retailPer1000=x=>x.pricedRetail;
 
-export { RETAIL_USD_PER_1000, SORTED_TIERS, classifyService, minimumRetailCentsForWholesale, wholesaleMultiplier, proposeGeneralRetail, proposeServiceRetail, calculateOrderCents, validateCheckoutQuote, validatePriceLadder, priceCatalog, pricingDecision, retailPer1000, supplierPricingInput };
+export { MIN_GLOBAL_PER_1000_CENTS, MIN_PURCHASE_CENTS, minimumPurchaseQuantity, servicePurchaseMinimum, RETAIL_USD_PER_1000, SORTED_TIERS, classifyService, minimumRetailCentsForWholesale, wholesaleMultiplier, proposeGeneralRetail, proposeServiceRetail, calculateOrderCents, validateCheckoutQuote, validatePriceLadder, priceCatalog, pricingDecision, retailPer1000, supplierPricingInput };
