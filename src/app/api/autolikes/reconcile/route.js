@@ -50,7 +50,7 @@ export async function GET(req) {
    from litix_autolikes_enrollment_attempts a
    join litix_auto_boost_campaigns c on c.id=a.campaign_id and c.customer_id=a.customer_id
    where a.gateway_subscription_id ~ '^[0-9]{1,30}$'
-     and a.status='GATEWAY_APPROVED_PENDING_VERIFICATION' and a.consent_at is not null
+     and a.status='GATEWAY_APPROVED_PENDING_VERIFICATION' and a.consent_at is not null and a.monitoring_consent_at is not null
    order by a.created_at asc limit 5`);
  }catch{return send({error:"Subscription ledger unavailable"},503);}
  let inspected=0,paid=0,unconfirmed=0,review=0;
