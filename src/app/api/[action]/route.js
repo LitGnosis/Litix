@@ -4,6 +4,7 @@ import { neon } from "@neondatabase/serverless";
 import { randomUUID, createHash } from "node:crypto";
 import { after } from "next/server";
 import { sendOrderEmails, notificationsConfigured } from "../../../lib/orderNotifications.mjs";
+import { notifyOwnersOfVerifiedPurchase } from "../../../lib/ownerPurchaseNotifications.mjs";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -231,7 +232,10 @@ export async function POST(req){
  if(!quote.allowed)return send({error:"Quantity cannot meet wholesale pricing requirements; no charge submitted"},422);
  if(!Number.isSafeInteger(x.expectedAmountCents)||x.expectedAmountCents!==cents)return send({error:"The price has changed. Refresh the catalog and confirm the new total before paying."},409);
  const orderId="ltx2_"+randomUUID(),secret=randomUUID()+"-"+randomUUID(),sql=db();
- const notifyPaid=(fulfillment)=>after(()=>sendOrderEmails({orderId,secret,email,amountCents:cents,quantity:qty,serviceName:String(service.name||"Social media service"),fulfillment}).catch(e=>console.error("Litix email task failed",{orderId,error:String(e?.message||"send error").slice(0,100)})));
+ const notifyPaid=(fulfillment)=>after(()=>Promise.allSettled([
+  sendOrderEmails({orderId,secret,email,amountCents:cents,quantity:qty,serviceName:String(service.name||"Social media service"),fulfillment}),
+  notifyOwnersOfVerifiedPurchase({sql,kind:"service",orderId})
+ ]).then(results=>{for(const x of results)if(x.status==="rejected")console.error("Litix paid-order email needs review",{orderId,reason:String(x.reason?.message||"notification error").slice(0,100)})}));
  try{const rows=await sql.query("insert into litix_v2_orders(id,email,service_id,service_name,category,destination,quantity,amount_cents,supplier_cost_cents,idempotency_key,tracking_token_hash,metadata) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12::jsonb) on conflict(idempotency_key) do nothing returning id",[orderId,email,id,String(service.name),String(service.category||"Other"),destination,qty,cents,Math.ceil(Number(service.rate)*qty/10),idem,hash(secret),JSON.stringify({refill:!!service.refill})]);if(!rows.length)return send({error:"Payment already submitted; do not retry the same checkout"},409);await sql.query("update litix_v2_orders set payment_state='processing',payment_attempted_at=now() where id=$1",[orderId])}catch{return send({error:"Database unavailable; no charge submitted"},503)}
  let payment;try{const r=await fetch(gatewayUrl,{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded"},body:new URLSearchParams({security_key:gatewayKey,type:"sale",payment_token:token,amount:(cents/100).toFixed(2),orderid:orderId,email}),signal:AbortSignal.timeout(18000),cache:"no-store"});if(!r.ok)throw Error("Payment gateway request failed");payment=Object.fromEntries(new URLSearchParams(await r.text()))}catch{await sql.query("update litix_v2_orders set payment_state='review' where id=$1",[orderId]).catch(()=>{});return send({orderId,secret,payment:"review",message:"Payment outcome is uncertain; do not retry or place a second order"},202)}
  if(String(payment.response)!=="1"){await sql.query("update litix_v2_orders set payment_state='declined' where id=$1",[orderId]).catch(()=>{});return send({error:"Payment declined: "+String(payment.responsetext||"Please contact your card issuer").slice(0,100)},402)}
