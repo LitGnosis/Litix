@@ -6,16 +6,18 @@ const send=(x,s=200)=>Response.json(x,{status:s});
 const conn=()=>neon(process.env.LITIX_AUTOLIKES_DATABASE_URL||process.env.LITIX_V2_DATABASE_URL||process.env.DATABASE_URL);
 const sha=x=>createHash("sha256").update(x).digest("hex");
 function signatureValid(raw,header){
-  const key=process.env.LITIX_NMI_WEBHOOK_SIGNING_KEY;
-  const supplied=String(header||"").trim();
-  if(!key || !/^[a-f0-9]{64}$/i.test(supplied))return false;
-  const expected=createHmac("sha256",key).update(raw).digest();
-  return timingSafeEqual(expected,Buffer.from(supplied,"hex"));
+  // NMI Payment Gateway uses Webhook-Signature: t=<nonce>,s=<sha256 HMAC>.
+  // This is not the separate NMI Signup API's "Signature" header.
+  const key=process.env.LITIX_NMI_WEBHOOK_SIGNING_KEY || process.env.NMI_WEBHOOK_SIGNING_KEY;
+  const match=/^t=([a-zA-Z0-9_-]{8,128}),s=([a-f0-9]{64})$/i.exec(String(header||"").trim());
+  if(!key || !match)return false;
+  const expected=createHmac("sha256",key).update(match[1]+"."+raw).digest();
+  return timingSafeEqual(expected,Buffer.from(match[2],"hex"));
 }
 export async function POST(req){
  const raw=await req.text();
  if(raw.length>32768)return send({error:"Request too large"},413);
- if(!signatureValid(raw,req.headers.get("signature")))return send({error:"Bad signature"},401);
+ if(!signatureValid(raw,req.headers.get("webhook-signature")))return send({error:"Bad signature"},401);
  let data;try{data=JSON.parse(raw)}catch{return send({error:"Invalid JSON"},400)}
  const eventId=String(data?.event_id||""),type=String(data?.event_type||"");
  const b=data?.event_body||{},providerId=String(b.subscription_id||"");
