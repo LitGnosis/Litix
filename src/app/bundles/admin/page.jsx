@@ -1,7 +1,7 @@
 "use client";
 import {useState} from "react";
-import {BUNDLE_KINDS,BUNDLE_INSTRUCTIONS} from "../../../lib/growthBundles.mjs";
-const zero=()=>Object.fromEntries(BUNDLE_KINDS.map(k=>[k,0]));
+import {POST_BUNDLE_KINDS,BUNDLE_INSTRUCTIONS} from "../../../lib/growthBundles.mjs";
+const zero=()=>Object.fromEntries(POST_BUNDLE_KINDS.map(k=>[k,0]));
 export default function BundleAdmin(){
  const [token,setToken]=useState(""),[data,setData]=useState(null),[message,setMessage]=useState(""),[busy,setBusy]=useState(false),
   [active,setActive]=useState(""),[url,setUrl]=useState(""),[allocations,setAllocations]=useState(zero),
@@ -46,7 +46,12 @@ export default function BundleAdmin(){
     <p><strong>Retail:</strong> {"$"+(o.price_cents/100).toFixed(2)} · <strong>Customer:</strong> {o.email}</p>
     <p><strong>Payment:</strong> {o.payment_state} · <strong>Status:</strong> {o.order_state}</p>
     <p className="small">Package totals: {Object.entries(o.package_items).map(([k,v])=>k+" "+Number(v).toLocaleString()).join(" · ")}</p>
-    <p className="small">Remaining unallocated: {Object.entries(o.package_items).map(([kind,total])=>kind+" "+Math.max(0,Number(total)-(data.posts||[]).filter(p=>p.order_id===o.id&&p.status!=="Rejected").reduce((sum,p)=>sum+Number(p.allocations?.[kind]||0),0)).toLocaleString()).join(" · ")}</p>
+    <p className="small">Remaining post engagement to allocate: {Object.entries(o.package_items).filter(([kind])=>kind!=="Followers").map(([kind,total])=>kind+" "+Math.max(0,Number(total)-(data.posts||[]).filter(p=>p.order_id===o.id&&p.status!=="Rejected").reduce((sum,p)=>sum+Number(p.allocations?.[kind]||0),0)).toLocaleString()).join(" · ")}</p>
+    {o.package_items?.Followers!=null&&<div className="lg-bundle-warning">
+     <p><strong>Profile Followers:</strong> {Number(o.followers_fulfilled||0).toLocaleString()} / {Number(o.package_items.Followers).toLocaleString()} · Account: {o.profile_ref}</p>
+     <p className="small">Followers are for this customer's account, not a post. Only record them after personally verifying fulfillment.</p>
+     {Number(o.followers_fulfilled||0)===0&&<button disabled={busy||o.payment_state!=="settled"} onClick={()=>{if(window.confirm("Confirm that you personally delivered and verified "+Number(o.package_items.Followers).toLocaleString()+" Followers to "+o.profile_ref+"?"))run("markFollowersFulfilled",o.id,{manuallyVerified:true})}}>Mark Followers manually fulfilled</button>}
+    </div>}
     <button disabled={busy||!o.gateway_transaction_id} onClick={()=>run("refreshSettlement",o.id)}>Verify NMI settlement</button>
     <p className="lg-bundle-warning">{BUNDLE_INSTRUCTIONS}</p>
     <h3>Submitted posts ({(data.posts||[]).filter(p=>p.order_id===o.id&&p.status!=="Rejected").length}/10)</h3>
@@ -61,7 +66,7 @@ export default function BundleAdmin(){
     <button className="alt" disabled={busy} onClick={()=>{setActive(active===o.id?"":o.id);setAllocations(zero());setUrl("")}}>{active===o.id?"Close entry":"Record WhatsApp post and allocation"}</button>
     {active===o.id&&<form className="form" style={{marginTop:14}} onSubmit={e=>{e.preventDefault();run("savePost",o.id,{url,allocations})}}>
       <label>Verified public {o.platform} post URL<input required type="url" value={url} onChange={e=>setUrl(e.target.value)}/></label>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(170px,1fr))",gap:12}}>{BUNDLE_KINDS.map(k=><label key={k}>{k}<input type="number" min="0" step="1" value={allocations[k]} onChange={e=>setAllocations(a=>({...a,[k]:Number(e.target.value)}))}/></label>)}</div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(170px,1fr))",gap:12}}>{POST_BUNDLE_KINDS.map(k=><label key={k}>{k}<input type="number" min="0" step="1" value={allocations[k]} onChange={e=>setAllocations(a=>({...a,[k]:Number(e.target.value)}))}/></label>)}</div>
       <p className="small">These numbers allocate from the purchased total. The database rejects allocations that exceed it.</p>
       <button className="pay" disabled={busy||!url}>Save for review — no supplier call</button>
     </form>}
