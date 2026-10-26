@@ -1,7 +1,7 @@
 import { neon } from "@neondatabase/serverless";
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 
-export const db = () => neon(process.env.LITIX_V2_DATABASE_URL || process.env.DATABASE_URL || process.env.POSTGRES_URL);
+export const db = () => neon(process.env.LITIX_AUTOLIKES_DATABASE_URL || process.env.LITIX_V2_DATABASE_URL || process.env.DATABASE_URL || process.env.POSTGRES_URL);
 export const sha = value => createHash("sha256").update(String(value)).digest("hex");
 export function equalMac(message, signature, key) {
   if (!key || !/^[a-f0-9]{64}$/i.test(signature || "")) return false;
