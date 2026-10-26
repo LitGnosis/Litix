@@ -7,7 +7,7 @@ const reply=(data,status=200)=>Response.json(data,{status,headers:{"cache-contro
 const fingerprint=x=>createHash("sha256").update(x).digest("hex");
 function authorized(req){
  const expected=process.env.LITIX_CRON_SECRET;
- const token=(req.headers.get("authorization")||"").replace(/^Bearer\\s+/i,"");
+ const token=(req.headers.get("authorization")||"").replace(/^Bearer\s+/i,"");
  if(!expected||!token)return false;
  const a=Buffer.from(fingerprint(token),"hex"),b=Buffer.from(fingerprint(expected),"hex");
  return timingSafeEqual(a,b);
