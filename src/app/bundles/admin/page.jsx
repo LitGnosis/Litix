@@ -4,13 +4,25 @@ import {BUNDLE_KINDS,BUNDLE_INSTRUCTIONS} from "../../../lib/growthBundles.mjs";
 const zero=()=>Object.fromEntries(BUNDLE_KINDS.map(k=>[k,0]));
 export default function BundleAdmin(){
  const [token,setToken]=useState(""),[data,setData]=useState(null),[message,setMessage]=useState(""),[busy,setBusy]=useState(false),
-  [active,setActive]=useState(""),[url,setUrl]=useState(""),[allocations,setAllocations]=useState(zero);
+  [active,setActive]=useState(""),[url,setUrl]=useState(""),[allocations,setAllocations]=useState(zero),
+  [mappings,setMappings]=useState([]),[mapPlatform,setMapPlatform]=useState("Instagram"),[mapKind,setMapKind]=useState("Likes"),[serviceId,setServiceId]=useState("");
  const headers=()=>({"authorization":"Bearer "+token,"content-type":"application/json"});
  async function refresh(){
   if(!token)return;
   setBusy(true);setMessage("");
   try{const r=await fetch("/api/bundles/admin",{headers:headers(),cache:"no-store"});
    const v=await r.json();if(!r.ok)throw Error(v.error||"Authorization failed");setData(v);
+   const maps=await fetch("/api/bundles/mappings",{headers:headers(),cache:"no-store"});if(maps.ok)setMappings((await maps.json()).mappings||[]);
+  }catch(e){setMessage(e.message)}finally{setBusy(false)}
+ }
+ async function verifySupplierMap(e){
+  e.preventDefault();setBusy(true);setMessage("");
+  try{
+   const r=await fetch("/api/bundles/mappings",{method:"POST",headers:headers(),
+    body:JSON.stringify({platform:mapPlatform,kind:mapKind,serviceId})});
+   const v=await r.json();if(!r.ok)throw Error(v.error||"Supplier service not verified");
+   setMessage("Verified SMMGLOB "+v.platform+" "+v.kind+" #"+v.serviceId+" · $"+v.rateUsdPerThousand+"/1000");
+   const q=await fetch("/api/bundles/mappings",{headers:headers(),cache:"no-store"});if(q.ok)setMappings((await q.json()).mappings||[]);
   }catch(e){setMessage(e.message)}finally{setBusy(false)}
  }
  async function run(action,orderId,extras={}){
@@ -29,7 +41,19 @@ export default function BundleAdmin(){
    <div style={{display:"flex",gap:10,flexWrap:"wrap"}}><input style={{flex:"1 1 260px"}} type="password" autoComplete="off" aria-label="Administrator access token" placeholder="Enter administrator access token" value={token} onChange={e=>setToken(e.target.value)}/><button className="pay" disabled={!token||busy} onClick={refresh}>Load authorized orders</button></div>
    {message&&<p role="status" className="msg">{message}</p>}
    {!data&&<p className="small">Administration is unavailable until your configured server-side administrator credential is verified.</p>}
-   {data?.orders.map(o=><article key={o.id} className="panel" style={{marginTop:20}}>
+   {data&&<section className="panel" style={{marginTop:20}}>
+   <h2>Verify SMMGLOB service routes</h2>
+   <p className="small">Enter only actual SMMGLOB service IDs. The server checks the supplier live catalog, platform, category, min/max and wholesale rate before saving each mapping. This does not send any paid supplier orders.</p>
+   <form onSubmit={verifySupplierMap} style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"end"}}>
+    <label>Platform<select value={mapPlatform} onChange={e=>setMapPlatform(e.target.value)}><option>Instagram</option><option>TikTok</option></select></label>
+    <label>Service<select value={mapKind} onChange={e=>setMapKind(e.target.value)}>{BUNDLE_KINDS.map(k=><option key={k}>{k}</option>)}</select></label>
+    <label>Supplier service ID<input value={serviceId} onChange={e=>setServiceId(e.target.value)} required pattern="[0-9]+" placeholder="SMMGLOB ID"/></label>
+    <button className="pay" disabled={busy||!serviceId}>Verify and save mapping</button>
+   </form>
+   <p className="small">{mappings.length}/12 platform/service mappings verified. All twelve plus supplier cost coverage are required to enable bundle checkout.</p>
+   {mappings.map(m=><p key={m.platform+":"+m.kind} className="small">{m.platform} {m.kind} · SMMGLOB #{m.service_id} · ${Number(m.provider_rate_usd).toFixed(4)} per 1,000 · {m.min_qty}–{m.max_qty} units · {m.refill_days==null?"No verified refill duration":m.refill_days+"-day refill"}</p>)}
+  </section>}
+  {data?.orders.map(o=><article key={o.id} className="panel" style={{marginTop:20}}>
     <div className="kicker">{o.platform} · {o.package_name}</div><h2>{o.id}</h2>
     <p><strong>Retail:</strong> {"$"+(o.price_cents/100).toFixed(2)} · <strong>Customer:</strong> {o.email}</p>
     <p><strong>Payment:</strong> {o.payment_state} · <strong>Status:</strong> {o.order_state}</p>
