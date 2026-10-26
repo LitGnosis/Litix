@@ -1,7 +1,7 @@
 import { neon } from "@neondatabase/serverless";
 import { createHash, timingSafeEqual } from "node:crypto";
-import { nmiRecurringStatus } from "../../../../lib/nmiRecurring.mjs";
-import { parseNmiTransactionEvidence, paidPeriodEnd } from "../../../../lib/nmiQueryEvidence.mjs";
+import { nmiRecurringStatus } from "../../../../../lib/nmiRecurring.mjs";
+import { parseNmiTransactionEvidence, paidPeriodEnd } from "../../../../../lib/nmiQueryEvidence.mjs";
 
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
