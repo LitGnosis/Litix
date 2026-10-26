@@ -18,7 +18,7 @@ export async function GET(){
    "select e.event_id,e.event_type,e.received_at,s.campaign_id from litix_autolikes_live_gateway_events e join litix_autolikes_live_subscriptions s on s.provider_subscription_id=e.provider_subscription_id where s.subscriber_id=$1 order by e.received_at desc limit 100",
    [customer.id]);
   const deliveries=await sql.query(
-   "select p.id,p.post_url,p.state,p.supplier_order_id,p.created_at,s.campaign_id from litix_autolikes_live_posts p join litix_autolikes_live_subscriptions s on s.id=p.subscription_id where s.subscriber_id=$1 order by p.created_at desc limit 100",
+   "select p.id,p.post_url,p.state,p.supplier_order_id,p.supplier_status,p.supplier_remains,p.created_at,s.campaign_id from litix_autolikes_live_posts p join litix_autolikes_live_subscriptions s on s.id=p.subscription_id where s.subscriber_id=$1 order by p.created_at desc limit 100",
    [customer.id]);
   const enabled=process.env.VERCEL_ENV==="production" &&
    process.env.LITIX_AUTOLIKES_LIVE_ENROLL_ENABLED==="true" &&
@@ -32,7 +32,7 @@ export async function GET(){
    })),
    history:history.map(e=>({id:e.event_id,type:e.event_type,verifiedAt:e.received_at,campaignId:e.campaign_id})),
    deliveries:deliveries.map(p=>({id:p.id,postUrl:p.post_url,state:p.state,
-    supplierOrderId:p.supplier_order_id,campaignId:p.campaign_id,createdAt:p.created_at})),
+    supplierOrderId:p.supplier_order_id,supplierStatus:p.supplier_status,remainingLikes:p.supplier_remains,campaignId:p.campaign_id,createdAt:p.created_at})),
    recurring:{enabled,liveMerchantConfirmed:process.env.LITIX_NMI_RECURRING_MERCHANT_APPROVED==="true"}
   });
  }catch(e){
