@@ -66,6 +66,10 @@ test("enrollment ledger includes unique claims, consent, cancellation evidence a
  const route=read("app/api/account/billing/route.js");
  assert.match(route,/sameOrigin\(req\)/);
  assert.match(route,/consentToMonthlyRenewal!==true/);
+ assert.match(route,/const canEnroll=/);
+ assert.match(route,/LITIX_AUTOLIKES_SOURCE_VERIFIED/);
+ assert.match(route,/LITIX_AUTOLIKES_BILLING_RECONCILE_ENABLED/);
+ assert.match(route,/if\(!canEnroll\(\)\)/);
  assert.match(route,/on conflict do nothing returning id/);
  assert.match(route,/return response\(\{status:"cancelled"/);
  assert.match(route,/UNKNOWN_OUTCOME/);
