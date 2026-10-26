@@ -5,6 +5,7 @@ const zero=()=>Object.fromEntries(POST_BUNDLE_KINDS.map(k=>[k,0]));
 export default function BundleAdmin(){
  const [token,setToken]=useState(""),[data,setData]=useState(null),[message,setMessage]=useState(""),[busy,setBusy]=useState(false),
   [active,setActive]=useState(""),[url,setUrl]=useState(""),[allocations,setAllocations]=useState(zero),
+  [bluevineReferences,setBluevineReferences]=useState({}),
   [mappings,setMappings]=useState([]),[mapPlatform,setMapPlatform]=useState("Instagram"),[mapKind,setMapKind]=useState("Likes"),[serviceId,setServiceId]=useState("");
  const headers=()=>({"authorization":"Bearer "+token,"content-type":"application/json"});
  async function refresh(){
@@ -44,7 +45,19 @@ export default function BundleAdmin(){
      {data?.orders.map(o=><article key={o.id} className="panel" style={{marginTop:20}}>
     <div className="kicker">{o.platform} · {o.package_name}</div><h2>{o.id}</h2>
     <p><strong>Retail:</strong> {"$"+(o.price_cents/100).toFixed(2)} · <strong>Customer:</strong> {o.email}</p>
-    <p><strong>Payment:</strong> {o.payment_state} · <strong>Status:</strong> {o.order_state}</p>
+    <p><strong>Payment:</strong> {o.payment_state} · <strong>Provider:</strong> {o.payment_provider||"paykings"} · <strong>Status:</strong> {o.order_state}</p>
+    {o.payment_provider==="bluevine"?<div className="lg-bundle-warning">
+     <p><strong>Bluevine — manual payment verification required.</strong> WhatsApp contact: {o.customer_whatsapp||"Not supplied"}</p>
+     {o.bluevine_payment_reference?<p><strong>Bluevine confirmation:</strong> {o.bluevine_payment_reference}</p>:null}
+     {o.payment_state==="awaiting_payment"?<>
+      <p>Open your Bluevine merchant account separately. Match the payer, purchased tier, exact {("$"+(o.price_cents/100).toFixed(2))} amount, and payment reference. Never approve using a customer screenshot or checkout return alone.</p>
+      <label>Verified Bluevine payment reference<input aria-label={"Bluevine confirmation for "+o.id} value={bluevineReferences[o.id]||""} onChange={e=>setBluevineReferences(v=>({...v,[o.id]:e.target.value}))}/></label>
+      <button disabled={busy||!bluevineReferences[o.id]||bluevineReferences[o.id].trim().length<6} onClick={()=>{
+       if(window.confirm("I independently verified that Bluevine received $"+(o.price_cents/100).toFixed(2)+" for "+o.id+". Mark this order paid and send existing notifications?"))
+        run("confirmBluevinePayment",o.id,{verifiedInBluevine:true,confirmedAmountCents:Number(o.price_cents),bluevineReference:bluevineReferences[o.id].trim()});
+      }}>Confirm verified Bluevine payment</button>
+     </>:null}
+    </div>:null}
     <p className="small">Package totals: {Object.entries(o.package_items).map(([k,v])=>k+" "+Number(v).toLocaleString()).join(" · ")}</p>
     <p className="small">Remaining post engagement to allocate: {Object.entries(o.package_items).filter(([kind])=>kind!=="Followers").map(([kind,total])=>kind+" "+Math.max(0,Number(total)-(data.posts||[]).filter(p=>p.order_id===o.id&&p.status!=="Rejected").reduce((sum,p)=>sum+Number(p.allocations?.[kind]||0),0)).toLocaleString()).join(" · ")}</p>
     {o.package_items?.Followers!=null&&<div className="lg-bundle-warning">
@@ -52,7 +65,7 @@ export default function BundleAdmin(){
      <p className="small">Followers are for this customer's account, not a post. Only record them after personally verifying fulfillment.</p>
      {Number(o.followers_fulfilled||0)===0&&<button disabled={busy||o.payment_state!=="settled"} onClick={()=>{if(window.confirm("Confirm that you personally delivered and verified "+Number(o.package_items.Followers).toLocaleString()+" Followers to "+o.profile_ref+"?"))run("markFollowersFulfilled",o.id,{manuallyVerified:true})}}>Mark Followers manually fulfilled</button>}
     </div>}
-    <button disabled={busy||!o.gateway_transaction_id} onClick={()=>run("refreshSettlement",o.id)}>Verify NMI settlement</button>
+    {o.payment_provider!=="bluevine"?<button disabled={busy||!o.gateway_transaction_id} onClick={()=>run("refreshSettlement",o.id)}>Verify NMI settlement</button>:null}
     <p className="lg-bundle-warning">{BUNDLE_INSTRUCTIONS}</p>
     <h3>Submitted posts ({(data.posts||[]).filter(p=>p.order_id===o.id&&p.status!=="Rejected").length}/10)</h3>
     {(data.posts||[]).filter(p=>p.order_id===o.id).map(p=><div key={p.id} style={{borderTop:"1px solid #6380a166",padding:"13px 0"}}>
