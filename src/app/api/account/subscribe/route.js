@@ -12,6 +12,11 @@ const liveAllowed=()=>process.env.VERCEL_ENV==="production"
  &&process.env.LITIX_AUTOLIKES_LIVE_ENROLL_ENABLED==="true"
  &&process.env.LITIX_NMI_RECURRING_MERCHANT_APPROVED==="true"
  &&process.env.NMI_GATEWAY_MODE==="PRODUCTION"
+ &&process.env.LITIX_AUTOLIKES_DISPATCH_ENABLED==="true"
+ &&process.env.LITIX_AUTOLIKES_SOURCE_VERIFIED==="true"
+ &&Boolean(process.env.SMMGLOB_API_KEY)
+ &&Boolean(process.env.LITIX_NMI_WEBHOOK_SIGNING_KEY||process.env.NMI_WEBHOOK_SIGNING_KEY)
+ &&Boolean(process.env.LITIX_AUTOLIKES_DATABASE_URL)
  &&typeof process.env.NMI_SECURITY_KEY==="string"
  &&process.env.NMI_SECURITY_KEY.length>=16;
 const sameOrigin=request=>{try{return new URL(request.headers.get("origin")).origin===new URL(request.url).origin}catch{return false}};
