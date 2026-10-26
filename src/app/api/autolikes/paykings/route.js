@@ -37,19 +37,12 @@ export async function POST(req){
   const matches=await db.query("select s.* from litix_autolikes_live_subscriptions s where s.provider_subscription_id=$1 or exists(select 1 from litix_autolikes_enrollment_attempts a where a.id=$2 and a.gateway_subscription_id=s.provider_subscription_id) limit 1",[providerId,String(b.order_id||"")]);
   if(matches.length!==1)return send({error:"Unmatched subscription"},409);
   const s=matches[0];
-  if(type==="transaction.sale.success"){
-   const action=b.action||{},amount=Math.round(Number(action.amount)*100);
-   if(!/^\d+$/.test(String(b.transaction_id||""))||String(action.success)!=="1"||String(action.response_code)!=="100"||action.action_type!=="sale"||b.currency!=="USD"||amount!==Number(s.amount_cents))
-    return send({error:"Payment mismatch"},422);
-  }
-  if(type==="transaction.sale.success") {
-    const applied=await db.query(
-      "with accepted as (insert into litix_autolikes_live_gateway_events(event_id,provider_subscription_id,event_type,transaction_id,payload_sha256) values($1,$2,$3,$4,$5) on conflict do nothing returning event_id) update litix_autolikes_live_subscriptions s set status='ACTIVE',payment_status='PAID',last_paid_at=now(),billing_cycle_end=greatest(now(),coalesce(s.billing_cycle_end,now())) + interval '1 month',posts_remaining=s.monthly_post_limit,updated_at=now() from accepted where s.id=$6 and s.status<>'CANCELLED' returning s.campaign_id",
-      [eventId,s.provider_subscription_id,type,String(b.transaction_id),hash,s.id]);
-    if(applied.length)await db.query("update litix_auto_boost_campaigns set status='active',updated_at=now() where id=$1",[applied[0].campaign_id]);
-    return send({ok:true,activated:applied.length===1,replay:applied.length===0});
-  }
-  if(["recurring.subscription.delete","transaction.sale.failure","transaction.refund.success"].includes(type)){
+  // NMI sale-success notifications can be pending settlement. They do not grant fulfillment.
+  // The authenticated Query API reconciliation route checks condition=complete and recurring source.
+  if(type==="transaction.sale.success")return send({ok:true,awaitingSettledPaymentVerification:true},202);
+  if(type==="recurring.subscription.delete" || 
+    (["transaction.sale.failure","transaction.refund.success"].includes(type) &&
+     (b?.action?.source==="recurring" || b?.source==="recurring"))){
     const stopped=await db.query(
       "with accepted as (insert into litix_autolikes_live_gateway_events(event_id,provider_subscription_id,event_type,payload_sha256) values($1,$2,$3,$4) on conflict do nothing returning event_id) update litix_autolikes_live_subscriptions s set status=$5,payment_status=$6,posts_remaining=0,updated_at=now() from accepted where s.id=$7 returning s.campaign_id",
       [eventId,s.provider_subscription_id,type,hash,type==="recurring.subscription.delete"?"CANCELLED":"PAUSED",type==="transaction.refund.success"?"REFUNDED":"FAILED",s.id]);
