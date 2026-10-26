@@ -13,7 +13,7 @@ test('supplier-backed social expansion, sorting, filters, IDs, limits and 5x pri
  const {GET}=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
  const get=async query=>{const r=await GET(new Request('https://example.test/api/smmservices?'+query));assert.equal(r.status,200);return r.json();};
  const all=await get('');assert.equal(all.total,9);assert.deepEqual(new Set(all.items.map(x=>x.id)),new Set(['2','3','1','20','13','10','12','11','14']));
- for(let i=1;i<all.items.length;i++)if(all.items[i-1].platform===all.items[i].platform)assert.ok(all.items[i-1].per1000<=all.items[i].per1000,"numeric retail price ascending within each platform");
+ for(let i=1;i<all.items.length;i++){const platform=v=>/instagram/i.test(v.name)?"Instagram":/tiktok/i.test(v.name)?"TikTok":v.name.split(" ")[0];if(platform(all.items[i-1])===platform(all.items[i]))assert.ok(all.items[i-1].per1000<=all.items[i].per1000,"numeric retail price ascending within each platform");}
  for(const x of all.items){assert.equal(x.per1000,x.id==='10'?11.25:['20','14'].includes(x.id)?6.99:6.25);assert.equal(x.min,100);assert.equal(x.max,5000);assert.ok(rows.some(r=>String(r.service)===x.id));}
  const ig=await get('platform=Instagram');assert.equal(ig.total,1);assert.equal(ig.items.find(x=>x.id==='20').refill,false);assert.equal(ig.items.find(x=>x.id==='20').noDrop,false);
  assert.equal((await get('platform=TikTok')).total,5);
