@@ -1,5 +1,5 @@
 // Exact fixed-price Instagram/TikTok Growth Bundles. Do not apply general service markup.
-export const BUNDLE_INSTRUCTIONS="IMPORTANT: All Growth Bundle orders require WhatsApp confirmation. After purchasing, contact LITIX through WhatsApp and submit links or screenshots for up to 10 posts. Your package quantities are distributed across your selected posts and are not repeated for each post. LITIX manually verifies your selected posts and service allocation before processing your order.";
+export const BUNDLE_INSTRUCTIONS="IMPORTANT: All Growth Bundle orders require WhatsApp confirmation. After purchasing, contact LITIX through WhatsApp and submit links or screenshots for up to 10 posts. Likes, Views, and Shares are package totals distributed across your selected posts; Followers are applied once to your Instagram or TikTok account. Nothing is repeated per post. LITIX manually verifies your selected posts and service allocation before processing your order.";
 // Owner's October 26 update: 20% off the previous four prices.
 // Followers are delivered to the purchased account/profile, not to individual posts.
 const levels=[
