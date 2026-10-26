@@ -4,7 +4,7 @@ export const dynamic="force-dynamic";
 export const maxDuration=60;
 const respond=(x,s=200)=>Response.json(x,{status:s,headers:{"cache-control":"no-store"}});
 export async function POST(req) {
-  if(process.env.LITIX_AUTOLIKES_EVENT_INGEST_ENABLED!=="true")return respond({error:"Event source not enabled"},503);
+  if(process.env.VERCEL_ENV!=="production"||process.env.LITIX_AUTOLIKES_SOURCE_VERIFIED!=="true"||process.env.LITIX_AUTOLIKES_EVENT_INGEST_ENABLED!=="true")return respond({error:"Event source not enabled"},503);
   const raw=await req.text();
   if(raw.length>4096)return respond({error:"Event too large"},413);
   const signature=(req.headers.get("x-litix-event-signature")||"").replace(/^sha256=/i,"");
