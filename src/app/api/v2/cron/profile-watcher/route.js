@@ -57,7 +57,7 @@ export async function POST(req){
     and s.last_successful_payment_at is not null and s.current_period_end>now()
     and exists(select 1 from litix_autolikes_billing_events e
       where e.provider='nmi' and e.provider_subscription_item_id=s.provider_subscription_item_id
-      and e.event_type='PAYMENT_SUCCEEDED' and e.signature_verified=true
+      and e.event_type='PAYMENT_SUCCEEDED' and (e.signature_verified=true or e.verification_method='AUTHENTICATED_QUERY')
       and e.verified_at >= s.last_successful_payment_at-interval '5 minutes')
    limit 1`,[workspaceId,platform,profile]);
   if(!watchers.length)return send({error:"No verified paid campaign and consented watcher found"},403);
