@@ -58,7 +58,7 @@ test("owner token, explicit post approval and unique supplier reservation gate e
  schema=read("db/migrations/20261026-growth-bundles-manual-fulfillment.sql");
  assert.match(admin,/LITIX_BUNDLES_ADMIN_TOKEN/);
  assert.match(admin,/sameOrigin\(req\)/);
- assert.match(admin,/post\.status!=="Approved"/);
+ assert.match(admin,/post\.status!=="Under Review"/);
  assert.match(admin,/OWNER_CONFIRMED_MANUAL_DELIVERY/);
  assert.match(admin,/Supplier API dispatch is disabled/);
  assert.doesNotMatch(admin,/fetch\("https:\/\/smmglob\.com/);
