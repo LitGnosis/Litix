@@ -41,7 +41,7 @@ export async function POST(request){
  const paymentToken=String(body?.paymentToken||"");
  if(!/^al_[a-f0-9]{40}$/.test(campaignId)||!/^[0-9a-f-]{36}$/i.test(requestKey))
    return respond({error:"Invalid campaign or enrollment reference"},400);
- if(body?.consent!==true||body?.consentVersion!=="autolikes-recurring-v1")
+ if(body?.consent!==true||body?.monitoringConsent!==true||body?.consentVersion!=="autolikes-recurring-v1")
    return respond({error:"Explicit monthly recurring billing consent is required"},400);
  if(!/^[a-zA-Z0-9_.-]{12,300}$/.test(paymentToken)||/^[0-9]{12,19}$/.test(paymentToken))
    return respond({error:"A valid Collect.js single-use token is required"},400);
