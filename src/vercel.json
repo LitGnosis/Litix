@@ -6,6 +6,14 @@
     {
       "path": "/api/v2/cron/sync-catalog",
       "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/v2/cron/autolikes-billing-reconcile",
+      "schedule": "5 0 * * *"
+    },
+    {
+      "path": "/api/v2/cron/autolikes-dispatch",
+      "schedule": "15 0 * * *"
     }
   ]
 }
