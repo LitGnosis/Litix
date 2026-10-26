@@ -1,12 +1,12 @@
 // Exact fixed-price Instagram/TikTok Growth Bundles. Do not apply general service markup.
 export const BUNDLE_INSTRUCTIONS="IMPORTANT: All Growth Bundle orders require WhatsApp confirmation. After purchasing, contact LITIX through WhatsApp and submit links or screenshots for up to 10 posts. Likes, Views, and Shares are package totals distributed across your selected posts; Followers are applied once to your Instagram or TikTok account. Nothing is repeated per post. LITIX manually verifies your selected posts and service allocation before processing your order.";
-// Owner's October 26 update: 20% off the previous four prices.
+// Owner's October 26 update: 20% increase above the previous four prices.
 // Followers are delivered to the purchased account/profile, not to individual posts.
 const levels=[
- ["launch","Launch",3588,[25000,100000,1000,5000]],
- ["momentum","Momentum",7188,[50000,250000,2500,10000]],
- ["power","Power",13188,[100000,500000,5000,20000]],
- ["apex","Apex",23988,[250000,1000000,10000,50000]],
+ ["launch","Launch",5382,[25000,100000,1000,5000]],
+ ["momentum","Momentum",10782,[50000,250000,2500,10000]],
+ ["power","Power",19782,[100000,500000,5000,20000]],
+ ["apex","Apex",35982,[250000,1000000,10000,50000]],
 ];
 export const BUNDLE_KINDS=["Likes","Views","Shares","Followers"];
 export const POST_BUNDLE_KINDS=["Likes","Views","Shares"];
