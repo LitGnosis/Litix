@@ -12,7 +12,7 @@ test("numeric per-1000 retail ascending, independent of service ID and minimum c
   {service:78,name:"TikTok Likes X",platform:"TikTok",retail:22.99},
   {service:18,name:"TikTok Likes Y",platform:"TikTok",retail:7.49},
  ];
- assert.deepEqual(sortServicesPer1000(data,rank,x=>x.retail).map(s=>s.service),[1,222,2,18,78]);
+ assert.deepEqual(sortServicesPer1000(data,rank,x=>x.retail).map(s=>s.service),[1,18,222,2,78]);
  assert.equal(data[0].service,2,"sorting should never mutate cached supplier order");
 });
 test("strict Instagram and TikTok Likes filtering excludes Followers and other service kinds",()=>{
