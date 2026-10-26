@@ -3,8 +3,8 @@ import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 import {GROWTH_BUNDLES,BUNDLE_KINDS,POST_BUNDLE_KINDS,BUNDLE_INSTRUCTIONS,growthBundle,validPost,allocationsValid,configuredWhatsApp} from "../lib/growthBundles.mjs";
 const read=p=>readFileSync(new URL("../"+p,import.meta.url),"utf8");
-// Each previous retail price reduced by exactly 20%; followers replace the removed services.
-const price=[3588,7188,13188,23988];
+// Each previous retail price increased by exactly 20%; followers replace the removed services.
+const price=[5382,10782,19782,35982];
 const quantity=[
  [25000,100000,1000,5000],
  [50000,250000,2500,10000],
