@@ -53,8 +53,8 @@ export async function POST(req){
  catch{return response({orderId:id,trackingToken:secret,payment:"review",message:"Gateway result must be reconciled. Do not pay twice."},202);}
  const settled=await verifyNmiSettlement({orderId:id,transactionId,priceCents:pkg.priceCents});
  if(settled.settled){
-  await sql.query("update litix_growth_bundle_orders set payment_state='settled',order_state='Awaiting WhatsApp Submission',settled_at=now(),updated_at=now() where id=$1 and payment_state='approved_pending_settlement'",[id]);
-  await sendBundleReceipt({id,email,package_name:pkg.name,price_cents:pkg.priceCents}).catch(()=>false);
+  const settledRows=await sql.query("update litix_growth_bundle_orders set payment_state='settled',order_state='Awaiting WhatsApp Submission',settled_at=now(),updated_at=now() where id=$1 and payment_state='approved_pending_settlement' returning id,email,package_id,package_name,package_items,price_cents,profile_ref,created_at",[id]);
+  if(settledRows.length)await sendBundleReceipt(settledRows[0]).catch(()=>false);
  }
  // Never call SMMGLOB in this route. Supplier dispatch can ONLY be admin-approved.
  return response({
