@@ -39,7 +39,7 @@ export async function POST(req){
    const checked=await verifyNmiSettlement({orderId,transactionId:order.gateway_transaction_id,priceCents:order.price_cents});
    if(!checked.settled)return response({ok:false,settled:false,reason:checked.reason},202);
    const updated=await sql.query("update litix_growth_bundle_orders set payment_state='settled',settled_at=coalesce(settled_at,now()),order_state=case when order_state='Awaiting Payment' then 'Awaiting WhatsApp Submission' else order_state end,updated_at=now() where id=$1 and payment_state in ('approved_pending_settlement','settled') returning id,email,package_name,price_cents",[orderId]);
-   if(updated.length){await sendBundleReceipt(updated[0]);await audit(sql,orderId,"PAYMENT_SETTLEMENT_VERIFIED",{gatewayTransactionId:order.gateway_transaction_id});}
+   if(updated.length){await sendBundleReceipt(updated[0],sql);await audit(sql,orderId,"PAYMENT_SETTLEMENT_VERIFIED",{gatewayTransactionId:order.gateway_transaction_id});}
    return response({ok:true,settled:true});
   }
   if(order.payment_state!=="settled")return response({error:"Payment settlement must be independently verified before post allocation or fulfillment"},409);
