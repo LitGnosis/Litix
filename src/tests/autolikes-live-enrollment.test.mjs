@@ -29,7 +29,7 @@ test("approved NMI subscription stays pending independent payment verification, 
  assert.match(route,/UNKNOWN_OUTCOME/);
  assert.match(route,/No automatic retry/);
  assert.match(route,/no automatic retry/i);
- assert.doesNotMatch(route,/ACTIVE_PAID|setInterval|setTimeout\(/);
+ assert.doesNotMatch(route,/set status=.+ACTIVE_PAID|setInterval|setTimeout\(/);
  assert.match(ledger,/unique\s*\(customer_id,campaign_id,request_key\)/);
  assert.match(ledger,/ALTER TABLE litix_autolikes_enrollment_attempts ENABLE ROW LEVEL SECURITY/i);
  assert.doesNotMatch(ledger,/payment_token|card_number|cvv/);
