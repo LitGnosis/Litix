@@ -42,8 +42,12 @@ try{
    await page.locator('input[type="checkbox"]').check();
    const disabled=await page.getByRole("button",{name:/Pay with Bluevine/}).isDisabled();
    assert.equal(disabled,false);
+   page.on("pageerror",err=>console.error("MOBILE PAGE ERROR",pkg,err.message));
+   page.on("console",msg=>{if(msg.type()==="error")console.error("MOBILE CONSOLE",pkg,msg.text().slice(0,200))});
    await page.getByRole("button",{name:/Pay with Bluevine/}).click();
-   await page.waitForURL(url,{timeout:10000});
+   await page.waitForTimeout(500);
+   console.info("handoff diagnostic",pkg,{submitted,external,current:page.url(),notice:(await page.locator('[role="status"]').allTextContents()).slice(-3)});
+   await page.waitForURL(url,{timeout:8000});
    assert.equal(submitted,1);
    assert.equal(external,1,"exact hosted URL reached, intercepted without charge");
    await page.goto(base+"/bundles/confirmation?id="+orderId,{waitUntil:"networkidle"});
