@@ -1,5 +1,6 @@
 import { neon } from "@neondatabase/serverless";
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
+import { fetchLikesServices } from "./autolikes.mjs";
 
 export const db = () => neon(process.env.LITIX_AUTOLIKES_DATABASE_URL || process.env.LITIX_V2_DATABASE_URL || process.env.DATABASE_URL || process.env.POSTGRES_URL);
 export const sha = value => createHash("sha256").update(String(value)).digest("hex");
@@ -35,6 +36,17 @@ async function place(row) {
   if(!/^[0-9]+$/.test(String(row.service_id||"")) ||
      !Number.isSafeInteger(Number(row.likes)) || Number(row.likes)<1)
     return {state:"DECLINED",reason:"INVALID_SUPPLIER_SERVICE"};
+  // Validate the exact paid service against today's approved SMMGLOB Likes
+  // catalog BEFORE any paid supplier action. A stale service ID or unsupported
+  // quantity must never silently route to another provider or service.
+  let available;
+  try{
+    const catalog=await fetchLikesServices(row.platform);
+    available=catalog.find(s=>String(s.service)===String(row.service_id));
+  }catch{return {state:"DECLINED",reason:"SUPPLIER_CATALOG_UNAVAILABLE"};}
+  if(!available || Number(row.likes)<Number(available.min) ||
+     Number(row.likes)>Number(available.max))
+    return {state:"DECLINED",reason:"SERVICE_OR_QUANTITY_NOT_AVAILABLE"};
   let response;
   try{
     response=await fetch(url.href,{
