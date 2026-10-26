@@ -3,7 +3,7 @@ import { createHmac, createHash, timingSafeEqual } from "node:crypto";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 const send=(x,s=200)=>Response.json(x,{status:s});
-const conn=()=>neon(process.env.LITIX_V2_DATABASE_URL||process.env.DATABASE_URL);
+const conn=()=>neon(process.env.LITIX_AUTOLIKES_DATABASE_URL||process.env.LITIX_V2_DATABASE_URL||process.env.DATABASE_URL);
 const sha=x=>createHash("sha256").update(x).digest("hex");
 function signatureValid(raw,header){
  const match=/^t=([^,]+),s=([a-f0-9]{64})$/i.exec(header||"");
