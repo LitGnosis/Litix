@@ -54,7 +54,7 @@ export async function POST(req){
  const settled=await verifyNmiSettlement({orderId:id,transactionId,priceCents:pkg.priceCents});
  if(settled.settled){
   await sql.query("update litix_growth_bundle_orders set payment_state='settled',order_state='Awaiting WhatsApp Submission',settled_at=now(),updated_at=now() where id=$1 and payment_state='approved_pending_settlement'",[id]);
-  await sendBundleReceipt({id,email,package_name:pkg.name,price_cents:pkg.priceCents}).catch(()=>false);
+  await sendBundleReceipt({id,email,package_name:pkg.name,price_cents:pkg.priceCents},sql).catch(()=>false);
  }
  // Never call SMMGLOB in this route. Supplier dispatch can ONLY be admin-approved.
  return response({
