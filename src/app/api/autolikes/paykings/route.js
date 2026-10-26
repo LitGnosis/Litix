@@ -26,7 +26,7 @@ export async function POST(req){
  const db=conn(),hash=sha(raw);
  try{
   if(type==="recurring.subscription.add"){
-   const found=await db.query("select a.customer_id,a.quoted_amount_cents,c.* from litix_autolikes_enrollment_attempts a join litix_auto_boost_campaigns c on c.id=a.campaign_id and c.customer_id=a.customer_id where a.gateway_subscription_id=$1 and a.status='GATEWAY_APPROVED_PENDING_VERIFICATION' and a.consent_at is not null",[providerId]);
+   const found=await db.query("select a.customer_id,a.quoted_amount_cents,c.* from litix_autolikes_enrollment_attempts a join litix_auto_boost_campaigns c on c.id=a.campaign_id and c.customer_id=a.customer_id where a.gateway_subscription_id=$1 and a.status='GATEWAY_APPROVED_PENDING_VERIFICATION' and a.consent_at is not null and a.monitoring_consent_at is not null",[providerId]);
    if(found.length!==1)return send({error:"No matching enrollment"},409);
    const c=found[0],handle=String(c.account_ref).replace(/^@/,"");
    if(!/^[a-z0-9._]{1,30}$/i.test(handle))return send({error:"Invalid profile"},422);
