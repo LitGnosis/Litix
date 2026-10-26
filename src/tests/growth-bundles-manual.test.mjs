@@ -59,8 +59,11 @@ test("owner token, explicit post approval and unique supplier reservation gate e
  assert.match(admin,/LITIX_BUNDLES_ADMIN_TOKEN/);
  assert.match(admin,/sameOrigin\(req\)/);
  assert.match(admin,/post\.status!=="Approved"/);
- assert.match(admin,/OWNER_APPROVED_SUPPLIER_RELEASE/);
- assert.match(admin,/on conflict\(post_id,kind\) do nothing/);
+ assert.match(admin,/OWNER_CONFIRMED_MANUAL_DELIVERY/);
+ assert.match(admin,/Supplier API dispatch is disabled/);
+ assert.doesNotMatch(admin,/fetch\("https:\/\/smmglob\.com/);
+ assert.match(admin,/markManualProcessing/);
+ assert.match(admin,/markManualCompleted/);
  assert.match(admin,/UNKNOWN_OUTCOME|status:"unknown"/);
  assert.match(schema,/unique\(post_id,kind\)/);
  assert.match(schema,/litix_bundle_save_post/);
