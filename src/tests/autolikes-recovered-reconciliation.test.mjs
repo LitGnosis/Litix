@@ -9,7 +9,7 @@ const webhook=read("app/api/autolikes/paykings/route.js");
 const supplier=read("lib/liveAutoLikes.mjs");
 const checkout=read("app/api/[action]/route.js");
 const report=({condition="complete",source="recurring",amount="10.00",sub="99801",id="22233",success="1"}={})=>
-\`<nm_response><transaction><transaction_id>\${id}</transaction_id><subscription_id>\${sub}</subscription_id><condition>\${condition}</condition><action><source>\${source}</source><action_type>sale</action_type><success>\${success}</success><amount>\${amount}</amount><date>20261024120000</date></action></transaction></nm_response>\`;
+`<nm_response><transaction><transaction_id>${id}</transaction_id><subscription_id>${sub}</subscription_id><condition>${condition}</condition><action><source>${source}</source><action_type>sale</action_type><success>${success}</success><amount>${amount}</amount><date>20261024120000</date></action></transaction></nm_response>`;
 test("restored Oct25 parser accepts only settled matching recurring payments",()=>{
  assert.equal(parseNmiTransactionEvidence(report(),"99801",1000).length,1);
  assert.equal(parseNmiTransactionEvidence(report({condition:"pendingsettlement"}),"99801",1000).length,0);
