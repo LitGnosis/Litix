@@ -7,8 +7,8 @@ const style={padding:"12px",border:"1px solid #547a93",borderRadius:11,color:"#f
 export default function AutoLikesCheckout({campaign,onClose}){
  const [config,setConfig]=useState(null),[quote,setQuote]=useState(null),[ready,setReady]=useState(false),
        [consent,setConsent]=useState(false),[busy,setBusy]=useState(false),[message,setMessage]=useState("");
- const requestKey=useRef(""),purchaseRef=useRef(null);
- useEffect(()=>{requestKey.current=crypto.randomUUID();setQuote(null);setReady(false);setMessage("");setConsent(false);const ctl=new AbortController();
+ const requestKey=useRef(""),purchaseRef=useRef(null),enrollmentSubmitted=useRef(false);
+ useEffect(()=>{requestKey.current=crypto.randomUUID();enrollmentSubmitted.current=false;setQuote(null);setReady(false);setMessage("");setConsent(false);const ctl=new AbortController();
   Promise.all([
    fetch("/api/account/subscribe/config",{cache:"no-store",signal:ctl.signal}).then(r=>r.json()),
    fetch("/api/account/subscribe/quote",{method:"POST",headers:{"content-type":"application/json"},credentials:"same-origin",body:JSON.stringify({platform:campaign.platform,serviceId:campaign.serviceId,quantityPerPost:campaign.quantityPerPost,maxPostsPerMonth:campaign.maxPostsPerMonth}),signal:ctl.signal}).then(async r=>{const v=await r.json();if(!r.ok)throw Error(v.error||"Monthly quote unavailable");return v.quote})
@@ -18,7 +18,9 @@ export default function AutoLikesCheckout({campaign,onClose}){
  },[campaign.id]);
 
  async function enroll(token){
-  if(busy||!consent||!config?.enabled||!quote)return;
+  if(enrollmentSubmitted.current||!consent||!config?.enabled||!quote)return;
+  // Tokenization sets busy before this callback. Lock exactly once when a live token arrives.
+  enrollmentSubmitted.current=true;
   setBusy(true);setMessage("");
   try{
    const response=await fetch("/api/account/subscribe",{method:"POST",headers:{"content-type":"application/json"},credentials:"same-origin",body:JSON.stringify({
@@ -60,7 +62,7 @@ export default function AutoLikesCheckout({campaign,onClose}){
 
  function submit(e){
   e.preventDefault();
-  if(!ready||busy||!consent||!quote||!config?.enabled)return;
+  if(!ready||busy||enrollmentSubmitted.current||!consent||!quote||!config?.enabled)return;
   setBusy(true);setMessage("");
   try{getCollect().startPaymentRequest()}catch{setBusy(false);setMessage("Complete the secure card fields first.")}
  }
@@ -74,7 +76,7 @@ export default function AutoLikesCheckout({campaign,onClose}){
     <div id="al-ccexp" style={{minHeight:44}} aria-label="Secure expiration date"/>
     <div id="al-cvv" style={{minHeight:44}} aria-label="Secure card CVV"/>
     <label><input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)}/> I authorize Litix to charge {dollars} every month until I cancel, subject to the stated maximum number of posts and likes per post.</label>
-    <button type="submit" disabled={!ready||!consent||!quote||busy} style={style}>{busy?"Processing…":"Start monthly subscription"}</button>
+    <button type="submit" disabled={!ready||!consent||!quote||busy||enrollmentSubmitted.current} style={style}>{busy?"Processing…":"Start monthly subscription"}</button>
    </form>
   </>}
   {message&&<p role="status">{message}</p>}
