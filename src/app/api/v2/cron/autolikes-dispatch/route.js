@@ -13,7 +13,7 @@ const enabled=()=>process.env.VERCEL_ENV==="production" &&
  process.env.LITIX_AUTOLIKES_SOURCE_VERIFIED==="true" &&
  process.env.LITIX_NMI_RECURRING_LIVE_ENABLED==="true";
 function authorized(request){
- const expected=process.env.LITIX_CRON_SECRET;
+ const expected=process.env.LITIX_CRON_SECRET||process.env.CRON_SECRET;
  const value=(request.headers.get("authorization")||"").replace(/^Bearer\s+/i,"");
  if(!expected||!value)return false;
  const h=s=>createHash("sha256").update(s).digest();
@@ -122,7 +122,5 @@ export async function POST(request){
   return send({ok:false,state:"manual_review",message:"Supplier outcome is ambiguous. No automatic retry will occur."},202);
  }
 }
-export async function GET(request){
- if(!authorized(request))return send({error:"Unauthorized"},401);
- return send({enabled:enabled(),mode:enabled()?"ready_for_signed_post_events":"disabled",supplierRequestsOnGet:false});
-}
+// A scheduled GET invokes identical signed, paid, consent and duplicate-claim checks.
+export async function GET(request){return POST(request)}
