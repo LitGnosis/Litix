@@ -59,7 +59,7 @@ export async function POST(request){
    if(!admitted.length)return respond({error:"An enrollment already exists for this request. Review its status; do not resubmit a charge."},409);
    // NMI Classic tokenized subscription enrollment on the *existing* merchant gateway.
    // One request only. Unknown/timeout outcome ALWAYS needs manual reconciliation.
-   const form=createRecurringForm({amountCents:quote.amountCents,dayOfMonth:Math.min(new Date().getUTCDate(),28),paymentToken},process.env.NMI_SECURITY_KEY);
+   const form=createRecurringForm({amountCents:quote.amountCents,dayOfMonth:Math.min(new Date().getUTCDate(),28),paymentToken,orderId:id},process.env.NMI_SECURITY_KEY);
    let result={approved:false,subscriptionId:null},state="UNKNOWN_OUTCOME";
    try{
      const response=await fetch("https://paykings.transactiongateway.com/api/transact.php",{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded"},body:form,signal:AbortSignal.timeout(18000),cache:"no-store"});
