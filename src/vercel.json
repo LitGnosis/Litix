@@ -10,6 +10,10 @@
     {
       "path": "/api/autolikes/cron",
       "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/autolikes/reconcile",
+      "schedule": "15 * * * *"
     }
   ]
 }
