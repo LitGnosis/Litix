@@ -27,7 +27,7 @@ create index if not exists litix_growth_bundle_posts_order on litix_growth_bundl
 create table if not exists litix_growth_bundle_supplier_mappings(
  platform text not null check(platform in ('Instagram','TikTok')),
  kind text not null check(kind in ('Likes','Views','Impressions','Shares','Saves','Reposts')),
- service_id text not null, min_qty integer not null check(min_qty>0),
+ service_id text not null, provider_rate_usd numeric(12,6) not null check(provider_rate_usd>0), min_qty integer not null check(min_qty>0),
  max_qty integer not null check(max_qty>=min_qty),
  refill_days integer check(refill_days>=0),verified_at timestamptz not null,
  primary key(platform,kind)
