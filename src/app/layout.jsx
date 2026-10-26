@@ -1,5 +1,6 @@
 import "./style.css";
 import "./metallic.css";
+import "./growthBundles.css";
 import { LITIX_BRAND_MANIFEST } from "../config/brandEngine";
 
 const keywords = [
