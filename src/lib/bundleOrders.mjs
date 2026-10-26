@@ -52,7 +52,18 @@ export async function sendBundleReceipt(order,sql){
   "\nTotal: $"+(Number(order.price_cents)/100).toFixed(2)+
   "\nStatus: Awaiting WhatsApp Submission\n\nIMPORTANT: Contact LITIX using the official WhatsApp link on your private order status page and submit up to 10 post URLs or screenshots. You must provide public URLs before fulfillment. Quantities are package totals, not per post. LITIX must manually approve allocations before any supplier delivery.";
  let customerSent=false;
- try{
+ // Persisted customer receipt claim prevents duplicate confirmations even if
+ // a payment is checked again days later (beyond Resend's idempotency window).
+ let customerClaimed=!sql;
+ if(sql){
+  try{
+   const claimed=await sql.query(
+    "insert into litix_owner_purchase_notices(order_id,recipient,event,status) values($1,$2,'bundle_customer_receipt','claimed') on conflict(order_id,recipient,event) do nothing returning order_id",
+    [order.id,order.email]);
+   customerClaimed=claimed.length>0;
+  }catch(e){console.error("Bundle customer receipt claim failed",{orderId:order.id});}
+ }
+ if(customerClaimed)try{
   const r=await fetch("https://api.resend.com/emails",{
    method:"POST",
    headers:{"Authorization":"Bearer "+key,"Content-Type":"application/json","Idempotency-Key":"litix-bundle-settled/"+order.id},
@@ -62,6 +73,11 @@ export async function sendBundleReceipt(order,sql){
   });
   customerSent=r.ok;
  }catch{customerSent=false}
+ if(sql&&customerClaimed)try{
+  await sql.query(
+   "update litix_owner_purchase_notices set status=$3,sent_at=case when $3='sent' then now() else sent_at end where order_id=$1 and recipient=$2 and event='bundle_customer_receipt' and status='claimed'",
+   [order.id,order.email,customerSent?"sent":"delivery_uncertain"]);
+ }catch(e){console.error("Bundle customer receipt status needs review",{orderId:order.id})}
  // Paid record is re-read and verified by the owner notifier. Only one email
  // per recipient/order, even when checkout, cron and admin reconcile repeatedly.
  if(sql)try{await notifyOwnersOfVerifiedPurchase({sql,kind:"bundle",orderId:order.id})}
