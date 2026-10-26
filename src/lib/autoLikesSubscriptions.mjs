@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { retailPer1000 } from "./pricing.mjs";
+import { retailPer1000, calculateOrderCents } from "./pricing.mjs";
 import { isEligibleLikesService } from "./autolikes.mjs";
 
 export const MAX_MONTHLY_CHARGE_CENTS = 2_000_000;
@@ -15,7 +15,7 @@ export function quoteAutoLikesMonth(campaign, services) {
   if (!Number.isSafeInteger(maxPosts) || maxPosts < 1 || maxPosts > 60) throw Error("Invalid monthly post limit.");
   const retailRate = Number(retailPer1000(service));
   if (!Number.isFinite(retailRate) || retailRate <= 0) throw Error("Supplier retail price is unavailable.");
-  const perPostCents = Math.ceil(retailRate * 100 * quantity / 1000);
+  const perPostCents = calculateOrderCents(quantity,retailRate);
   const monthlyCents = perPostCents * maxPosts;
   if (!Number.isSafeInteger(monthlyCents) || monthlyCents < 100 || monthlyCents > MAX_MONTHLY_CHARGE_CENTS) throw Error("Monthly amount is outside supported limits.");
   return { campaignId:campaign.id, serviceId:String(service.service), serviceName:String(service.name||"Likes service").slice(0,100), platform:campaign.platform, target:campaign.account_ref, quantity, maxPosts, perPostCents, monthlyCents, currency:"USD" };
