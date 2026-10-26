@@ -2,7 +2,7 @@
 import {useEffect,useRef,useState} from "react";
 import {growthBundle,BUNDLE_INSTRUCTIONS} from "../../../lib/growthBundles.mjs";
 const money=c=>"$"+(c/100).toFixed(2);
-const collect=()=>typeof window!=="undefined"?window.CollectJS:null;
+const collect=()=>{try{if(typeof CollectJS!=="undefined")return CollectJS}catch{}return typeof window!=="undefined"?window.CollectJS:null;};
 export default function BundleCheckout(){
  const [pkgId,setPkgId]=useState("ig_launch"),[catalog,setCatalog]=useState(null),[email,setEmail]=useState(""),[profile,setProfile]=useState(""),
  [consent,setConsent]=useState(false),[cardReady,setCardReady]=useState(false),[busy,setBusy]=useState(false),[notice,setNotice]=useState("");
@@ -16,6 +16,8 @@ export default function BundleCheckout(){
   script.src="https://secure.nmi.com/token/Collect.js";
   script.async=true;script.id="litix-bundle-collect";
   script.setAttribute("data-tokenization-key",catalog.publicKey);
+  script.setAttribute("data-variant","inline");
+  script.setAttribute("data-style-sniffer","false");
   const init=()=>{
    if(!active||!collect()?.configure)return;
    try{collect().configure({
