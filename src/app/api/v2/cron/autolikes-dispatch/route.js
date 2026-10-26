@@ -53,7 +53,7 @@ async function choosePaidEvent(sql){
    and s.last_successful_payment_at is not null
    and exists(select 1 from litix_autolikes_billing_events b
       where b.provider='nmi' and b.provider_subscription_item_id=s.provider_subscription_item_id
-        and b.event_type='PAYMENT_SUCCEEDED' and b.signature_verified=true
+        and b.event_type='PAYMENT_SUCCEEDED' and (b.signature_verified=true or b.verification_method='AUTHENTICATED_QUERY')
         and b.verified_at>=s.last_successful_payment_at-interval '5 minutes')
  order by e.received_at asc limit 1`);
  return rows[0]||null;
