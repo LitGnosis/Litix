@@ -89,3 +89,31 @@ test("Bluevine API must refuse all checkout redirects until links are independen
   else process.env.LITIX_BLUEVINE_LINKS_VERIFIED=prior;
  }
 });
+
+test("new unpaid Bluevine orders alert both owners and customer, never claim successful payment",async t=>{
+ const {notifyBluevineOrderPending}=await import("../lib/bluevineNotifications.mjs");
+ const oldKey=process.env.RESEND_API_KEY,oldFetch=globalThis.fetch;
+ process.env.RESEND_API_KEY="test-only-not-live";
+ const notices=[];
+ globalThis.fetch=async(url,init)=>{
+  assert.equal(url,"https://api.resend.com/emails");
+  const message=JSON.parse(init.body);
+  notices.push({message,key:init.headers["Idempotency-Key"]});
+  assert.doesNotMatch(init.body,/card_number|cvv|payment_token|security_key/);
+  return Response.json({id:"mock"});
+ };
+ t.after(()=>{globalThis.fetch=oldFetch;if(oldKey===undefined)delete process.env.RESEND_API_KEY;else process.env.RESEND_API_KEY=oldKey;});
+ const result=await notifyBluevineOrderPending({
+  orderId:"lbg_12345678-1234-4234-8234-123456789abc",
+  email:"buyer@example.test",whatsapp:"+12145550100",profile:"@testingcreator",
+  packageName:"Instagram Launch Growth Bundle",packageId:"ig_launch",priceCents:5382,createdAt:"2026-10-26T22:00:00Z"});
+ assert.deepEqual(result,{owner:true,customer:true});
+ assert.equal(notices.length,2);
+ assert.deepEqual(notices[0].message.to,["litixsocial@gmail.com","litgnosisllc@gmail.com"]);
+ assert.deepEqual(notices[1].message.to,["buyer@example.test"]);
+ assert.match(notices[0].message.text,/NOT A PAID ORDER/);
+ assert.match(notices[0].message.text,/12145550100/);
+ assert.match(notices[1].message.text,/AWAITING PAYMENT VERIFICATION/);
+ assert.match(notices[1].message.text,/up to 10 post links or screenshots/);
+ assert.notEqual(notices[0].key,notices[1].key);
+});
