@@ -29,6 +29,7 @@ const normalizeSocialProfileInput=(value,platform)=>{
  const input=/^(?:www\.)?(?:instagram\.com|tiktok\.com)\//i.test(raw)?"https://"+raw:raw;
  if(/^https?:\/\//i.test(input)){
   let url;try{url=new URL(input)}catch{return {ok:false,error:"Enter a valid public profile URL or @username."}}
+  if(url.protocol!=="https:"||url.username||url.password)return {ok:false,error:"Use a secure public profile link (https://)."};
   const host=url.hostname.toLowerCase().replace(/^www\./,"");
   if(platform==="instagram"&&host!=="instagram.com")return {ok:false,error:"Use an Instagram username or instagram.com profile URL."};
   if(platform==="tiktok"&&host!=="tiktok.com")return {ok:false,error:"Use a TikTok username or tiktok.com profile URL."};
