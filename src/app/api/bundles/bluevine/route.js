@@ -2,6 +2,7 @@ import {randomUUID,randomBytes} from "node:crypto";
 import {growthBundle,validWhatsApp} from "../../../../lib/growthBundles.mjs";
 import {bluevineBundleLink} from "../../../../lib/bluevineBundles.mjs";
 import {bundleBluevineReady} from "../route.js";
+import {notifyBluevineOrderPending} from "../../../../lib/bluevineNotifications.mjs";
 import {bundleDB,hashToken,response,sameOrigin} from "../../../../lib/bundleOrders.mjs";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
@@ -25,15 +26,23 @@ export async function POST(req){
   return response({error:"Enter a valid email, public account, WhatsApp contact, and agree to manual post submission"},422);
  const orderId="lbg_"+randomUUID();
  const secret=randomBytes(28).toString("base64url");
+ let persistedOrder;
  try{
   const sql=bundleDB();
   const rows=await sql.query(
-   "insert into litix_growth_bundle_orders(id,email,package_id,platform,package_name,price_cents,package_items,idempotency_key,tracking_token_hash,profile_ref,terms_accepted_at,payment_state,order_state,payment_provider,customer_whatsapp) values($1,$2,$3,$4,$5,$6,$7::jsonb,$8,$9,$10,now(),'awaiting_payment','Awaiting Payment','bluevine',$11) on conflict(idempotency_key) do nothing returning id",
+   "insert into litix_growth_bundle_orders(id,email,package_id,platform,package_name,price_cents,package_items,idempotency_key,tracking_token_hash,profile_ref,terms_accepted_at,payment_state,order_state,payment_provider,customer_whatsapp) values($1,$2,$3,$4,$5,$6,$7::jsonb,$8,$9,$10,now(),'awaiting_payment','Awaiting Payment','bluevine',$11) on conflict(idempotency_key) do nothing returning id,created_at",
    [orderId,email,pkg.id,pkg.platform,pkg.name,pkg.priceCents,JSON.stringify(pkg.items),idem,hashToken(secret),profile,whatsapp]);
   if(!rows.length)return response({error:"This order has already been created. Use your saved tracking information; do not start another checkout."},409);
+  persistedOrder=rows[0];
  }catch{return response({error:"Could not save pending Bluevine order. No redirect or payment initiated."},503);}
+ // Sending failures must never change payment status or create an untracked charge.
+ const notices=await notifyBluevineOrderPending({
+  orderId,email,whatsapp,profile,packageName:pkg.name,packageId:pkg.id,priceCents:pkg.priceCents,createdAt:persistedOrder.created_at
+ }).catch(()=>({owner:false,customer:false}));
+ if(!notices.owner||!notices.customer)console.error("Bluevine pending order notifications need follow-up",{orderId,owner:notices.owner,customer:notices.customer});
  return response({
   orderId,trackingToken:secret,checkoutUrl,
+  pendingNotifications:{owner:!!notices.owner,customer:!!notices.customer},
   payment:"awaiting_payment",status:"Awaiting Payment",
   message:"Order saved as UNPAID. After Bluevine checkout, return to your Litix tracking page. Send your order number, account and up to 10 post links or screenshots through official WhatsApp. Payment must be verified manually through Bluevine before fulfillment."
  },201);
