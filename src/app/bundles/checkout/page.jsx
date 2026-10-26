@@ -1,14 +1,19 @@
 "use client";
 import {useEffect,useRef,useState} from "react";
-import {growthBundle,BUNDLE_INSTRUCTIONS} from "../../../lib/growthBundles.mjs";
+import {growthBundle,BUNDLE_INSTRUCTIONS,validWhatsApp} from "../../../lib/growthBundles.mjs";
+import {bluevineBundleLink} from "../../../lib/bluevineBundles.mjs";
 const money=c=>"$"+(c/100).toFixed(2);
 const collect=()=>{try{if(typeof CollectJS!=="undefined")return CollectJS}catch{}return typeof window!=="undefined"?window.CollectJS:null;};
 export default function BundleCheckout(){
  const [pkgId,setPkgId]=useState("ig_launch"),[catalog,setCatalog]=useState(null),[email,setEmail]=useState(""),[profile,setProfile]=useState(""),
  [consent,setConsent]=useState(false),[cardReady,setCardReady]=useState(false),[busy,setBusy]=useState(false),[notice,setNotice]=useState("");
+ const [whatsapp,setWhatsapp]=useState(""),[bluevineBusy,setBluevineBusy]=useState(false),[pendingBluevine,setPendingBluevine]=useState(null);
+ const bluevineIdem=useRef(null);
  const idem=useRef(""),submitted=useRef(false),onToken=useRef(null);
  const pkg=growthBundle(pkgId);
- useEffect(()=>{const id=new URLSearchParams(location.search).get("package");if(growthBundle(id))setPkgId(id);idem.current=crypto.randomUUID();fetch("/api/bundles",{cache:"no-store"}).then(r=>r.json()).then(setCatalog).catch(()=>setNotice("Bundle checkout availability could not be checked."))},[]);
+ useEffect(()=>{const id=new URLSearchParams(location.search).get("package");if(growthBundle(id))setPkgId(id);idem.current=crypto.randomUUID();fetch("/api/bundles",{cache:"no-store"}).then(r=>r.json()).then(setCatalog).catch(()=>setNotice("Bundle checkout availability could not be checked."));
+  try{const prev=JSON.parse(sessionStorage.getItem("litix:bundle-bluevine-pending")||"null");if(prev?.id&&prev?.packageId)setPendingBluevine(prev);}catch{}
+ },[]);
  useEffect(()=>{
   if(!catalog?.checkoutEnabled||!catalog.publicKey)return;
   let active=true,timeout;
@@ -57,6 +62,27 @@ export default function BundleCheckout(){
   setBusy(true);setNotice("");
   try{collect().startPaymentRequest()}catch{setBusy(false);setNotice("Check your secure card fields.")}
  }
+ async function beginBluevine(e){
+  e.preventDefault();
+  if(!pkg||!catalog?.bluevineEnabled||bluevineBusy)return;
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())||!/^[\w.@:/-]{2,150}$/.test(profile.trim())||
+   !validWhatsApp(whatsapp)||!consent){setNotice("Enter a valid email, username or profile URL, WhatsApp number, and accept the post-submission terms.");return;}
+  if(!bluevineIdem.current||bluevineIdem.current.packageId!==pkg.id)bluevineIdem.current={packageId:pkg.id,key:crypto.randomUUID()};
+  setBluevineBusy(true);setNotice("");
+  try{
+   const r=await fetch("/api/bundles/bluevine",{method:"POST",headers:{"content-type":"application/json"},
+    body:JSON.stringify({packageId:pkg.id,expectedAmountCents:pkg.priceCents,email,profile,whatsapp,whatsappConsent:consent,idempotencyKey:bluevineIdem.current.key})});
+   const d=await r.json();if(!r.ok)throw Error(d.error||"Pending Bluevine order could not be saved.");
+   if(!d.orderId||!d.trackingToken||d.checkoutUrl!==bluevineBundleLink(pkg))throw Error("Payment link validation failed. No redirect made.");
+   const tracking={id:d.orderId,token:d.trackingToken};
+   const pending={...tracking,packageId:pkg.id};
+   sessionStorage.setItem("litix:bundle-confirmation",JSON.stringify(tracking));
+   sessionStorage.setItem("litix:bundle-bluevine-pending",JSON.stringify(pending));
+   setPendingBluevine(pending);
+   // Payment remains UNPAID until an administrator verifies the transaction in Bluevine.
+   location.assign(d.checkoutUrl);
+  }catch(err){setNotice(err.message||"Bluevine checkout unavailable. No payment was initiated.");setBluevineBusy(false);}
+ }
  return <main className="wrap"><nav className="nav"><a href="/" className="brand">LITIX</a><a href="/bundles">Growth Bundles</a></nav>
   <section className="panel" style={{maxWidth:730,margin:"25px auto"}}>
    <span className="kicker">LITIX GROWTH BUNDLES</span><h1>Purchase Bundle</h1>
@@ -74,7 +100,18 @@ export default function BundleCheckout(){
     <label style={{display:"flex",alignItems:"start",gap:10,fontSize:14,lineHeight:1.5}}><input style={{width:20,marginTop:3}} type="checkbox" required checked={consent} onChange={e=>setConsent(e.target.checked)}/><span>I understand that WhatsApp post submission is mandatory, no more than 10 posts may be submitted, quantities are distributed across those posts, and all fulfillment requires manual LITIX approval.</span></label>
     {catalog?.checkoutEnabled?<><div><label>Card number<div id="bundle-ccnumber" className="field"/></label><div className="premium-card-row"><label>Expiration<div id="bundle-ccexp" className="field"/></label><label>CVV<div id="bundle-cvv" className="field"/></label></div></div><button className="pay" disabled={!cardReady||!consent||busy||submitted.current}>{busy?"Processing securely...":"Pay "+money(pkg.priceCents)+" with PayKings"}</button></>:
       <div role="status" className="lg-bundle-warning"><strong>Bundle checkout is not yet available.</strong> Live payment fields are unavailable. Check your connection and try again; no payment can be submitted until the secure gateway and official WhatsApp contact are available.</div>}
-   </form>{notice&&<p role="status" className="msg">{notice}</p>}
+   </form>
+   {catalog?.bluevineEnabled?<section aria-label="Bluevine payment option" className="lg-bluevine-checkout">
+    <h3>Pay with Bluevine — {pkg&&money(pkg.priceCents)}</h3>
+    <p className="small">Alternative payment method. Your bundle and price stay the same. Enter your email and Instagram/TikTok account above, then add your WhatsApp contact below. Your pending order will be saved before you are redirected.</p>
+    <form onSubmit={beginBluevine} className="form">
+     <label>WhatsApp contact (include country code)<input type="tel" required value={whatsapp} onChange={e=>setWhatsapp(e.target.value)} placeholder="+1 555 555 5555" autoComplete="tel"/></label>
+     <p className="lg-bundle-warning">After payment, return to Litix and send your order number plus links or screenshots for up to 10 posts via WhatsApp. Bluevine does not automatically confirm your payment to this website. Fulfillment stays on hold until LITIX verifies it in Bluevine.</p>
+     <button className="pay" type="submit" disabled={!consent||bluevineBusy}>{bluevineBusy?"Saving pending order...":"Pay with Bluevine — "+money(pkg.priceCents)}</button>
+    </form>
+   </section>:null}
+   {pendingBluevine?<p className="small">Already visited Bluevine? <a href={"/bundles/confirmation?id="+encodeURIComponent(pendingBluevine.id)}>View your saved bundle order and WhatsApp instructions</a>. Payment remains pending until manually confirmed.</p>:null}
+   {notice&&<p role="status" className="msg">{notice}</p>}
    <p className="small">Ordinary one-time Litix orders remain available at <a href="/#checkout">regular checkout</a>.</p>
   </section></main>
 }

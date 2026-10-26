@@ -14,7 +14,7 @@ export async function GET(req){
  if(!authorized(req))return response({error:"Admin authorization required"},401);
  try{
   const sql=bundleDB();
-  const orders=await sql.query("select id,package_id,package_name,platform,price_cents,email,payment_state,order_state,gateway_transaction_id,package_items,followers_fulfilled,profile_ref,created_at from litix_growth_bundle_orders order by created_at desc limit 75");
+  const orders=await sql.query("select id,package_id,package_name,platform,price_cents,email,payment_state,order_state,gateway_transaction_id,package_items,followers_fulfilled,profile_ref,created_at,payment_provider,customer_whatsapp,bluevine_payment_reference from litix_growth_bundle_orders order by created_at desc limit 75");
   const posts=await sql.query("select id,order_id,post_url,status,allocations from litix_growth_bundle_posts where order_id=any($1::text[]) order by created_at",[orders.map(o=>o.id)]);
   const dispatch=await sql.query("select d.id,d.post_id,d.kind,d.quantity,d.status,d.supplier_order_id from litix_growth_bundle_dispatch d join litix_growth_bundle_posts p on p.id=d.post_id where p.order_id=any($1::text[]) order by d.attempted_at desc",[orders.map(o=>o.id)]);
   const history=await sql.query("select order_id,admin_action,details,created_at from litix_growth_bundle_audit where order_id=any($1::text[]) order by created_at desc limit 150",[orders.map(o=>o.id)]);
@@ -33,6 +33,23 @@ export async function POST(req){
   if(!rows.length)return response({error:"Order not found"},404);
   const order=rows[0],bundle=growthBundle(order.package_id);
   if(!bundle)return response({error:"Unknown catalog package"},422);
+  if(action==="confirmBluevinePayment"){
+   // Only an authenticated owner who actually checked Bluevine can make this
+   // irreversible payment transition. A redirect or customer screenshot is NOT proof.
+   const reference=String(data.bluevineReference||"").trim();
+   if(order.payment_provider!=="bluevine"||order.payment_state!=="awaiting_payment")
+    return response({error:"This is not an unpaid Bluevine order"},409);
+   if(data.verifiedInBluevine!==true||data.confirmedAmountCents!==Number(order.price_cents)||
+     !/^[A-Za-z0-9 _./#-]{6,128}$/.test(reference))
+    return response({error:"Independently verify this order in Bluevine, enter its confirmation reference and exact amount before proceeding"},422);
+   const verified=await sql.query(
+    "update litix_growth_bundle_orders set payment_state='settled',order_state='Awaiting WhatsApp Submission',settled_at=now(),bluevine_payment_reference=$2,updated_at=now() where id=$1 and payment_provider='bluevine' and payment_state='awaiting_payment' returning id,email,package_id,package_name,package_items,price_cents,profile_ref,created_at",
+    [orderId,reference]);
+   if(!verified.length)return response({error:"Order already updated or changed; refresh before retrying"},409);
+   await audit(sql,orderId,"OWNER_VERIFIED_BLUEVINE_PAYMENT",{reference,amountCents:order.price_cents,verifiedInBluevine:true});
+   const notified=await sendBundleReceipt(verified[0]).catch(()=>false);
+   return response({ok:true,settled:true,notificationsSent:notified,status:"Awaiting WhatsApp Submission"});
+  }
   if(action==="refreshSettlement"){
    if(!order.gateway_transaction_id||!["approved_pending_settlement","settled"].includes(order.payment_state))
     return response({error:"No approved gateway transaction to reconcile"},409);

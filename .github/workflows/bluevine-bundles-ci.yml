@@ -1,0 +1,58 @@
+name: Bluevine bundles isolated verification (no real payments)
+on:
+  push:
+    branches: [feature/bluevine-bundle-payments-20261026]
+  pull_request:
+    paths:
+      - 'src/lib/bluevineBundles.mjs'
+      - 'src/app/api/bundles/bluevine/**'
+      - 'src/app/bundles/**'
+      - 'src/components/GrowthBundles.jsx'
+      - 'src/tests/bluevine-bundles.test.mjs'
+      - '.github/workflows/bluevine-bundles-ci.yml'
+permissions:
+  contents: read
+jobs:
+  bluevine-nocharge:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: src/package-lock.json
+      - name: Install locked dependencies
+        working-directory: src
+        run: npm ci --no-audit --no-fund
+      - name: Test Bluevine and existing bundle path only (no charge)
+        working-directory: src
+        env:
+          LITIX_BLUEVINE_LINKS_VERIFIED: 'false'
+        run: node --test tests/bluevine-bundles.test.mjs tests/growth-bundles-manual.test.mjs tests/growth-bundles-paid-mock.test.mjs tests/growth-bundles-route-negative.test.mjs tests/owner-purchase-notifications.test.mjs
+      - name: Compile Next.js without activating Bluevine buttons
+        working-directory: src
+        env:
+          LITIX_BLUEVINE_LINKS_VERIFIED: 'false'
+        run: npm run build
+      - name: Install isolated browser automation (no payment credentials)
+        working-directory: src
+        run: npm install --no-save --ignore-scripts playwright@1.56.1
+      - name: Simulate 390px mobile checkout for all eight platform bundles
+        working-directory: src
+        env:
+          LITIX_BLUEVINE_LINKS_VERIFIED: 'false'
+        run: |
+          npm run start -- --port 3100 >/tmp/litix-mobile-next.log 2>&1 &
+          app_pid=$!
+          trap 'kill $app_pid || true' EXIT
+          for i in $(seq 1 25); do
+            if curl -fsS -o /dev/null http://localhost:3100/bundles; then break; fi
+            sleep 1
+          done
+          export CHROME_PATH="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium)"
+          test -n "$CHROME_PATH"
+          node tests/bluevine-mobile.mjs
