@@ -65,13 +65,13 @@ export default function BundleCheckout(){
    <p className="small">Fixed-price package totals. Submit up to 10 posts, not 10 copies of each service.</p>
    <div className="lg-bundle-items">{pkg&&Object.entries(pkg.items).map(([kind,n])=><div key={kind}><span>{kind}</span><strong>{n.toLocaleString()}</strong></div>)}</div>
    <p className="lg-bundle-warning">{BUNDLE_INSTRUCTIONS}</p>
-   <p className="small">Your links/screenshots and allocations are reviewed manually. No SMMGLOB order is placed automatically.</p>
+   <p className="small">After PayKings approves your one-time payment, you MUST tap the WhatsApp button on the confirmation page and message LITIX your order number plus up to 10 post links or screenshots. I personally arrange fulfillment; there is no automated supplier dispatch.</p>
    <form onSubmit={submit} className="form">
     <label>Email<input type="email" required value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com"/></label>
     <label>{pkg?.platform} username or public profile URL<input required value={profile} onChange={e=>setProfile(e.target.value)} placeholder="@yourprofile" autoCapitalize="none" autoCorrect="off"/></label>
     <label style={{display:"flex",alignItems:"start",gap:10,fontSize:14,lineHeight:1.5}}><input style={{width:20,marginTop:3}} type="checkbox" required checked={consent} onChange={e=>setConsent(e.target.checked)}/><span>I understand that WhatsApp post submission is mandatory, no more than 10 posts may be submitted, quantities are distributed across those posts, and all fulfillment requires manual LITIX approval.</span></label>
     {catalog?.checkoutEnabled?<><div><label>Card number<div id="bundle-ccnumber" className="field"/></label><div className="premium-card-row"><label>Expiration<div id="bundle-ccexp" className="field"/></label><label>CVV<div id="bundle-cvv" className="field"/></label></div></div><button className="pay" disabled={!cardReady||!consent||busy||submitted.current}>{busy?"Processing securely...":"Pay "+money(pkg.priceCents)+" with PayKings"}</button></>:
-      <div role="status" className="lg-bundle-warning"><strong>Bundle checkout is not yet available.</strong> We're verifying the official WhatsApp contact, supplier service mappings, and secure payment configuration. No payment can be submitted from this page.</div>}
+      <div role="status" className="lg-bundle-warning"><strong>Bundle checkout is not yet available.</strong> Live payment fields are unavailable. Check your connection and try again; no payment can be submitted until the secure gateway and official WhatsApp contact are available.</div>}
    </form>{notice&&<p role="status" className="msg">{notice}</p>}
    <p className="small">Ordinary one-time Litix orders remain available at <a href="/#checkout">regular checkout</a>.</p>
   </section></main>
