@@ -64,7 +64,7 @@ test("owner token, explicit post approval and unique supplier reservation gate e
  assert.doesNotMatch(admin,/fetch\("https:\/\/smmglob\.com/);
  assert.match(admin,/markManualProcessing/);
  assert.match(admin,/markManualCompleted/);
- assert.match(admin,/UNKNOWN_OUTCOME|status:"unknown"/);
+ assert.match(admin,/OWNER_CONFIRMED_MANUAL_DELIVERY/);
  assert.match(schema,/unique\(post_id,kind\)/);
  assert.match(schema,/litix_bundle_save_post/);
  assert.match(schema,/MAX_TEN_POSTS/);
