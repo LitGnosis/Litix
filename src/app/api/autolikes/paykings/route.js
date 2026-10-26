@@ -35,7 +35,7 @@ export async function POST(req){
     ["als_"+sha(providerId).slice(0,40),c.id,c.customer_id,providerId,url,handle.toLowerCase(),c.platform,String(c.service_catalog_id),c.quantity_per_post,c.max_posts_per_month,c.quoted_amount_cents]);
   }
   const matches=await db.query("select s.* from litix_autolikes_live_subscriptions s where s.provider_subscription_id=$1 or exists(select 1 from litix_autolikes_enrollment_attempts a where a.id=$2 and a.gateway_subscription_id=s.provider_subscription_id) limit 1",[providerId,String(b.order_id||"")]);
-  if(matches.length!==1)return send({error:"Unmatched subscription"},409);
+  if(matches.length!==1)return send({ok:true,ignored:true,reason:"Not an AutoLikes subscription"});
   const s=matches[0];
   // NMI sale-success notifications can be pending settlement. They do not grant fulfillment.
   // The authenticated Query API reconciliation route checks condition=complete and recurring source.
