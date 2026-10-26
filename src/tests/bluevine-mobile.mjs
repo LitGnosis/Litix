@@ -1,7 +1,7 @@
 // Isolated local-browser simulations: all payment endpoints are intercepted; NO real charge.
 import {chromium} from "playwright";
 import assert from "node:assert/strict";
-const base="http://127.0.0.1:3100";
+const base="http://localhost:3100";
 const urls={
  launch:["https://pay.bluevine.com/p/ecd2c080f8a74e33ac834ed0e9eedc92",5382],
  momentum:["https://pay.bluevine.com/p/23d4ce5549c846b6b50dd4ce233b7723",10782],
