@@ -18,6 +18,11 @@ CREATE TABLE IF NOT EXISTS litix_autolikes_enrollment_attempts (
   updated_at timestamptz not null default now(),
   unique (customer_id,campaign_id,request_key)
 );
+-- Prevent independent request keys from triggering multiple subscriptions for a single campaign.
+-- Ambiguous outcomes remain locked until reviewed and reconciled.
+CREATE UNIQUE INDEX IF NOT EXISTS litix_autolikes_one_active_enrollment_per_campaign
+  ON litix_autolikes_enrollment_attempts(campaign_id)
+  WHERE status IN ('REQUESTED','UNKNOWN_OUTCOME','GATEWAY_APPROVED_PENDING_VERIFICATION');
 CREATE INDEX IF NOT EXISTS litix_autolikes_enrollment_review_idx
   ON litix_autolikes_enrollment_attempts(status,created_at)
   WHERE status in ('REQUESTED','UNKNOWN_OUTCOME');
