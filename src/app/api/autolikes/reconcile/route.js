@@ -72,7 +72,7 @@ export async function GET(req) {
      platform,service_id,max_likes_per_post,monthly_post_limit,amount_cents)
     values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
     on conflict (provider_subscription_id) do nothing`,
-    [internalId,a.campaign_id,a.customer_id,subId,target.profileUrl,target.handle.toLowerCase(),
+    [internalId,a.campaign_id,a.customer_id,subId,target.profileUrl,target.handle.replace(/^@/,"").toLowerCase(),
      a.platform,String(a.service_catalog_id),Number(a.quantity_per_post),
      Number(a.max_posts_per_month),Number(a.quoted_amount_cents)]);
    for(const record of records){
