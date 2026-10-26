@@ -70,45 +70,33 @@ export async function POST(req){
     return response({error:"Invalid post allocation"},409);
    const kinds=BUNDLE_KINDS.filter(k=>Number(post.allocations?.[k]||0)>0);
    if(!kinds.length)return response({error:"Assign at least one service"},422);
-   const mapped=await sql.query("select kind,service_id,min_qty,max_qty from litix_growth_bundle_supplier_mappings where platform=$1 and kind=any($2::text[]) and verified_at is not null",[bundle.platform,kinds]);
-   for(const kind of kinds){
-    const m=mapped.find(x=>x.kind===kind),q=Number(post.allocations[kind]);
-    if(!m||!m.service_id||q<Number(m.min_qty)||q>Number(m.max_qty))
-     return response({error:"Verified supplier route unavailable or quantity outside limits for "+kind},409);
-   }
+   // Manual order: post review never depends on supplier API mapping.
    const updated=await sql.query("update litix_growth_bundle_posts set status='Approved',approved_at=now() where id=$1 and status='Under Review' returning id",[postId]);
    if(!updated.length)return response({error:"Post changed while reviewing"},409);
    await sql.query("update litix_growth_bundle_orders set order_state='Approved',approved_at=now(),updated_at=now() where id=$1 and order_state in ('Under Review','Approved')",[orderId]);
    await audit(sql,orderId,"POST_APPROVED",{postId,kinds});
    return response({ok:true,approved:true});
   }
-  if(action==="release"){
-   if(post.status!=="Approved")return response({error:"Explicit post approval required"},409);
-   if(process.env.VERCEL_ENV!=="production"||process.env.LITIX_BUNDLES_LIVE_ENABLED!=="true"||!process.env.SMMGLOB_API_KEY)
-    return response({error:"Verified production SMMGLOB dispatch is disabled"},503);
-   const kind=String(data.kind||""),quantity=Number(post.allocations?.[kind]);
-   if(!BUNDLE_KINDS.includes(kind)||!Number.isSafeInteger(quantity)||quantity<=0)return response({error:"Invalid service allocation"},422);
-   const maps=await sql.query("select service_id,min_qty,max_qty from litix_growth_bundle_supplier_mappings where platform=$1 and kind=$2 and verified_at is not null",[bundle.platform,kind]);
-   const m=maps[0];if(!m||!/^\d+$/.test(String(m.service_id))||quantity<Number(m.min_qty)||quantity>Number(m.max_qty))return response({error:"Unverified supplier service or unsupported order quantity"},409);
-   // Reserve exact line ONCE before calling the supplier. Unknown outcomes never retry automatically.
-   const rid="bd_"+randomUUID();
-   const reserved=await sql.query(
-    "insert into litix_growth_bundle_dispatch(id,post_id,kind,quantity) select $1,p.id,$2,$3 from litix_growth_bundle_posts p join litix_growth_bundle_orders o on o.id=p.order_id where p.id=$4 and p.order_id=$5 and p.status='Approved' and o.payment_state='settled' on conflict(post_id,kind) do nothing returning id",
-    [rid,kind,quantity,postId,orderId]);
-   if(!reserved.length)return response({error:"This service allocation was already sent or reserved; investigate before retrying"},409);
+  // Bundle fulfillment is performed personally, outside this website.
+  if(action==="markManualProcessing"){
+   const changed=await sql.query("update litix_growth_bundle_posts set status='Processing' where id=$1 and status='Approved' returning id",[postId]);
+   if(!changed.length)return response({error:"Approve this post before marking processing"},409);
    await sql.query("update litix_growth_bundle_orders set order_state='Processing',updated_at=now() where id=$1",[orderId]);
-   await audit(sql,orderId,"OWNER_APPROVED_SUPPLIER_RELEASE",{postId,kind,quantity,reservationId:rid});
-   let outcome={status:"unknown"};try{
-    const r=await fetch("https://smmglob.com/api/v2",{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded"},
-     body:new URLSearchParams({key:process.env.SMMGLOB_API_KEY,action:"add",service:String(m.service_id),link:post.post_url,quantity:String(quantity)}),
-     signal:AbortSignal.timeout(16000),cache:"no-store"});
-    if(r.ok){const result=await r.json();if(/^\d+$/.test(String(result?.order||"")))outcome={status:"submitted",supplier:String(result.order)};
-     else if(result?.error)outcome={status:"declined"};}
-   }catch{}
-   await sql.query("update litix_growth_bundle_dispatch set status=$2,supplier_order_id=$3,updated_at=now() where id=$1",[rid,outcome.status,outcome.supplier||null]);
-   if(outcome.status!=="submitted")await sql.query("update litix_growth_bundle_orders set order_state='Needs Attention' where id=$1",[orderId]);
-   return response({ok:outcome.status==="submitted",status:outcome.status,dispatchId:rid},outcome.status==="submitted"?200:202);
+   await audit(sql,orderId,"OWNER_MARKED_MANUAL_PROCESSING",{postId});
+   return response({ok:true,status:"Processing"});
   }
+  if(action==="markManualCompleted"){
+   if(data.manuallyVerified!==true)return response({error:"Owner must explicitly confirm manual delivery"},422);
+   const changed=await sql.query("update litix_growth_bundle_posts set status='Completed' where id=$1 and status in ('Approved','Processing') returning id",[postId]);
+   if(!changed.length)return response({error:"Post must first be approved and not already completed"},409);
+   const counted=await sql.query("select status,allocations from litix_growth_bundle_posts where order_id=$1 and status<>'Rejected'",[orderId]);
+   const complete=counted.length>0 && counted.every(p=>p.status==="Completed") &&
+     BUNDLE_KINDS.every(kind=>counted.reduce((n,p)=>n+Number(p.allocations?.[kind]||0),0)===Number(bundle.items[kind]));
+   await sql.query("update litix_growth_bundle_orders set order_state=$2,updated_at=now() where id=$1",[orderId,complete?"Completed":"Partially Completed"]);
+   await audit(sql,orderId,"OWNER_CONFIRMED_MANUAL_DELIVERY",{postId,allPackageTotalsDelivered:complete});
+   return response({ok:true,status:complete?"Completed":"Partially Completed"});
+  }
+  if(action==="release")return response({error:"Automated supplier dispatch is disabled. Fulfill personally and record delivery."},410);
   return response({error:"Unsupported admin operation"},400);
  }catch(e){return response({error:"Bundle admin operation needs review. No automatic retries.",code:String(e?.code||"REVIEW").slice(0,32)},503);}
 }
