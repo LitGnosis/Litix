@@ -32,7 +32,7 @@ export default function AutoLikesDrafts(){
  },[platform]);
  const estimate=activeService?activeService.per1000*Number(quantity)/1000:0;
  const handle=target.trim().replace(/^@/,"");
- const canPreviewProfile=platform==="instagram" ? /^(?!.*\\.\\.)(?!\\.)(?!.*\\.$)[a-zA-Z0-9._]{1,30}$/.test(handle) : /^[a-zA-Z0-9._]{2,24}$/.test(handle);
+ const canPreviewProfile=platform==="instagram" ? /^(?!.*\.\.)(?!\.)(?!.*\.$)[a-zA-Z0-9._]{1,30}$/.test(handle) : /^[a-zA-Z0-9._]{2,24}$/.test(handle);
  const profilePreview=canPreviewProfile ? (platform==="instagram"?"https://www.instagram.com/"+handle+"/":"https://www.tiktok.com/@"+handle) : null;
  const valid=activeService&&Number.isSafeInteger(Number(quantity))&&quantity>=activeService.min&&quantity<=activeService.max&&Number.isSafeInteger(Number(posts))&&posts>=1&&posts<=60&&target.trim().length>1;
  async function request(path,body){const r=await fetch("/api/account/autolikes",{method:path==="POST"?"POST":"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify(body),cache:"no-store"});const data=await r.json();if(!r.ok)throw Error(data.error||"Campaign update failed");return data}
