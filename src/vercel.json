@@ -9,7 +9,7 @@
     },
     {
       "path": "/api/bundles/cron",
-      "schedule": "15 3 * * *"
+      "schedule": "* * * * *"
     }
   ]
 }
