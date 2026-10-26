@@ -6,7 +6,7 @@ import {parseNmiTransactionEvidence,paidPeriodEnd} from "../lib/nmiQueryEvidence
 import {nmiRecurringStatus,parseRecurringGatewayResponse} from "../lib/nmiRecurring.mjs";
 const read=p=>readFileSync(new URL("../"+p,import.meta.url),"utf8");
 const campaign={id:"al_"+ "a".repeat(40),platform:"instagram",status:"draft",account_ref:"@testuser",service_catalog_id:"300",quantity_per_post:1000,max_posts_per_month:10};
-const services=[{service:300,name:"Instagram Likes",category:"Instagram Likes",type:"Default",rate:"1.00",min:100,max:100000}];
+const services=[{service:300,name:"Instagram Likes",category:"Instagram Likes",type:"Default",rate:"1.00",pricedRetail:8,min:100,max:100000}];
 test("AutoLikes monthly plans always price from the latest supported supplier catalog",()=>{
  const quote=quoteAutoLikesMonth(campaign,services);
  assert.equal(quote.quantity,1000);
