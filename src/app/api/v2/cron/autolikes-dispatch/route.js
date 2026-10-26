@@ -89,7 +89,10 @@ export async function POST(request){
    values($1,$2,$3,$4,$5,$6,$7,'CLAIMED') on conflict do nothing returning id`,
    [claimId,event.campaign_id,event.workspace_id,url,String(event.service_catalog_id),quantity,fingerprint]);
  }catch{return send({error:"Unable to reserve unique supplier order claim."},503)}
- if(!claim.length)return send({ok:true,processed:0,duplicate:true,reason:"A supplier claim already exists; duplicate ordering prevented."});
+ if(!claim.length){
+  await sql.query("update litix_profile_events set state='review' where event_id=$1 and state='queued'",[event.event_id]).catch(()=>{});
+  return send({ok:true,processed:0,duplicate:true,reason:"An existing claim requires reconciliation; duplicate order suppressed."});
+ }
  let reserved;
  try{
   reserved=await sql.query(`update litix_auto_boost_campaigns
@@ -101,6 +104,7 @@ export async function POST(request){
  }catch{return send({ok:false,state:"review",message:"Quota reservation outcome uncertain. Supplier order was not submitted; claim retained."},202)}
  if(!reserved.length){
   await sql.query("update litix_autolikes_delivery_claims set state='CANCELLED',updated_at=now() where id=$1 and state='CLAIMED'",[claimId]).catch(()=>{});
+  await sql.query("update litix_profile_events set state='ignored',processed_at=now() where event_id=$1 and state='queued'",[event.event_id]).catch(()=>{});
   return send({ok:true,processed:0,reason:"Monthly campaign delivery limit reached."});
  }
  // Once claimed, supplier network calls are NEVER retried automatically.
