@@ -80,7 +80,7 @@ export function draftPayload(raw,services) {
  * service catalog. This function never starts a charge or changes supplier prices.
  * The worst-case capacity is prepaid in the monthly amount; no unlimited plans.
  */
-export function quoteMonthlyAutoLikes({service,platform,quantityPerPost,maxPostsPerMonth,markupPercent=30}) {
+export function quoteMonthlyAutoLikes({service,platform,quantityPerPost,maxPostsPerMonth,markupPercent=0}) {
  if(!isEligibleLikesService(service,platform))throw Error("Invalid Likes service");
  const quantity=Number(quantityPerPost), posts=Number(maxPostsPerMonth);
  if(!Number.isSafeInteger(quantity)||quantity<Number(service.min)||quantity>Number(service.max))throw Error("Invalid likes per post");
