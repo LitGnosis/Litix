@@ -11,7 +11,7 @@ export default function BundleCheckout(){
  const bluevineIdem=useRef(null);
  const idem=useRef(""),submitted=useRef(false),onToken=useRef(null);
  const pkg=growthBundle(pkgId);
- useEffect(()=>{const id=new URLSearchParams(location.search).get("package");if(growthBundle(id))setPkgId(id);idem.current=crypto.randomUUID();fetch("/api/bundles",{cache:"no-store"}).then(r=>r.json()).then(setCatalog).catch(()=>setNotice("Bundle checkout availability could not be checked.");
+ useEffect(()=>{const id=new URLSearchParams(location.search).get("package");if(growthBundle(id))setPkgId(id);idem.current=crypto.randomUUID();fetch("/api/bundles",{cache:"no-store"}).then(r=>r.json()).then(setCatalog).catch(()=>setNotice("Bundle checkout availability could not be checked."));
   try{const prev=JSON.parse(sessionStorage.getItem("litix:bundle-bluevine-pending")||"null");if(prev?.id&&prev?.packageId)setPendingBluevine(prev);}catch{}
  },[]);
  useEffect(()=>{
