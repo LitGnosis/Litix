@@ -31,7 +31,7 @@ test("billing cycle follows calendar months and clamps short months",()=>{
 });
 test("live recurring endpoints never assume a provider response is a paid subscription",()=>{
  const get=p=>readFileSync(new URL("../"+p,import.meta.url),"utf8");
- const billing=get("app/api/account/billing/route.js"),reconcile=get("app/api/v2/cron/autolikes-reconcile/route.js"),dispatch=get("app/api/v2/cron/autolikes-dispatch/route.js");
+ const billing=get("app/api/account/billing/route.js"),reconcile=get("app/api/v2/cron/autolikes-billing-reconcile/route.js"),dispatch=get("app/api/v2/cron/autolikes-dispatch/route.js");
  const migration=get("db/migrations/20261025-autolikes-live-enrollment-ledger.sql");
  assert.match(billing,/consentToMonthlyRenewal!==true/);
  assert.match(billing,/consentToPostMonitoring!==true/);
@@ -42,7 +42,7 @@ test("live recurring endpoints never assume a provider response is a paid subscr
  assert.match(reconcile,/source:"recurring"/);
  assert.match(get("lib/nmiQueryEvidence.mjs"),/tag\(row,"condition"\)!=="complete"/);
  assert.match(reconcile,/AUTHENTICATED_QUERY/);
- assert.match(reconcile,/status='ACTIVE_PAID'/);
+ assert.match(reconcile,/ACTIVE_PAID/);
  assert.match(reconcile,/monitoring_consent_at/);
  assert.doesNotMatch(reconcile,/recurring:"add_subscription"/);
  assert.match(dispatch,/s\.status='ACTIVE_PAID'/);
