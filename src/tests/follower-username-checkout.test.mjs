@@ -67,6 +67,6 @@ test("backend validates follower destination, stores and dispatches the same nor
  assert.match(back,/destination=canonicalFollowerDestination\(link,followerPlatform\)/);
  assert.match(back,/destination,qty,cents/);
  assert.match(back,/smm\("add",\{service:id,link:destination,quantity:String\(qty\)\}\)/);
- assert.match(back,/const cents=Math\.max\(100,Math\.ceil\(retailPer1000\(service\)/);
+ assert.match(back,/const cents=calculateOrderCents\(qty,retailPer1000\(service\)\)/);
  assert.match(back,/payment_token:token/);
 });
