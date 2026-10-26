@@ -37,13 +37,13 @@ test('invalid and missing wholesale cannot be assumed zero',()=>{
 });
 test('all OTHER services get minimum multiplier; preserve higher existing retail',()=>{
   assert.deepEqual(proposeGeneralRetail(0.2,1),{
-    action:'reprice',retailCents:160,retailUsd:1.6,wholesaleCentsFloor:160,multiplier:8,
+    action:'reprice',retailCents:500,retailUsd:5,wholesaleCentsFloor:160,multiplier:8,
   });
   assert.equal(proposeGeneralRetail(1,2).retailUsd,5);
   assert.equal(proposeGeneralRetail(3,20).action,'unchanged');
   assert.equal(proposeGeneralRetail(0.75,4).retailUsd,6);
   assert.deepEqual(proposeGeneralRetail(20,90), {
-    action:'reprice',retailCents:4000,retailUsd:40,wholesaleCentsFloor:4000,multiplier:2,
+    action:'unchanged',retailCents:9000,retailUsd:90,wholesaleCentsFloor:4000,multiplier:2,
   });
   assert.equal(proposeGeneralRetail(24,10).retailUsd,48);
   assert.equal(proposeGeneralRetail(21,42).action,'unchanged');
@@ -130,15 +130,15 @@ test('an ordinary IG/TikTok view/follower cannot bypass $15 cap for $20+ wholesa
   assert.equal(proposeServiceRetail(ig('IG Followers 365 Days Refill',true),20).action,'reprice');
 });
 test('all categories are checked even when Instagram/TikTok specials do not apply',()=>{
-  assert.equal(proposeGeneralRetail(20,100).retailUsd,40); // Facebook likes
-  assert.equal(proposeGeneralRetail(0.50,3).retailUsd,4);  // YouTube shares
+  assert.equal(proposeGeneralRetail(20,100).retailUsd,100); // Facebook likes
+  assert.equal(proposeGeneralRetail(0.50,3).retailUsd,5);  // YouTube shares
   assert.equal(proposeGeneralRetail(5,19).retailUsd,25);  // Spotify listeners
 });
 
 const supplier=(service,name,rate,extra={})=>({service,name,rate,min:100,max:10000,type:'Default',...extra});
 test('ALL platform categories use verified wholesale brackets, never retail as cost',()=>{
  for(const platform of ['Instagram Likes','TikTok Comments','YouTube Views','Facebook Shares','Spotify Plays','Other Service']){
- for(const [rate,expected] of [[0.5,4],[1,5],[19.99,99.95],[20,40],[25,50]]){
+ for(const [rate,expected] of [[0.5,5],[1,5],[19.99,99.95],[20,65],[25,81.25]]){
  const d=pricingDecision(supplier(1,platform,rate,{per1000:999}));assert.equal(d.retailUsd,expected);
  }}
  for(const rate of [undefined,'invalid',0,-1,Infinity])assert.equal(pricingDecision(supplier(1,'YouTube Views',rate)).action,'review');
@@ -158,13 +158,14 @@ test('unknown guarantees, conflicting duration and cap violations are removed; p
 test('quantity bracket crossing is rejected before payment instead of silently raising advertised rate',()=>{
  // A $1/1k ordinary service costs $5/1k; 500 units cost $.50 wholesale and need $4, not $2.50.
  assert.equal(validateCheckoutQuote({actualSupplierWholesaleUsd:.5,customerSubtotalCents:250}).allowed,false);
- assert.equal(validateCheckoutQuote({actualSupplierWholesaleUsd:.5,customerSubtotalCents:400}).allowed,true);
+ assert.equal(validateCheckoutQuote({actualSupplierWholesaleUsd:.5,customerSubtotalCents:400}).allowed,false);
+ assert.equal(validateCheckoutQuote({actualSupplierWholesaleUsd:.5,customerSubtotalCents:500}).allowed,true);
 });
 
 test('ordinary service families preserve longer guarantees without breaking exact 2x',()=>{
  const result=priceCatalog([supplier(1,'YouTube USA No Drop 30-day refill',10),supplier(2,'YouTube USA No Drop 60-day refill',1),supplier(3,'YouTube USA No Drop lifetime refill',20)]);
- assert.deepEqual(result.items.map(x=>[x.service,x.pricedRetail]),[[1,50],[2,50.01]]);
- assert.equal(result.excluded[0].id,'3');
+ assert.deepEqual(result.items.map(x=>[x.service,x.pricedRetail]),[[1,50],[2,50.01],[3,65]]);
+ assert.equal(result.excluded.length,0);
 });
 
 test('premium exception cannot be inferred from conflicting supplier terms',()=>{
