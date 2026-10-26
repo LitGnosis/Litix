@@ -6,7 +6,7 @@ import {readFileSync} from 'node:fs';
 // are intercepted; these tests cannot charge a card or submit a supplier order.
 const source=readFileSync(new URL('../app/api/[action]/route.js',import.meta.url),'utf8')
  .replace('import { after } from "next/server";', 'const after=()=>{};').replace('import { sendOrderEmails, notificationsConfigured } from "../../../lib/orderNotifications.mjs";', 'const sendOrderEmails=async()=>true;const notificationsConfigured=()=>false;')
- .replace('"../../../lib/pricing.mjs"', JSON.stringify(new URL('../lib/pricing.mjs',import.meta.url).href)).replace('"../../../lib/catalogSort.mjs"', JSON.stringify(new URL('../lib/catalogSort.mjs',import.meta.url).href)).replace('import { neon } from "@neondatabase/serverless";', 'const neon=()=>globalThis.__litixTestDatabase;');
+ .replace('"../../../lib/pricing.mjs"', JSON.stringify(new URL('../lib/pricing.mjs',import.meta.url).href)).replace('"../../../lib/catalogSort.mjs"', JSON.stringify(new URL('../lib/catalogSort.mjs',import.meta.url).href)).replace('"../../../lib/ownerPurchaseNotifications.mjs"', JSON.stringify(new URL('../lib/ownerPurchaseNotifications.mjs',import.meta.url).href)).replace('import { neon } from "@neondatabase/serverless";', 'const neon=()=>globalThis.__litixTestDatabase;');
 const refillSiblings=['30 day','60 day','90 day','lifetime'].map((duration,i)=>({service:100+i,name:'Instagram followers '+duration+' refill',refill:true,rate:1,min:100,max:10000,type:'Default'}));
 const cases=[
  ['cached catalog cannot authorize changed wholesale',{warmCatalog:true,changedWholesale:2},409,0,0],
