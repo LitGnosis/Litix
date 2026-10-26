@@ -1,3 +1,4 @@
+import {sendOwnerPurchaseNotification} from "./ownerNotifications.mjs";
 // Transactional order notifications. Never include raw card data or log private tracking tokens.
 const emailKey=()=>process.env.RESEND_API_KEY||process.env.LITIX_RESEND_API_KEY||"";
 export const notificationsConfigured=()=>Boolean(emailKey());
@@ -18,7 +19,7 @@ async function deliver({key,to,subject,text,html}){
  return true;
 }
 /** Called after payment has been marked paid in the database. Email failures do not affect payments. */
-export async function sendOrderEmails({orderId,secret,email,amountCents,quantity,serviceName,fulfillment}){
+export async function sendOrderEmails({orderId,secret,email,amountCents,quantity,serviceName,fulfillment,notifyOwner=true,purchaseDate,destination}){
  if(!notificationsConfigured()){console.warn("Litix transactional email unavailable: missing Resend API key",{orderId});return false}
  const tracking=safeTrackingURL(orderId,secret);
  const amount=(Number(amountCents)/100).toFixed(2);
@@ -42,7 +43,14 @@ export async function sendOrderEmails({orderId,secret,email,amountCents,quantity
   text:"Your Litix order has been sent for fulfillment.\n\n"+base+"\n\nTrack your order: "+tracking+"\n\nKeep this link private. Supplier processing times may vary.",
   html:"<div "+styles+"><h1>Track your Litix order</h1><p>Your order has been received for fulfillment.</p>"+details+"<p><a href=\""+trackEsc+"\" style=\"color:#80d8ff\">Track order progress</a></p><p>Keep this link private. Supplier processing times may vary.</p></div>"
  };
- const results=await Promise.allSettled([deliver(receipt),deliver(trackingEmail)]);
+ const ownerTask=()=>sendOwnerPurchaseNotification({
+  orderId,purchaseDate,customerEmail:email,serviceName,quantity,amountCents,paymentStatus:"paid",
+  customerProfile:destination,
+  fulfillmentInstructions:fulfillment==="manual_review"
+   ?"Payment recorded; supplier outcome requires owner investigation. Review the paid order and fulfill manually only after reconciling the supplier."
+   :"Existing standard-service supplier workflow. Check supplier order status and the paid order record."
+ });
+ const results=await Promise.allSettled([deliver(receipt),deliver(trackingEmail),...(notifyOwner?[ownerTask()]:[])]);
  const failures=results.filter(x=>x.status==="rejected");
  if(failures.length){
   console.error("Litix order notification delivery failed",{orderId,failed:failures.length,reasons:failures.map(x=>String(x.reason?.message||"Send failed").slice(0,80))});
