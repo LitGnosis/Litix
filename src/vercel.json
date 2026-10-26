@@ -8,7 +8,7 @@
       "schedule": "0 0 * * *"
     },
     {
-      "path": "/api/v2/cron/autolikes-dispatch",
+      "path": "/api/autolikes/cron",
       "schedule": "0 * * * *"
     }
   ]
