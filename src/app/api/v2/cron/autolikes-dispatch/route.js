@@ -45,7 +45,7 @@ export async function GET(req){
      where b.provider='nmi' and b.provider_subscription_item_id=s.provider_subscription_item_id
        and b.event_type='PAYMENT_SUCCEEDED' and b.signature_verified=true
        and b.verified_at>=s.last_successful_payment_at-interval '5 minutes')
-   and not exists(select 1 from litix_autolikes_delivery_claims d where d.campaign_id=e.campaign_id and d.post_url=e.post_url)
+   and not exists(select 1 from litix_autolikes_delivery_claims d where d.campaign_id=e.campaign_id and d.post_url=e.post_url)\n   and (select count(*) from litix_autolikes_delivery_claims d where d.campaign_id=e.campaign_id and d.created_at>=date_trunc('month',now())) < c.max_posts_per_month
  order by e.received_at asc limit 5`);
  let confirmed=0,unknown=0,skipped=0;
  for(const event of rows){
