@@ -37,23 +37,11 @@ export default function BundleAdmin(){
  return <main className="wrap"><nav className="nav"><a href="/" className="brand">LITIX</a><a href="/bundles">Growth Bundles</a></nav>
   <section className="panel" style={{maxWidth:1050,margin:"25px auto"}}>
    <div className="kicker">LITIX · PROTECTED ADMIN</div><h1>Growth Bundle Management</h1>
-   <p className="small">Restricted to a server-verified administrator. The token is held in this page's memory only. No supplier order is created unless you explicitly approve and release that individual allocation.</p>
+   <p className="small">Restricted to a server-verified administrator. The token is held in this page's memory only. This dashboard never sends supplier orders. You personally fulfill customers after their WhatsApp messages and record completed deliveries.</p>
    <div style={{display:"flex",gap:10,flexWrap:"wrap"}}><input style={{flex:"1 1 260px"}} type="password" autoComplete="off" aria-label="Administrator access token" placeholder="Enter administrator access token" value={token} onChange={e=>setToken(e.target.value)}/><button className="pay" disabled={!token||busy} onClick={refresh}>Load authorized orders</button></div>
    {message&&<p role="status" className="msg">{message}</p>}
    {!data&&<p className="small">Administration is unavailable until your configured server-side administrator credential is verified.</p>}
-   {data&&<section className="panel" style={{marginTop:20}}>
-   <h2>Verify SMMGLOB service routes</h2>
-   <p className="small">Enter only actual SMMGLOB service IDs. The server checks the supplier live catalog, platform, category, min/max and wholesale rate before saving each mapping. This does not send any paid supplier orders.</p>
-   <form onSubmit={verifySupplierMap} style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"end"}}>
-    <label>Platform<select value={mapPlatform} onChange={e=>setMapPlatform(e.target.value)}><option>Instagram</option><option>TikTok</option></select></label>
-    <label>Service<select value={mapKind} onChange={e=>setMapKind(e.target.value)}>{BUNDLE_KINDS.map(k=><option key={k}>{k}</option>)}</select></label>
-    <label>Supplier service ID<input value={serviceId} onChange={e=>setServiceId(e.target.value)} required pattern="[0-9]+" placeholder="SMMGLOB ID"/></label>
-    <button className="pay" disabled={busy||!serviceId}>Verify and save mapping</button>
-   </form>
-   <p className="small">{mappings.length}/12 platform/service mappings verified. All twelve plus supplier cost coverage are required to enable bundle checkout.</p>
-   {mappings.map(m=><p key={m.platform+":"+m.kind} className="small">{m.platform} {m.kind} · SMMGLOB #{m.service_id} · ${Number(m.provider_rate_usd).toFixed(4)} per 1,000 · {m.min_qty}–{m.max_qty} units · {m.refill_days==null?"No verified refill duration":m.refill_days+"-day refill"}</p>)}
-  </section>}
-  {data?.orders.map(o=><article key={o.id} className="panel" style={{marginTop:20}}>
+     {data?.orders.map(o=><article key={o.id} className="panel" style={{marginTop:20}}>
     <div className="kicker">{o.platform} · {o.package_name}</div><h2>{o.id}</h2>
     <p><strong>Retail:</strong> {"$"+(o.price_cents/100).toFixed(2)} · <strong>Customer:</strong> {o.email}</p>
     <p><strong>Payment:</strong> {o.payment_state} · <strong>Status:</strong> {o.order_state}</p>
@@ -66,7 +54,8 @@ export default function BundleAdmin(){
      <p><a href={p.post_url} target="_blank" rel="noopener noreferrer">{p.post_url}</a> · <strong>{p.status}</strong></p>
      <p className="small">{Object.entries(p.allocations).map(([k,v])=>k+": "+Number(v).toLocaleString()).join(" · ")}</p>
      {p.status==="Under Review"&&<><button disabled={busy} onClick={()=>run("approvePost",o.id,{postId:p.id})}>Approve post</button>{" "}<button disabled={busy} onClick={()=>run("rejectPost",o.id,{postId:p.id})}>Reject post</button></>}
-     {p.status==="Approved"&&<div>{BUNDLE_KINDS.filter(k=>Number(p.allocations[k])>0).map(kind=><button key={kind} type="button" disabled={busy} style={{margin:"4px 8px 4px 0"}} onClick={()=>run("release",o.id,{postId:p.id,kind})}>Release {kind} ({Number(p.allocations[kind]).toLocaleString()}) to SMMGLOB</button>)}</div>}
+     {p.status==="Approved"&&<button disabled={busy} onClick={()=>run("markManualProcessing",o.id,{postId:p.id})}>Mark as manually processing</button>}
+     {["Approved","Processing"].includes(p.status)&&<button disabled={busy} onClick={()=>{if(window.confirm("Confirm that YOU manually verified delivery for this post?"))run("markManualCompleted",o.id,{postId:p.id,manuallyVerified:true})}}>Mark manually fulfilled</button>}
      {(data.dispatch||[]).filter(d=>d.post_id===p.id).map(d=><p className="small" key={d.id}>{d.kind} — {d.quantity.toLocaleString()} — {d.status} {d.supplier_order_id?" · supplier order "+d.supplier_order_id:""}</p>)}
     </div>)}
     <button className="alt" disabled={busy} onClick={()=>{setActive(active===o.id?"":o.id);setAllocations(zero());setUrl("")}}>{active===o.id?"Close entry":"Record WhatsApp post and allocation"}</button>
