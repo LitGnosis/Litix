@@ -9,6 +9,7 @@ on:
       - 'src/app/api/bundles/**'
       - 'src/app/api/[action]/route.js'
       - 'src/tests/owner-purchase-notifications.test.mjs'
+      - 'src/tests/growth-bundles-paid-mock.test.mjs'
       - '.github/workflows/litix-owner-notifications-ci.yml'
 jobs:
   mock-tests:
@@ -25,7 +26,7 @@ jobs:
       - run: npm ci --no-audit --no-fund
         working-directory: src
       - name: Mock verified payment emails and manual bundle fulfillment — never charge real cards
-        run: node --test tests/owner-purchase-notifications.test.mjs tests/growth-bundles-manual.test.mjs
+        run: node --test tests/owner-purchase-notifications.test.mjs tests/growth-bundles-manual.test.mjs tests/growth-bundles-paid-mock.test.mjs
         working-directory: src
       - name: Verify only bundle settlement polling is minute-level
         run: node --input-type=module -e 'import {readFileSync} from "node:fs"; const c=JSON.parse(readFileSync("vercel.json","utf8")); if(c.crons.find(x=>x.path==="/api/bundles/cron")?.schedule!=="* * * * *") process.exit(1); if(c.crons.find(x=>x.path==="/api/v2/cron/sync-catalog")?.schedule!=="0 0 * * *") process.exit(1)'
