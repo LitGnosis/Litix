@@ -1,5 +1,6 @@
 "use client";
 import {useEffect,useMemo,useState} from "react";
+import AutoLikesCheckout from "./AutoLikesCheckout.jsx";
 
 const controls={width:"100%",padding:"13px 12px",boxSizing:"border-box",font:"inherit",color:"#eaf4ff",background:"#071624",border:"1px solid #537b96",borderRadius:11};
 const primary={border:"1px solid #7dc7ea",borderRadius:12,padding:"12px 17px",background:"#194b66",color:"#effaff",font:"inherit",fontWeight:700,cursor:"pointer"};
@@ -11,6 +12,7 @@ export default function AutoLikesDrafts(){
  const [serviceId,setServiceId]=useState(""),[target,setTarget]=useState(""),[quantity,setQuantity]=useState(1000),[posts,setPosts]=useState(10);
  const [loading,setLoading]=useState(false),[pending,setPending]=useState(false),[notice,setNotice]=useState(""),[error,setError]=useState("");
  const [key,setKey]=useState("");
+ const [subscriptionCampaign,setSubscriptionCampaign]=useState(null);
  const activeService=useMemo(()=>services.find(s=>s.id===serviceId)||null,[services,serviceId]);
  useEffect(()=>{setKey(crypto.randomUUID())},[]);
  useEffect(()=>{
@@ -85,11 +87,13 @@ export default function AutoLikesDrafts(){
     <div style={{fontWeight:700,overflowWrap:"anywhere"}}>{c.platform.toUpperCase()} — {c.target}</div>
     <div style={{fontSize:13,color:"#bdcfde",marginTop:5}}>{c.quantityPerPost.toLocaleString()} likes/post · up to {c.maxPostsPerMonth} posts/month · Service #{c.serviceId}</div>
     <p style={{fontSize:13,color:"#b5dafa"}}>Status: <b>{c.status}</b> · {["draft","paused","cancelled"].includes(c.status)?"No active billing":"Contact support to verify billing"}</p>
+    {["draft","paused"].includes(c.status)&&<button type="button" style={secondary} onClick={()=>setSubscriptionCampaign(c)}>Review monthly subscription</button>}
     {["draft","paused"].includes(c.status)&&<div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
      <button style={secondary} type="button" disabled={pending} onClick={()=>update(c,c.status==="draft"?"pause":"resume")}>{c.status==="draft"?"Pause draft":"Resume editing"}</button>
      <button style={secondary} type="button" disabled={pending} onClick={()=>update(c,"cancel")}>Discard draft</button>
     </div>}
    </article>)}</div>}
   </div>
+  {subscriptionCampaign&&<AutoLikesCheckout campaign={subscriptionCampaign} onClose={()=>setSubscriptionCampaign(null)}/>}
  </section>;
 }
