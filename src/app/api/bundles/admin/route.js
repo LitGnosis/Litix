@@ -38,7 +38,7 @@ export async function POST(req){
     return response({error:"No approved gateway transaction to reconcile"},409);
    const checked=await verifyNmiSettlement({orderId,transactionId:order.gateway_transaction_id,priceCents:order.price_cents});
    if(!checked.settled)return response({ok:false,settled:false,reason:checked.reason},202);
-   const updated=await sql.query("update litix_growth_bundle_orders set payment_state='settled',settled_at=coalesce(settled_at,now()),order_state=case when order_state='Awaiting Payment' then 'Awaiting WhatsApp Submission' else order_state end,updated_at=now() where id=$1 and payment_state in ('approved_pending_settlement','settled') returning id,email,package_name,price_cents",[orderId]);
+   const updated=await sql.query("update litix_growth_bundle_orders set payment_state='settled',settled_at=coalesce(settled_at,now()),order_state=case when order_state='Awaiting Payment' then 'Awaiting WhatsApp Submission' else order_state end,updated_at=now() where id=$1 and payment_state='approved_pending_settlement' returning id,email,package_id,package_name,package_items,price_cents,profile_ref,created_at",[orderId]);
    if(updated.length){await sendBundleReceipt(updated[0]);await audit(sql,orderId,"PAYMENT_SETTLEMENT_VERIFIED",{gatewayTransactionId:order.gateway_transaction_id});}
    return response({ok:true,settled:true});
   }
