@@ -4,7 +4,7 @@ export const dynamic="force-dynamic";
 const digest=v=>createHash("sha256").update(String(v)).digest();
 const authorized=req=>{
  const key=process.env.CRON_SECRET||process.env.LITIX_CRON_SECRET;
- const actual=(req.headers.get("authorization")||"").replace(/^Bearer\\s+/i,"");
+ const actual=(req.headers.get("authorization")||"").replace(/^Bearer\s+/i,"");
  return Boolean(key&&actual)&&timingSafeEqual(digest(key),digest(actual));
 };
 // Operational status only: no secrets, charges, supplier calls, user PII, or database writes.
