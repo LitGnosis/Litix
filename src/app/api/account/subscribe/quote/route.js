@@ -28,7 +28,7 @@ export async function POST(request) {
    service,platform,
    quantityPerPost:payload.quantityPerPost,
    maxPostsPerMonth:payload.maxPostsPerMonth,
-   markupPercent:30
+   markupPercent:0
   });
   return json({quote,subscriptionCheckoutEnabled:false,
    message:"Price verified against the current supplier catalog. Subscription enrollment and recurring charges require separate activation."});
