@@ -1,4 +1,4 @@
-import { priceCatalog, retailPer1000, supplierPricingInput, validateCheckoutQuote } from "../../../lib/pricing.mjs";
+import { priceCatalog, retailPer1000, supplierPricingInput, validateCheckoutQuote, servicePurchaseMinimum, minimumPurchaseQuantity, calculateOrderCents } from "../../../lib/pricing.mjs";
 import {matchesServiceQuickKind,sortServicesPer1000} from "../../../lib/catalogSort.mjs";
 import { neon } from "@neondatabase/serverless";
 import { randomUUID, createHash } from "node:crypto";
@@ -143,7 +143,7 @@ const canonicalFollowerDestination=(rawValue,platform)=>{
 };
 const followerRank=x=>platformRank(x)<2&&/\bfollowers?\b/i.test([x.name,x.category].join(" "))?0:1;
 const platformName=x=>["Instagram","TikTok","YouTube","Facebook","Spotify","Other"][platformRank(x)];
-function shape(x){return {id:String(x.service),name:String(x.name||"Service"),category:String(x.category||"Other"),type:String(x.type||"Default"),min:Number(x.min),max:Number(x.max),per1000:retailPer1000(x),refill:hasRefill(x),noDrop:hasNoDrop(x),purchasable:/^default$/i.test(String(x.type||"Default"))};}
+function shape(x){const first=servicePurchaseMinimum(x,retailPer1000(x));return {id:String(x.service),name:String(x.name||"Service"),category:String(x.category||"Other"),type:String(x.type||"Default"),min:first?.quantity??Number(x.min),supplierMin:Number(x.min),max:Number(x.max),unitStep:Number(x.quantity_step??x.quantityStep??x.step??x.increment??1),startingAmountCents:first?.amountCents??null,pricingReview:!first,per1000:retailPer1000(x),refill:hasRefill(x),noDrop:hasNoDrop(x),purchasable:/^default$/i.test(String(x.type||"Default"))&&!!first};}
 export async function GET(req){
  const op=name(req),flags=conf(),p=new URL(req.url).searchParams;
  if(!["config","health","smmservices","track"].includes(op))return send({error:"Unknown route"},404);
@@ -213,6 +213,9 @@ export async function POST(req){
  if(!/^[0-9]+$/.test(id)||!Number.isSafeInteger(qty)||qty<1||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||!link||token.length<10||!/^[a-f0-9-]{36}$/.test(idem))return send({error:"Invalid service, quantity, public URL, email or payment information"},400);
  let service;try{service=(await refreshServices(false)).find(s=>String(s.service)===id)}catch{return send({error:"Litix prices unavailable; no charge submitted"},503)}
  if(!service||!/^default$/i.test(String(service.type||"Default"))||qty<Number(service.min)||qty>Number(service.max))return send({error:"This service needs additional order information or a different quantity"},422);
+ const serviceMinimum=minimumPurchaseQuantity(service,retailPer1000(service));
+ const supplierStep=Number(service.quantity_step??service.quantityStep??service.step??service.increment??1);
+ if(serviceMinimum===null||qty<serviceMinimum||!Number.isSafeInteger(supplierStep)||supplierStep<1||(qty-Number(service.min))%supplierStep!==0)return send({error:"Minimum $5 purchase not met at a supplier-permitted quantity. Choose an eligible quantity; no payment was submitted."},422);
  const followerPlatform=followerPlatformForService(service);
  let destination=link;
  if(followerPlatform){
@@ -223,8 +226,8 @@ export async function POST(req){
   if(!target||target.protocol!=="https:"||!target.hostname.includes(".")||target.username||target.password)
    return send({error:"Enter the public post or profile URL required by this service."},422);
  }
- const cents=Math.max(100,Math.ceil(retailPer1000(service)*qty/1000*100));if(!Number.isSafeInteger(cents)||cents>100000000)return send({error:"Order total is outside supported limits"},422);
- const quote=validateCheckoutQuote({actualSupplierWholesaleUsd:Number(service.rate)*qty/1000,customerSubtotalCents:cents,service:supplierPricingInput(service)});
+ const cents=calculateOrderCents(qty,retailPer1000(service));if(cents<500||!Number.isSafeInteger(cents)||cents>100000000)return send({error:"Minimum service purchase is $5 USD; choose a higher supported quantity."},422);
+ const quote=validateCheckoutQuote({actualSupplierWholesaleUsd:Number(service.rate)*qty/1000,customerSubtotalCents:cents,displayedPer1000:retailPer1000(service),quantity:qty,service:supplierPricingInput(service)});
  if(!quote.allowed)return send({error:"Quantity cannot meet wholesale pricing requirements; no charge submitted"},422);
  if(!Number.isSafeInteger(x.expectedAmountCents)||x.expectedAmountCents!==cents)return send({error:"The price has changed. Refresh the catalog and confirm the new total before paying."},409);
  const orderId="ltx2_"+randomUUID(),secret=randomUUID()+"-"+randomUUID(),sql=db();
