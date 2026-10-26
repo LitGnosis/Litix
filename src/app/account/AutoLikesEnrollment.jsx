@@ -27,7 +27,7 @@ export default function AutoLikesEnrollment({campaign,onComplete}) {
     method:"POST",credentials:"same-origin",
     headers:{"content-type":"application/json"},
     body:JSON.stringify({campaignId:campaign.id,requestKey:keyRef.current,paymentToken:token,
-     expectedMonthlyCents:quote.monthlyCents,consentToMonthlyRenewal:true,consentVersion:"2026-10"})
+     expectedMonthlyCents:quote.monthlyCents,consentToMonthlyRenewal:true,consentToPostMonitoring:true,consentVersion:"2026-10"})
    });
    const body=await res.json();
    if(!res.ok)throw Error(body.error||"Subscription enrollment could not be completed.");
@@ -109,7 +109,7 @@ export default function AutoLikesEnrollment({campaign,onComplete}) {
     </div>
     <label style={{display:"flex",gap:12,alignItems:"flex-start",lineHeight:1.5}}>
      <input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)} />
-     I authorize Litix to bill my card {money(quote.monthlyCents)} each month until I cancel, and understand I can cancel future renewals in my account.
+     I authorize Litix to bill my card {money(quote.monthlyCents)} each month until I cancel. I also confirm I control the selected profile and authorize Litix to monitor new posts using approved platform access once connected. Charges and fulfillment require separate verification.
     </label>
     <button type="button" disabled={!consent||!ready||busy} onClick={pay} style={{padding:14,borderRadius:9,background:"#236a93",color:"white",fontWeight:800,opacity:(!consent||!ready||busy)?0.6:1}}>
      {busy?"Submitting securely…":"Start monthly subscription — "+money(quote.monthlyCents)}
