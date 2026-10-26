@@ -65,7 +65,7 @@ export default function BundleCheckout(){
  async function beginBluevine(e){
   e.preventDefault();
   if(!pkg||!catalog?.bluevineEnabled||bluevineBusy)return;
-  if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email.trim())||!/^[\\w.@:/-]{2,150}$/.test(profile.trim())||
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())||!/^[\w.@:/-]{2,150}$/.test(profile.trim())||
    !validWhatsApp(whatsapp)||!consent){setNotice("Enter a valid email, username or profile URL, WhatsApp number, and accept the post-submission terms.");return;}
   if(!bluevineIdem.current||bluevineIdem.current.packageId!==pkg.id)bluevineIdem.current={packageId:pkg.id,key:crypto.randomUUID()};
   setBluevineBusy(true);setNotice("");
