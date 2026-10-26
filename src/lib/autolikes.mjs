@@ -73,3 +73,26 @@ export function draftPayload(raw,services) {
  const oneTimeEstimateCents=Math.ceil(per1000*100*quantity/1000);
  return {ok:true,platform,target:target.handle,profileUrl:target.profileUrl,quantityPerPost:quantity,maxPostsPerMonth:maxPosts,serviceId:String(service.service),serviceName:String(service.name),oneTimeEstimateCents};
 }
+
+
+/**
+ * Quote a fixed monthly AutoLikes capacity from the existing live SMMGLOB
+ * service catalog. This function never starts a charge or changes supplier prices.
+ * The worst-case capacity is prepaid in the monthly amount; no unlimited plans.
+ */
+export function quoteMonthlyAutoLikes({service,platform,quantityPerPost,maxPostsPerMonth,markupPercent=0}) {
+ if(!isEligibleLikesService(service,platform))throw Error("Invalid Likes service");
+ const quantity=Number(quantityPerPost), posts=Number(maxPostsPerMonth);
+ if(!Number.isSafeInteger(quantity)||quantity<Number(service.min)||quantity>Number(service.max))throw Error("Invalid likes per post");
+ if(!Number.isSafeInteger(posts)||posts<1||posts>60)throw Error("Invalid posts per month");
+ const retail=Number(retailPer1000(service));
+ if(!Number.isFinite(retail)||retail<=0)throw Error("Supplier price is not available");
+ // Price each post in whole cents, then charge at least the sum of every allowed post.
+ const perPostCents=Math.ceil(retail*100*quantity/1000);
+ const monthlyCapacityCents=perPostCents*posts;
+ if(!Number.isSafeInteger(monthlyCapacityCents)||monthlyCapacityCents>2000000)throw Error("Plan exceeds monthly limit");
+ const extra=Number(markupPercent);
+ if(!Number.isFinite(extra)||extra<0||extra>100)throw Error("Invalid plan margin");
+ const amountCents=Math.max(100,Math.ceil(monthlyCapacityCents*(1+extra/100)));
+ return {platform,serviceId:String(service.service),quantityPerPost:quantity,maxPostsPerMonth:posts,perPostCents,monthlyCapacityCents,amountCents,currency:"USD",billingInterval:"monthly",autoRenew:true,deliveryNotGuaranteed:true};
+}
