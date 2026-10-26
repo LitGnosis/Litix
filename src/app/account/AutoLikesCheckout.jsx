@@ -6,9 +6,10 @@ const getCollect=()=>typeof window!=="undefined"?window.CollectJS:null;
 const style={padding:"12px",border:"1px solid #547a93",borderRadius:11,color:"#fff",background:"#091d2c"};
 export default function AutoLikesCheckout({campaign,onClose}){
  const [config,setConfig]=useState(null),[quote,setQuote]=useState(null),[ready,setReady]=useState(false),
+       [monitoringConsent,setMonitoringConsent]=useState(false),
        [consent,setConsent]=useState(false),[busy,setBusy]=useState(false),[message,setMessage]=useState("");
  const requestKey=useRef(""),purchaseRef=useRef(null),enrollmentSubmitted=useRef(false);
- useEffect(()=>{requestKey.current=crypto.randomUUID();enrollmentSubmitted.current=false;setQuote(null);setReady(false);setMessage("");setConsent(false);const ctl=new AbortController();
+ useEffect(()=>{requestKey.current=crypto.randomUUID();enrollmentSubmitted.current=false;setQuote(null);setReady(false);setMessage("");setConsent(false);setMonitoringConsent(false);const ctl=new AbortController();
   Promise.all([
    fetch("/api/account/subscribe/config",{cache:"no-store",signal:ctl.signal}).then(r=>r.json()),
    fetch("/api/account/subscribe/quote",{method:"POST",headers:{"content-type":"application/json"},credentials:"same-origin",body:JSON.stringify({platform:campaign.platform,serviceId:campaign.serviceId,quantityPerPost:campaign.quantityPerPost,maxPostsPerMonth:campaign.maxPostsPerMonth}),signal:ctl.signal}).then(async r=>{const v=await r.json();if(!r.ok)throw Error(v.error||"Monthly quote unavailable");return v.quote})
@@ -18,13 +19,13 @@ export default function AutoLikesCheckout({campaign,onClose}){
  },[campaign.id]);
 
  async function enroll(token){
-  if(enrollmentSubmitted.current||!consent||!config?.enabled||!quote)return;
+  if(enrollmentSubmitted.current||!consent||!monitoringConsent||!config?.enabled||!quote)return;
   // Tokenization sets busy before this callback. Lock exactly once when a live token arrives.
   enrollmentSubmitted.current=true;
   setBusy(true);setMessage("");
   try{
    const response=await fetch("/api/account/subscribe",{method:"POST",headers:{"content-type":"application/json"},credentials:"same-origin",body:JSON.stringify({
-    campaignId:campaign.id,requestKey:requestKey.current,paymentToken:token,consent:true,consentVersion:"autolikes-recurring-v1"
+    campaignId:campaign.id,requestKey:requestKey.current,paymentToken:token,consent:true,monitoringConsent:true,consentVersion:"autolikes-recurring-v1"
    })});
    const v=await response.json();
    if(!response.ok && response.status!==202)throw Error(v.error||"Subscription was not approved");
@@ -62,7 +63,7 @@ export default function AutoLikesCheckout({campaign,onClose}){
 
  function submit(e){
   e.preventDefault();
-  if(!ready||busy||enrollmentSubmitted.current||!consent||!quote||!config?.enabled)return;
+  if(!ready||busy||enrollmentSubmitted.current||!consent||!monitoringConsent||!quote||!config?.enabled)return;
   setBusy(true);setMessage("");
   try{getCollect().startPaymentRequest()}catch{setBusy(false);setMessage("Complete the secure card fields first.")}
  }
@@ -76,7 +77,8 @@ export default function AutoLikesCheckout({campaign,onClose}){
     <div id="al-ccexp" style={{minHeight:44}} aria-label="Secure expiration date"/>
     <div id="al-cvv" style={{minHeight:44}} aria-label="Secure card CVV"/>
     <label><input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)}/> I authorize Litix to charge {dollars} every month until I cancel, subject to the stated maximum number of posts and likes per post.</label>
-    <button type="submit" disabled={!ready||!consent||!quote||busy||enrollmentSubmitted.current} style={style}>{busy?"Processing…":"Start monthly subscription"}</button>
+    <label><input type="checkbox" checked={monitoringConsent} onChange={e=>setMonitoringConsent(e.target.checked)}/> I confirm I manage this social profile and authorize Litix to monitor new public posts through approved platform access for this subscription.</label>
+    <button type="submit" disabled={!ready||!consent||!monitoringConsent||!quote||busy||enrollmentSubmitted.current} style={style}>{busy?"Processing…":"Start monthly subscription"}</button>
    </form>
   </>}
   {message&&<p role="status">{message}</p>}

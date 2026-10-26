@@ -41,7 +41,7 @@ export async function POST(request){
  const paymentToken=String(body?.paymentToken||"");
  if(!/^al_[a-f0-9]{40}$/.test(campaignId)||!/^[0-9a-f-]{36}$/i.test(requestKey))
    return respond({error:"Invalid campaign or enrollment reference"},400);
- if(body?.consent!==true||body?.consentVersion!=="autolikes-recurring-v1")
+ if(body?.consent!==true||body?.monitoringConsent!==true||body?.consentVersion!=="autolikes-recurring-v1")
    return respond({error:"Explicit monthly recurring billing consent is required"},400);
  if(!/^[a-zA-Z0-9_.-]{12,300}$/.test(paymentToken)||/^[0-9]{12,19}$/.test(paymentToken))
    return respond({error:"A valid Collect.js single-use token is required"},400);
@@ -59,7 +59,7 @@ export async function POST(request){
    // No price can be passed from the browser. An enrollment is bound to its server quote.
    const priceFingerprint=createHash("sha256").update([customer.id,campaignId,quote.serviceId,quote.quantityPerPost,quote.maxPostsPerMonth,quote.amountCents].join(":")).digest("hex");
    const id="ae_"+createHash("sha256").update(customer.id+":"+campaignId+":"+requestKey).digest("hex").slice(0,40);
-   const admitted=await sql.query("insert into litix_autolikes_enrollment_attempts(id,customer_id,campaign_id,request_key,quoted_amount_cents,price_fingerprint,consent_at,consent_version,status) values($1,$2,$3,$4,$5,$6,now(),$7,'REQUESTED') on conflict do nothing returning id",
+   const admitted=await sql.query("insert into litix_autolikes_enrollment_attempts(id,customer_id,campaign_id,request_key,quoted_amount_cents,price_fingerprint,consent_at,monitoring_consent_at,consent_version,status) values($1,$2,$3,$4,$5,$6,now(),now(),$7,'REQUESTED') on conflict do nothing returning id",
      [id,customer.id,campaignId,requestKey,quote.amountCents,priceFingerprint,"autolikes-recurring-v1"]);
    if(!admitted.length)return respond({error:"An enrollment already exists for this request. Review its status; do not resubmit a charge."},409);
    // NMI Classic tokenized subscription enrollment on the *existing* merchant gateway.

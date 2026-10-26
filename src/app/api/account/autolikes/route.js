@@ -31,7 +31,7 @@ async function payload(req){
  }catch{return null}
 }
 function view(row){
- return {id:row.id,platform:row.platform,target:row.account_ref||"",serviceId:row.service_catalog_id,quantityPerPost:Number(row.quantity_per_post),maxPostsPerMonth:Number(row.max_posts_per_month),status:row.status,createdAt:row.created_at,nextCheckAt:row.next_check_at,postsCompleted:Number(row.posts_processed_this_month||0)};
+ return {id:row.id,platform:row.platform,target:row.account_ref||"",serviceId:row.service_catalog_id,quantityPerPost:Number(row.quantity_per_post),maxPostsPerMonth:Number(row.max_posts_per_month),status:row.status,createdAt:row.created_at,nextCheckAt:row.next_check_at,postsCompleted:Number(row.posts_processed_this_month||0),subscription:row.live_subscription||null};
 }
 export async function GET(req){
  const me=await identity();if(me.error)return me.error;
@@ -43,8 +43,23 @@ export async function GET(req){
    return reply({platform,services:choices.slice(0,55).map(presentLikesService),purchaseEnabled:false,billingEnabled:false});
   }
   const sql=db();
-  const rows=await sql.query("select id,platform,account_ref,service_catalog_id,quantity_per_post,max_posts_per_month,status,created_at,next_check_at,posts_processed_this_month from litix_auto_boost_campaigns where customer_id=$1 order by created_at desc limit 30",[me.user.id]);
-  return reply({campaigns:rows.map(view),subscriptionEnabled:false,subscriptions:[],billingHistory:[],message:"Campaign drafts only. No recurring charges or automated supplier orders are enabled."});
+  const rows=await sql.query(`select id,platform,account_ref,service_catalog_id,quantity_per_post,max_posts_per_month,status,created_at,next_check_at,posts_processed_this_month,
+   (select jsonb_build_object('id',s.id,'status',s.status,'paymentStatus',s.payment_status,
+     'postsRemaining',s.posts_remaining,'maxPosts',s.monthly_post_limit,
+     'lastPaymentAt',s.last_paid_at,'billingCycleEnd',s.billing_cycle_end)
+     from litix_autolikes_live_subscriptions s
+     where s.campaign_id=litix_auto_boost_campaigns.id and s.subscriber_id=$1 limit 1) as live_subscription
+   from litix_auto_boost_campaigns where customer_id=$1 order by created_at desc limit 30`,[me.user.id]);
+  const enabled=process.env.VERCEL_ENV==="production" &&
+    process.env.LITIX_AUTOLIKES_LIVE_ENROLL_ENABLED==="true" &&
+    process.env.LITIX_NMI_RECURRING_MERCHANT_APPROVED==="true" &&
+    process.env.LITIX_AUTOLIKES_SOURCE_VERIFIED==="true" &&
+    process.env.LITIX_AUTOLIKES_DISPATCH_ENABLED==="true" &&
+    Boolean(process.env.SMMGLOB_API_KEY);
+  return reply({campaigns:rows.map(view),subscriptionEnabled:enabled,
+    subscriptions:rows.filter(r=>r.live_subscription).map(r=>({campaignId:r.id,...r.live_subscription})),
+    billingHistoryUrl:"/api/account/billing",
+    message:enabled?"Monthly subscription checkout is available.":"Subscription purchases are unavailable until production provider checks pass."});
  }catch(e){
   console.error("Litix autolikes listing failed",String(e?.message||"unavailable").slice(0,120));
   return reply({error:"The campaign listing is temporarily unavailable."},503);
