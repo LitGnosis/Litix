@@ -36,6 +36,16 @@ export async function POST(req){
  try{const list=await services();if(!list)return response({error:"SMMGLOB production API key not configured"},503);service=list.find(s=>String(s.service)===id);}
  catch{return response({error:"SMMGLOB service catalog unavailable"},503)}
  if(!service)return response({error:"Service ID not found in connected SMMGLOB catalog"},404);
+ // Do not treat supplier account-currency rates as USD without provider confirmation.
+ try{
+  const bal=await fetch("https://smmglob.com/api/v2",{method:"POST",
+   headers:{"content-type":"application/x-www-form-urlencoded"},
+   body:new URLSearchParams({key:process.env.SMMGLOB_API_KEY,action:"balance"}),
+   cache:"no-store",signal:AbortSignal.timeout(9000)});
+  const info=bal.ok?await bal.json():null;
+  if(String(info?.currency||"").toUpperCase()!=="USD")
+   return response({error:"Supplier account currency is not verified as USD; cannot approve this wholesale rate"},409);
+ }catch{return response({error:"Supplier currency verification unavailable"},503);}
  const name=String(service.name||""),category=String(service.category||"");
  const text=(name+" "+category),rate=Number(service.rate),min=Number(service.min),max=Number(service.max);
  if(!new RegExp(platform,"i").test(text)||!kindMatches[kind].test(name)||/dislike|comment.?likes?|mixed|multi.?service|package|bundle/i.test(name)||
