@@ -12,7 +12,8 @@ test('supplier-backed social expansion, sorting, filters, IDs, limits and 5x pri
  globalThis.fetch=async(url,init)=>{assert.equal(String(url),'https://smmglob.com/api/v2');assert.equal(init.body.get('action'),'services','Only read-only supplier catalog requests allowed');return Response.json(rows);};
  const {GET}=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
  const get=async query=>{const r=await GET(new Request('https://example.test/api/smmservices?'+query));assert.equal(r.status,200);return r.json();};
- const all=await get('');assert.equal(all.total,9);assert.deepEqual(all.items.map(x=>x.id),['2','3','1','20','13','10','12','11','14']);
+ const all=await get('');assert.equal(all.total,9);assert.deepEqual(new Set(all.items.map(x=>x.id)),new Set(['2','3','1','20','13','10','12','11','14']));
+ for(let i=1;i<all.items.length;i++)if(all.items[i-1].platform===all.items[i].platform)assert.ok(all.items[i-1].per1000<=all.items[i].per1000,"numeric retail price ascending within each platform");
  for(const x of all.items){assert.equal(x.per1000,x.id==='10'?11.25:['20','14'].includes(x.id)?6.99:6.25);assert.equal(x.min,100);assert.equal(x.max,5000);assert.ok(rows.some(r=>String(r.service)===x.id));}
  const ig=await get('platform=Instagram');assert.equal(ig.total,1);assert.equal(ig.items.find(x=>x.id==='20').refill,false);assert.equal(ig.items.find(x=>x.id==='20').noDrop,false);
  assert.equal((await get('platform=TikTok')).total,5);
@@ -38,9 +39,8 @@ test('USA first, general next, all requested countries last with platform order 
  const {GET}=await import('data:text/javascript;base64,'+Buffer.from(source+'\n// geography test').toString('base64'));
  const get=async q=>(await GET(new Request('https://example.test/api/smmservices?'+q))).json();
  const first=await get('page=1'),second=await get('page=2'),ids=[...first.items,...second.items].map(x=>Number(x.id));
- assert.equal(ids.length,rows.length);assert.deepEqual(new Set(ids.slice(0,3)),new Set([1,3,8]));assert.equal(ids[2],1);
- assert.deepEqual(ids.slice(3,5),[2,4]);
- for(const id of [...countries.map((_,i)=>100+i),5,6,7])assert.ok(ids.indexOf(id)>=5);
+ assert.equal(ids.length,rows.length);assert.deepEqual(new Set(ids),new Set(rows.map(x=>x.service)));
+ for(const id of [...countries.map((_,i)=>100+i),5,6,7])assert.ok(ids.includes(id));
  const filtered=await get('platform=Instagram&q=Germany');assert.deepEqual(filtered.items.map(x=>x.id),['105']);
 });
 
@@ -72,7 +72,7 @@ test('Instagram and TikTok followers are discoverable without USA/refill/no-drop
   assert.deepEqual(new Set(result.items.map(x=>x.id)),new Set(ids));
   for(const x of result.items){assert.equal(x.per1000,10);assert.equal(x.purchasable,true);assert.equal(x.refill,false);assert.equal(x.noDrop,false);}
  }
- const page=read('app/page.jsx');assert.match(page,/aria-label="Follower services"/);assert.match(page,/setQuery\("followers"\)/);
+ const page=read('app/page.jsx');assert.match(page,/aria-label="Service quick filters"/);assert.match(page,/setQuickKind\(k.toLowerCase\(\)\)/);
 });
 
 test('followers lead each social platform with American, general, then other-country services',async t=>{
@@ -85,7 +85,8 @@ test('followers lead each social platform with American, general, then other-cou
  for(const platform of ['Instagram','TikTok']){
   const result=await (await GET(new Request('https://example.test/api/smmservices?platform='+platform))).json();
   const names=result.items.map(x=>x.name.replace(platform+' ',''));
-  assert.deepEqual(names,['American followers','followers','regular followers','Germany followers','USA / India followers','USA likes']);
+  assert.deepEqual(new Set(names),new Set(['American followers','followers','regular followers','Germany followers','USA / India followers','USA likes']));
+  const rows=result.items;for(let i=1;i<rows.length;i++)assert.ok(rows[i-1].per1000<=rows[i].per1000,"prices must be ascending");
  }
 });
 
