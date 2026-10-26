@@ -23,6 +23,15 @@ export function normalizedPost(raw,platform,handle) {
   } catch {}
   return null;
 }
+export function supplierServiceAllows(row,catalog) {
+  if(!Array.isArray(catalog)||!row||!["instagram","tiktok"].includes(String(row.platform).toLowerCase()))
+    return false;
+  const svc=catalog.find(s=>String(s.service)===String(row.service_id));
+  const n=Number(row.likes);
+  return Boolean(svc) && Number.isSafeInteger(n) &&
+    n>=Number(svc.min) && n<=Number(svc.max) &&
+    Number(svc.min)>=1 && Number(svc.max)>=Number(svc.min);
+}
 async function place(row) {
   // SMMGLOB is the only authorized supplier. Never cascade an ambiguous order.
   const key=process.env.SMMGLOB_API_KEY;
@@ -39,13 +48,10 @@ async function place(row) {
   // Validate the exact paid service against today's approved SMMGLOB Likes
   // catalog BEFORE any paid supplier action. A stale service ID or unsupported
   // quantity must never silently route to another provider or service.
-  let available;
-  try{
-    const catalog=await fetchLikesServices(row.platform);
-    available=catalog.find(s=>String(s.service)===String(row.service_id));
-  }catch{return {state:"DECLINED",reason:"SUPPLIER_CATALOG_UNAVAILABLE"};}
-  if(!available || Number(row.likes)<Number(available.min) ||
-     Number(row.likes)>Number(available.max))
+  let catalog;
+  try{catalog=await fetchLikesServices(row.platform);}
+  catch{return {state:"DECLINED",reason:"SUPPLIER_CATALOG_UNAVAILABLE"};}
+  if(!supplierServiceAllows(row,catalog))
     return {state:"DECLINED",reason:"SERVICE_OR_QUANTITY_NOT_AVAILABLE"};
   let response;
   try{
