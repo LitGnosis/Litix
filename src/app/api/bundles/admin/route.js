@@ -44,8 +44,11 @@ export async function POST(req){
   }
   if(order.payment_state!=="settled")return response({error:"Payment settlement must be independently verified before post allocation or fulfillment"},409);
   if(action==="savePost"){
-   const url=String(data.url||"").trim(),allocations=data.allocations||{};
-   if(!validPost(url,bundle.platform)||!allocationsValid(bundle,[{url,...allocations}]))
+   const raw=String(data.url||"").trim(),allocations=data.allocations||{};
+   if(!validPost(raw,bundle.platform))return response({error:"Invalid platform post URL"},422);
+   const uri=new URL(raw);uri.search="";uri.hash="";
+   const url=uri.origin.replace("://www.","://")+uri.pathname.replace(/\/$/,"");
+   if(!allocationsValid(bundle,[{url,...allocations}]))
     return response({error:"Public post URL or service quantities invalid"},422);
    const saved=await sql.query("select litix_bundle_save_post($1,$2,$3,$4::jsonb) as post_id",
      [orderId,"bp_"+randomUUID(),url,JSON.stringify(allocations)]);
