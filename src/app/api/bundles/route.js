@@ -16,13 +16,24 @@ export async function verifiedMappings(){
  if(!bundleDBUrl())return [];
  const sql=neon(bundleDBUrl());
  try{
-  return await sql.query("select platform,kind,service_id,min_qty,max_qty,refill_days from litix_growth_bundle_supplier_mappings where verified_at is not null");
+  return await sql.query("select platform,kind,service_id,min_qty,max_qty,refill_days,provider_rate_usd from litix_growth_bundle_supplier_mappings where verified_at is not null");
  }catch{return []}
 }
 export async function bundleCheckoutReady(){
  if(!bundlePaymentPrerequisites())return false;
  const maps=await verifiedMappings();
- return ["Instagram","TikTok"].every(p=>BUNDLE_KINDS.every(k=>maps.some(m=>m.platform===p&&m.kind===k&&/^\d+$/.test(String(m.service_id))&&Number(m.min_qty)>0&&Number(m.max_qty)>=Number(m.min_qty))));
+ return GROWTH_BUNDLES.every(bundle=>{
+  let supplierCostUsd=0;
+  for(const kind of BUNDLE_KINDS){
+   const m=maps.find(x=>x.platform===bundle.platform&&x.kind===kind);
+   const qty=bundle.items[kind];
+   if(!m||!/^\d+$/.test(String(m.service_id))||Number(m.min_qty)<1||Number(m.max_qty)<Number(m.min_qty)||
+     !Number.isFinite(Number(m.provider_rate_usd))||Number(m.provider_rate_usd)<=0||
+     Number(m.min_qty)>qty||Number(m.max_qty)*bundle.maxPosts<qty)return false;
+   supplierCostUsd+=Number(m.provider_rate_usd)*qty/1000;
+  }
+  return supplierCostUsd*100<bundle.priceCents;
+ });
 }
 export async function GET(){
  const ready=await bundleCheckoutReady();
