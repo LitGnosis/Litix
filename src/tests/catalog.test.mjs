@@ -86,7 +86,8 @@ test('followers lead each social platform with American, general, then other-cou
   const result=await (await GET(new Request('https://example.test/api/smmservices?platform='+platform))).json();
   const names=result.items.map(x=>x.name.replace(platform+' ',''));
   assert.deepEqual(new Set(names),new Set(['American followers','followers','regular followers','Germany followers','USA / India followers','USA likes']));
-  const rows=result.items;for(let i=1;i<rows.length;i++)assert.ok(rows[i-1].per1000<=rows[i].per1000,"prices must be ascending");
+  const tier=x=>/(?:american|usa|\bUS\b)/i.test(x.name)?1:/\b(?:followers?|likes?)\b/i.test(x.name)?2:3;
+  const rows=result.items;for(let i=1;i<rows.length;i++){assert.ok(tier(rows[i-1])<=tier(rows[i]),"existing tier hierarchy must be preserved");if(tier(rows[i-1])===tier(rows[i]))assert.ok(rows[i-1].per1000<=rows[i].per1000,"price ascending inside tier");}
  }
 });
 
