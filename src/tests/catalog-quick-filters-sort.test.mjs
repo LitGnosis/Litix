@@ -44,6 +44,6 @@ test("frontend has seven interactive, visibly highlighted quick filters, backend
 test("original checkout and retail price rules stay in place",()=>{
  const api=src("app/api/[action]/route.js");
  assert.match(api,/validateCheckoutQuote/);
- assert.match(api,/retailPer1000\(service\)\*qty\/1000/);
+ assert.match(api,/calculateOrderCents\(qty,retailPer1000\(service\)\)/);
  assert.match(api,/smm\("add"/);
 });
