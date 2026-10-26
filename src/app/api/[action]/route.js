@@ -114,6 +114,33 @@ const geographyRank=x=>{
  return /\b(?:usa|united states(?: of america)?|american|us)\b|u\.s\.a?\.|🇺🇸/i.test(label)?0:1;
 };
 const platformRank=x=>{const z=String(x.name||"")+" "+String(x.category||"");return /instagram|(?:^|[^a-z])ig(?:[^a-z]|$)/i.test(z)?0:/tik[\s-]*tok/i.test(z)?1:/youtube|\byt\b/i.test(z)?2:/facebook|\bfb\b/i.test(z)?3:/spotify/i.test(z)?4:5};
+// Standardize follower destinations at the payment boundary: the customer may
+// submit @username or a profile link, while SMMGLOB always receives a public URL.
+const followerPlatformForService=service=>{
+ const label=[service?.name,service?.category].map(v=>String(v||"")).join(" ").toLowerCase();
+ if(!/\bfollow(?:er)?s?\b/.test(label))return "";
+ if(/instagram|(?:^|[^a-z])ig(?:[^a-z]|$)/.test(label))return "instagram";
+ if(/tik[\s._-]*tok/.test(label))return "tiktok";
+ return "";
+};
+const canonicalFollowerDestination=(rawValue,platform)=>{
+ const raw=String(rawValue||"").trim();
+ if(!raw||!["instagram","tiktok"].includes(platform))return null;
+ const input=/^(?:www\.)?(?:instagram\.com|tiktok\.com)\//i.test(raw)?"https://"+raw:raw;
+ let user=input.replace(/^@/,"");
+ if(/^https?:\/\//i.test(input)){
+  let parsed;try{parsed=new URL(input)}catch{return null}
+  if(parsed.protocol!=="https:"||parsed.username||parsed.password)return null;
+  const host=parsed.hostname.toLowerCase().replace(/^www\./,"");
+  if(host!==(platform==="instagram"?"instagram.com":"tiktok.com"))return null;
+  const matched=platform==="instagram"?parsed.pathname.match(/^\/([A-Za-z0-9._]+)\/?$/):parsed.pathname.match(/^\/@([A-Za-z0-9._]+)\/?$/);
+  if(!matched)return null; // A post, reel or video URL is not a Followers destination.
+  user=matched[1];
+ }
+ const valid=platform==="instagram"?/^[A-Za-z0-9._]{1,30}$/.test(user):/^[A-Za-z0-9._]{2,24}$/.test(user);
+ if(!valid)return null;
+ return platform==="instagram"?"https://www.instagram.com/"+user+"/":"https://www.tiktok.com/@"+user;
+};
 const followerRank=x=>platformRank(x)<2&&/\bfollowers?\b/i.test([x.name,x.category].join(" "))?0:1;
 const platformName=x=>["Instagram","TikTok","YouTube","Facebook","Spotify","Other"][platformRank(x)];
 function shape(x){return {id:String(x.service),name:String(x.name||"Service"),category:String(x.category||"Other"),type:String(x.type||"Default"),min:Number(x.min),max:Number(x.max),per1000:retailPer1000(x),refill:hasRefill(x),noDrop:hasNoDrop(x),purchasable:/^default$/i.test(String(x.type||"Default"))};}
@@ -182,21 +209,31 @@ export async function POST(req){
  let parsedGateway;try{parsedGateway=new URL(gatewayUrl)}catch{return send({error:"Payment gateway configuration is invalid"},503)}
  if(parsedGateway.protocol!=="https:"||(gatewayMode==="TEST"&&parsedGateway.hostname==="paykings.transactiongateway.com"))return send({error:"Test mode requires a dedicated HTTPS sandbox gateway URL. No charge was submitted."},503);
  let x;try{x=await req.json()}catch{return send({error:"Invalid JSON"},400)}
- const id=bounded(x.serviceId,32),qty=Number(x.quantity),email=bounded(x.email,250).toLowerCase(),link=bounded(x.link,1200),token=bounded(x.paymentToken,500),idem=bounded(x.idempotencyKey,36);let target;try{target=new URL(link)}catch{}
- if(!/^[0-9]+$/.test(id)||!Number.isSafeInteger(qty)||qty<1||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||!target||target.protocol!=="https:"||!target.hostname.includes(".")||token.length<10||!/^[a-f0-9-]{36}$/.test(idem))return send({error:"Invalid service, quantity, public URL, email or payment information"},400);
+ const id=bounded(x.serviceId,32),qty=Number(x.quantity),email=bounded(x.email,250).toLowerCase(),link=bounded(x.link,1200),token=bounded(x.paymentToken,500),idem=bounded(x.idempotencyKey,36);
+ if(!/^[0-9]+$/.test(id)||!Number.isSafeInteger(qty)||qty<1||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||!link||token.length<10||!/^[a-f0-9-]{36}$/.test(idem))return send({error:"Invalid service, quantity, public URL, email or payment information"},400);
  let service;try{service=(await refreshServices(false)).find(s=>String(s.service)===id)}catch{return send({error:"Litix prices unavailable; no charge submitted"},503)}
  if(!service||!/^default$/i.test(String(service.type||"Default"))||qty<Number(service.min)||qty>Number(service.max))return send({error:"This service needs additional order information or a different quantity"},422);
+ const followerPlatform=followerPlatformForService(service);
+ let destination=link;
+ if(followerPlatform){
+  destination=canonicalFollowerDestination(link,followerPlatform);
+  if(!destination)return send({error:"Enter a valid public "+(followerPlatform==="instagram"?"Instagram":"TikTok")+" username or profile link. Post URLs cannot be used for Followers."},422);
+ }else{
+  let target;try{target=new URL(link)}catch{}
+  if(!target||target.protocol!=="https:"||!target.hostname.includes(".")||target.username||target.password)
+   return send({error:"Enter the public post or profile URL required by this service."},422);
+ }
  const cents=Math.max(100,Math.ceil(retailPer1000(service)*qty/1000*100));if(!Number.isSafeInteger(cents)||cents>100000000)return send({error:"Order total is outside supported limits"},422);
  const quote=validateCheckoutQuote({actualSupplierWholesaleUsd:Number(service.rate)*qty/1000,customerSubtotalCents:cents,service:supplierPricingInput(service)});
  if(!quote.allowed)return send({error:"Quantity cannot meet wholesale pricing requirements; no charge submitted"},422);
  if(!Number.isSafeInteger(x.expectedAmountCents)||x.expectedAmountCents!==cents)return send({error:"The price has changed. Refresh the catalog and confirm the new total before paying."},409);
  const orderId="ltx2_"+randomUUID(),secret=randomUUID()+"-"+randomUUID(),sql=db();
  const notifyPaid=(fulfillment)=>after(()=>sendOrderEmails({orderId,secret,email,amountCents:cents,quantity:qty,serviceName:String(service.name||"Social media service"),fulfillment}).catch(e=>console.error("Litix email task failed",{orderId,error:String(e?.message||"send error").slice(0,100)})));
- try{const rows=await sql.query("insert into litix_v2_orders(id,email,service_id,service_name,category,destination,quantity,amount_cents,supplier_cost_cents,idempotency_key,tracking_token_hash,metadata) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12::jsonb) on conflict(idempotency_key) do nothing returning id",[orderId,email,id,String(service.name),String(service.category||"Other"),link,qty,cents,Math.ceil(Number(service.rate)*qty/10),idem,hash(secret),JSON.stringify({refill:!!service.refill})]);if(!rows.length)return send({error:"Payment already submitted; do not retry the same checkout"},409);await sql.query("update litix_v2_orders set payment_state='processing',payment_attempted_at=now() where id=$1",[orderId])}catch{return send({error:"Database unavailable; no charge submitted"},503)}
+ try{const rows=await sql.query("insert into litix_v2_orders(id,email,service_id,service_name,category,destination,quantity,amount_cents,supplier_cost_cents,idempotency_key,tracking_token_hash,metadata) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12::jsonb) on conflict(idempotency_key) do nothing returning id",[orderId,email,id,String(service.name),String(service.category||"Other"),destination,qty,cents,Math.ceil(Number(service.rate)*qty/10),idem,hash(secret),JSON.stringify({refill:!!service.refill})]);if(!rows.length)return send({error:"Payment already submitted; do not retry the same checkout"},409);await sql.query("update litix_v2_orders set payment_state='processing',payment_attempted_at=now() where id=$1",[orderId])}catch{return send({error:"Database unavailable; no charge submitted"},503)}
  let payment;try{const r=await fetch(gatewayUrl,{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded"},body:new URLSearchParams({security_key:gatewayKey,type:"sale",payment_token:token,amount:(cents/100).toFixed(2),orderid:orderId,email}),signal:AbortSignal.timeout(18000),cache:"no-store"});if(!r.ok)throw Error("Payment gateway request failed");payment=Object.fromEntries(new URLSearchParams(await r.text()))}catch{await sql.query("update litix_v2_orders set payment_state='review' where id=$1",[orderId]).catch(()=>{});return send({orderId,secret,payment:"review",message:"Payment outcome is uncertain; do not retry or place a second order"},202)}
  if(String(payment.response)!=="1"){await sql.query("update litix_v2_orders set payment_state='declined' where id=$1",[orderId]).catch(()=>{});return send({error:"Payment declined: "+String(payment.responsetext||"Please contact your card issuer").slice(0,100)},402)}
  const transactionId=String(payment.transactionid||"").trim();if(!transactionId){await sql.query("update litix_v2_orders set payment_state='review' where id=$1",[orderId]).catch(()=>{});return send({orderId,secret,payment:"review",message:"Gateway reported approval without a transaction ID. Payment requires reconciliation; do not retry or place a second order."},202)}
  try{await sql.query("update litix_v2_orders set payment_state='paid',payment_transaction_id=$2 where id=$1",[orderId,transactionId]);await sql.query("update litix_v2_orders set fulfillment_state='dispatching',supplier_attempted_at=now() where id=$1 and supplier_attempted_at is null",[orderId])}catch{return send({orderId,secret,payment:"paid",fulfillment:"review",message:"Paid; supplier reconciliation required"},202)}
- try{const supplierResult=await smm("add",{service:id,link,quantity:String(qty)});if(!supplierResult?.order)throw Error("No supplier order ID");await sql.query("update litix_v2_orders set supplier_order_id=$2,fulfillment_state='submitted',last_supplier_status=$3::jsonb where id=$1",[orderId,String(supplierResult.order),JSON.stringify(supplierResult)]);notifyPaid("submitted");return send({orderId,secret,payment:"paid",fulfillment:"submitted",message:"Payment approved and supplier order submitted"})}
+ try{const supplierResult=await smm("add",{service:id,link:destination,quantity:String(qty)});if(!supplierResult?.order)throw Error("No supplier order ID");await sql.query("update litix_v2_orders set supplier_order_id=$2,fulfillment_state='submitted',last_supplier_status=$3::jsonb where id=$1",[orderId,String(supplierResult.order),JSON.stringify(supplierResult)]);notifyPaid("submitted");return send({orderId,secret,payment:"paid",fulfillment:"submitted",message:"Payment approved and supplier order submitted"})}
  catch{await sql.query("update litix_v2_orders set fulfillment_state='manual_review' where id=$1",[orderId]).catch(()=>{});notifyPaid("manual_review");return send({orderId,secret,payment:"paid",fulfillment:"manual_review",message:"Payment approved, but supplier outcome requires review. Do not reorder."},202)}
 }
