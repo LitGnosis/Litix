@@ -38,11 +38,9 @@ jobs:
         env:
           LITIX_BLUEVINE_LINKS_VERIFIED: 'false'
         run: npm run build
-      - name: Install isolated browser simulator (no payment credentials)
+      - name: Install isolated browser automation (no payment credentials)
         working-directory: src
-        run: |
-          npm install --no-save --ignore-scripts playwright@1.56.1
-          npx playwright install --with-deps chromium
+        run: npm install --no-save --ignore-scripts playwright@1.56.1
       - name: Simulate 390px mobile checkout for all eight platform bundles
         working-directory: src
         env:
@@ -55,4 +53,6 @@ jobs:
             if curl -fsS -o /dev/null http://localhost:3100/bundles; then break; fi
             sleep 1
           done
+          export CHROME_PATH="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium)"
+          test -n "$CHROME_PATH"
           node tests/bluevine-mobile.mjs
