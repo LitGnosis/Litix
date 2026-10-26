@@ -14,7 +14,8 @@ test("NMI gateway signature verifies nonce and raw bytes, not signup webhook for
 });
 
 test("SMMGLOB is the only supplier and no preview environment can place live supplier orders",()=>{
- assert.match(supplier,/name:"SMMGLOB"/);
+ assert.match(supplier,/supplier:"SMMGLOB"/);
+ assert.match(supplier,/SMMGLOB_API_KEY/);
  assert.doesNotMatch(supplier,/smmfollowom|SMMFOLLOWOM/i);
  assert.match(supplier,/VERCEL_ENV!=="production"/);
  assert.match(supplier,/LITIX_AUTOLIKES_DISPATCH_ENABLED/);
