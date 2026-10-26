@@ -4,6 +4,7 @@ import {readFileSync} from "node:fs";
 const file=readFileSync(new URL("../app/api/[action]/route.js",import.meta.url),"utf8");
 const code=file
  .replace('"../../../lib/pricing.mjs"',JSON.stringify(new URL("../lib/pricing.mjs",import.meta.url).href))
+ .replace('"../../../lib/catalogSort.mjs"',JSON.stringify(new URL("../lib/catalogSort.mjs",import.meta.url).href))
  .replace('import { neon } from "@neondatabase/serverless";','const neon=()=>({query:async()=>[]});')
  .replace('import { after } from "next/server";','const after=()=>{};')
  .replace('import { sendOrderEmails, notificationsConfigured } from "../../../lib/orderNotifications.mjs";','const sendOrderEmails=async()=>true; const notificationsConfigured=()=>false;');
