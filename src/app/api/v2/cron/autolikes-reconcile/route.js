@@ -33,11 +33,14 @@ export async function POST(req){
  let rows;
  try{
   rows=await sql.query(`select s.id,s.campaign_id,s.workspace_id,s.provider_subscription_item_id,
-       s.last_successful_payment_at,a.monthly_amount_cents
+       s.last_successful_payment_at,a.monthly_amount_cents,a.monitoring_consent_at,
+       c.platform,c.account_ref
     from litix_recurring_subscriptions s
     join litix_autolikes_subscription_attempts a
      on a.provider_subscription_item_id=s.provider_subscription_item_id
       and a.campaign_id=s.campaign_id and a.customer_id=s.customer_id
+    join litix_auto_boost_campaigns c
+     on c.id=s.campaign_id and c.customer_id=s.customer_id
     where s.provider='nmi' and s.status in ('PENDING','ACTIVE_PAID','PAST_DUE')
       and a.state='AWAITING_VERIFICATION'
     order by coalesce(s.last_successful_payment_at,s.created_at) asc limit 5`);
@@ -81,6 +84,20 @@ export async function POST(req){
     if(!status.length){unchanged++;continue}
     // Enable campaign only after a settled matching recurring transaction.
     await sql.query("update litix_auto_boost_campaigns set status='active',updated_at=now() where id=$1 and status='draft'",[row.campaign_id]);
+    // Profile monitoring requires separately recorded customer consent.
+    // API-based platform ownership / post detection remains separately gated.
+    if(row.monitoring_consent_at && ["instagram","tiktok"].includes(row.platform) &&
+      /^@[a-z0-9._]{1,30}$/i.test(String(row.account_ref||""))){
+      const watcherId="alwatch_"+fingerprint(row.workspace_id+"\\n"+row.platform+"\\n"+row.account_ref).slice(0,40);
+      await sql.query(`insert into litix_profile_watchers
+       (id,workspace_id,platform,profile_handle,campaign_id,customer_id,consent_at,enabled)
+       select $1,$2,$3,$4,s.campaign_id,s.customer_id,a.monitoring_consent_at,true
+       from litix_recurring_subscriptions s
+       join litix_autolikes_subscription_attempts a on a.provider_subscription_item_id=s.provider_subscription_item_id
+       where s.id=$5 and s.status='ACTIVE_PAID' and a.monitoring_consent_at is not null
+       on conflict (workspace_id,platform,profile_handle) do nothing`,
+       [watcherId,row.workspace_id,row.platform,row.account_ref,row.id]);
+    }
     verified++;
    }catch{manualReview++}
   }
