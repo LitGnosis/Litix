@@ -1,0 +1,33 @@
+name: Publish Litix stable recovery archive
+on:
+  push:
+    branches: [backup/litix-stable-release-assets-2026-10-26]
+permissions:
+  contents: write
+  actions: read
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Get sanitized source ZIP from passed backup run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh run download 40297497821 -n litix-source-backups-2026-10-26
+          unzip -t LITIX-STABLE-MASTER-5-DOLLAR-MINIMUM-2026-10-26.zip | tail -1
+      - name: Publish immutable stable tag and release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG=litix-stable-5-dollar-floor-2026-10-26
+          SHA=aeaf44359d76757fb8c02576e7c48088a5428f40
+          if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$TAG" >/dev/null 2>&1; then
+            echo "Refuse to overwrite existing stable tag"; exit 1
+          fi
+          gh api "repos/$GITHUB_REPOSITORY/git/refs" -f "ref=refs/tags/$TAG" -f "sha=$SHA" >/dev/null
+          gh release create "$TAG" LITIX-STABLE-MASTER-5-DOLLAR-MINIMUM-2026-10-26.zip --verify-tag --latest=false --title "LITIX stable $5 minimum, 2026-10-26" --notes "Stable source SHA: $SHA. Vercel production READY deployment: dpl_6zgjVtqLbCSbr2GqCGNCH1ix4xXK. 113 tests pass and Next.js build passes. Sanitized full source archive, no secrets. Live supplier rate inventory and real-payment checkout remain unverified."
