@@ -6,8 +6,8 @@ const page=readFileSync(new URL('../app/page.jsx',import.meta.url),'utf8');
 const source=readFileSync(new URL('../app/api/[action]/route.js',import.meta.url),'utf8').replace('import { after } from "next/server";', 'const after=()=>{};').replace('import { sendOrderEmails, notificationsConfigured } from "../../../lib/orderNotifications.mjs";', 'const sendOrderEmails=async()=>true;const notificationsConfigured=()=>false;').replace('"../../../lib/pricing.mjs"', JSON.stringify(new URL('../lib/pricing.mjs',import.meta.url).href)).replace('"../../../lib/catalogSort.mjs"', JSON.stringify(new URL('../lib/catalogSort.mjs',import.meta.url).href)).replace('import { neon } from "@neondatabase/serverless";','const neon=()=>{throw Error("Unexpected database access")};');
 test('card prerequisites reject incomplete details, private links, and invalid quantities',()=>{
  const check=vm.runInNewContext(page.slice(page.indexOf('const validOrderDetails='),page.indexOf('const whatsappNumber='))+'validOrderDetails',{URL});
- const s={purchasable:true,min:100,max:1000};
- assert.equal(check(s,'https://instagram.com/test','user@example.test',100),true);
+ const s={purchasable:true,min:716,supplierMin:100,max:1000,unitStep:1,per1000:6.99};
+ assert.equal(check(s,'https://instagram.com/test','user@example.test',716),true);
  for(const url of ['','javascript:alert(1)','https://localhost/a','http://127.0.0.1','https://user:pass@example.com'])assert.equal(check(s,url,'user@example.test',100),false);
  assert.equal(check(null,'https://example.com','user@example.test',100),false);
  assert.equal(check(s,'https://example.com','invalid',100),false);
@@ -28,7 +28,7 @@ test('concurrent catalog requests share a read-only upstream fetch and recommend
 
 test('catalog prices show explicit USD rate and minimum-order total',()=>{
  assert.match(page,/className="price-unit"> per 1,000 units/);
- assert.match(page,/className="minimum-price">From/);
+ assert.match(page,/className="minimum-price">\{s.pricingReview/);
  assert.match(source,/action==="services"\?8000:16000/);
  const css=readFileSync(new URL('../app/metallic.css',import.meta.url),'utf8');
  assert.match(css,/\.service-option \.foot\{flex-wrap:wrap/);
