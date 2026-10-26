@@ -1,11 +1,11 @@
 -- Additive migration. Preserve historical order pricing, package IDs and payment records.
 -- Followers belong to the purchased Instagram/TikTok account, not each post.
 ALTER TABLE litix_growth_bundle_orders ADD COLUMN IF NOT EXISTS followers_fulfilled integer NOT NULL DEFAULT 0;
-DO $ BEGIN
+DO $$ BEGIN
  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='litix_growth_bundle_followers_nonnegative' AND conrelid='litix_growth_bundle_orders'::regclass) THEN
   ALTER TABLE litix_growth_bundle_orders ADD CONSTRAINT litix_growth_bundle_followers_nonnegative CHECK (followers_fulfilled >= 0);
  END IF;
-END $;
+END $$;
 -- Recreate the atomic allocation procedure for current package snapshots.
 -- Legacy items in older order snapshots are supported without adding new catalog listings.
 CREATE OR REPLACE FUNCTION litix_bundle_save_post(
