@@ -1,3 +1,5 @@
+import {sendOwnerPurchaseNotification} from "./ownerNotifications.mjs";
+import {growthBundle} from "./growthBundles.mjs";
 import {createHash,timingSafeEqual} from "node:crypto";
 import {neon} from "@neondatabase/serverless";
 export const bundleUrl=()=>process.env.LITIX_BUNDLES_DATABASE_URL||process.env.LITIX_AUTOLIKES_DATABASE_URL||process.env.LITIX_V2_DATABASE_URL;
@@ -44,19 +46,36 @@ export async function verifyNmiSettlement({orderId,transactionId,priceCents}){
   (!tag(transaction,"currency")||tag(transaction,"currency")==="USD")&&settledSale&&settleAction;
  return {settled:okay,reason:okay?"SETTLED":"NOT_SETTLED_OR_MISMATCH"};
 }
+// Called only on first verified transition to settled. Nothing here submits supplier orders.
 export async function sendBundleReceipt(order){
  const key=process.env.RESEND_API_KEY||process.env.LITIX_RESEND_API_KEY;
- if(!key)return false;
- const text="Your LITIX Growth Bundle payment is settled.\nOrder: "+order.id+"\nPackage: "+order.package_name+
+ const pkg=growthBundle(order.package_id);
+ const items=order.package_items||pkg?.items||{};
+ const quantity=["Likes","Views","Shares","Followers"].map(k=>k+": "+Number(items[k]||0).toLocaleString("en-US")).join(", ");
+ const owner=sendOwnerPurchaseNotification({
+  orderId:order.id,purchaseDate:order.created_at||order.settled_at,
+  customerEmail:order.email,customerProfile:order.profile_ref,
+  serviceName:order.package_name,quantity,amountCents:Number(order.price_cents),paymentStatus:"settled",
+  fulfillmentInstructions:"MANUAL FULFILLMENT ONLY. Await customer-submitted Instagram/TikTok account and up to 10 post URLs or screenshots via WhatsApp. Review allocations in the owner bundle dashboard; do not submit this bundle to SMMGLOB or any supplier automatically. Update each post and account Followers status manually after verification."
+ });
+ if(!key){await owner.catch(()=>false);return false}
+ const tracking="https://www.litix.net/bundles/confirmation?id="+encodeURIComponent(order.id);
+ const body="Your LITIX Growth Bundle payment is settled.\nOrder: "+order.id+"\nPackage: "+order.package_name+
+  "\nQuantity / package totals: "+quantity+
   "\nTotal: $"+(Number(order.price_cents)/100).toFixed(2)+
-  "\nStatus: Awaiting WhatsApp Submission\n\nIMPORTANT: Contact LITIX using the official WhatsApp link on your private order status page and submit up to 10 post URLs or screenshots. You must provide public URLs before fulfillment. Quantities are package totals, not per post. LITIX must manually approve allocations before any supplier delivery.";
- try{
-  const r=await fetch("https://api.resend.com/emails",{
-   method:"POST",
-   headers:{"Authorization":"Bearer "+key,"Content-Type":"application/json","Idempotency-Key":"litix-bundle-settled/"+order.id},
-   body:JSON.stringify({from:"Litix <orders@litix.net>",to:[order.email],subject:"LITIX Growth Bundle — Payment confirmed: "+order.id,text}),
-   signal:AbortSignal.timeout(9000),cache:"no-store"
-  });
-  return r.ok;
- }catch{return false}
+  "\nPayment: settled\nFulfillment: Awaiting WhatsApp Submission"+
+  "\n\nTracking: "+tracking+" (open on the same browser used at checkout; your private tracking token stays in that browser)."+
+  "\n\nIMPORTANT: Contact LITIX using the official WhatsApp link on your private order status page and submit up to 10 post URLs or screenshots. You must provide public URLs before fulfillment. Quantities are package totals, not per post. LITIX must manually approve allocations before any supplier delivery.";
+ const customer=fetch("https://api.resend.com/emails",{
+  method:"POST",
+  headers:{"Authorization":"Bearer "+key,"Content-Type":"application/json","Idempotency-Key":"litix-bundle-settled/"+order.id},
+  body:JSON.stringify({from:"Litix <orders@litix.net>",to:[order.email],subject:"LITIX Growth Bundle — Payment confirmed: "+order.id,text:body}),
+  signal:AbortSignal.timeout(9000),cache:"no-store"
+ }).then(r=>r.ok).catch(()=>false);
+ const result=await Promise.allSettled([customer,owner]);
+ if(result.some(x=>x.status==="rejected"||x.value===false)){
+  console.error("Litix bundle notification failure",{orderId:order.id});
+  return false;
+ }
+ return true;
 }
