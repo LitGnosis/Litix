@@ -9,6 +9,7 @@ create table if not exists litix_growth_bundle_orders (
  order_state text not null default 'Awaiting Payment' check(order_state in
  ('Awaiting Payment','Awaiting WhatsApp Submission','Under Review','Approved','Processing','Partially Completed','Completed','Needs Attention')),
  gateway_transaction_id text unique, idempotency_key text not null unique,
+ tracking_token_hash text not null,
  approved_at timestamptz, settled_at timestamptz, terms_accepted_at timestamptz not null,
  profile_ref text, created_at timestamptz not null default now(),
  updated_at timestamptz not null default now()
