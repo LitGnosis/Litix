@@ -58,6 +58,7 @@ export default function BundleAdmin(){
     <p><strong>Retail:</strong> {"$"+(o.price_cents/100).toFixed(2)} · <strong>Customer:</strong> {o.email}</p>
     <p><strong>Payment:</strong> {o.payment_state} · <strong>Status:</strong> {o.order_state}</p>
     <p className="small">Package totals: {Object.entries(o.package_items).map(([k,v])=>k+" "+Number(v).toLocaleString()).join(" · ")}</p>
+    <p className="small">Remaining unallocated: {Object.entries(o.package_items).map(([kind,total])=>kind+" "+Math.max(0,Number(total)-(data.posts||[]).filter(p=>p.order_id===o.id&&p.status!=="Rejected").reduce((sum,p)=>sum+Number(p.allocations?.[kind]||0),0)).toLocaleString()).join(" · ")}</p>
     <button disabled={busy||!o.gateway_transaction_id} onClick={()=>run("refreshSettlement",o.id)}>Verify NMI settlement</button>
     <p className="lg-bundle-warning">{BUNDLE_INSTRUCTIONS}</p>
     <h3>Submitted posts ({(data.posts||[]).filter(p=>p.order_id===o.id&&p.status!=="Rejected").length}/10)</h3>
