@@ -173,7 +173,7 @@ button:disabled{filter:saturate(.55)}
 @media(max-width:620px){.audience-header{align-items:flex-start;flex-direction:column}.audience-header nav{gap:12px}.audience-actions{flex-direction:column}.audience-actions a{width:100%;box-sizing:border-box}.audience-footer{flex-direction:column}}
 
 .litix-new-logo{display:block;max-height:86px;width:min(36vw,165px);object-fit:contain}
-.litix-network-tabs{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+.litix-network-tabs{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0;max-width:100%;min-width:0}.litix-network-tabs button{max-width:100%;min-width:0;white-space:normal;overflow-wrap:break-word}
 .litix-network-tabs button{border:1px solid #416c89;border-radius:20px;padding:10px 12px;background:#133049;color:#e9f8ff;font-weight:700;cursor:pointer}
 .litix-network-tabs button.litix-network-active{background:#078cc4;color:white}
 .litix-feature-panel{margin-top:24px}
