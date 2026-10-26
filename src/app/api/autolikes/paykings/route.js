@@ -39,12 +39,21 @@ export async function POST(req){
    if(!/^\d+$/.test(String(b.transaction_id||""))||String(action.success)!=="1"||String(action.response_code)!=="100"||action.action_type!=="sale"||b.currency!=="USD"||amount!==Number(s.amount_cents))
     return send({error:"Payment mismatch"},422);
   }
-  const accepted=await db.query("insert into litix_autolikes_live_gateway_events(event_id,provider_subscription_id,event_type,transaction_id,payload_sha256) values($1,$2,$3,$4,$5) on conflict do nothing returning event_id",[eventId,s.provider_subscription_id,type,type==="transaction.sale.success"?String(b.transaction_id):null,hash]);
-  if(!accepted.length)return send({ok:true,replayed:true});
-  if(type==="transaction.sale.success")
-   await db.query("update litix_autolikes_live_subscriptions set status='ACTIVE',payment_status='PAID',last_paid_at=now(),billing_cycle_end=greatest(now(),coalesce(billing_cycle_end,now()))+interval '1 month',posts_remaining=monthly_post_limit,updated_at=now() where id=$1",[s.id]);
-  if(["recurring.subscription.delete","transaction.sale.failure","transaction.refund.success"].includes(type))
-   await db.query("update litix_autolikes_live_subscriptions set status=$2,payment_status=$3,posts_remaining=0,updated_at=now() where id=$1",[s.id,type==="recurring.subscription.delete"?"CANCELLED":"PAUSED",type==="transaction.refund.success"?"REFUNDED":"FAILED"]);
+  if(type==="transaction.sale.success") {
+    const applied=await db.query(
+      "with accepted as (insert into litix_autolikes_live_gateway_events(event_id,provider_subscription_id,event_type,transaction_id,payload_sha256) values($1,$2,$3,$4,$5) on conflict do nothing returning event_id) update litix_autolikes_live_subscriptions s set status='ACTIVE',payment_status='PAID',last_paid_at=now(),billing_cycle_end=greatest(now(),coalesce(s.billing_cycle_end,now())) + interval '1 month',posts_remaining=s.monthly_post_limit,updated_at=now() from accepted where s.id=$6 and s.status<>'CANCELLED' returning s.campaign_id",
+      [eventId,s.provider_subscription_id,type,String(b.transaction_id),hash,s.id]);
+    if(applied.length)await db.query("update litix_auto_boost_campaigns set status='active',updated_at=now() where id=$1",[applied[0].campaign_id]);
+    return send({ok:true,activated:applied.length===1,replay:applied.length===0});
+  }
+  if(["recurring.subscription.delete","transaction.sale.failure","transaction.refund.success"].includes(type)){
+    const stopped=await db.query(
+      "with accepted as (insert into litix_autolikes_live_gateway_events(event_id,provider_subscription_id,event_type,payload_sha256) values($1,$2,$3,$4) on conflict do nothing returning event_id) update litix_autolikes_live_subscriptions s set status=$5,payment_status=$6,posts_remaining=0,updated_at=now() from accepted where s.id=$7 returning s.campaign_id",
+      [eventId,s.provider_subscription_id,type,hash,type==="recurring.subscription.delete"?"CANCELLED":"PAUSED",type==="transaction.refund.success"?"REFUNDED":"FAILED",s.id]);
+    if(stopped.length)await db.query("update litix_auto_boost_campaigns set status='paused',updated_at=now() where id=$1",[stopped[0].campaign_id]);
+    return send({ok:true,stopped:stopped.length===1});
+  }
+  await db.query("insert into litix_autolikes_live_gateway_events(event_id,provider_subscription_id,event_type,payload_sha256) values($1,$2,$3,$4) on conflict do nothing",[eventId,s.provider_subscription_id,type,hash]);
   return send({ok:true,subscriptionId:s.id});
  }catch(e){console.error("AutoLikes NMI ledger error",String(e?.code||"database"));return send({error:"Billing ledger unavailable"},503)}
 }
