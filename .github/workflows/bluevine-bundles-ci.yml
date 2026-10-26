@@ -52,7 +52,7 @@ jobs:
           app_pid=$!
           trap 'kill $app_pid || true' EXIT
           for i in $(seq 1 25); do
-            if curl -fsS -o /dev/null http://127.0.0.1:3100/bundles; then break; fi
+            if curl -fsS -o /dev/null http://localhost:3100/bundles; then break; fi
             sleep 1
           done
           node tests/bluevine-mobile.mjs
