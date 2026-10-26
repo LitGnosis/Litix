@@ -38,3 +38,21 @@ jobs:
         env:
           LITIX_BLUEVINE_LINKS_VERIFIED: 'false'
         run: npm run build
+      - name: Install isolated browser simulator (no payment credentials)
+        working-directory: src
+        run: |
+          npm install --no-save --ignore-scripts playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Simulate 390px mobile checkout for all eight platform bundles
+        working-directory: src
+        env:
+          LITIX_BLUEVINE_LINKS_VERIFIED: 'false'
+        run: |
+          npm run start -- --port 3100 >/tmp/litix-mobile-next.log 2>&1 &
+          app_pid=$!
+          trap 'kill $app_pid || true' EXIT
+          for i in $(seq 1 25); do
+            if curl -fsS -o /dev/null http://127.0.0.1:3100/bundles; then break; fi
+            sleep 1
+          done
+          node tests/bluevine-mobile.mjs
