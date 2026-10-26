@@ -41,7 +41,7 @@ export async function POST(req){
  if(!(process.env.LITIX_V2_DATABASE_URL||process.env.DATABASE_URL||process.env.POSTGRES_URL))return send({error:"Billing ledger unavailable."},503);
  const sql=db();let subscriptions;
  try{
-  subscriptions=await sql.query(`select s.id,s.provider_subscription_item_id,s.current_period_end,a.monthly_amount_cents,a.created_at
+  subscriptions=await sql.query(`select s.id,s.provider_subscription_item_id,s.current_period_end,a.monthly_amount_cents,a.created_at,a.monitoring_consent_at
    from litix_recurring_subscriptions s
    join litix_autolikes_subscription_attempts a on a.provider_subscription_item_id=s.provider_subscription_item_id
    where s.provider='nmi' and s.status in ('PENDING','ACTIVE_PAID','PAST_DUE')
@@ -70,7 +70,7 @@ export async function POST(req){
       set status=$2,last_successful_payment_at=$3::timestamptz,current_period_end=$4::timestamptz,updated_at=now()
       where id=$1 and (last_successful_payment_at is null or last_successful_payment_at<$3::timestamptz)`,
      [sub.id,state,txn.paidAt,periodEnd]);
-    if(state==="ACTIVE_PAID"){
+    if(state==="ACTIVE_PAID" && sub.monitoring_consent_at){
      await sql.query("update litix_auto_boost_campaigns set status='active',updated_at=now() where id=(select campaign_id from litix_recurring_subscriptions where id=$1) and status='draft'",[sub.id]);
     }
     verified++;
