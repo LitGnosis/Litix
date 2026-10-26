@@ -1,6 +1,6 @@
 import { neon } from "@neondatabase/serverless";
 import { createHash, timingSafeEqual } from "node:crypto";
-import { parseNmiTransactionEvidence, paidPeriodEnd } from "../../../../lib/nmiQueryEvidence.mjs";
+import { parseNmiTransactionEvidence, paidPeriodEnd } from "../../../../../lib/nmiQueryEvidence.mjs";
 
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
