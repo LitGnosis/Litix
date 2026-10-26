@@ -2,7 +2,7 @@ import { priceCatalog, retailPer1000 } from "./pricing.mjs";
 
 export const autolikesBillingAvailable = () => false;
 // AutoLikes is draft-only until paid subscription reconciliation and supplier fulfillment are verified.
-export const accountDatabaseURL = () => process.env.LITIX_V2_DATABASE_URL || process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.POSTGRES_PRISMA_URL || "";
+export const accountDatabaseURL = () => process.env.LITIX_AUTOLIKES_DATABASE_URL || process.env.LITIX_V2_DATABASE_URL || process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.POSTGRES_PRISMA_URL || "";
 
 export function parseProfileTarget(raw,platform) {
  const p=String(platform||"").toLowerCase();
