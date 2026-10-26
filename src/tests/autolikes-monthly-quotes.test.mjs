@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 import { quoteMonthlyAutoLikes } from "../lib/autolikes.mjs";
 
-const service={service:33588,name:"Instagram Likes",category:"Instagram",type:"Default",rate:4,min:100,max:10000};
+const service={service:33588,name:"Instagram Likes",category:"Instagram",type:"Default",rate:4,pricedRetail:7,min:100,max:10000};
 test("monthly quote stays based on the existing retail pricing without hidden additional markup",()=>{
  const q=quoteMonthlyAutoLikes({service,platform:"instagram",quantityPerPost:600,maxPostsPerMonth:10});
  assert.equal(q.maxPostsPerMonth,10);
