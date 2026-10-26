@@ -11,3 +11,8 @@ ALTER TABLE litix_growth_bundle_orders
 CREATE INDEX IF NOT EXISTS litix_growth_bundle_pending_bluevine_idx
  ON litix_growth_bundle_orders(payment_state,created_at DESC)
  WHERE payment_provider='bluevine';
+
+-- A merchant payment reference cannot settle two different bundle orders.
+CREATE UNIQUE INDEX IF NOT EXISTS litix_growth_bundle_bluevine_reference_unique
+ ON litix_growth_bundle_orders(bluevine_payment_reference)
+ WHERE payment_provider='bluevine' AND bluevine_payment_reference IS NOT NULL;
