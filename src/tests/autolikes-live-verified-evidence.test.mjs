@@ -40,7 +40,7 @@ test("live recurring endpoints never assume a provider response is a paid subscr
  assert.match(billing,/status:"pending_payment_verification"/);
  assert.match(reconcile,/report_type:"transaction"/);
  assert.match(reconcile,/source:"recurring"/);
- assert.match(reconcile,/condition/); // condition check occurs in parser.
+ assert.match(get("lib/nmiQueryEvidence.mjs"),/tag\(row,"condition"\)!=="complete"/);
  assert.match(reconcile,/AUTHENTICATED_QUERY/);
  assert.match(reconcile,/status='ACTIVE_PAID'/);
  assert.match(reconcile,/monitoring_consent_at/);
