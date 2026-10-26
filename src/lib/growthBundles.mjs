@@ -1,12 +1,15 @@
 // Exact fixed-price Instagram/TikTok Growth Bundles. Do not apply general service markup.
 export const BUNDLE_INSTRUCTIONS="IMPORTANT: All Growth Bundle orders require WhatsApp confirmation. After purchasing, contact LITIX through WhatsApp and submit links or screenshots for up to 10 posts. Your package quantities are distributed across your selected posts and are not repeated for each post. LITIX manually verifies your selected posts and service allocation before processing your order.";
+// Owner's October 26 update: 20% off the previous four prices.
+// Followers are delivered to the purchased account/profile, not to individual posts.
 const levels=[
- ["launch","Launch",4485,[25000,100000,10000,1000,1000,100]],
- ["momentum","Momentum",8985,[50000,250000,25000,2500,2500,250]],
- ["power","Power",16485,[100000,500000,50000,5000,5000,500]],
- ["apex","Apex",29985,[250000,1000000,100000,10000,10000,1000]],
+ ["launch","Launch",3588,[25000,100000,1000,5000]],
+ ["momentum","Momentum",7188,[50000,250000,2500,10000]],
+ ["power","Power",13188,[100000,500000,5000,20000]],
+ ["apex","Apex",23988,[250000,1000000,10000,50000]],
 ];
-export const BUNDLE_KINDS=["Likes","Views","Impressions","Shares","Saves","Reposts"];
+export const BUNDLE_KINDS=["Likes","Views","Shares","Followers"];
+export const POST_BUNDLE_KINDS=["Likes","Views","Shares"];
 export const GROWTH_BUNDLES=["Instagram","TikTok"].flatMap(platform=>
  levels.map(([slug,tier,priceCents,counts])=>Object.freeze({
   id:(platform==="Instagram"?"ig":"tt")+"_"+slug,
@@ -39,11 +42,12 @@ export function validPost(value,platform){
 }
 export function allocationsValid(bundle,allocations){
  if(!bundle||!Array.isArray(allocations)||allocations.length<1||allocations.length>10)return false;
- const urls=new Set(),totals=Object.fromEntries(BUNDLE_KINDS.map(k=>[k,0]));
+ const urls=new Set(),totals=Object.fromEntries(POST_BUNDLE_KINDS.map(k=>[k,0]));
  for(const post of allocations){
   if(!validPost(post.url,bundle.platform)||urls.has(post.url))return false;
   urls.add(post.url);
-  for(const k of BUNDLE_KINDS){
+  if(Object.keys(post).some(k=>k!=="url" && !POST_BUNDLE_KINDS.includes(k)))return false;
+  for(const k of POST_BUNDLE_KINDS){
    const n=post[k]??0;
    if(!Number.isSafeInteger(n)||n<0)return false;
    totals[k]+=n;
