@@ -20,11 +20,23 @@ export async function bundleCheckoutReady(){
   return !!found?.[0]?.orders;
  }catch{return false}
 }
+// This is deliberately separate from PayKings availability. The owner must verify
+// each Bluevine link and amount before setting LITIX_BLUEVINE_LINKS_VERIFIED=true.
+export async function bundleBluevineReady(){
+ if(process.env.LITIX_BLUEVINE_LINKS_VERIFIED!=="true"||!bundleDBUrl())return false;
+ try{
+  const sql=neon(bundleDBUrl());
+  const rows=await sql.query("select count(*)::int as n from information_schema.columns where table_schema='public' and table_name='litix_growth_bundle_orders' and column_name in ('payment_provider','customer_whatsapp','bluevine_payment_reference')");
+  return Number(rows?.[0]?.n)===3;
+ }catch{return false}
+}
 export async function GET(){
  const ready=await bundleCheckoutReady();
+ const bluevineReady=await bundleBluevineReady();
  return Response.json({
   packages:GROWTH_BUNDLES,
   checkoutEnabled:ready,
+  bluevineEnabled:bluevineReady,
   whatsappConfigured:Boolean(configuredWhatsApp()),
   manualFulfillment:true,
   instructions:BUNDLE_INSTRUCTIONS,
