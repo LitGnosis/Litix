@@ -1,14 +1,15 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
-import {GROWTH_BUNDLES,BUNDLE_KINDS,BUNDLE_INSTRUCTIONS,growthBundle,validPost,allocationsValid,configuredWhatsApp} from "../lib/growthBundles.mjs";
+import {GROWTH_BUNDLES,BUNDLE_KINDS,POST_BUNDLE_KINDS,BUNDLE_INSTRUCTIONS,growthBundle,validPost,allocationsValid,configuredWhatsApp} from "../lib/growthBundles.mjs";
 const read=p=>readFileSync(new URL("../"+p,import.meta.url),"utf8");
-const price=[4485,8985,16485,29985];
+// Each previous retail price increased by exactly 20%; followers replace the removed services.
+const price=[5382,10782,19782,35982];
 const quantity=[
- [25000,100000,10000,1000,1000,100],
- [50000,250000,25000,2500,2500,250],
- [100000,500000,50000,5000,5000,500],
- [250000,1000000,100000,10000,10000,1000]];
+ [25000,100000,1000,5000],
+ [50000,250000,2500,10000],
+ [100000,500000,5000,20000],
+ [250000,1000000,10000,50000]];
 test("eight fixed price packages and stable historic IDs",()=>{
  assert.equal(GROWTH_BUNDLES.length,8);
  for(const platform of ["Instagram","TikTok"]){
@@ -78,4 +79,22 @@ test("no guessed WhatsApp number and no changed ordinary checkout",()=>{
  assert.doesNotMatch(catalog,/19452106315/);
  assert.equal(configuredWhatsApp(),null);
  assert.match(catalog,/checkoutEnabled:ready/);
+});
+
+test("Followers are account-level only, never allocated to a particular post",()=>{
+ assert.deepEqual(BUNDLE_KINDS,["Likes","Views","Shares","Followers"]);
+ assert.deepEqual(POST_BUNDLE_KINDS,["Likes","Views","Shares"]);
+ for(const bundle of GROWTH_BUNDLES){
+  assert.ok(bundle.items.Followers>0);
+  assert.deepEqual(Object.keys(bundle.items),["Likes","Views","Shares","Followers"]);
+  assert.equal(allocationsValid(bundle,[{url:bundle.platform==="Instagram"?"https://instagram.com/p/CABC123":"https://tiktok.com/@creator/video/7493200000000000000",Followers:500}]),false);
+ }
+ const admin=read("app/api/bundles/admin/route.js");
+ const dashboard=read("app/bundles/admin/page.jsx");
+ const schema=read("db/migrations/20261026-growth-bundles-followers-and-post-allocations.sql");
+ assert.match(admin,/markFollowersFulfilled/);
+ assert.match(admin,/OWNER_VERIFIED_ACCOUNT_FOLLOWERS/);
+ assert.match(dashboard,/Mark Followers manually fulfilled/);
+ assert.match(schema,/followers_fulfilled/);
+ assert.match(schema,/k = 'Followers'/);
 });

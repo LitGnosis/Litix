@@ -15,7 +15,7 @@ export default function GrowthBundles({standalone=false}){
    <div className="lg-bundle-art" aria-hidden="true"><span className="lg-art-letter">{p.tier.substring(0,1)}</span><span className="lg-art-orbit"/><span className="lg-art-platform">{p.platform.toUpperCase()}</span></div>
    <div className="lg-bundle-head"><span className="lg-tier">{p.tier}</span>{i===1||i===3?<span className="lg-popular">POPULAR</span>:null}</div>
    <strong className="lg-price">{currency(p.priceCents)}</strong>
-   <p className="lg-bundle-small">Package totals · distribute across up to 10 posts</p>
+   <p className="lg-bundle-small">Package totals · post engagement across up to 10 posts; Followers to your account</p>
    <dl className="lg-bundle-items">{Object.entries(p.items).map(([kind,quantity])=><div key={kind}><dt>{kind}</dt><dd>{fmt(quantity)}</dd></div>)}</dl>
    <p className="lg-bundle-small">Refills: supplier-dependent only; no guaranteed refill.</p>
    <p className="lg-bundle-warning">{BUNDLE_INSTRUCTIONS}</p>

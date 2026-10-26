@@ -64,7 +64,7 @@ export default function BundleCheckout(){
     {["Instagram","TikTok"].map(p=><optgroup key={p} label={p}>{["Launch","Momentum","Power","Apex"].map(t=>{const id=(p==="Instagram"?"ig":"tt")+"_"+t.toLowerCase();return <option key={id} value={id}>{p} {t} — {money(growthBundle(id).priceCents)}</option>})}</optgroup>)}
    </select></label>
    <h2>{pkg?.name} · {pkg&&money(pkg.priceCents)}</h2>
-   <p className="small">Fixed-price package totals. Submit up to 10 posts, not 10 copies of each service.</p>
+   <p className="small">Fixed-price package totals. Likes, Views and Shares can be allocated across up to 10 posts. Followers are delivered once to your selected account.</p>
    <div className="lg-bundle-items">{pkg&&Object.entries(pkg.items).map(([kind,n])=><div key={kind}><span>{kind}</span><strong>{n.toLocaleString()}</strong></div>)}</div>
    <p className="lg-bundle-warning">{BUNDLE_INSTRUCTIONS}</p>
    <p className="small">After PayKings approves your one-time payment, you MUST tap the WhatsApp button on the confirmation page and message LITIX your order number plus up to 10 post links or screenshots. I personally arrange fulfillment; there is no automated supplier dispatch.</p>
