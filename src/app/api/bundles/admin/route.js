@@ -3,7 +3,7 @@ import {bundleDB,response,sameOrigin,safeEquals,verifyNmiSettlement,sendBundleRe
 import {growthBundle,validPost,allocationsValid,POST_BUNDLE_KINDS} from "../../../../lib/growthBundles.mjs";
 export const runtime="nodejs";export const dynamic="force-dynamic";export const maxDuration=50;
 const authorized=req=>{
- const configured=process.env.LITIX_BUNDLES_ADMIN_TOKEN;
+ const configured=process.env.LITIX_BUNDLES_ADMIN_TOKEN||process.env.ADMIN_SECRET;
  const provided=(req.headers.get("authorization")||"").replace(/^Bearer\s+/i,"").trim();
  return Boolean(configured&&configured.length>=32&&provided.length>=32&&provided.length<=256&&safeEquals(configured,provided));
 };
