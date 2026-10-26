@@ -115,6 +115,13 @@ const geographyRank=x=>{
 const platformRank=x=>{const z=String(x.name||"")+" "+String(x.category||"");return /instagram|(?:^|[^a-z])ig(?:[^a-z]|$)/i.test(z)?0:/tik[\s-]*tok/i.test(z)?1:/youtube|\byt\b/i.test(z)?2:/facebook|\bfb\b/i.test(z)?3:/spotify/i.test(z)?4:5};
 const followerRank=x=>platformRank(x)<2&&/\bfollowers?\b/i.test([x.name,x.category].join(" "))?0:1;
 const platformName=x=>["Instagram","TikTok","YouTube","Facebook","Spotify","Other"][platformRank(x)];
+const serviceMatchesQuickKind=(x,kind)=>{
+ const name=String(x.name||"").toLowerCase(),category=String(x.category||"").toLowerCase();
+ const text=name+" "+category;
+ if(kind==="likes")return /\blikes?\b/.test(text)&&!/\bfollowers?\b/.test(text)&&!/\b(?:views?|shares?|comments?|saves?|reposts?)\b/.test(name);
+ if(kind==="followers")return /\bfollowers?\b/.test(text)&&!/\blikes?\b/.test(name);
+ return true;
+};
 function shape(x){return {id:String(x.service),name:String(x.name||"Service"),category:String(x.category||"Other"),type:String(x.type||"Default"),min:Number(x.min),max:Number(x.max),per1000:retailPer1000(x),refill:hasRefill(x),noDrop:hasNoDrop(x),purchasable:/^default$/i.test(String(x.type||"Default"))};}
 export async function GET(req){
  const op=name(req),flags=conf(),p=new URL(req.url).searchParams;
@@ -123,7 +130,14 @@ export async function GET(req){
  if(op==="health"){let database=false;if(flags.database)try{await db().query("select 1",[]);database=true}catch{}const gatewayMode=selectedGatewayMode();const gatewayConfigured=gatewayMode==="TEST"?!!(process.env.NMI_TEST_SECURITY_KEY&&process.env.NMI_TEST_GATEWAY_URL):!!process.env.NMI_SECURITY_KEY;return send({service:"litix-v2",database,supplierConfigured:flags.supplier,paykingsConfigured:flags.payment,orderEmailConfigured:notificationsConfigured(),gatewayMode,testGatewayConfigured:gatewayMode==="TEST"?gatewayConfigured:undefined,liveTransactionVerified:false,ready:database&&flags.supplier&&flags.payment},database?200:503)}
  if(op==="smmservices"){
   const cat=bounded(p.get("category"),100),platform=bounded(p.get("platform"),30),term=bounded(p.get("q"),120).toLowerCase(),page=Math.max(1,Math.min(10000,Number(p.get("page"))||1));
-  try{const all=await getServices(),filtered=all.filter(x=>(!cat||String(x.category||"Other")===cat)&&(!platform||platform==="All platforms"||platformName(x)===platform)&&(!term||[x.service,x.name,x.category].some(z=>String(z||"").toLowerCase().includes(term)))).sort((a,b)=>followerRank(a)-followerRank(b)||geographyRank(a)-geographyRank(b)||platformRank(a)-platformRank(b)||String(a.name||"").localeCompare(String(b.name||"")));const goals={"Grow audience":/followers?|profile/i,"Increase engagement":/likes?|comments?|views?|saves?/i,"Launch a product":/shares?|views?|saves?/i,"Generate leads":/profile|views?/i,"Build brand awareness":/views?|shares?/i};const matcher=goals[p.get("goal")];const recommendations=matcher&&["7","30","90"].includes(p.get("horizon"))?filtered.filter(x=>/^default$/i.test(String(x.type||"Default"))&&matcher.test(String(x.name))).slice(0,3).map(shape):[];return send({recommendations,items:filtered.slice((page-1)*24,page*24).map(shape),categories:[...new Set(all.map(x=>String(x.category||"Other")))].sort(),total:filtered.length,allCount:all.length,page})}
+  // Strict category quick filters stay separate from free-text search.
+  const quickKind=["followers","likes"].includes(String(p.get("kind")||"").toLowerCase())?String(p.get("kind")).toLowerCase():"";
+  try{const all=await getServices(),filtered=all.filter(x=>(!cat||String(x.category||"Other")===cat)&&(!platform||platform==="All platforms"||platformName(x)===platform)&&(!term||[x.service,x.name,x.category].some(z=>String(z||"").toLowerCase().includes(term)))&&
+    (!quickKind||serviceMatchesQuickKind(x,quickKind)))
+    .sort((a,b)=>platformRank(a)-platformRank(b)||
+      Number(retailPer1000(a))-Number(retailPer1000(b))||
+      String(a.name||"").localeCompare(String(b.name||""))||
+      String(a.service).localeCompare(String(b.service)));const goals={"Grow audience":/followers?|profile/i,"Increase engagement":/likes?|comments?|views?|saves?/i,"Launch a product":/shares?|views?|saves?/i,"Generate leads":/profile|views?/i,"Build brand awareness":/views?|shares?/i};const matcher=goals[p.get("goal")];const recommendations=matcher&&["7","30","90"].includes(p.get("horizon"))?filtered.filter(x=>/^default$/i.test(String(x.type||"Default"))&&matcher.test(String(x.name))).slice(0,3).map(shape):[];return send({recommendations,items:filtered.slice((page-1)*24,page*24).map(shape),categories:[...new Set(all.map(x=>String(x.category||"Other")))].sort(),total:filtered.length,allCount:all.length,page})}
   catch(e){console.error("SMMGLOB catalog unavailable",String(e?.message||"").slice(0,100));return send({error:"Live supplier catalog unavailable",items:[],categories:[],total:0},503)}
  }
  if(op==="track"){
