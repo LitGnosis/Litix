@@ -52,7 +52,7 @@ test("mock route rejects unpaid or unsafe requests without gateway or supplier c
  const source=readFileSync(new URL("../app/api/choose-posts/checkout/route.js",import.meta.url),"utf8")
   .replace('import {after} from "next/server";','const after=fn=>globalThis.__postsAfter.push(fn);')
   .replace('import {randomUUID} from "node:crypto";','import {randomUUID} from "node:crypto";')
-  .replace('from "../../../../lib/choosePosts.mjs"',JSON.stringify(new URL("../lib/choosePosts.mjs",import.meta.url).href))
+  .replace('"../../../../lib/choosePosts.mjs"',JSON.stringify(new URL("../lib/choosePosts.mjs",import.meta.url).href))
   .replace('import {chooseSql,chooseDatabaseReady,sha,choiceId,privateToken,previewDemo,getPreviewService,getCurrentLikesService,notifyPaid,dispatchPaidPosts} from "../../../../lib/choosePostsServer.mjs";',
    'const {chooseSql,chooseDatabaseReady,sha,choiceId,privateToken,previewDemo,getPreviewService,getCurrentLikesService,notifyPaid,dispatchPaidPosts}=globalThis.__postsHarness;');
  globalThis.__postsAfter=[];
