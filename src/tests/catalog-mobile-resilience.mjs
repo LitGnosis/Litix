@@ -25,7 +25,7 @@ try{
  await page.getByRole("button",{name:"TikTok services"}).click();
  await page.getByText("2 match current filters",{exact:false}).waitFor();
  assert.equal(await page.locator(".service-option").count(),2);
- await page.getByRole("button",{name:"TikTok Followers"}).click();
+ await page.getByRole("button",{name:"TikTok Followers",exact:true}).click();
  await page.getByText("1 match current filters",{exact:false}).waitFor();
  assert.equal(await page.locator(".service-option").count(),1);
  assert.match(await page.locator(".service-option").innerText(),/TikTok Followers Demo/);
