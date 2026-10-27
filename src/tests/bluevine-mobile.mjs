@@ -22,7 +22,8 @@ try{
     assert.equal(request.expectedAmountCents,amount);
     assert.equal(request.email,"buyer@example.test");
     assert.equal(request.profile,"@testingcreator");
-    assert.equal(request.whatsapp,"+1 214 555 0100");
+    assert.equal(request.phone,"+1 214 555 0100");
+    assert.equal(request.smsConsent,false);
     assert.equal(request.whatsappConsent,true);
     await route.fulfill({status:201,contentType:"application/json",body:JSON.stringify({orderId,trackingToken:"mock-secret",checkoutUrl:url,payment:"awaiting_payment",status:"Awaiting Payment",pendingNotifications:{owner:true,customer:true}})});
    });
@@ -51,10 +52,16 @@ try{
    assert.equal(submitted,1);
    assert.equal(external,1,"exact hosted URL reached, intercepted without charge");
    await page.goto(base+"/bundles/confirmation?id="+orderId,{waitUntil:"networkidle"});
-   await page.getByRole("heading",{name:"Order status and WhatsApp submission"}).waitFor();
+   await page.getByRole("heading",{name:"Order confirmation and submission"}).waitFor();
    await page.getByText(orderId,{exact:false}).first().waitFor();
    await page.getByText("NOT marked paid",{exact:false}).waitFor();
-   await page.getByRole("link",{name:/Message LITIX on WhatsApp/}).waitFor();
+   await page.getByRole("link",{name:"Send Order Details via WhatsApp"}).waitFor();
+   const email=page.getByRole("link",{name:"Email My Order Details"});
+   const mailHref=await email.getAttribute("href");
+   assert.ok(mailHref.startsWith("mailto:Litixsocial@gmail.com?"));
+   assert.ok(decodeURIComponent(mailHref).includes("LITIX Order Submission — "+orderId));
+   assert.equal(await page.getByRole("link",{name:"Message LITIX on Instagram"}).getAttribute("href"),"https://www.instagram.com/litixsocial/");
+   await page.getByRole("link",{name:"Return to LITIX"}).waitFor();
    assert.equal(await page.locator('input[type="password"]').count(),0,"no customer login required");
    console.info("PASS simulated mobile",pkg,amount,url,"pending+WhatsApp+tracking; no charge");
    await ctx.close();
