@@ -25,9 +25,17 @@ export async function enabledBoosteroCards(){
  for(const approved of rows){
   const service=live.find(s=>s.id===approved.supplier_service_id);
   if(!service)continue;
-  const quantity=Math.max(Number(service.min),Math.ceil(500000/Number(approved.retail_per_1000_cents)));
-  let quote;
-  try{quote=boosteroQuote({service,approved,quantity});}catch{continue}
+  // $5 retail alone is insufficient when total supplier cost is below $1:
+  // the global 8x wholesale floor still applies at that quantity.
+  const retail=Number(approved.retail_per_1000_cents),wholesale=Number(service.wholesalePer1000USD);
+  const floorQty=Math.max(Number(service.min),Math.ceil(500000/retail));
+  const candidates=[floorQty,Math.max(floorQty,Math.ceil(1000/wholesale)),
+    Math.max(floorQty,Math.ceil(20000/wholesale))].filter(q=>Number.isSafeInteger(q)&&q<=Number(service.max));
+  let quantity=null,quote=null;
+  for(const candidate of [...new Set(candidates)].sort((a,b)=>a-b)){
+   try{quote=boosteroQuote({service,approved,quantity:candidate});quantity=candidate;break}catch{}
+  }
+  if(!quote||quantity===null)continue;
   const category=service.platform+" "+(service.kind==="followers"?"Followers":"Likes");
   cards.push({id:"boostero_"+service.id,name:service.name,category,platform:service.platform,
    type:"Default",kind:service.kind,min:quantity,supplierMin:Number(service.min),max:Number(service.max),unitStep:1,
