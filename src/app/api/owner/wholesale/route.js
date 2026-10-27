@@ -1,7 +1,7 @@
 import {ownerRequest,ownerResponse,safeOrigin} from "../../../../lib/ownerAuth.mjs";
 import {ownerWholesaleCatalog} from "../../../../lib/ownerWholesale.mjs";
 import {currentOwnerQuote,ownerOrderRows,ownerCreateOrder,ownerRefreshOrder,
- ownerPurchasesEnabled,ownerCardEnabled} from "../../../../lib/ownerWholesaleOrders.mjs";
+ ownerPurchasesEnabled,ownerCardEnabled,ownerBalance} from "../../../../lib/ownerWholesaleOrders.mjs";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 export const maxDuration=60;
@@ -16,6 +16,10 @@ export async function GET(req){
     cardPublicKey:ownerCardEnabled()?process.env.NEXT_PUBLIC_PAYKINGS_NMI_COLLECT_PUBLIC_KEY||null:null});
   }
   if(type==="orders")return ownerResponse({orders:await ownerOrderRows(session.sub)});
+  if(type==="balances"){
+   const settled=await Promise.allSettled(["smmglob","boostero"].map(async provider=>({provider,...await ownerBalance(provider)})));
+   return ownerResponse({balances:settled.map((x,i)=>x.status==="fulfilled"?{...x.value,status:"available"}:{provider:["smmglob","boostero"][i],status:"unavailable"})});
+  }
   return ownerResponse({error:"Unknown owner view"},400);
  }catch{return ownerResponse({error:"Private supplier data temporarily unavailable"},503)}
 }
