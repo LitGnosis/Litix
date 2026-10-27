@@ -135,6 +135,7 @@ export async function ownerCreateOrder(sub,data,{db=ownerDB(),getQuote=currentOw
   }catch{return {orderId,payment:"review",submitted:false,message:"Approved gateway transaction requires reconciliation. No supplier order sent."}}
  }
  const outcome=await dispatchOwnerOrder(orderId,{db,operation,getQuote});
+ await sendOwnerWholesaleNotice(orderId,{db}).catch(()=>{});
  return {orderId,payment:q.paymentMethod==="paykings"?"paid":"not_required",...outcome,costCents:q.wholesaleCents,
   totalCents:q.totalCents,feesCents:q.feeCents,provider:q.provider};
 }
@@ -160,5 +161,55 @@ export async function ownerRefreshOrder(sub,id,{db=ownerDB(),operation=ownerSupp
  const saved=await db.query(
  "update public.litix_owner_wholesale_orders set supplier_status=$3::jsonb,last_checked_at=now(),state=$4,updated_at=now() where id=$1 and owner_sub=$2 and supplier_order_id=$5 returning *",
  [id,sub,JSON.stringify(snap),state,o.supplier_order_id]);
+ if(state==="FAILED"||state==="COMPLETED")await sendOwnerWholesaleNotice(id,{db,event:state}).catch(()=>{});
  return saved[0]||o;
+}
+
+
+export async function sendOwnerWholesaleNotice(id,{db=ownerDB(),event="receipt",fetcher=fetch}={}){
+ const credential=process.env.RESEND_API_KEY||process.env.LITIX_RESEND_API_KEY;
+ if(!credential)return {sent:false,reason:"email_not_configured"};
+ const rows=await db.query(
+  "select id,provider,supplier_service_id,destination,quantity,supplier_cost_cents,total_charge_cents,payment_method,payment_state,state,supplier_order_id,supplier_status,notification_state from public.litix_owner_wholesale_orders where id=$1",[id]);
+ if(rows.length!==1)return {sent:false,reason:"order_not_found"};
+ const o=rows[0];
+ if(event==="receipt"&&o.notification_state==="SENT")return {sent:false,reason:"already_notified"};
+ const body=[
+  "PRIVATE LITIX WHOLESALE ORDER — "+String(event).toUpperCase(),
+  "Litix owner order: "+o.id,"Supplier: "+o.provider+" #"+o.supplier_service_id,
+  "Destination: "+o.destination,"Quantity: "+o.quantity,
+  "Supplier wholesale: $"+(Number(o.supplier_cost_cents)/100).toFixed(2),
+  "Card total (if applicable): $"+(Number(o.total_charge_cents)/100).toFixed(2),
+  "Payment: "+o.payment_method+" / "+o.payment_state,
+  "Supplier ID: "+(o.supplier_order_id||"Not independently confirmed"),
+  "Fulfillment: "+o.state,
+  "Provider status: "+String(o.supplier_status?.status||"Not yet reported").slice(0,80),
+  "Supplier acceptance is not independent confirmation of Instagram delivery."
+ ].join("\n");
+ try{
+  const response=await fetcher("https://api.resend.com/emails",{
+   method:"POST",cache:"no-store",redirect:"error",signal:AbortSignal.timeout(12000),
+   headers:{"authorization":"Bearer "+credential,"content-type":"application/json",
+    "Idempotency-Key":"litix-owner-wholesale-"+event+"-"+id},
+   body:JSON.stringify({from:"Litix <orders@litix.net>",to:["litixsocial@gmail.com","litgnosisllc@gmail.com"],
+    subject:"Litix private wholesale "+event+": "+id,text:body})
+  });
+  if(!response.ok)throw Error("owner_email_delivery_unconfirmed");
+  if(event==="receipt")await db.query("update public.litix_owner_wholesale_orders set notification_state='SENT' where id=$1 and notification_state='PENDING'",[id]);
+  return {sent:true};
+ }catch{return {sent:false,reason:"email_delivery_unconfirmed"}}
+}
+export async function pollOwnerOrders({db=ownerDB(),limit=12}={}){
+ if(!ownerPurchasesEnabled())return {checked:0,disabled:true};
+ const rows=await db.query("select id,owner_sub,created_at,last_checked_at,state from public.litix_owner_wholesale_orders where state='SUBMITTED' and (last_checked_at is null or last_checked_at<now()-interval '15 minutes') order by last_checked_at nulls first limit $1",[Math.min(12,limit)]);
+ let checked=0,failed=0;
+ for(const item of rows){
+  try{
+   await ownerRefreshOrder(item.owner_sub,item.id,{db});
+   if(Date.now()-new Date(item.created_at).getTime()>86400000)
+    await sendOwnerWholesaleNotice(item.id,{db,event:"delayed"}).catch(()=>{});
+   checked++;
+  }catch{failed++}
+ }
+ return {checked,failed};
 }
