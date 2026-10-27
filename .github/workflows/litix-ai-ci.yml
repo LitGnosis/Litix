@@ -1,0 +1,40 @@
+name: LITIX AI isolated API, safety and no-charge checks
+on:
+  push:
+    branches: [feature/litix-ai-openai-20261027]
+  pull_request:
+    paths:
+      - "src/lib/litixAI.mjs"
+      - "src/app/api/litix-ai/**"
+      - "src/components/LitixAI.jsx"
+      - "src/app/litix-ai.css"
+      - "src/app/layout.jsx"
+      - "src/db/migrations/20261027-litix-ai-rate-limits.sql"
+      - "src/tests/litix-ai.test.mjs"
+      - ".github/workflows/litix-ai-ci.yml"
+permissions:
+  contents: read
+jobs:
+  ai-no-charge:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: src/package-lock.json
+      - name: Install locked dependencies
+        working-directory: src
+        run: npm ci --no-audit --no-fund
+      - name: Safety checks and regression tests (no live transactions)
+        working-directory: src
+        run: node --test tests/litix-ai.test.mjs tests/checkout.test.mjs tests/guardian.test.mjs tests/owner-purchase-notifications.test.mjs tests/catalog.test.mjs tests/bluevine-bundles.test.mjs
+      - name: Verify existing Next.js production build remains intact
+        working-directory: src
+        env:
+          LITIX_AI_VERIFIED: "false"
+        run: npm run build
