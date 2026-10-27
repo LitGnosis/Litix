@@ -1,0 +1,50 @@
+name: Instagram Choose Your Posts — no-charge verification
+on:
+  push:
+    branches:
+      - feature/instagram-choose-posts-20261027
+  pull_request:
+    paths:
+      - "src/app/choose-posts/**"
+      - "src/app/api/choose-posts/**"
+      - "src/lib/choosePosts*"
+      - "src/tests/choose-posts*.mjs"
+      - "src/db/migrations/20261027-instagram-choose-posts.sql"
+      - ".github/workflows/choose-posts-ci.yml"
+permissions:
+  contents: read
+jobs:
+  no-charge-regression:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: src
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: src/package-lock.json
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Instagram multi-post, pricing, gateway, owner notifications and regression tests (mocked)
+        run: node --test tests/choose-posts.test.mjs tests/choose-posts-dispatch.test.mjs tests/checkout.test.mjs tests/collect-lifecycle.test.mjs tests/five-dollar-floor.test.mjs tests/pricing-rules.test.mjs tests/preview-checkout.test.mjs tests/owner-purchase-notifications.test.mjs tests/growth-bundles-manual.test.mjs tests/litix-ai.test.mjs tests/autolikes-coming-soon.test.mjs
+      - name: Build Next.js safely without a card or supplier call
+        run: npm run build
+      - name: Use preinstalled browser for responsive iPhone, Android and desktop checks
+        run: npm install --no-save --ignore-scripts playwright@1.56.1
+      - name: Confirm responsive grid, selection, exact price and one simulated checkout
+        run: |
+          npm run start -- --port 3100 >/tmp/litix-choose-posts-next.log 2>&1 &
+          app_pid=$!
+          trap 'kill $app_pid || true' EXIT
+          for i in $(seq 1 25); do
+            if curl -fsS -o /dev/null http://localhost:3100/choose-posts; then break; fi
+            sleep 1
+          done
+          export CHROME_PATH="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium)"
+          test -n "$CHROME_PATH"
+          node tests/choose-posts-mobile.mjs
