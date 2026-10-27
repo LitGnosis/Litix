@@ -178,3 +178,19 @@ test("repeat owner PayKings submission cannot cause a second card charge or supp
   restore();
  }
 });
+
+test("private owner API denies unauthenticated requests, role headers and wholesale API scraping before provider calls",async()=>{
+ const {GET,POST}=await import("../app/api/owner/wholesale/route.js");
+ const url="https://litix.net/api/owner/wholesale?view=catalog";
+ for(const headers of [{},{authorization:"Bearer fake-role-token","x-owner-role":"OWNER"},{cookie:"__Host-litix-wholesale-session=forged"},{email:"owner@example.com"}]){
+  const res=await GET(new Request(url,{headers}));
+  assert.equal(res.status,401);
+  const body=await res.text();
+  assert.ok(!body.includes("wholesalePer1000")&&!body.includes("pricePer1000")&&!body.includes("SMMGLOB_API_KEY"));
+ }
+ const post=await POST(new Request("https://litix.net/api/owner/wholesale",{
+  method:"POST",headers:{"origin":"https://litix.net","content-type":"application/json","x-owner-role":"OWNER"},
+  body:JSON.stringify({action:"purchase",confirmed:true,quantity:1000,provider:"boostero"})
+ }));
+ assert.equal(post.status,401);
+});
