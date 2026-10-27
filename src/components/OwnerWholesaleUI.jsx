@@ -112,6 +112,16 @@ export default function OwnerWholesaleUI(){
    setOrders(existing=>existing.map(o=>o.id===id?r.order:o));
   }catch(e){setNotice(e.message)}finally{setBusy(false)}
  }
+ async function verifySettlement(id){
+  setBusy(true);setNotice("");
+  try{
+   const result=await dataCall({action:"verifySettlement",orderId:id});
+   setNotice(result.payment==="settled"?
+    "PayKings settlement verified; supplier dispatch "+(result.submitted?"submitted":"requires review") :
+    "PayKings settlement remains unverified. No supplier request was sent.");
+   await loadOrders();
+  }catch(e){setNotice(e.message)}finally{setBusy(false)}
+ }
  return <main className="owner-wholesale">
   <header className="owner-header"><div><span className="owner-small">LITIX · CONFIDENTIAL</span><h1>Owner Wholesale Desk</h1><p>Authenticated owner access · supplier rates never appear in the public store.</p></div>
    <form method="post" action="/owner/wholesale/logout"><button type="submit" className="owner-outline">Sign out</button></form></header>
@@ -194,12 +204,14 @@ export default function OwnerWholesaleUI(){
     <td><b>{o.provider?.toUpperCase()} #{o.supplier_service_id}</b><div>{o.id}</div><div>{o.payment_method}</div></td>
     <td>{o.destination}</td><td>{o.supplier_order_id||"Unconfirmed"}</td>
     <td>{money(o.supplier_cost_cents)}<div>{Number(o.quantity).toLocaleString()} ordered</div></td>
-    <td>{o.state}<div>{o.supplier_status?.status||"No verified delivery update"}</div></td>
+    <td>{o.state}<div>Payment: {o.payment_state}{o.settlement_state==="pending"?" · awaiting settlement":""}</div><div>{o.supplier_status?.status||"No verified delivery update"}</div></td>
     <td>Original (self-recorded): {o.baseline_followers??"Not provided"}
      <div>Supplier-reported completed: {o.supplier_status?.completed??"Unknown"}</div>
      <div>Supplier-reported remaining: {o.supplier_status?.remains??"Unknown"}</div>
      <div>Refill at purchase: {o.refill_days?o.refill_days+" days":"Unspecified"} · API refill: {o.refill_eligible?"eligible":"not confirmed"} · {o.refill_method||"not advertised"}</div></td>
-    <td><button type="button" className="owner-outline" disabled={busy} onClick={()=>refreshOrder(o.id)}>Check supplier</button></td></tr>)}</tbody></table></div>}
+    <td>{o.payment_method==="paykings"&&o.settlement_state==="pending"?
+    <button type="button" className="owner-outline" disabled={busy||!data.cardEnabled} onClick={()=>verifySettlement(o.id)}>Verify settlement</button>:
+    <button type="button" className="owner-outline" disabled={busy} onClick={()=>refreshOrder(o.id)}>Check supplier</button>}</td></tr>)}</tbody></table></div>}
   </section>}
   <footer className="owner-footer"><span>Private owner dashboard · no public retail changes</span><button type="button" onClick={reload} className="owner-outline">Refresh wholesale rates</button></footer>
  </main>;
