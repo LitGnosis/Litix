@@ -46,7 +46,7 @@ test("read-only SMMGLOB services call retries once after terminated, preserves c
  assert.ok(result.body.lastSupplierSuccessAt);
  assert.equal(result.body.total,2);
  assert.deepEqual(new Set(result.body.items.map(x=>x.id)),new Set(["510","511"]));
- assert.equal(result.body.items.find(x=>x.id==="510").per1000,5);
+ assert.equal(result.body.items.find(x=>x.id==="510").per1000,9,"existing USA-targeted price remains unchanged");
  const ig=await get("platform=Instagram");
  assert.equal(ig.status,200);
  assert.equal(ig.body.total,2);
