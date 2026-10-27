@@ -1,0 +1,31 @@
+name: LITIX Guardian external uptime checks
+# NOTE: GitHub scheduled events run ONLY on the repository's default branch.
+# This workflow is staged on the production feature branch, but the schedule is
+# INACTIVE until this exact workflow is installed on default/main.
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+permissions:
+  contents: read
+  issues: write
+concurrency:
+  group: litix-guardian-external
+  cancel-in-progress: false
+jobs:
+  independent-health:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "24"
+      - name: Check Vercel AND functional TikTok catalog from GitHub infrastructure
+        working-directory: src
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          LITIX_GUARDIAN_EXTERNAL_RESEND_KEY: ${{ secrets.LITIX_GUARDIAN_EXTERNAL_RESEND_KEY }}
+        run: node scripts/guardian-external-monitor.mjs
