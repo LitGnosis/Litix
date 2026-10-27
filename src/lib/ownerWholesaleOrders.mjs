@@ -10,7 +10,7 @@ export const ownerDB=()=>{
 export const ownerPurchasesEnabled=()=>process.env.VERCEL_ENV==="production"&&
  process.env.LITIX_OWNER_WHOLESALE_PURCHASES==="true";
 export const ownerCardEnabled=()=>ownerPurchasesEnabled()&&process.env.LITIX_OWNER_PAYKINGS_ENABLED==="true"&&
- !!process.env.NMI_SECURITY_KEY&&!!process.env.LITIX_OWNER_PAYKINGS_FEE_BPS&&
+ !!process.env.NMI_SECURITY_KEY&&!!(process.env.NEXT_PUBLIC_PAYKINGS_NMI_COLLECT_PUBLIC_KEY||process.env.PAYKINGS_NMI_COLLECT_PUBLIC_KEY)&&!!process.env.LITIX_OWNER_PAYKINGS_FEE_BPS&&
  !!process.env.LITIX_OWNER_PAYKINGS_FEE_FIXED_CENTS;
 const hash=x=>createHash("sha256").update(String(x)).digest("hex");
 const money=n=>"$"+(Number(n)/100).toFixed(2);
