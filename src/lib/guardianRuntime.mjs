@@ -112,8 +112,8 @@ async function persistObservation(sql,o,at){
  if(event?.kind==="outage")next.alert_at=at.toISOString();
  if(event?.kind==="escalation")next.escalation_at=at.toISOString();
  const update=await sql.query(
-  "update public.litix_guardian_components set status=$2,consecutive_failures=$3,consecutive_successes=$4,checked_at=$5,last_healthy_at=case when $2='healthy' then $5 else last_healthy_at end,last_result=$6::jsonb,active_incident_id=$7,alert_at=$8,escalation_at=$9,updated_at=$5 where component=$1 and updated_at=$10 returning component",
-  [o.component,next.status,next.consecutive_failures,next.consecutive_successes,at.toISOString(),JSON.stringify(sanitize(o)),next.active_incident_id,next.alert_at,next.escalation_at,prev.updated_at]);
+  "update public.litix_guardian_components set status=$2,consecutive_failures=$3,consecutive_successes=$4,checked_at=$5,last_healthy_at=case when $2='healthy' then $5 else last_healthy_at end,last_result=$6::jsonb,active_incident_id=$7,alert_at=$8,escalation_at=$9,updated_at=$5 where component=$1 and status=$10 and consecutive_failures=$11 and consecutive_successes=$12 and checked_at is not distinct from $13 returning component",
+  [o.component,next.status,next.consecutive_failures,next.consecutive_successes,at.toISOString(),JSON.stringify(sanitize(o)),next.active_incident_id,next.alert_at,next.escalation_at,prev.status,prev.consecutive_failures,prev.consecutive_successes,prev.checked_at]);
  if(!update.length)return;
  if(event?.kind==="outage")await sql.query(
   "insert into public.litix_guardian_incidents(id,component,started_at,confirmed_at,severity,cause_code,summary) values($1,$2,$3,$3,'critical',$4,$5) on conflict(id) do nothing",
