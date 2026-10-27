@@ -42,8 +42,9 @@ export async function ownerBalance(provider){
  const value=Number(x.balance);if(!Number.isFinite(value)||value<0)throw Error("supplier_balance_invalid");
  return {amount:value,currency:String(x.currency||"USD").slice(0,5)};
 }
-export async function dispatchOwnerOrder(id,{db=ownerDB(),operation=ownerSupplierAPI,quoteProvider=currentOwnerQuote}={}){
+export async function dispatchOwnerOrder(id,{db=null,operation=ownerSupplierAPI,quoteProvider=currentOwnerQuote}={}){
  if(!ownerPurchasesEnabled())throw Error("owner_purchases_disabled");
+ db=db||ownerDB();
  const rows=await db.query(
   "update public.litix_owner_wholesale_orders set state='DISPATCHING',attempt_id=$2,updated_at=now() where id=$1 and state='QUEUED' and ((payment_method='supplier_balance' and payment_state='not_required') or (payment_method='paykings' and payment_state='paid' and payment_transaction_id is not null)) returning *",
   [id,randomUUID()]);
@@ -82,8 +83,9 @@ export async function dispatchOwnerOrder(id,{db=ownerDB(),operation=ownerSupplie
   return {state:"SUBMITTED",submitted:true,supplierOrderId:supplierId};
  }catch{return {state:"UNKNOWN_OUTCOME",submitted:false,requiresReview:true}}
 }
-export async function ownerCreateOrder(sub,data,{db=ownerDB(),getQuote=currentOwnerQuote,operation=ownerSupplierAPI}={}){
+export async function ownerCreateOrder(sub,data,{db=null,getQuote=currentOwnerQuote,operation=ownerSupplierAPI}={}){
  if(!ownerPurchasesEnabled())throw Error("owner_purchases_disabled");
+ db=db||ownerDB();
  const idem=String(data?.idempotencyKey||"");
  if(!/^[0-9a-f-]{36}$/i.test(idem)||data?.confirmed!==true)throw Error("final_owner_confirmation_required");
  const q=await getQuote(data);
