@@ -43,7 +43,7 @@ test("Bluevine redirects only after a server-saved UNPAID order, never after a r
  assert.match(ui,/location.assign\(d.checkoutUrl\)/);
  assert.match(ui,/d.checkoutUrl!==bluevineBundleLink\(pkg\)/);
  assert.match(ui,/type="tel" required/);
- assert.match(ui,/up to 10 posts via WhatsApp/);
+ assert.match(ui,/up to 10 post links or screenshots/);
  assert.match(ready,/LITIX_BLUEVINE_LINKS_VERIFIED/);
  assert.match(ready,/bluevineEnabled:bluevineReady/);
  assert.match(schema,/payment_provider/);
@@ -105,7 +105,7 @@ test("new unpaid Bluevine orders alert both owners and customer, never claim suc
  t.after(()=>{globalThis.fetch=oldFetch;if(oldKey===undefined)delete process.env.RESEND_API_KEY;else process.env.RESEND_API_KEY=oldKey;});
  const result=await notifyBluevineOrderPending({
   orderId:"lbg_12345678-1234-4234-8234-123456789abc",
-  email:"buyer@example.test",whatsapp:"+12145550100",profile:"@testingcreator",
+  email:"buyer@example.test",phone:"+12145550100",profile:"@testingcreator",trackingToken:"secret-for-test",
   packageName:"Instagram Launch Growth Bundle",packageId:"ig_launch",priceCents:5382,createdAt:"2026-10-26T22:00:00Z"});
  assert.deepEqual(result,{owner:true,customer:true});
  assert.equal(notices.length,2);
@@ -115,5 +115,8 @@ test("new unpaid Bluevine orders alert both owners and customer, never claim suc
  assert.match(notices[0].message.text,/12145550100/);
  assert.match(notices[1].message.text,/AWAITING PAYMENT VERIFICATION/);
  assert.match(notices[1].message.text,/up to 10 post links or screenshots/);
+ assert.match(notices[1].message.text,/token=secret-for-test/);
+ assert.match(notices[1].message.text,/litixsocial@gmail.com/);
+ assert.match(notices[1].message.text,/instagram.com\/litixsocial/);
  assert.notEqual(notices[0].key,notices[1].key);
 });
