@@ -22,6 +22,7 @@ Status: **DRAFT — Preview only, no purchases and no production merge** (Octobe
 - New owner ledger migration applied on Neon staging \`br-patient-dust-awdnby4p\`. Active-order unique index verified; **zero owner orders / supplier attempts**.
 - \`LITIX_OWNER_ALLOWED_ORIGIN\` configured for THIS feature branch Preview, pinned to
   \`https://litixfinallogocorrectedvercelready-git-dd0122-litgnosisllc-9049.vercel.app\`.
+- `LITIX_OWNER_DATABASE_URL`: configured as **Sensitive Preview environment variable scoped to PR #53** and connected to Neon staging `br-patient-dust-awdnby4p`; production database untouched.
 - Owner purchases, PayKings owner checkout and settlement verification are NOT enabled.
 
 ## Exact remaining Auth0 owner administrator action
@@ -67,3 +68,9 @@ The existing **public** PayKings checkout was NOT changed. The owner option inte
 - Supplier timeouts and uncertain gateway outcomes never trigger automatic retries.
 - Last no-charge CI: **119 tests passed, zero failed** (all owner/new settlement tests and existing payment, Boostero, Guardian, bundle, AutoLikes, AI tests). Next.js production build passed. Protected Vercel Preview READY.
 - **No real payments, supplier orders, refill requests or customer changes made.**
+
+## 2026-10-27 verification follow-up
+- Latest production `/api/health`: HTTP 200, `supplierConfigured=true`, `paykingsConfigured=true` (existing customer flow); Instagram customer catalog: HTTP 200 but marked `catalogStatus=cached`, not fresh SMMGLOB wholesale.
+- Owner Preview private endpoints `/api/owner/wholesale?view=catalog`, `balances`, `orders` returned **HTTP 401** without an authenticated owner cookie. `/owner/wholesale/login` returned HTTP 503 because complete Auth0 application settings remain missing. No wholesale fields leaked in the blocked responses.
+- Verified existing Preview Client IDs do not match across the two app configurations. Do not guess or copy incompatible client secrets. No connected Auth0 management plugin available.
+- Preview redeployed after staging-only Neon connection configuration and is **READY**; no production modifications or real orders.
