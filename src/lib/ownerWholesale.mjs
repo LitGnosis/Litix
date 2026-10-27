@@ -7,7 +7,7 @@ const only=new Set(["services","balance","add","status"]);
 export async function ownerSupplierAPI(provider,action,params={},opts={}){
  const c=api[provider];if(!c||!only.has(action))throw Error("supplier_action_denied");
  if(action==="add"&&opts.oneTimeLocked!==true)throw Error("unlocked_supplier_purchase_denied");
- if(action==="add"&&process.env.LITIX_OWNER_WHOLESALE_PURCHASES!=="true")throw Error("owner_purchases_disabled");
+ if(action==="add"&&(process.env.VERCEL_ENV!=="production"||process.env.LITIX_OWNER_WHOLESALE_PURCHASES!=="true"))throw Error("owner_purchases_disabled");
  const key=process.env[c.key];if(!key)throw Error(provider+"_credentials_not_configured");
  const endpoint=provider==="smmglob"?(process.env.SMMGLOB_API_URL||c.url):(process.env.BOOSTERO_API_URL||c.url);
  const url=new URL(endpoint);
