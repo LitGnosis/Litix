@@ -1,7 +1,7 @@
 name: Bluevine bundles isolated verification (no real payments)
 on:
   push:
-    branches: [feature/litix-bundles-three-channels-20261026]
+    branches: [feature/litix-paykings-bluevine-choice-20261026]
   pull_request:
     paths:
       - 'src/lib/bluevineBundles.mjs'
@@ -13,6 +13,8 @@ on:
       - 'src/app/bundles/**'
       - 'src/components/GrowthBundles.jsx'
       - 'src/tests/bluevine-bundles.test.mjs'
+      - 'src/tests/dual-provider-mobile.test.mjs'
+      - 'src/app/growthBundles.css'
       - '.github/workflows/bluevine-bundles-ci.yml'
 permissions:
   contents: read
@@ -45,7 +47,7 @@ jobs:
       - name: Install isolated browser automation (no payment credentials)
         working-directory: src
         run: npm install --no-save --ignore-scripts playwright@1.56.1
-      - name: Simulate 390px mobile checkout for all eight platform bundles
+      - name: Simulate 390px mobile checkout with both payment methods (no real charges)
         working-directory: src
         env:
           LITIX_BLUEVINE_LINKS_VERIFIED: 'false'
@@ -60,14 +62,15 @@ jobs:
           export CHROME_PATH="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium)"
           test -n "$CHROME_PATH"
           node tests/bluevine-mobile.mjs
+          node tests/dual-provider-mobile.test.mjs
 
       - name: Save tested source as downloadable ZIP backup
         run: |
-          git archive --format=zip --output=Litix-Bundles-Three-Channels-2026-10-26.zip HEAD
+          git archive --format=zip --output=Litix-Dual-Bundle-Checkout-2026-10-26.zip HEAD
           unzip -t Litix-Bundles-Three-Channels-2026-10-26.zip | tail -n 1
       - name: Upload audited source ZIP backup
         uses: actions/upload-artifact@v4
         with:
-          name: litix-bundles-three-channels-source
+          name: litix-dual-bundle-checkout-source
           path: Litix-Bundles-Three-Channels-2026-10-26.zip
           retention-days: 30
