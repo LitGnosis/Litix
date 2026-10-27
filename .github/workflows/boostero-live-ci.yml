@@ -5,6 +5,9 @@ on:
   pull_request:
     paths:
       - "src/lib/boostero*.mjs"
+      - "src/app/api/checkout/v1/route.js"
+      - "src/app/api/catalog/v1/route.js"
+      - "src/app/api/track/route.js"
       - "src/app/api/internal/boostero/**"
       - "src/db/migrations/20261027-boostero-fulfillment.sql"
       - "src/tests/boostero*.test.mjs"
@@ -30,6 +33,6 @@ jobs:
       - name: Install locked packages without audit
         run: npm ci --no-audit --no-fund
       - name: Test Boostero guards and existing Litix payment, pricing, email and supplier functionality with mocks
-        run: node --test tests/boostero-readonly.test.mjs tests/boostero-live-fulfillment.test.mjs tests/checkout.test.mjs tests/preview-checkout.test.mjs tests/five-dollar-floor.test.mjs tests/pricing-rules.test.mjs tests/owner-purchase-notifications.test.mjs tests/guardian.test.mjs tests/growth-bundles-manual.test.mjs tests/autolikes-coming-soon.test.mjs tests/litix-ai.test.mjs
+        run: node --test tests/boostero-readonly.test.mjs tests/boostero-live-fulfillment.test.mjs tests/boostero-integration.test.mjs tests/checkout.test.mjs tests/preview-checkout.test.mjs tests/five-dollar-floor.test.mjs tests/pricing-rules.test.mjs tests/owner-purchase-notifications.test.mjs tests/guardian.test.mjs tests/growth-bundles-manual.test.mjs tests/autolikes-coming-soon.test.mjs tests/litix-ai.test.mjs
       - name: Build Next.js with no live payment or supplier calls
         run: npm run build
