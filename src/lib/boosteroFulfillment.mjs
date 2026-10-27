@@ -153,8 +153,15 @@ export async function syncBoosteroStatuses({sql=boosteroSQL(),operation=boostero
    const res=await operation("status",{order:item.supplier_order_id});
    const name=String(res.status||"").toLowerCase();
    const state=/^completed|complete|finished$/.test(name)?"COMPLETED":/^(canceled|cancelled|failed|error)$/.test(name)?"FAILED":"SUBMITTED";
+   const snapshot={provider:"boostero",status:String(res.status||"Unknown").slice(0,80),
+    remains:res.remains??null,checked_at:new Date().toISOString()};
    await sql.query("update public.litix_boostero_fulfillment set state=$2,supplier_status=$3::jsonb,checked_at=now(),updated_at=now() where litix_order_id=$1 and supplier_order_id=$4",
-    [item.litix_order_id,state,JSON.stringify({status:String(res.status||"Unknown").slice(0,80),remains:res.remains??null,checked_at:new Date().toISOString()}),item.supplier_order_id]);
+    [item.litix_order_id,state,JSON.stringify(snapshot),item.supplier_order_id]);
+   // Keep the generic customer/owner tracking record in sync as well.
+   // Only the matching confirmed Boostero ID may be updated.
+   const customerState=state==="COMPLETED"?"completed":state==="FAILED"?"failed":"processing";
+   await sql.query("update public.litix_v2_orders set fulfillment_state=$3,last_supplier_status=$4::jsonb,updated_at=now() where id=$1 and supplier_order_id=$2 and payment_state='paid'",
+    [item.litix_order_id,String(item.supplier_order_id),customerState,JSON.stringify(snapshot)]);
    if(state==="FAILED"||(state==="SUBMITTED"&&item.attempted_at&&Date.now()-Date.parse(item.attempted_at)>86400000))
     await boosteroNotice(item.litix_order_id,null).catch(()=>{});
    checked++;
