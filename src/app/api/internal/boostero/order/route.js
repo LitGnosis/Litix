@@ -1,7 +1,8 @@
 import {after} from "next/server";
-import {boosteroProduction,boosteroFollowers} from "../../../../lib/boosteroReadOnly.mjs";
+import {randomUUID} from "node:crypto";
+import {boosteroProduction,boosteroFollowers} from "../../../../../lib/boosteroReadOnly.mjs";
 import {boosteroAdminAuthorized,boosteroProductionReady,boosteroSQL,boosteroProfile,verifyBoosteroQuote,
- boosteroOrderId,boosteroToken,hashBoostero,dispatchBoostero,boosteroNotice} from "../../../../lib/boosteroFulfillment.mjs";
+ boosteroOrderId,boosteroToken,hashBoostero,dispatchBoostero,boosteroNotice} from "../../../../../lib/boosteroFulfillment.mjs";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 export const maxDuration=60;
@@ -27,7 +28,7 @@ export async function POST(request){
   try{service=boosteroFollowers(await boosteroProduction("services")).find(s=>s.id===rows[0].supplier_service_id)}
   catch{return send({error:"Live supplier eligibility cannot be verified"},503)}
   if(!service?.apiRefillEligible)return send({error:"Supplier API refill not available; no request sent"},409);
-  const attemptId=crypto.randomUUID();
+  const attemptId=randomUUID();
   try{await sql.query("insert into public.litix_boostero_attempts(id,litix_order_id,kind,state) values($1,$2,'refill','STARTED')",[attemptId,orderId]);}
   catch{return send({error:"Refill already attempted; reconcile supplier before another request"},409)}
   try{
