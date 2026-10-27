@@ -105,11 +105,15 @@ export async function POST(request){
     [orderId,transaction]);
    if(marked.length!==1)throw Error("payment_persist_mismatch");
   }catch{
+   after(()=>boosteroNotice(orderId,null).catch(()=>{}));
    return send({orderId,payment:"paid",fulfillment:"manual_review",message:"Approved payment needs ledger reconciliation; supplier NOT submitted"},202);
   }
  }
  const attempt=await dispatchBoostero(orderId).catch(()=>({submitted:false,state:"UNKNOWN_OUTCOME",requiresReview:true}));
- after(()=>boosteroNotice(orderId,paymentMode==="card"?secret:null).catch(()=>{}));
+ after(async()=>{await Promise.allSettled([
+  boosteroNotice(orderId,paymentMode==="card"?secret:null),
+  ...(attempt.requiresReview?[boosteroNotice(orderId,null)]:[])
+ ]);});
  return send({orderId,token:paymentMode==="card"?secret:undefined,payment:paymentMode==="card"?"paid":"admin_authorized",
   fulfillment:attempt.state,supplierOrderId:attempt.supplierOrderId||null,supplierSubmitted:attempt.submitted===true,
   message:attempt.submitted?"Supplier order accepted and stored":"Order requires owner review; do NOT repeat payment or supplier add"},attempt.submitted?200:202);
