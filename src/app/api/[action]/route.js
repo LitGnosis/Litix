@@ -1,6 +1,5 @@
 import { priceCatalog, retailPer1000, supplierPricingInput, validateCheckoutQuote, servicePurchaseMinimum, minimumPurchaseQuantity, calculateOrderCents } from "../../../lib/pricing.mjs";
 import {matchesServiceQuickKind,sortServicesPer1000} from "../../../lib/catalogSort.mjs";
-import {legacyPublicServiceAllowed} from "../../../lib/publicBoosteroOnly.mjs";
 import { neon } from "@neondatabase/serverless";
 import { randomUUID, createHash } from "node:crypto";
 import { after } from "next/server";
@@ -89,6 +88,17 @@ async function refreshSupplierOrder(sql,x){
   return {live:false,warning:"Latest supplier update is temporarily unavailable. Previous order status is shown."};
  }
 }
+// Keep this check local: legacy numeric checkout is also loaded by the
+// existing standalone no-charge gateway regression harness.
+const legacyPublicServiceAllowed=service=>{
+ if(process.env.VERCEL_ENV!=="production"||process.env.LITIX_BOOSTERO_ENABLED!=="true")return true;
+ const title=String(service?.name||""),category=String(service?.category||"");
+ const label=title+" "+category;
+ if(!/\b(?:instagram|ig|tiktok|tik[\s-]*tok)\b/i.test(label))return true;
+ const followers=/\bfollowers?\b/i.test(title)||(/\bfollowers?\b/i.test(category)&&!/\b(?:views?|likes?|comments?|shares?|saves?)\b/i.test(title));
+ const likes=/\blikes?\b/i.test(title)&&!/\b(?:comment|story|livestream|live stream|live|poll|battle|reply|replies)\b/i.test(title);
+ return !(followers||likes);
+};
 const truth = v => v === true || String(v).toLowerCase() === "true" || String(v) === "1";
 const hasRefill = x => truth(x.refill) || truth(x.refillable) || truth(x.auto_refill) || truth(x.autorefill);
 const hasNoDrop = x => {
