@@ -60,3 +60,14 @@ jobs:
           export CHROME_PATH="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium)"
           test -n "$CHROME_PATH"
           node tests/bluevine-mobile.mjs
+
+      - name: Save tested source as downloadable ZIP backup
+        run: |
+          git archive --format=zip --output=Litix-Bundles-Three-Channels-2026-10-26.zip HEAD
+          unzip -t Litix-Bundles-Three-Channels-2026-10-26.zip | tail -n 1
+      - name: Upload audited source ZIP backup
+        uses: actions/upload-artifact@v4
+        with:
+          name: litix-bundles-three-channels-source
+          path: Litix-Bundles-Three-Channels-2026-10-26.zip
+          retention-days: 30
