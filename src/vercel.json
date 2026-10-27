@@ -18,6 +18,10 @@
     {
       "path": "/api/internal/boostero/cron",
       "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/owner/wholesale/cron",
+      "schedule": "*/15 * * * *"
     }
   ]
 }
