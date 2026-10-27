@@ -8,7 +8,7 @@ on:
       - "src/app/choose-posts/**"
       - "src/app/api/choose-posts/**"
       - "src/lib/choosePosts*"
-      - "src/tests/choose-posts.test.mjs"
+      - "src/tests/choose-posts*.test.mjs"
       - "src/db/migrations/20261027-instagram-choose-posts.sql"
       - ".github/workflows/choose-posts-ci.yml"
 permissions:
@@ -31,6 +31,6 @@ jobs:
       - name: Install locked dependencies
         run: npm ci --no-audit --no-fund
       - name: Instagram multi-post, pricing, gateway, owner notifications and regression tests (mocked)
-        run: node --test tests/choose-posts.test.mjs tests/checkout.test.mjs tests/collect-lifecycle.test.mjs tests/five-dollar-floor.test.mjs tests/pricing-rules.test.mjs tests/preview-checkout.test.mjs tests/owner-purchase-notifications.test.mjs tests/growth-bundles-manual.test.mjs tests/litix-ai.test.mjs tests/autolikes-coming-soon.test.mjs
+        run: node --test tests/choose-posts.test.mjs tests/choose-posts-dispatch.test.mjs tests/checkout.test.mjs tests/collect-lifecycle.test.mjs tests/five-dollar-floor.test.mjs tests/pricing-rules.test.mjs tests/preview-checkout.test.mjs tests/owner-purchase-notifications.test.mjs tests/growth-bundles-manual.test.mjs tests/litix-ai.test.mjs tests/autolikes-coming-soon.test.mjs
       - name: Build Next.js safely without a card or supplier call
         run: npm run build
