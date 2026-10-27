@@ -37,6 +37,10 @@
 @media(prefers-reduced-motion:reduce){.lxai-shell *{scroll-behavior:auto!important}}
 
 
+/* The expanding AI wrapper must never intercept taps on WhatsApp through transparent space. */
+.lxai-shell{pointer-events:none}
+.lxai-shell .lxai-panel,.lxai-shell .lxai-launcher{pointer-events:auto}
+
 /* Floating launchers only — keep AI logic and the existing WhatsApp anchor untouched.
    Desktop stacks AI above WhatsApp. Mobile places AI left, WhatsApp right. */
 @media (min-width:576px){
