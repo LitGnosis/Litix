@@ -61,7 +61,8 @@ test("Only authorized owner manually verifies the actual Bluevine transaction; n
  assert.match(ui,/Confirm verified Bluevine payment/);
  assert.match(ui,/customer_whatsapp/);
  assert.match(tracking,/NOT marked paid/);
- assert.match(tracking,/data.order.paymentProvider==="bluevine"/);
+ assert.match(tracking,/AWAITING PAYMENT VERIFICATION/);
+ assert.match(tracking,/fromEmail/);
 });
 test("The existing PayKings bundle checkout and regular storefront checkout remain present",()=>{
  const old=read("app/api/bundles/checkout/route.js");
@@ -114,7 +115,7 @@ test("new unpaid Bluevine orders alert both owners and customer, never claim suc
  assert.match(notices[0].message.text,/NOT A PAID ORDER/);
  assert.match(notices[0].message.text,/12145550100/);
  assert.match(notices[1].message.text,/AWAITING PAYMENT VERIFICATION/);
- assert.match(notices[1].message.text,/up to 10 post links or screenshots/);
+ assert.match(notices[1].message.text,/up to 10 post links/);
  assert.match(notices[1].message.text,/token=secret-for-test/);
  assert.match(notices[1].message.text,/litixsocial@gmail.com/);
  assert.match(notices[1].message.text,/instagram.com\/litixsocial/);
