@@ -18,5 +18,5 @@ try{
    .sort((a,b)=>a.rate-b.rate);
   out[p+" "+kind]={count:rows.length,candidates:rows.slice(0,11)};
  }
- console.log("BOOSTERO_CATALOG_AUDIT "+JSON.stringify(out));
+ for(const [category,data] of Object.entries(out)){console.log("BOOSTERO_CATEGORY_COUNT "+JSON.stringify({category,count:data.count}));for(const item of data.candidates.slice(0,7))console.log("BOOSTERO_SERVICE_CANDIDATE "+JSON.stringify({category,...item}));}
 }catch(e){console.log("BOOSTERO_CATALOG_AUDIT_FAILED "+String(e.message).slice(0,100));process.exitCode=1}
