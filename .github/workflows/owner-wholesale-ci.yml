@@ -11,6 +11,7 @@ on:
       - "src/lib/ownerWholesale*.mjs"
       - "src/app/api/owner/wholesale/**"
       - "src/tests/owner-wholesale-security.test.mjs"
+      - "src/tests/owner-settlement.test.mjs"
       - "src/db/migrations/20261027-owner-wholesale.sql"
       - ".github/workflows/owner-wholesale-ci.yml"
 permissions:
@@ -33,6 +34,6 @@ jobs:
       - name: Install locked dependencies
         run: npm ci --no-audit --no-fund
       - name: Auth0 token, duplicate supplier-order and protected checkout plus existing feature regression (mocked)
-        run: node --test tests/owner-wholesale-security.test.mjs tests/boostero-live-fulfillment.test.mjs tests/boostero-integration.test.mjs tests/checkout.test.mjs tests/preview-checkout.test.mjs tests/pricing-rules.test.mjs tests/five-dollar-floor.test.mjs tests/litix-ai.test.mjs tests/growth-bundles-manual.test.mjs tests/owner-purchase-notifications.test.mjs tests/guardian.test.mjs tests/autolikes-coming-soon.test.mjs
+        run: node --test tests/owner-settlement.test.mjs tests/owner-wholesale-security.test.mjs tests/boostero-live-fulfillment.test.mjs tests/boostero-integration.test.mjs tests/checkout.test.mjs tests/preview-checkout.test.mjs tests/pricing-rules.test.mjs tests/five-dollar-floor.test.mjs tests/litix-ai.test.mjs tests/growth-bundles-manual.test.mjs tests/owner-purchase-notifications.test.mjs tests/guardian.test.mjs tests/autolikes-coming-soon.test.mjs
       - name: Build isolated owner interface and existing Next.js app without real charges
         run: npm run build
