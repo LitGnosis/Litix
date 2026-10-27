@@ -146,7 +146,7 @@ export async function dispatchBoostero(orderId,{sql=boosteroSQL(),operation=boos
 }
 export async function syncBoosteroStatuses({sql=boosteroSQL(),operation=boosteroProduction,limit=20}={}){
  if(!boosteroProductionReady())return {checked:0,disabled:true};
- const orders=await sql.query("select litix_order_id,supplier_order_id,attempted_at,checked_at from public.litix_boostero_fulfillment where state in ('SUBMITTED','COMPLETED') and supplier_order_id is not null and (checked_at is null or checked_at<now()-interval '15 minutes') order by checked_at nulls first limit $1",[Math.min(20,limit)]);
+ const orders=await sql.query("select litix_order_id,supplier_order_id,attempted_at,checked_at from public.litix_boostero_fulfillment where state='SUBMITTED' and supplier_order_id is not null and (checked_at is null or checked_at<now()-interval '15 minutes') order by checked_at nulls first limit $1",[Math.min(20,limit)]);
  let checked=0,failed=0;
  for(const item of orders){
   try{
@@ -155,9 +155,10 @@ export async function syncBoosteroStatuses({sql=boosteroSQL(),operation=boostero
    const state=/^completed|complete|finished$/.test(name)?"COMPLETED":/^(canceled|cancelled|failed|error)$/.test(name)?"FAILED":"SUBMITTED";
    await sql.query("update public.litix_boostero_fulfillment set state=$2,supplier_status=$3::jsonb,checked_at=now(),updated_at=now() where litix_order_id=$1 and supplier_order_id=$4",
     [item.litix_order_id,state,JSON.stringify({status:String(res.status||"Unknown").slice(0,80),remains:res.remains??null,checked_at:new Date().toISOString()}),item.supplier_order_id]);
-   if(state==="FAILED")await boosteroNotice(item.litix_order_id,null).catch(()=>{});
+   if(state==="FAILED"||(state==="SUBMITTED"&&item.attempted_at&&Date.now()-Date.parse(item.attempted_at)>86400000))
+    await boosteroNotice(item.litix_order_id,null).catch(()=>{});
    checked++;
-  }catch{failed++;}
+  }catch{failed++;if(item.attempted_at&&Date.now()-Date.parse(item.attempted_at)>86400000)await boosteroNotice(item.litix_order_id,null).catch(()=>{});}
  }
  return {checked,failed};
 }
