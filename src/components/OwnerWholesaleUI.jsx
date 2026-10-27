@@ -191,7 +191,7 @@ export default function OwnerWholesaleUI(){
     <td>Original (self-recorded): {o.baseline_followers??"Not provided"}
      <div>Supplier-reported completed: {o.supplier_status?.completed??"Unknown"}</div>
      <div>Supplier-reported remaining: {o.supplier_status?.remains??"Unknown"}</div>
-     <div>Refill: see current supplier listing; availability not guaranteed</div></td>
+     <div>Refill at purchase: {o.refill_days?o.refill_days+" days":"Unspecified"} · API refill: {o.refill_eligible?"eligible":"not confirmed"} · {o.refill_method||"not advertised"}</div></td>
     <td><button type="button" className="owner-outline" disabled={busy} onClick={()=>refreshOrder(o.id)}>Check supplier</button></td></tr>)}</tbody></table></div>}
   </section>}
   <footer className="owner-footer"><span>Private owner dashboard · no public retail changes</span><button type="button" onClick={reload} className="owner-outline">Refresh wholesale rates</button></footer>
