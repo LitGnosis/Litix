@@ -1,10 +1,14 @@
 name: Bluevine bundles isolated verification (no real payments)
 on:
   push:
-    branches: [feature/bluevine-bundle-payments-20261026]
+    branches: [feature/litix-bundles-three-channels-20261026]
   pull_request:
     paths:
       - 'src/lib/bluevineBundles.mjs'
+      - 'src/lib/bluevineNotifications.mjs'
+      - 'src/lib/bundlePhone.mjs'
+      - 'src/lib/growthBundles.mjs'
+      - 'src/tests/bundle-phone.test.mjs'
       - 'src/app/api/bundles/bluevine/**'
       - 'src/app/bundles/**'
       - 'src/components/GrowthBundles.jsx'
@@ -32,7 +36,7 @@ jobs:
         working-directory: src
         env:
           LITIX_BLUEVINE_LINKS_VERIFIED: 'false'
-        run: node --test tests/bluevine-bundles.test.mjs tests/growth-bundles-manual.test.mjs tests/growth-bundles-paid-mock.test.mjs tests/growth-bundles-route-negative.test.mjs tests/owner-purchase-notifications.test.mjs
+        run: node --test tests/bluevine-bundles.test.mjs tests/bundle-phone.test.mjs tests/growth-bundles-manual.test.mjs tests/growth-bundles-paid-mock.test.mjs tests/growth-bundles-route-negative.test.mjs tests/owner-purchase-notifications.test.mjs
       - name: Compile Next.js without activating Bluevine buttons
         working-directory: src
         env:
@@ -56,3 +60,14 @@ jobs:
           export CHROME_PATH="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium)"
           test -n "$CHROME_PATH"
           node tests/bluevine-mobile.mjs
+
+      - name: Save tested source as downloadable ZIP backup
+        run: |
+          git archive --format=zip --output=Litix-Bundles-Three-Channels-2026-10-26.zip HEAD
+          unzip -t Litix-Bundles-Three-Channels-2026-10-26.zip | tail -n 1
+      - name: Upload audited source ZIP backup
+        uses: actions/upload-artifact@v4
+        with:
+          name: litix-bundles-three-channels-source
+          path: Litix-Bundles-Three-Channels-2026-10-26.zip
+          retention-days: 30

@@ -49,7 +49,7 @@ test("all customer purchase entry points explain WhatsApp review and prevent def
  assert.match(checkout,/type="checkbox" required/);
  assert.match(receipt,/data\.instructions/);
  assert.match(receipt,/whatsappUrl/);
- assert.match(BUNDLE_INSTRUCTIONS,/up to 10 posts/);
+ assert.match(BUNDLE_INSTRUCTIONS,/up to 10 post/);
  assert.doesNotMatch(order,/action:"add"|action:'add'|smmglob\.com\/api\/v2/);
  assert.match(order,/verifyNmiSettlement/);
  assert.match(order,/on conflict\(idempotency_key\) do nothing/);
