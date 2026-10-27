@@ -8,6 +8,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 let servicesCache = [], updated = 0, catalogFlight = null;
+let supplierRawCount = 0, catalogLastError = null;
 const send = (v,s=200) => Response.json(v,{status:s,headers:{"cache-control":"no-store","x-content-type-options":"nosniff"}});
 const hash = v => createHash("sha256").update(String(v)).digest("hex");
 const conn = () => process.env.LITIX_V2_DATABASE_URL || process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.POSTGRES_PRISMA_URL;
@@ -29,7 +30,7 @@ const bounded = (v,n=120) => String(v??"").trim().slice(0,n);
 async function smm(action,params={}) {
  const u = new URL(process.env.SMMGLOB_API_URL || "https://smmglob.com/api/v2");
  if (!process.env.SMMGLOB_API_KEY || u.protocol!=="https:" || !["smmglob.com","www.smmglob.com"].includes(u.hostname)) throw Error("SMMGLOB supplier configuration invalid");
- const r = await fetch(u,{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded"},body:new URLSearchParams({key:process.env.SMMGLOB_API_KEY,action,...params}),cache:"no-store",signal:AbortSignal.timeout(action==="services"?8000:16000)});
+ const r = await fetch(u,{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded"},body:new URLSearchParams({key:process.env.SMMGLOB_API_KEY,action,...params}),cache:"no-store",signal:AbortSignal.timeout(action==="services"?18000:16000)});
  if(!r.ok) throw Error("Supplier returned HTTP "+r.status);
  const obj=await r.json(); if(obj?.error) throw Error(String(obj.error).slice(0,160)); return obj;
 }
@@ -78,8 +79,17 @@ const hasNoDrop = x => {
 };
 async function refreshServices(allowStale=true){
  try {
-  const s=await smm("services");
-  if(!Array.isArray(s))throw Error("Invalid service response");
+  let s;
+  try{s=await smm("services")}
+  catch(error){
+   // Safe retry ONLY for the read-only "services" action when a supplier
+   // connection drops or times out. No retries of add/order/payment actions.
+   const message=String(error?.message||error);
+   if(!/terminated|timeout|fetch failed|network|ECONNRESET|socket hang up/i.test(message))throw error;
+   console.warn("SMMGLOB read-only services connection interrupted; retrying once",{error:message.slice(0,90)});
+   s=await smm("services");
+  }
+  if(!Array.isArray(s)||s.length===0)throw Error("Invalid or empty supplier service response");
   const eligible=priceCatalog(s).items.filter(x=>{
    if(["33771","33772","33773"].includes(String(x.service)))return false;
    const label=[x.name,x.category,x.description,x.desc,x.platform].map(v=>String(v||"")).join(" ");
@@ -90,9 +100,12 @@ async function refreshServices(allowStale=true){
    const socialRequested=/(?:instagram|(?:^|[^a-z])ig(?:[^a-z]|$)|tik[\s-]*tok)/i.test(label)&&/\b(?:followers?|likes?|views?|shares?|reposts?|comments?)\b/i.test(label);return x.service!=null&&Number.isFinite(Number(x.rate))&&Number(x.rate)>0&&Number(x.min)>0&&Number(x.max)>=Number(x.min)&&regular&&(socialRequested||(usa&&!mixedGeography&&hasRefill(x)&&hasNoDrop(x)));
   });
   servicesCache=eligible;
+  supplierRawCount=s.length;
+  catalogLastError=null;
   updated=Date.now();
   return servicesCache;
  } catch(e) {
+  catalogLastError=String(e?.message||e).slice(0,100);
   if(allowStale&&servicesCache.length&&Date.now()-updated<1200000)return servicesCache;
   throw e;
  }
@@ -154,8 +167,13 @@ export async function GET(req){
   // Strict category quick filters stay separate from free-text search.
   const quickKind=["followers","likes"].includes(String(p.get("kind")||"").toLowerCase())?String(p.get("kind")).toLowerCase():"";
   try{const all=await getServices(),filtered=sortServicesPer1000(all.filter(x=>(!cat||String(x.category||"Other")===cat)&&(!platform||platform==="All platforms"||platformName(x)===platform)&&(!term||[x.service,x.name,x.category].some(z=>String(z||"").toLowerCase().includes(term)))&&
-    (!quickKind||matchesServiceQuickKind(x,quickKind))),platformRank,retailPer1000);const goals={"Grow audience":/followers?|profile/i,"Increase engagement":/likes?|comments?|views?|saves?/i,"Launch a product":/shares?|views?|saves?/i,"Generate leads":/profile|views?/i,"Build brand awareness":/views?|shares?/i};const matcher=goals[p.get("goal")];const recommendations=matcher&&["7","30","90"].includes(p.get("horizon"))?filtered.filter(x=>/^default$/i.test(String(x.type||"Default"))&&matcher.test(String(x.name))).slice(0,3).map(shape):[];return send({recommendations,items:filtered.slice((page-1)*24,page*24).map(shape),categories:[...new Set(all.map(x=>String(x.category||"Other")))].sort(),total:filtered.length,allCount:all.length,page})}
-  catch(e){console.error("SMMGLOB catalog unavailable",String(e?.message||"").slice(0,100));return send({error:"Live supplier catalog unavailable",items:[],categories:[],total:0},503)}
+    (!quickKind||matchesServiceQuickKind(x,quickKind))),platformRank,retailPer1000);const goals={"Grow audience":/followers?|profile/i,"Increase engagement":/likes?|comments?|views?|saves?/i,"Launch a product":/shares?|views?|saves?/i,"Generate leads":/profile|views?/i,"Build brand awareness":/views?|shares?/i};const matcher=goals[p.get("goal")];const recommendations=matcher&&["7","30","90"].includes(p.get("horizon"))?filtered.filter(x=>/^default$/i.test(String(x.type||"Default"))&&matcher.test(String(x.name))).slice(0,3).map(shape):[];return send({recommendations,items:filtered.slice((page-1)*24,page*24).map(shape),categories:[...new Set(all.map(x=>String(x.category||"Other")))].sort(),total:filtered.length,allCount:all.length,page,
+   // The raw count is from a successful read-only SMMGLOB services response;
+   // 'cached' never claims a live upstream connection.
+   catalogStatus:!catalogLastError&&Date.now()-updated<300000?"live":"cached",
+   lastSupplierSuccessAt:updated?new Date(updated).toISOString():null,
+   supplierRawCount})}
+  catch(e){console.error("SMMGLOB catalog unavailable",String(e?.message||"").slice(0,100));return send({error:"Live supplier catalog unavailable",items:[],categories:[],total:0,allCount:0,catalogStatus:"unavailable",retryable:true},503)}
  }
  if(op==="track"){
   const id=bounded(p.get("id"),80),secret=bounded(p.get("token"),150);
