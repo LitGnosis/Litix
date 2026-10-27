@@ -122,6 +122,21 @@ async function persistObservation(sql,o,at){
  if(event?.kind==="escalation")await sql.query("update public.litix_guardian_incidents set last_seen_at=$2 where id=$1",[event.id,at.toISOString()]);
  if(event)await queueAlert(sql,o.component,event,event.id||incidentId,o,at);
 }
+// Injectable transport allows preview fault and recovery email tests without
+// sending a real email. The production cron supplies the real Resend transport.
+export async function deliverGuardianNotice({eventKey,payload,apiKey,transport=fetch}){
+ const p=payload;
+ const subject="LITIX Guardian "+(p.event==="recovery"?"RECOVERY":p.event==="escalation"?"ESCALATION":"OUTAGE")+" — "+p.component;
+ const text=["Litix Guardian diagnostic alert","Time (UTC): "+p.time,"Component: "+p.component,"Event: "+p.event,
+  "Code: "+p.code,"Details: "+p.detail,"Probable cause: "+p.probableCause,
+  "Suggested repair: "+p.repair,"View protected dashboard: https://www.litix.net/guardian/admin",
+  "No payment or order changes were performed."].join("\\n");
+ const result=await transport("https://api.resend.com/emails",{method:"POST",
+  headers:{"authorization":"Bearer "+apiKey,"content-type":"application/json","idempotency-key":eventKey},
+  body:JSON.stringify({from:"Litix Guardian <orders@litix.net>",to:["Litixsocial@gmail.com"],subject,text}),
+  cache:"no-store",signal:AbortSignal.timeout(8000)});
+ return result.ok;
+}
 async function sendQueuedAlerts(sql){
  if(process.env.VERCEL_ENV!=="production")return {sent:0,disabled:"preview"};
  const key=process.env.RESEND_API_KEY||process.env.LITIX_RESEND_API_KEY;
@@ -131,15 +146,9 @@ async function sendQueuedAlerts(sql){
  let sent=0;
  for(const entry of rows){
   const p=entry.payload;
-  const subject="LITIX Guardian "+(p.event==="recovery"?"RECOVERY":p.event==="escalation"?"ESCALATION":"OUTAGE")+" — "+p.component;
-  const text=["Litix Guardian diagnostic alert","Time (UTC): "+p.time,"Component: "+p.component,"Event: "+p.event,
-   "Code: "+p.code,"Details: "+p.detail,"Probable cause: "+p.probableCause,"Suggested repair: "+p.repair,
-   "View protected dashboard: https://www.litix.net/guardian/admin","No payment or order changes were performed."].join("\n");
   try{
-   const r=await fetch("https://api.resend.com/emails",{method:"POST",headers:{"authorization":"Bearer "+key,"content-type":"application/json","idempotency-key":entry.event_key},
-    body:JSON.stringify({from:"Litix Guardian <orders@litix.net>",to:["Litixsocial@gmail.com"],subject,text}),
-    cache:"no-store",signal:AbortSignal.timeout(8000)});
-   if(!r.ok)throw Error("EMAIL_HTTP_"+r.status);
+   const success=await deliverGuardianNotice({eventKey:entry.event_key,payload:p,apiKey:key});
+   if(!success)throw Error("EMAIL_DELIVERY_FAILED");
    await sql.query("update public.litix_guardian_alert_outbox set status='sent',sent_at=now() where event_key=$1",[entry.event_key]);sent++;
   }catch(e){
    await sql.query("update public.litix_guardian_alert_outbox set status='pending' where event_key=$1",[entry.event_key]);
