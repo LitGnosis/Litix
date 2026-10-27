@@ -36,7 +36,7 @@ try{
  await page.getByText("2 match current filters",{exact:false}).waitFor();
  assert.equal(await page.locator(".service-option").count(),2);
  await page.getByRole("textbox",{name:"Service search"}).fill("nonsense");
- await page.getByText("no services match these filters").waitFor();
+ await page.locator(".catalog-status").getByText("no services match these filters").waitFor();
  assert.equal(await page.locator(".service-option").count(),0);
  assert.equal(await page.getByText("314 Litix services available",{exact:false}).count(),1);
  await page.getByRole("textbox",{name:"Service search"}).fill("");
