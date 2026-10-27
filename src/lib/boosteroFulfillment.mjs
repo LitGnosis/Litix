@@ -1,8 +1,8 @@
 // Isolated Boostero fulfillment; no import into existing storefront or SMMGLOB checkout.
 import {neon} from "@neondatabase/serverless";
 import {createHash,randomUUID,timingSafeEqual} from "node:crypto";
-import {boosteroProduction,boosteroFollowers} from "./boosteroReadOnly.mjs";
-import {proposeServiceRetail,minimumRetailCentsForWholesale,calculateOrderCents} from "./pricing.mjs";
+import {boosteroProduction,boosteroCompatibleServices} from "./boosteroReadOnly.mjs";
+import {proposeServiceRetail,minimumRetailCentsForWholesale,calculateOrderCents,proposeGeneralRetail,validateCheckoutQuote} from "./pricing.mjs";
 
 export const boosteroDatabaseURL=()=>process.env.LITIX_BOOSTERO_DATABASE_URL||process.env.LITIX_V2_DATABASE_URL||
  process.env.DATABASE_URL||process.env.POSTGRES_URL||"";
@@ -36,9 +36,24 @@ export function boosteroProfile(input,platform){
  if(["p","reel","stories","explore","api"].includes(username.toLowerCase()))return null;
  return "https://"+origin+"/"+(platform==="tiktok"?"@":"")+username+"/";
 }
+export function boosteroDestination(input,platform,kind="followers"){
+ if(kind==="followers")return boosteroProfile(input,platform);
+ if(kind!=="likes"||!["instagram","tiktok"].includes(platform))return null;
+ let u;try{u=new URL(String(input||"").trim())}catch{return null}
+ const host=u.hostname.toLowerCase().replace(/^www\./,"");
+ if(u.protocol!=="https:"||host!==(platform==="instagram"?"instagram.com":"tiktok.com")||
+   u.username||u.password||u.port||u.search||u.hash)return null;
+ if(platform==="instagram"){
+  const m=u.pathname.match(/^\/(p|reel)\/([a-zA-Z0-9_-]{5,32})\/?$/);
+  return m?"https://www.instagram.com/"+m[1]+"/"+m[2]+"/":null;
+ }
+ const m=u.pathname.match(/^\/@([a-zA-Z0-9._]{2,24})\/video\/([0-9]{10,30})\/?$/);
+ return m?"https://www.tiktok.com/@"+m[1]+"/video/"+m[2]:null;
+}
 export function boosteroQuote({service,approved,quantity}){
  if(!approved||approved.enabled!==true)throw Error("boostero_service_not_approved");
- if(String(service.id)!==String(approved.supplier_service_id)||service.platform.toLowerCase()!==approved.platform)
+ if(String(service.id)!==String(approved.supplier_service_id)||service.platform.toLowerCase()!==approved.platform||
+   String(service.kind||"followers")!==String(approved.service_kind||"followers"))
   throw Error("boostero_service_mapping_changed");
  const qty=Number(quantity),step=1,min=Number(service.min),max=Number(service.max);
  if(!Number.isSafeInteger(qty)||!Number.isSafeInteger(min)||!Number.isSafeInteger(max)||qty<min||qty>max||(qty-min)%step)
@@ -47,26 +62,32 @@ export function boosteroQuote({service,approved,quantity}){
  if(!Number.isFinite(wholesalePer1000)||wholesalePer1000<=0||
     wholesalePer1000>Number(approved.wholesale_ceiling_per_1000))
   throw Error("boostero_wholesale_changed");
- const repriced=proposeServiceRetail({name:service.name,category:service.category,refill:service.refillClaim},wholesalePer1000);
- if(repriced.action!=="reprice")throw Error("boostero_service_breaks_litix_retail_ladder");
+ const kind=String(approved.service_kind||"followers");
+ const repriced=kind==="followers"
+  ?proposeServiceRetail({name:service.name,category:service.category,refill:service.refillClaim},wholesalePer1000)
+  :proposeGeneralRetail(wholesalePer1000,Number(approved.retail_per_1000_cents)/100);
+ if(!["reprice","unchanged"].includes(repriced.action))throw Error("boostero_service_breaks_litix_retail_ladder");
  const retailPer1000Cents=Number(approved.retail_per_1000_cents);
  // Never automatically reprice, and never sell below currently required margin.
- if(!Number.isSafeInteger(retailPer1000Cents)||retailPer1000Cents<repriced.retailPer1000Cents||
-    (retailPer1000Cents>1500&&!["365","lifetime"].includes(repriced.classification.tier)))
+ if(!Number.isSafeInteger(retailPer1000Cents)||retailPer1000Cents<(kind==="followers"?repriced.retailPer1000Cents:repriced.retailCents)||
+    (kind==="followers"&&retailPer1000Cents>1500&&!["365","lifetime"].includes(repriced.classification.tier)))
   throw Error("boostero_retail_not_approved_for_current_cost");
  const amountCents=calculateOrderCents(qty,retailPer1000Cents/100);
  const costUSD=wholesalePer1000*qty/1000;
  const wholesaleCents=Math.ceil(costUSD*100-1e-8);
  const floor=minimumRetailCentsForWholesale(costUSD);
- if(amountCents<500||!Number.isSafeInteger(amountCents)||amountCents>100000000||floor===null||amountCents<floor)
+ const validated=validateCheckoutQuote({actualSupplierWholesaleUsd:costUSD,customerSubtotalCents:amountCents,
+  displayedPer1000:retailPer1000Cents/100,quantity:qty,
+  service:{name:service.name,category:service.category,refill:service.refillClaim}});
+ if(amountCents<500||!Number.isSafeInteger(amountCents)||amountCents>100000000||floor===null||amountCents<floor||!validated.allowed)
   throw Error("boostero_five_dollar_or_margin_floor_not_met");
  return {quantity:qty,amountCents,wholesaleCents,costUSD,retailPer1000Cents,platform:approved.platform,
-  serviceId:String(service.id),serviceName:String(service.name)};
+  serviceId:String(service.id),serviceName:String(service.name),kind};
 }
 export async function verifyBoosteroQuote(serviceId,quantity,sql=boosteroSQL()){
  const enabled=await sql.query("select * from public.litix_boostero_services where supplier_service_id=$1 and enabled=true",[serviceId]);
  if(enabled.length!==1)throw Error("boostero_service_not_explicitly_enabled");
- const rows=boosteroFollowers(await boosteroProduction("services"));
+ const rows=boosteroCompatibleServices(await boosteroProduction("services"));
  const service=rows.find(x=>x.id===serviceId);
  if(!service)throw Error("boostero_live_service_not_found");
  return {quote:boosteroQuote({service,approved:enabled[0],quantity}),service};
