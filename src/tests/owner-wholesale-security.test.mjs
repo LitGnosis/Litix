@@ -121,3 +121,60 @@ test("one durable supplier add at most; ambiguous rejection is not retried",asyn
   assert.equal(b.submitted,false);assert.equal(adds,1);assert.equal(cardCharges,0);
  }finally{restore()}
 });
+
+test("repeat owner PayKings submission cannot cause a second card charge or supplier purchase",async()=>{
+ configured();
+ const originalFetch=globalThis.fetch;
+ const otherKeys=["NMI_SECURITY_KEY","NEXT_PUBLIC_PAYKINGS_NMI_COLLECT_PUBLIC_KEY","LITIX_OWNER_PAYKINGS_FEE_BPS","LITIX_OWNER_PAYKINGS_FEE_FIXED_CENTS"];
+ const existing=Object.fromEntries(otherKeys.map(x=>[x,process.env[x]]));
+ Object.assign(process.env,{VERCEL_ENV:"production",LITIX_OWNER_WHOLESALE_PURCHASES:"true",
+  LITIX_OWNER_PAYKINGS_ENABLED:"true",NMI_SECURITY_KEY:"fake-key-not-used-live",
+  NEXT_PUBLIC_PAYKINGS_NMI_COLLECT_PUBLIC_KEY:"fake-collectjs-public",
+  LITIX_OWNER_PAYKINGS_FEE_BPS:"290",LITIX_OWNER_PAYKINGS_FEE_FIXED_CENTS:"30"});
+ let gatewayCalls=0,supplierCalls=0,insertCount=0,state="QUEUED";
+ globalThis.fetch=async url=>{
+  if(!String(url).includes("paykings.transactiongateway.com"))throw Error("Unexpected real network");
+  gatewayCalls++;return new Response("response=1&transactionid=FAKE_GATEWAY_123",{status:200});
+ };
+ const orderId="low_aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+ const db={query:async(sql,args=[])=>{
+  if(sql.startsWith("insert into public.litix_owner_wholesale_orders")){
+   insertCount++;return insertCount===1?[{id:orderId}]:[];
+  }
+  if(sql.startsWith("update public.litix_owner_wholesale_orders set payment_state='paid'"))return [{id:orderId}];
+  if(sql.startsWith("update public.litix_owner_wholesale_orders set state='DISPATCHING'")){
+   if(state!=="QUEUED")return [];state="DISPATCHING";
+   return [{id:orderId,attempt_id:"unique-attempt",provider:"smmglob",supplier_service_id:"123",
+    destination:"https://www.instagram.com/test/",quantity:1000,supplier_cost_cents:1000,
+    total_charge_cents:1059,payment_method:"paykings",payment_state:"paid"}];
+  }
+  if(sql.startsWith("insert into public.litix_owner_wholesale_attempts"))return [];
+  if(sql.startsWith("update public.litix_owner_wholesale_orders set state='SUBMITTED'")){
+   state="SUBMITTED";return [{id:orderId}];
+  }
+  return [];
+ }};
+ const quote={provider:"smmglob",serviceId:"123",quantity:1000,
+  service:{id:"123",name:"Instagram Followers",refillDays:30,refillEligible:false,refillMethod:"manual advertised"},
+  destination:"https://www.instagram.com/test/",wholesalePer1000:10,wholesaleCents:1000,
+  feeCents:59,totalCents:1059,paymentMethod:"paykings"};
+ const getQuote=async()=>quote;
+ const operation=async (provider,action)=>{
+  if(action==="balance")return {balance:"40.00"};
+  if(action==="add"){supplierCalls++;return {order:554433}}
+  throw Error("Unexpected supplier operation");
+ };
+ const body={provider:"smmglob",serviceId:"123",quantity:1000,profile:"@test",paymentMethod:"paykings",
+  expectedWholesaleCents:1000,expectedTotalCents:1059,paymentToken:"fake-tokenized-abc",
+  idempotencyKey:"baaaaaaa-1111-4111-8111-111111111111",confirmed:true};
+ try{
+  const first=await ownerCreateOrder("auth0|exact_owner_123",body,{db,getQuote,operation});
+  assert.equal(first.payment,"paid");assert.equal(first.state,"SUBMITTED");
+  assert.equal(supplierCalls,1);assert.equal(gatewayCalls,1);
+  await assert.rejects(ownerCreateOrder("auth0|exact_owner_123",body,{db,getQuote,operation}),/duplicate_purchase_blocked/);
+  assert.equal(supplierCalls,1);assert.equal(gatewayCalls,1);
+ }finally{
+  globalThis.fetch=originalFetch;Object.entries(existing).forEach(([k,v])=>v==null?delete process.env[k]:process.env[k]=v);
+  restore();
+ }
+});
