@@ -31,6 +31,7 @@ try{
    await page.route("**/api/bundles/order?*",route=>route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({order:{id:orderId,package:(platform==="ig"?"Instagram ":"TikTok ")+tier+" Growth Bundle",payment:"awaiting_payment",paymentProvider:"bluevine",status:"Awaiting Payment"},posts:[],deliveries:[],instructions:"Send up to 10 post links or screenshots through WhatsApp.",whatsappUrl:"https://wa.me/12145550100?text=order"})}));
    await page.goto(base+"/bundles",{waitUntil:"networkidle"});
    assert.equal(await page.getByRole("link",{name:"Pay with Bluevine"}).count(),4,"all four cards retain Bluevine buttons");
+   assert.equal(await page.getByText("Pay with PayKings — Unavailable").count(),4,"unapproved PayKings choices are unavailable");
    if(platform==="tt")await page.getByRole("button",{name:"TikTok"}).click();
    const link=page.locator('a.lg-bundle-bluevine[href*="package='+pkg+'"]');
    assert.equal(await link.count(),1);
