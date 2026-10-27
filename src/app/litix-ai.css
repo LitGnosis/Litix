@@ -44,6 +44,8 @@
  .lxai-panel{height:min(610px,calc(100dvh - 175px));min-height:0}
 }
 @media (max-width:575px){
+ /* Keep the layout viewport at the actual iPhone width even if another section overflows. */
+ html,body{max-width:100%;overflow-x:clip}
  .lxai-shell{
   left:max(10px,env(safe-area-inset-left));
   right:auto;
