@@ -115,7 +115,7 @@ export async function POST(request){
       method:"POST",
       headers:{"authorization":"Bearer "+process.env.OPENAI_API_KEY,"content-type":"application/json"},
       body:JSON.stringify({model:process.env.LITIX_AI_MODEL||"gpt-6-luna",
-        store:false,max_output_tokens:550,temperature:0.2,
+        store:false,max_output_tokens:600,reasoning:{effort:"none"},
         instructions:POLICY+"\nVERIFIED STORE DATA (may be incomplete or stale):\n"+facts,
         input:[...cleanConversation(body?.history),{role:"user",content:cleanMessage}]}),
       cache:"no-store",signal:AbortSignal.timeout(21000)
