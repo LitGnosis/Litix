@@ -17,7 +17,7 @@ create table if not exists public.litix_owner_wholesale_orders (
  supplier_cost_cents integer not null check(supplier_cost_cents>0),
  total_charge_cents integer not null check(total_charge_cents>0),
  payment_method text not null check(payment_method in('supplier_balance','paykings')),
- payment_state text not null check(payment_state in('not_required','processing','paid','review','declined')),
+ payment_state text not null check(payment_state in('not_required','processing','approved_pending_settlement','paid','review','declined')),
  payment_transaction_id text unique,
  state text not null default 'QUEUED' check(state in('QUEUED','DISPATCHING','SUBMITTED','COMPLETED','REJECTED','UNKNOWN_OUTCOME','FAILED')),
  supplier_order_id text,
@@ -42,3 +42,8 @@ create table if not exists public.litix_owner_wholesale_attempts (
  finished_at timestamptz,
  unique(order_id,action)
 );
+
+-- Prevent two parallel idempotency keys buying the same active owner intent.
+create unique index if not exists litix_owner_wholesale_active_intent_unique
+ on public.litix_owner_wholesale_orders(owner_sub,fingerprint)
+ where state in ('QUEUED','DISPATCHING','SUBMITTED','UNKNOWN_OUTCOME');
