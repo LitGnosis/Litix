@@ -35,3 +35,54 @@
 .lxai-sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 @media(max-width:480px){.lxai-shell{right:10px;bottom:max(10px,env(safe-area-inset-bottom))}.lxai-panel{width:calc(100vw - 20px);height:min(610px,calc(100dvh - 88px))}.lxai-launcher{min-height:48px;padding:8px 13px}.lxai-head{padding:11px}.lxai-badge{font-size:9px}}
 @media(prefers-reduced-motion:reduce){.lxai-shell *{scroll-behavior:auto!important}}
+
+
+/* The expanding AI wrapper must never intercept taps on WhatsApp through transparent space. */
+.lxai-shell{pointer-events:none}
+.lxai-shell .lxai-panel,.lxai-shell .lxai-launcher{pointer-events:auto}
+
+/* Floating launchers only — keep AI logic and the existing WhatsApp anchor untouched.
+   Desktop stacks AI above WhatsApp. Mobile places AI left, WhatsApp right. */
+@media (min-width:576px){
+ .lxai-shell{bottom:max(94px,calc(env(safe-area-inset-bottom) + 94px))}
+ .lxai-panel{height:min(610px,calc(100dvh - 175px));min-height:0}
+}
+@media (max-width:575px){
+ /* Keep the layout viewport at the actual iPhone width even if another section overflows. */
+ html,body{max-width:100%;overflow-x:clip}
+ .lxai-shell{
+  left:max(10px,env(safe-area-inset-left));
+  right:auto;
+  bottom:max(18px,calc(env(safe-area-inset-bottom) + 12px));
+  max-width:calc(100vw - 24px);
+ }
+ .lxai-launcher{
+  margin-left:0;
+  min-height:52px;
+  padding:8px 11px;
+  gap:6px;
+  font-size:12px;
+  white-space:nowrap;
+ }
+ .lxai-orb{width:26px;height:26px;flex:0 0 26px;font-size:17px}
+ .whatsapp-float{
+  right:max(14px,env(safe-area-inset-right));
+  bottom:max(18px,calc(env(safe-area-inset-bottom) + 12px));
+ }
+ .lxai-panel{
+  width:min(390px,calc(100vw - 28px));
+  max-width:calc(100vw - 28px);
+  height:min(610px,calc(100dvh - max(18px,calc(env(safe-area-inset-bottom) + 12px)) - 52px - 18px - max(16px,env(safe-area-inset-top))));
+  min-height:0;
+  margin-bottom:18px;
+ }
+ /* Leave scrollable breathing room to reach form actions and footer links. */
+ html{scroll-padding-bottom:calc(100px + env(safe-area-inset-bottom))}
+ body{padding-bottom:calc(88px + env(safe-area-inset-bottom))}
+}
+@media (max-width:360px){
+ .lxai-launcher{font-size:11px;padding:8px 9px;gap:5px}
+ .lxai-orb{width:23px;height:23px;flex-basis:23px}
+ .whatsapp-float{padding:11px;font-size:12px;gap:7px}
+ .whatsapp-icon{width:22px;height:22px}
+}
