@@ -42,11 +42,11 @@ try{
    await page.locator('input[placeholder="@yourprofile"]').fill("@testingcreator");
    await page.locator('input[type="tel"]').fill("+1 214 555 0100");
    await page.locator('input[type="checkbox"][required]').check();
-   const disabled=await page.getByRole("button",{name:/Pay with Bluevine/}).isDisabled();
+   const disabled=await page.getByRole("button",{name:/^Pay with Bluevine —/}).isDisabled();
    assert.equal(disabled,false);
    page.on("pageerror",err=>console.error("MOBILE PAGE ERROR",pkg,err.message));
    page.on("console",msg=>{if(msg.type()==="error")console.error("MOBILE CONSOLE",pkg,msg.text().slice(0,200))});
-   await page.getByRole("button",{name:/Pay with Bluevine/}).click();
+   await page.getByRole("button",{name:/^Pay with Bluevine —/}).click();
    await page.waitForTimeout(500);
    console.info("handoff diagnostic",pkg,{submitted,external,current:page.url(),notice:(await page.locator('[role="status"]').allTextContents()).slice(-3)});
    await page.waitForURL(url,{timeout:8000});
