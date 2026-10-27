@@ -8,6 +8,7 @@ const dataCall=async(body)=>{
 };
 export default function OwnerWholesaleUI(){
  const [data,setData]=useState({services:[],providers:[]});
+ const [balances,setBalances]=useState([]);
  const [tab,setTab]=useState("catalog");
  const [busy,setBusy]=useState(false),[loading,setLoading]=useState(true),[notice,setNotice]=useState("");
  const [method,setMethod]=useState("supplier_balance"),[selected,setSelected]=useState(null);
@@ -25,6 +26,8 @@ export default function OwnerWholesaleUI(){
    const r=await fetch("/api/owner/wholesale?view=catalog",{cache:"no-store",credentials:"same-origin"});
    if(!r.ok)throw Error("Owner authentication or supplier availability unavailable");
    setData(await r.json());
+   const balancesResponse=await fetch("/api/owner/wholesale?view=balances",{cache:"no-store",credentials:"same-origin"});
+   if(balancesResponse.ok)setBalances((await balancesResponse.json()).balances||[]);
   }catch(e){setNotice(e.message)}finally{setLoading(false)}
  }
  async function loadOrders(){
@@ -120,7 +123,11 @@ export default function OwnerWholesaleUI(){
   {!data.purchasesEnabled&&<div className="owner-notice">Wholesale comparison is available after owner sign-in. Real purchases are currently disabled until verified Auth0 setup, database deployment and security sign-off.</div>}
   {tab==="catalog"?<>
    <section className="owner-summary" aria-label="Supplier availability">
-    {(data.providers||[]).map(p=><div key={p.name}><strong>{p.name.toUpperCase()}</strong><span>{p.status}</span></div>)}
+    {(data.providers||[]).map(p=>{
+     const balance=balances.find(x=>x.provider===p.name);
+     return <div key={p.name}><strong>{p.name.toUpperCase()}</strong>
+      <span>Catalog: {p.status} · Wallet: {balance?.status==="available"?dollars(balance.amount)+" "+balance.currency:"Unavailable"}</span></div>
+    })}
     <div><strong>{data.services.length.toLocaleString()}</strong><span>Instagram follower services, actual supplier-listed rates</span></div>
    </section>
    <section className="owner-panel">
