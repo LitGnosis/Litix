@@ -1,4 +1,4 @@
-import {boosteroProduction,boosteroFollowers} from "./boosteroReadOnly.mjs";
+import {boosteroProduction,boosteroCompatibleServices} from "./boosteroReadOnly.mjs";
 import {boosteroSQL,boosteroQuote,boosteroProductionReady} from "./boosteroFulfillment.mjs";
 // Read-only catalog requests are coalesced for 90 seconds to avoid hammering
 // Boostero when SMMGLOB is unavailable. Paid order quotes ALWAYS use fresh
@@ -7,7 +7,7 @@ let catalogCache=null,catalogExpires=0,catalogFlight=null;
 async function liveCatalog(){
  if(catalogCache&&Date.now()<catalogExpires)return catalogCache;
  if(!catalogFlight)catalogFlight=boosteroProduction("services")
-  .then(rows=>{const services=boosteroFollowers(rows);catalogCache=services;catalogExpires=Date.now()+90000;return services})
+  .then(rows=>{const services=boosteroCompatibleServices(rows);catalogCache=services;catalogExpires=Date.now()+90000;return services})
   .finally(()=>{catalogFlight=null});
  return catalogFlight;
 }
@@ -28,9 +28,9 @@ export async function enabledBoosteroCards(){
   const quantity=Math.max(Number(service.min),Math.ceil(500000/Number(approved.retail_per_1000_cents)));
   let quote;
   try{quote=boosteroQuote({service,approved,quantity});}catch{continue}
-  const category=service.platform+" Followers";
+  const category=service.platform+" "+(service.kind==="followers"?"Followers":"Likes");
   cards.push({id:"boostero_"+service.id,name:service.name,category,platform:service.platform,
-   type:"Default",min:quantity,supplierMin:Number(service.min),max:Number(service.max),unitStep:1,
+   type:"Default",kind:service.kind,min:quantity,supplierMin:Number(service.min),max:Number(service.max),unitStep:1,
    startingAmountCents:quote.amountCents,pricingReview:false,per1000:quote.retailPer1000Cents/100,
    refill:service.apiRefillEligible===true,noDrop:false,purchasable:true});
  }
@@ -41,5 +41,5 @@ export function filterBoosteroCards(items,params){
   cat=String(params.get("category")||""),platform=String(params.get("platform")||"");
  return items.filter(s=>(!name||[s.id,s.name,s.category].some(x=>String(x).toLowerCase().includes(name)))&&
   (!cat||cat===s.category)&&(!platform||platform==="All platforms"||platform===s.platform)&&
-  (!kind||kind==="followers"));
+  (!kind||kind===s.kind));
 }
