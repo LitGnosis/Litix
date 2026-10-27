@@ -47,10 +47,19 @@ async function catalogContext(request,intent){
     if(intent.kind)url.searchParams.set("kind",intent.kind);
     if(intent.terms)url.searchParams.set("q",intent.terms);
     url.searchParams.set("page","1");
-    const r=await catalogGET(new Request(url));
+    let r=await catalogGET(new Request(url));
+    let source="deployment";
+    // Preview intentionally has no production supplier credentials. Read only
+    // the public live Litix catalog rather than copying supplier keys into Preview.
+    if(!r.ok&&process.env.VERCEL_ENV==="preview"){
+      const live=new URL("https://www.litix.net/api/catalog/v1");
+      live.search=url.search;
+      r=await fetch(live,{cache:"no-store",signal:AbortSignal.timeout(12000)});
+      source="public-production";
+    }
     if(!r.ok)return {state:"unavailable",services:[]};
     const data=await r.json();
-    return {state:data.catalogStatus||"unknown",total:Number(data.total||0),services:safeRows(data.items||[])};
+    return {state:data.catalogStatus||"unknown",source,total:Number(data.total||0),services:safeRows(data.items||[])};
   }catch{return {state:"unavailable",services:[]};}
 }
 async function guardianContext(){
@@ -63,10 +72,12 @@ async function guardianContext(){
 }
 async function bundleContext(){
   try{
-    const r=await bundlesGET();
+    const preview=process.env.VERCEL_ENV==="preview";
+    const r=preview?await fetch("https://www.litix.net/api/bundles",
+      {cache:"no-store",signal:AbortSignal.timeout(12000)}):await bundlesGET();
     if(!r.ok)return {state:"unavailable"};
     const x=await r.json();
-    return {state:"available",paykingsCheckoutReady:x.checkoutEnabled===true,
+    return {state:"available",source:preview?"public-production":"deployment",paykingsCheckoutReady:x.checkoutEnabled===true,
       bluevineCheckoutReady:x.bluevineEnabled===true,manualFulfillment:true,
       packages:(x.packages||[]).map(p=>({name:p.name,platform:p.platform,
         priceUSD:(Number(p.priceCents)/100).toFixed(2),items:p.items,maxPosts:p.maxPosts})).slice(0,8),
