@@ -76,6 +76,7 @@ test("owner add requires production purchase enablement AND a durable claim, wit
   process.env.SMMGLOB_API_KEY="fake-secret-never-log";
   await assert.rejects(ownerSupplierAPI("smmglob","add",{service:"123",quantity:1000,link:"https://www.instagram.com/test/"},{oneTimeLocked:true,fetcher:async()=>{throw Error("network must stay locked")}}),/owner_purchases_disabled/);
   process.env.LITIX_OWNER_WHOLESALE_PURCHASES="true";
+  process.env.VERCEL_ENV="production";
   await assert.rejects(ownerSupplierAPI("smmglob","add",{service:"123",quantity:1000,link:"https://www.instagram.com/test/"},{fetcher:async()=>{throw Error("network not allowed")}}),/unlocked_supplier_purchase_denied/);
   await assert.rejects(ownerSupplierAPI("smmglob","refill",{order:"123"},{fetcher:async()=>{throw Error("network not allowed")}}),/supplier_action_denied/);
   const payloads=[];
