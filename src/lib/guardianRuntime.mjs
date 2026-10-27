@@ -24,7 +24,7 @@ async function retryReadOnly(fn,max=2){
 const check=async(component,operation)=>{
  const start=Date.now();
  try{const o=await operation();return {component,ok:o.kind==="not_launched"?true:o.ok!==false,
-  kind:o.kind==="not_launched"?"not_launched":"check",code:safeCode(o.code||"OK"),
+  kind:["not_launched","degraded"].includes(o.kind)?o.kind:"check",code:safeCode(o.code||"OK"),
   detail:String(o.detail||"").slice(0,140),latencyMs:Date.now()-start}}
  catch(e){return {component,ok:false,kind:"check",code:codeOf(e),detail:"Read-only check unavailable",latencyMs:Date.now()-start}}
 };
@@ -32,11 +32,15 @@ const catalog=async(path)=>{
  const r=await retryReadOnly(()=>get("/api/catalog/v1?"+path,26000));
  const d=await r.json();
  if(!Array.isArray(d.items)||!Number.isSafeInteger(d.total)||!Number.isSafeInteger(d.allCount)||
-  d.items.length===0||d.total<=0||d.allCount<d.total||d.catalogStatus!=="live")
-  return {ok:false,code:d.catalogStatus==="cached"?"CATALOG_CACHED_NOT_LIVE":"CATALOG_EMPTY_OR_INVALID",detail:"Catalog response lacks verified live usable services"};
+  d.items.length===0||d.total<=0||d.allCount<d.total)
+  return {ok:false,code:"CATALOG_EMPTY_OR_INVALID",detail:"Catalog has no usable services"};
  if(d.items.some(x=>!x.id||!x.name||!Number.isFinite(Number(x.per1000))||Number(x.per1000)<=0))
-  return {ok:false,code:"CATALOG_UNUSABLE_PRICES",detail:"Catalog contains invalid service descriptions or retail amounts"};
- return {ok:true,code:"LIVE_SERVICES",detail:"Usable services verified: "+d.total+" filtered; "+d.allCount+" eligible"};
+  return {ok:false,code:"CATALOG_UNUSABLE_PRICES",detail:"Catalog has invalid service descriptions or retail amounts"};
+ if(d.catalogStatus==="cached")
+  return {ok:true,kind:"degraded",code:"CATALOG_CACHED_USABLE",detail:"Usable cached services are present; live supplier freshness is not verified"};
+ if(d.catalogStatus!=="live")
+  return {ok:false,code:"CATALOG_SOURCE_UNVERIFIED",detail:"Supplier catalog source status is not verified"};
+ return {ok:true,code:"LIVE_SERVICES",detail:"Usable live services: "+d.total+" filtered; "+d.allCount+" eligible"};
 };
 export async function performGuardianChecks(sql,priorByComponent={},now=new Date()){
  const every=15*60*1000, recent=name=>{const p=priorByComponent[name];return p?.checked_at && now.getTime()-new Date(p.checked_at).getTime()<every};
