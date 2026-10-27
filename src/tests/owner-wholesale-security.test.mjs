@@ -134,7 +134,7 @@ test("repeat owner PayKings submission cannot cause a second card charge or supp
  let gatewayCalls=0,supplierCalls=0,insertCount=0,state="QUEUED";
  globalThis.fetch=async url=>{
   if(!String(url).includes("paykings.transactiongateway.com"))throw Error("Unexpected real network");
-  gatewayCalls++;return new Response("response=1&transactionid=FAKE_GATEWAY_123",{status:200});
+  gatewayCalls++;return new Response("response=1&transactionid=FAKEGATEWAY123",{status:200});
  };
  const orderId="low_aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
  const db={query:async(sql,args=[])=>{
