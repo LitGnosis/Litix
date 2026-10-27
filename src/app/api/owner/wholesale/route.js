@@ -1,7 +1,7 @@
 import {ownerRequest,ownerResponse,safeOrigin} from "../../../../lib/ownerAuth.mjs";
 import {ownerWholesaleCatalog} from "../../../../lib/ownerWholesale.mjs";
 import {currentOwnerQuote,ownerOrderRows,ownerCreateOrder,ownerRefreshOrder,
- ownerPurchasesEnabled,ownerCardEnabled,ownerBalance} from "../../../../lib/ownerWholesaleOrders.mjs";
+ ownerPurchasesEnabled,ownerCardEnabled,ownerBalance,ownerReconcileSettlement} from "../../../../lib/ownerWholesaleOrders.mjs";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 export const maxDuration=60;
@@ -34,6 +34,11 @@ export async function POST(req){
    if(!/^low_[0-9a-f-]{36}$/.test(String(body.orderId||"")))return ownerResponse({error:"Invalid order ID"},422);
    const order=await ownerRefreshOrder(session.sub,body.orderId);
    return ownerResponse({order});
+  }
+  if(body?.action==="verifySettlement"){
+   if(!/^low_[0-9a-f-]{36}$/.test(String(body.orderId||"")))return ownerResponse({error:"Invalid order ID"},422);
+   const result=await ownerReconcileSettlement(session.sub,body.orderId);
+   return ownerResponse(result,result.payment==="settled"?200:202);
   }
   if(body?.action==="purchase"){
    if(!ownerPurchasesEnabled())return ownerResponse({error:"Owner wholesale purchases are not activated"},503);
