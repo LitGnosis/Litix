@@ -88,12 +88,13 @@ test("four quick filters never call SMMGLOB and return only approved Boostero ca
  const template=readFileSync(new URL("../app/api/catalog/v1/route.js",import.meta.url),"utf8");
  enable();
  let smmCalls=0;
+ let active=true;
  const options={
   catalog:async()=>{smmCalls++;throw Error("SMMGLOB 525 MUST NOT BLOCK BOOSTERO-ONLY TAB")},
-  cards:async()=>mapping.map(([id,platform,kind,retail])=>({
+  cards:async()=>active?mapping.map(([id,platform,kind,retail])=>({
     id:"boostero_"+id,platform:platform==="instagram"?"Instagram":"TikTok",kind,
     category:(platform==="instagram"?"Instagram":"TikTok")+" "+(kind==="likes"?"Likes":"Followers"),per1000:retail/100
-  })),
+  })):[],
   filter:(all,p)=>all.filter(x=>(!p.get("kind")||x.kind===p.get("kind"))&&
      (!p.get("platform")||p.get("platform")==="All platforms"||x.platform===p.get("platform"))&&
      (!p.get("category")||x.category===p.get("category")))
@@ -112,7 +113,7 @@ test("four quick filters never call SMMGLOB and return only approved Boostero ca
    assert.deepEqual(data.items.map(x=>x.id),["boostero_"+id]);
    assert.equal(data.boosteroOnly,true);
   }
-  options.cards=async()=>[];
+  active=false;
   const res=await GET(new Request("https://litix.net/api/catalog/v1?platform=TikTok&kind=likes"));
   assert.equal((await res.json()).message,"Temporarily unavailable");
   assert.equal(smmCalls,0);
