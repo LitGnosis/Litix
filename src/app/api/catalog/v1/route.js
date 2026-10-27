@@ -4,6 +4,30 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 export async function GET(request) {
+ const incoming=new URL(request.url),p=incoming.searchParams;
+ const platform=p.get("platform")||"",kind=p.get("kind")||"";
+ const canonical=["Instagram Followers","Instagram Likes","TikTok Followers","TikTok Likes"];
+ const category=p.get("category")||"";
+ const targeted=/^(Instagram|TikTok)$/.test(platform)&&/^(followers|likes)$/.test(kind)||canonical.includes(category);
+ // The four Boostero-only tabs must not wait for an unrelated SMMGLOB 525.
+ // This branch reads only the live approved Boostero catalog, never old numeric SKUs.
+ if(targeted&&process.env.VERCEL_ENV==="production"&&process.env.LITIX_BOOSTERO_ENABLED==="true"){
+  const cat=canonical.includes(category)?category:null;
+  let cards=[];
+  try{
+   const all=await enabledBoosteroCards();
+   cards=filterBoosteroCards(all,new URLSearchParams({
+    platform:cat?cat.split(" ")[0]:platform,kind:cat?cat.split(" ")[1].toLowerCase():kind,
+    q:p.get("q")||"",category:cat||""
+   }));
+  }catch{}
+  const unavailable=cards.length===0;
+  return Response.json({items:cards,total:cards.length,allCount:cards.length,page:1,
+   categories:canonical,recommendations:[],
+   catalogStatus:unavailable?"unavailable":"live",boosteroCatalogStatus:unavailable?"unavailable":"live_allowlisted",
+   message:unavailable?"Temporarily unavailable":undefined,boosteroOnly:true},
+   {headers:{"cache-control":"no-store","x-content-type-options":"nosniff"}});
+ }
  const url=new URL(request.url);
  url.pathname="/api/smmservices";
  const original=await catalog(new Request(url,request));
