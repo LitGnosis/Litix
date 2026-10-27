@@ -47,12 +47,16 @@ test("filter follower services, distinguish refill from non-drop/no refill",()=>
   {service:2,name:"TikTok Followers Lifetime Refill",category:"TikTok",rate:"3.00",min:500,max:50000,refill:true},
   {service:3,name:"Instagram Followers No Refill",category:"Instagram",rate:"2.00",min:50,max:1000,refill:false},
   {service:4,name:"TikTok Likes 90 Day",category:"TikTok",rate:1,min:10,max:1000},
-  {service:5,name:"Instagram Followers Non Drop",category:"Instagram",rate:2,min:10,max:10000}
+  {service:5,name:"Instagram Followers Non Drop",category:"Instagram",rate:2,min:10,max:10000},
+  {service:6,name:"TikTok Followers 30 Days Manual Refill",category:"TikTok",rate:3.74,min:10,max:15000,refill:false}
  ]);
- assert.equal(out.length,4);
- assert.equal(out.filter(x=>x.refill30Plus).length,2);
+ assert.equal(out.length,5);
+ assert.equal(out.filter(x=>x.refill30Plus).length,3);
  assert.equal(out.find(x=>x.id==="1").refillDays,30);
  assert.equal(out.find(x=>x.id==="2").refillDays,"lifetime");
  assert.equal(out.find(x=>x.id==="3").refillClaim,false);
  assert.equal(out.find(x=>x.id==="5").refill30Plus,false);
+ assert.equal(out.find(x=>x.id==="6").refill30Plus,true);
+ assert.equal(out.find(x=>x.id==="6").refillMethod,"manual advertised");
+ assert.equal(out.find(x=>x.id==="6").apiRefillEligible,false);
 });
