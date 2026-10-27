@@ -83,3 +83,38 @@ test("supplier API cannot add without durable claim and never accepts invalid ac
   await assert.rejects(boosteroProduction("cancel",{order:"1"}),/action_forbidden/);
  }finally{restore()}
 });
+
+test("four quick filters never call SMMGLOB and return only approved Boostero cards; absent service says temporarily unavailable",async()=>{
+ const template=readFileSync(new URL("../app/api/catalog/v1/route.js",import.meta.url),"utf8");
+ enable();
+ let smmCalls=0;
+ const options={
+  catalog:async()=>{smmCalls++;throw Error("SMMGLOB 525 MUST NOT BLOCK BOOSTERO-ONLY TAB")},
+  cards:async()=>mapping.map(([id,platform,kind,retail])=>({
+    id:"boostero_"+id,platform:platform==="instagram"?"Instagram":"TikTok",kind,
+    category:(platform==="instagram"?"Instagram":"TikTok")+" "+(kind==="likes"?"Likes":"Followers"),per1000:retail/100
+  })),
+  filter:(all,p)=>all.filter(x=>(!p.get("kind")||x.kind===p.get("kind"))&&
+     (!p.get("platform")||p.get("platform")==="All platforms"||x.platform===p.get("platform"))&&
+     (!p.get("category")||x.category===p.get("category")))
+ };
+ globalThis.__fourKinds=options;
+ try{
+  const code=template.replace('import { GET as catalog } from "../../[action]/route.js";',
+   "const catalog=globalThis.__fourKinds.catalog;")
+   .replace('import {enabledBoosteroCards,filterBoosteroCards} from "../../../../lib/boosteroCatalog.mjs";',
+    "const enabledBoosteroCards=globalThis.__fourKinds.cards;const filterBoosteroCards=globalThis.__fourKinds.filter;");
+  const {GET}=await import("data:text/javascript,"+encodeURIComponent(code)+"#"+Date.now());
+  for(const [id,platform,kind] of mapping){
+   const res=await GET(new Request("https://litix.net/api/catalog/v1?platform="+(platform==="instagram"?"Instagram":"TikTok")+"&kind="+kind));
+   assert.equal(res.status,200);
+   const data=await res.json();
+   assert.deepEqual(data.items.map(x=>x.id),["boostero_"+id]);
+   assert.equal(data.boosteroOnly,true);
+  }
+  options.cards=async()=>[];
+  const res=await GET(new Request("https://litix.net/api/catalog/v1?platform=TikTok&kind=likes"));
+  assert.equal((await res.json()).message,"Temporarily unavailable");
+  assert.equal(smmCalls,0);
+ }finally{delete globalThis.__fourKinds;restore()}
+});
