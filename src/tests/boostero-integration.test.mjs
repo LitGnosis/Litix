@@ -37,7 +37,7 @@ test("original storefront markup and customer checkout components are untouched"
  assert.match(b,/^\s*return checkout\(new Request\(url, request\)\);/m);
  assert.match(b,/^  if\(\/\^boostero_\[0-9\]\{1,12\}\$\/\.test\(id\)\)\{/m);
  assert.match(card,/CollectJS|cardReady|ccnumber/);
- assert.match(catalog,/if\(!original\.ok\|\|process\.env\.LITIX_BOOSTERO_ENABLED!=="true"/);
+ assert.match(catalog,/if\(process\.env\.LITIX_BOOSTERO_ENABLED!=="true"\|\|process\.env\.VERCEL_ENV!=="production"\)return original/);
 });
 test("standalone supplier tracker is token-gated, not a public diagnostic endpoint",()=>{
  const t=load("../app/api/internal/boostero/track/route.js");
