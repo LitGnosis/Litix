@@ -1,6 +1,7 @@
 import {neon} from "@neondatabase/serverless";
 import {randomUUID,createHash} from "node:crypto";
 import {ownerSupplierAPI,ownerWholesaleCatalog,wholesaleQuote,ownerProfile} from "./ownerWholesale.mjs";
+import {verifyOwnerPaymentSettlement,ownerCoveredCardTotal} from "./ownerSettlement.mjs";
 
 export const ownerDB=()=>{
  const url=process.env.LITIX_OWNER_DATABASE_URL||process.env.LITIX_BOOSTERO_DATABASE_URL||process.env.LITIX_V2_DATABASE_URL;
@@ -10,16 +11,15 @@ export const ownerDB=()=>{
 export const ownerPurchasesEnabled=()=>process.env.VERCEL_ENV==="production"&&
  process.env.LITIX_OWNER_WHOLESALE_PURCHASES==="true";
 export const ownerCardEnabled=()=>ownerPurchasesEnabled()&&process.env.LITIX_OWNER_PAYKINGS_ENABLED==="true"&&
+ process.env.LITIX_OWNER_PAYKINGS_SETTLEMENT_VERIFIED==="true"&&
  !!process.env.NMI_SECURITY_KEY&&!!(process.env.NEXT_PUBLIC_PAYKINGS_NMI_COLLECT_PUBLIC_KEY||process.env.PAYKINGS_NMI_COLLECT_PUBLIC_KEY)&&!!process.env.LITIX_OWNER_PAYKINGS_FEE_BPS&&
  !!process.env.LITIX_OWNER_PAYKINGS_FEE_FIXED_CENTS;
 const hash=x=>createHash("sha256").update(String(x)).digest("hex");
 const money=n=>"$"+(Number(n)/100).toFixed(2);
 export const ownerGatewayFee=cents=>{
  if(!ownerCardEnabled())throw Error("owner_card_checkout_disabled");
- const bps=Number(process.env.LITIX_OWNER_PAYKINGS_FEE_BPS),fixed=Number(process.env.LITIX_OWNER_PAYKINGS_FEE_FIXED_CENTS);
- if(!Number.isSafeInteger(bps)||bps<0||bps>1500||!Number.isSafeInteger(fixed)||fixed<0||fixed>1000)
-  throw Error("owner_card_fee_not_verified");
- return Math.ceil(cents*bps/10000)+fixed;
+ return ownerCoveredCardTotal(cents,Number(process.env.LITIX_OWNER_PAYKINGS_FEE_BPS),
+  Number(process.env.LITIX_OWNER_PAYKINGS_FEE_FIXED_CENTS)).feeCents;
 };
 export async function currentOwnerQuote({provider,serviceId,quantity,profile,paymentMethod}){
  const destination=ownerProfile(profile);
@@ -58,13 +58,13 @@ export async function dispatchOwnerOrder(id,{db=null,operation=ownerSupplierAPI,
  try{
   const q=await quoteProvider({provider:o.provider,serviceId:o.supplier_service_id,quantity:Number(o.quantity),
    profile:o.destination,paymentMethod:o.payment_method});
-  if(q.wholesaleCents>Number(o.supplier_cost_cents)||q.totalCents>Number(o.total_charge_cents))throw Error("supplier_price_increased");
+  if(q.wholesaleCents!==Number(o.supplier_cost_cents)||q.totalCents!==Number(o.total_charge_cents))throw Error("supplier_price_changed");
   const balance=await operation(o.provider,"balance");
   if(!Number.isFinite(Number(balance.balance))||Number(balance.balance)+1e-7<q.wholesaleCents/100)
    throw Error("supplier_insufficient_funds");
   result=await operation(o.provider,"add",{service:o.supplier_service_id,link:o.destination,quantity:o.quantity},{oneTimeLocked:true});
  }catch(err){
-  const definitive=["supplier_definitely_rejected","supplier_price_increased","supplier_insufficient_funds",
+  const definitive=["supplier_definitely_rejected","supplier_price_changed","supplier_insufficient_funds",
    "supplier_quantity_invalid","supplier_service_unavailable","invalid_supplier_service"].includes(String(err.message));
   const state=definitive?"REJECTED":"UNKNOWN_OUTCOME";
   await Promise.allSettled([
@@ -102,7 +102,7 @@ export async function ownerCreateOrder(sub,data,{db=null,getQuote=currentOwnerQu
  let inserted;
  try{
   inserted=await db.query(
-   "insert into public.litix_owner_wholesale_orders(id,owner_sub,idempotency_key,fingerprint,provider,supplier_service_id,service_name,destination,quantity,wholesale_per_1000,supplier_cost_cents,total_charge_cents,payment_method,payment_state,baseline_followers,refill_days,refill_eligible,refill_method) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18) on conflict(owner_sub,idempotency_key) do nothing returning id",
+   "insert into public.litix_owner_wholesale_orders(id,owner_sub,idempotency_key,fingerprint,provider,supplier_service_id,service_name,destination,quantity,wholesale_per_1000,supplier_cost_cents,total_charge_cents,payment_method,payment_state,baseline_followers,refill_days,refill_eligible,refill_method) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18) on conflict do nothing returning id",
    [orderId,sub,idem,fingerprint,q.provider,q.serviceId,q.service.name,q.destination,q.quantity,q.wholesalePer1000,
     q.wholesaleCents,q.totalCents,q.paymentMethod,q.paymentMethod==="paykings"?"processing":"not_required",baseline,
     q.service.refillDays??null,q.service.refillEligible===true,q.service.refillMethod||"not advertised"]);
@@ -124,7 +124,7 @@ export async function ownerCreateOrder(sub,data,{db=null,getQuote=currentOwnerQu
    await db.query("update public.litix_owner_wholesale_orders set payment_state='review' where id=$1",[orderId]).catch(()=>{});
    return {orderId,payment:"review",submitted:false,message:"Gateway outcome unknown. Do not pay again."};
   }
-  if(reply.response!=="1"||!/^[A-Za-z0-9-]{3,100}$/.test(String(reply.transactionid||""))){
+  if(reply.response!=="1"||!/^\d{5,32}$/.test(String(reply.transactionid||""))){
    await db.query("update public.litix_owner_wholesale_orders set payment_state=$2 where id=$1",[orderId,
     reply.response==="1"?"review":"declined"]).catch(()=>{});
    return {orderId,payment:reply.response==="1"?"review":"declined",submitted:false,
@@ -132,18 +132,46 @@ export async function ownerCreateOrder(sub,data,{db=null,getQuote=currentOwnerQu
   }
   try{
    const changed=await db.query(
-    "update public.litix_owner_wholesale_orders set payment_state='paid',payment_transaction_id=$2,updated_at=now() where id=$1 and payment_state='processing' returning id",
+    "update public.litix_owner_wholesale_orders set payment_transaction_id=$2,settlement_state='pending',updated_at=now() where id=$1 and payment_state='processing' and settlement_state='not_required' returning id",
     [orderId,String(reply.transactionid)]);
    if(changed.length!==1)throw Error("gateway_approval_not_persisted");
   }catch{return {orderId,payment:"review",submitted:false,message:"Approved gateway transaction requires reconciliation. No supplier order sent."}}
+  // A gateway-approved SALE is not proof of SETTLEMENT. Query later; never
+  // call either supplier until a matching settled transaction is verified.
+  return {orderId,payment:"approved_pending_settlement",submitted:false,
+    message:"PayKings approved. Awaiting independently verified settlement; supplier purchase NOT submitted.",
+    totalCents:q.totalCents,feesCents:q.feeCents};
  }
  const outcome=await dispatchOwnerOrder(orderId,{db,operation,quoteProvider:getQuote});
  await sendOwnerWholesaleNotice(orderId,{db}).catch(()=>{});
  return {orderId,payment:q.paymentMethod==="paykings"?"paid":"not_required",...outcome,costCents:q.wholesaleCents,
   totalCents:q.totalCents,feesCents:q.feeCents,provider:q.provider};
 }
+export async function ownerReconcileSettlement(sub,id,{db=null,verify=verifyOwnerPaymentSettlement,operation=ownerSupplierAPI,quoteProvider=currentOwnerQuote}={}){
+ if(!ownerCardEnabled())return {orderId:id,payment:"disabled",submitted:false};
+ db=db||ownerDB();
+ const orders=await db.query(
+  "select * from public.litix_owner_wholesale_orders where id=$1 and owner_sub=$2 and payment_method='paykings'",
+  [id,sub]);
+ if(orders.length!==1)throw Error("order_not_found");
+ const o=orders[0];
+ if(o.payment_state==="paid")return {orderId:id,payment:"paid",submitted:o.state==="SUBMITTED"||o.state==="COMPLETED",state:o.state,alreadyVerified:true};
+ if(o.payment_state!=="processing"||o.settlement_state!=="pending"||
+    !/^\d{5,32}$/.test(String(o.payment_transaction_id||"")))
+  return {orderId:id,payment:"review",submitted:false};
+ const verified=await verify({orderId:id,transactionId:String(o.payment_transaction_id),totalCents:Number(o.total_charge_cents)});
+ if(verified.settled!==true)return {orderId:id,payment:"approved_pending_settlement",submitted:false,reason:verified.reason};
+ const updated=await db.query(
+  "update public.litix_owner_wholesale_orders set payment_state='paid',settlement_state='verified',updated_at=now() where id=$1 and owner_sub=$2 and payment_state='processing' and settlement_state='pending' and payment_transaction_id=$3 returning id",
+  [id,sub,String(o.payment_transaction_id)]);
+ if(updated.length!==1)return {orderId:id,payment:"review",submitted:false,requiresReconciliation:true};
+ const dispatched=await dispatchOwnerOrder(id,{db,operation,quoteProvider});
+ await sendOwnerWholesaleNotice(id,{db}).catch(()=>{});
+ return {orderId:id,payment:"settled",...dispatched};
+}
+
 export async function ownerOrderRows(sub,{db=ownerDB(),limit=75}={}){
- return db.query("select id,provider,supplier_service_id,service_name,destination,quantity,supplier_cost_cents,total_charge_cents,payment_method,payment_state,state,supplier_order_id,supplier_status,baseline_followers,refill_days,refill_eligible,refill_method,last_checked_at,created_at from public.litix_owner_wholesale_orders where owner_sub=$1 order by created_at desc limit $2",[sub,Math.min(limit,75)]);
+ return db.query("select id,provider,supplier_service_id,service_name,destination,quantity,supplier_cost_cents,total_charge_cents,payment_method,payment_state,settlement_state,state,supplier_order_id,supplier_status,baseline_followers,refill_days,refill_eligible,refill_method,last_checked_at,created_at from public.litix_owner_wholesale_orders where owner_sub=$1 order by created_at desc limit $2",[sub,Math.min(limit,75)]);
 }
 export async function ownerRefreshOrder(sub,id,{db=ownerDB(),operation=ownerSupplierAPI}={}){
  const rows=await db.query("select * from public.litix_owner_wholesale_orders where id=$1 and owner_sub=$2",[id,sub]);
