@@ -42,7 +42,7 @@ export default function BundleCheckout(){
   return()=>{active=false;clearTimeout(timeout);script.remove()};
  },[method,catalog?.checkoutEnabled,catalog?.publicKey,pkgId]);
  onToken.current=async token=>{
-  if(method!=="paykings"||submitted.current||busy===false&&bluevineBusy||pendingBluevine?.packageId===pkg?.id||!pkg||!catalog?.checkoutEnabled||!consent||!token)return;
+  if(method!=="paykings"||submitted.current||bluevineBusy||pendingBluevine?.packageId===pkg?.id||!pkg||!catalog?.checkoutEnabled||!consent||!token)return;
   submitted.current=true;
   try{
    const r=await fetch("/api/bundles/checkout",{method:"POST",
@@ -107,7 +107,7 @@ export default function BundleCheckout(){
     <label>{pkg?.platform} username or public profile URL<input required value={profile} onChange={e=>setProfile(e.target.value)} placeholder="@yourprofile" autoCapitalize="none" autoCorrect="off"/></label>
     <label style={{display:"flex",alignItems:"start",gap:10,fontSize:14,lineHeight:1.5}}><input style={{width:20,marginTop:3}} type="checkbox" required checked={consent} onChange={e=>setConsent(e.target.checked)}/><span>I understand that I must submit my order information via WhatsApp, email, or Instagram. I may submit up to 10 posts, and all fulfillment requires manual LITIX approval.</span></label>
     {method==="paykings"&&catalog?.checkoutEnabled?<><div><label>Card number<div id="bundle-ccnumber" className="field"/></label><div className="premium-card-row"><label>Expiration<div id="bundle-ccexp" className="field"/></label><label>CVV<div id="bundle-cvv" className="field"/></label></div></div><button className="pay" disabled={!cardReady||!consent||busy||bluevineBusy||submitted.current||pendingBluevine?.packageId===pkg?.id}>{busy?"Processing securely...":"Pay with PayKings — "+money(pkg.priceCents)}</button></>:
-      method==="paykings"?<div role="status" className="lg-bundle-warning"><strong>PayKings bundle checkout is unavailable until merchant activation.</strong> Live payment fields are unavailable. Check your connection and try again; no payment can be submitted until the secure gateway and official WhatsApp contact are available.</div>}
+      method==="paykings"?<div role="status" className="lg-bundle-warning"><strong>PayKings bundle checkout is unavailable until merchant activation.</strong> Live payment fields are unavailable. Check your connection and try again; no payment can be submitted until the secure gateway and official WhatsApp contact are available.</div>:null}
    </form>
    {method==="bluevine"&&catalog?.bluevineEnabled?<section aria-label="Bluevine payment option" className="lg-bluevine-checkout">
     <h3>Pay with Bluevine — {pkg&&money(pkg.priceCents)}</h3>
