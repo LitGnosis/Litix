@@ -137,7 +137,7 @@ export async function ownerCreateOrder(sub,data,{db=null,getQuote=currentOwnerQu
    if(changed.length!==1)throw Error("gateway_approval_not_persisted");
   }catch{return {orderId,payment:"review",submitted:false,message:"Approved gateway transaction requires reconciliation. No supplier order sent."}}
  }
- const outcome=await dispatchOwnerOrder(orderId,{db,operation,getQuote});
+ const outcome=await dispatchOwnerOrder(orderId,{db,operation,quoteProvider:getQuote});
  await sendOwnerWholesaleNotice(orderId,{db}).catch(()=>{});
  return {orderId,payment:q.paymentMethod==="paykings"?"paid":"not_required",...outcome,costCents:q.wholesaleCents,
   totalCents:q.totalCents,feesCents:q.feeCents,provider:q.provider};
