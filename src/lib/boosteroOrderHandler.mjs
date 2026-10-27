@@ -1,7 +1,7 @@
 import {after} from "next/server";
 import {randomUUID} from "node:crypto";
-import {boosteroProduction,boosteroFollowers} from "./boosteroReadOnly.mjs";
-import {boosteroAdminAuthorized,boosteroProductionReady,boosteroSQL,boosteroProfile,verifyBoosteroQuote,
+import {boosteroProduction,boosteroCompatibleServices} from "./boosteroReadOnly.mjs";
+import {boosteroAdminAuthorized,boosteroProductionReady,boosteroSQL,boosteroDestination,verifyBoosteroQuote,
  boosteroOrderId,boosteroToken,hashBoostero,dispatchBoostero,boosteroNotice} from "./boosteroFulfillment.mjs";
 const send=(body,status=200)=>Response.json(body,{status,headers:{"cache-control":"no-store","referrer-policy":"no-referrer","x-content-type-options":"nosniff"}});
 const validId=s=>/^ltx2_[a-f0-9-]{36}$/.test(String(s||""));
@@ -23,7 +23,7 @@ export async function handleBoosteroOrder(request,{adminOnly=true}={}){
   const rows=await sql.query("select o.id,f.supplier_order_id,f.supplier_service_id,f.state from public.litix_v2_orders o join public.litix_boostero_fulfillment f on f.litix_order_id=o.id where o.id=$1 and f.state in('SUBMITTED','COMPLETED')",[orderId]);
   if(rows.length!==1||!rows[0].supplier_order_id)return send({error:"No eligible confirmed Boostero order"},409);
   let service;
-  try{service=boosteroFollowers(await boosteroProduction("services")).find(s=>s.id===rows[0].supplier_service_id)}
+  try{service=boosteroCompatibleServices(await boosteroProduction("services")).find(s=>s.id===rows[0].supplier_service_id)}
   catch{return send({error:"Live supplier eligibility cannot be verified"},503)}
   if(!service?.apiRefillEligible)return send({error:"Supplier API refill not available; no request sent"},409);
   const attemptId=randomUUID();
@@ -45,8 +45,8 @@ export async function handleBoosteroOrder(request,{adminOnly=true}={}){
  let quote;
  try{({quote}=await verifyBoosteroQuote(id,quantity,sql))}
  catch(e){return send({error:String(e.message||"Unable to verify live quote").slice(0,100)},409)}
- const destination=boosteroProfile(data?.destination,quote.platform);
- if(!destination)return send({error:"Enter a valid direct public profile URL, not a post URL"},422);
+ const destination=boosteroDestination(data?.destination,quote.platform,quote.kind);
+ if(!destination)return send({error:quote.kind==="likes"?"Enter a direct public post/video URL for Likes":"Enter a direct public profile URL for Followers"},422);
  if(action==="quote")return send({approved:true,serviceId:id,serviceName:quote.serviceName,quantity,
   amountCents:quote.amountCents,supplierCostCents:quote.wholesaleCents,destination,minimumCheckoutCents:500});
  if(Number(data?.expectedAmountCents)!==quote.amountCents)return send({error:"Live price changed; no payment attempted"},409);
@@ -69,7 +69,7 @@ export async function handleBoosteroOrder(request,{adminOnly=true}={}){
  try{
   const rows=await sql.query(
    "with new_order as (insert into public.litix_v2_orders(id,email,service_id,service_name,category,destination,quantity,amount_cents,supplier_cost_cents,idempotency_key,tracking_token_hash,metadata,payment_state,fulfillment_state) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12::jsonb,$13,'pending') on conflict(idempotency_key) do nothing returning id), selected as (insert into public.litix_boostero_fulfillment(litix_order_id,supplier_service_id,payment_mode,state,approved_admin_id) select id,$3,$14,$15,$16 from new_order returning litix_order_id) select litix_order_id from selected",
-   [orderId,email,id,quote.serviceName,"Boostero "+quote.platform,destination,quantity,quote.amountCents,
+   [orderId,email,id,quote.serviceName,"Boostero "+quote.platform+" "+quote.kind,destination,quantity,quote.amountCents,
     quote.wholesaleCents,idem,hashBoostero(secret),JSON.stringify({supplier:"boostero",adminOnly:true}),paymentMode==="admin"?"admin_authorized":"processing",
     paymentMode,paymentMode==="admin"?"QUEUED":"PENDING_PAYMENT",paymentMode==="admin"?"owner":null]);
   inserted=rows.length===1;
