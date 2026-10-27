@@ -45,7 +45,7 @@ export default function BundleConfirmation(){
      <p><strong>Payment verification status:</strong> {paid?"Verified paid":"AWAITING PAYMENT VERIFICATION"}</p>
      <p><strong>Order status:</strong> {order.status}</p>
     </div>
-    {!paid&&<p className="lg-bundle-warning"><strong>Payment is NOT marked paid yet.</strong> Bluevine is hosted separately. Returning to LITIX, uploading a receipt, or opening this page does not verify payment. LITIX will confirm the real transaction directly in Bluevine before any fulfillment. If you already paid, do not pay again while verification is pending.</p>}
+    {!paid&&<p className="lg-bundle-warning"><strong>Payment is NOT marked paid yet.</strong> {order.paymentProvider==="bluevine"?"Bluevine is hosted separately. Returning to LITIX, uploading a receipt, or opening this page does not verify payment. LITIX will confirm the real transaction directly in Bluevine before any fulfillment.":"LITIX will verify the PayKings transaction using the existing secure payment reconciliation process."} If you already paid, do not pay again while verification is pending.</p>}
     <h3>Submit your receipt and up to 10 posts</h3>
     <p className="small">Choose WhatsApp, email, or Instagram. Include your order number, payment receipt, Instagram/TikTok profile, and up to 10 post links or screenshots. Attach receipt and screenshots manually in the app you choose. LITIX reviews posts and fulfillment manually.</p>
     <div className="lg-bundle-actions" style={{display:"grid",gap:12,margin:"18px 0"}}>
