@@ -31,7 +31,7 @@ jobs:
         working-directory: src
         env:
           SMMGLOB_API_KEY: 'mock-only-not-real'
-        run: node --test tests/catalog-smmglob-recovery.test.mjs tests/catalog.test.mjs tests/catalog-quick-filters-sort.test.mjs
+        run: node --test tests/catalog-smmglob-recovery.test.mjs tests/pricing-rules.test.mjs tests/checkout.test.mjs tests/follower-username-checkout.test.mjs
       - name: Production build (no live payment or supplier calls)
         working-directory: src
         run: npm run build
