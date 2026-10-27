@@ -38,7 +38,7 @@ export function boosteroProfile(input,platform){
 }
 export function boosteroQuote({service,approved,quantity}){
  if(!approved||approved.enabled!==true)throw Error("boostero_service_not_approved");
- if(String(service.id)!==String(approved.supplier_service_id)||service.platform!==approved.platform)
+ if(String(service.id)!==String(approved.supplier_service_id)||service.platform.toLowerCase()!==approved.platform)
   throw Error("boostero_service_mapping_changed");
  const qty=Number(quantity),step=1,min=Number(service.min),max=Number(service.max);
  if(!Number.isSafeInteger(qty)||!Number.isSafeInteger(min)||!Number.isSafeInteger(max)||qty<min||qty>max||(qty-min)%step)
