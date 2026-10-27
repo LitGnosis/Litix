@@ -1,5 +1,16 @@
 import {boosteroProduction,boosteroFollowers} from "./boosteroReadOnly.mjs";
 import {boosteroSQL,boosteroQuote,boosteroProductionReady} from "./boosteroFulfillment.mjs";
+// Read-only catalog requests are coalesced for 90 seconds to avoid hammering
+// Boostero when SMMGLOB is unavailable. Paid order quotes ALWAYS use fresh
+// supplier price and balance in boosteroFulfillment.mjs before dispatch.
+let catalogCache=null,catalogExpires=0,catalogFlight=null;
+async function liveCatalog(){
+ if(catalogCache&&Date.now()<catalogExpires)return catalogCache;
+ if(!catalogFlight)catalogFlight=boosteroProduction("services")
+  .then(rows=>{const services=boosteroFollowers(rows);catalogCache=services;catalogExpires=Date.now()+90000;return services})
+  .finally(()=>{catalogFlight=null});
+ return catalogFlight;
+}
 // Never publish from supplier API alone: both production enablement and explicit DB allowlist required.
 export async function enabledBoosteroCards(){
  if(!boosteroProductionReady())return [];
@@ -9,7 +20,7 @@ export async function enabledBoosteroCards(){
  catch{return []}
  if(!rows.length)return [];
  let live;
- try{live=boosteroFollowers(await boosteroProduction("services"))}catch{return []}
+ try{live=await liveCatalog()}catch{return []}
  const cards=[];
  for(const approved of rows){
   const service=live.find(s=>s.id===approved.supplier_service_id);

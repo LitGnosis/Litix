@@ -54,6 +54,24 @@ const publicOrder=(x,refresh={})=>{
  return {id:x.id,service:x.service_name,quantity:Number(x.quantity),amount:(Number(x.amount_cents)/100).toFixed(2),payment:x.payment_state,fulfillment:x.fulfillment_state,supplierOrderId:x.supplier_order_id||null,status:supplierStatus||null,remains:validRemaining,checkedAt:stat.checked_at||null,liveSupplierStatus:refresh.live===true,deliveryConfirmed:x.fulfillment_state==="completed",statusNote:refresh.warning||(!supplierStatus?"Supplier accepted the order; delivery is not confirmed yet.":"Supplier status is based on its most recent response.")};
 };
 async function refreshSupplierOrder(sql,x){
+ // The public email-order lookup also sees Boostero orders. Never send a
+ // Boostero supplier order ID to SMMGLOB's status endpoint.
+ try{
+  const provider=await sql.query(
+   "select state,supplier_order_id,supplier_status,checked_at from public.litix_boostero_fulfillment where litix_order_id=$1",
+   [x.id]);
+  if(provider.length){
+   const b=provider[0],mapped=String(b.state||"").toLowerCase();
+   x.fulfillment_state=mapped==="submitted"?"processing":mapped==="unknown_outcome"?"manual_review":mapped;
+   x.supplier_order_id=b.supplier_order_id||null;
+   x.last_supplier_status={...b.supplier_status,provider:"boostero",
+    checked_at:b.checked_at||b.supplier_status?.checked_at||null};
+   return {live:false,warning:"Showing the last saved Boostero supplier update. Live delivery is not independently verified."};
+  }
+ }catch{
+  // Database uncertainty must not cause a cross-provider status lookup.
+  return {live:false,warning:"Supplier tracking is temporarily unavailable; no cross-provider lookup was made."};
+ }
  if(!x.supplier_order_id)return {live:false,warning:"Waiting for supplier order assignment."};
  const last=x.last_supplier_status||{},lastTime=Date.parse(String(last.checked_at||""));
  if(Number.isFinite(lastTime)&&Date.now()-lastTime<60000)return {live:false,warning:"Showing a supplier update fetched within the last minute."};
