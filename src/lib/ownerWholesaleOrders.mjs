@@ -102,9 +102,10 @@ export async function ownerCreateOrder(sub,data,{db=null,getQuote=currentOwnerQu
  let inserted;
  try{
   inserted=await db.query(
-   "insert into public.litix_owner_wholesale_orders(id,owner_sub,idempotency_key,fingerprint,provider,supplier_service_id,service_name,destination,quantity,wholesale_per_1000,supplier_cost_cents,total_charge_cents,payment_method,payment_state,baseline_followers) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) on conflict(owner_sub,idempotency_key) do nothing returning id",
+   "insert into public.litix_owner_wholesale_orders(id,owner_sub,idempotency_key,fingerprint,provider,supplier_service_id,service_name,destination,quantity,wholesale_per_1000,supplier_cost_cents,total_charge_cents,payment_method,payment_state,baseline_followers,refill_days,refill_eligible,refill_method) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18) on conflict(owner_sub,idempotency_key) do nothing returning id",
    [orderId,sub,idem,fingerprint,q.provider,q.serviceId,q.service.name,q.destination,q.quantity,q.wholesalePer1000,
-    q.wholesaleCents,q.totalCents,q.paymentMethod,q.paymentMethod==="paykings"?"processing":"not_required",baseline]);
+    q.wholesaleCents,q.totalCents,q.paymentMethod,q.paymentMethod==="paykings"?"processing":"not_required",baseline,
+    q.service.refillDays??null,q.service.refillEligible===true,q.service.refillMethod||"not advertised"]);
  }catch{throw Error("owner_order_ledger_unavailable")}
  if(inserted.length!==1)throw Error("duplicate_purchase_blocked_do_not_retry");
  if(q.paymentMethod==="paykings"){
@@ -142,7 +143,7 @@ export async function ownerCreateOrder(sub,data,{db=null,getQuote=currentOwnerQu
   totalCents:q.totalCents,feesCents:q.feeCents,provider:q.provider};
 }
 export async function ownerOrderRows(sub,{db=ownerDB(),limit=75}={}){
- return db.query("select id,provider,supplier_service_id,service_name,destination,quantity,supplier_cost_cents,total_charge_cents,payment_method,payment_state,state,supplier_order_id,supplier_status,baseline_followers,last_checked_at,created_at from public.litix_owner_wholesale_orders where owner_sub=$1 order by created_at desc limit $2",[sub,Math.min(limit,75)]);
+ return db.query("select id,provider,supplier_service_id,service_name,destination,quantity,supplier_cost_cents,total_charge_cents,payment_method,payment_state,state,supplier_order_id,supplier_status,baseline_followers,refill_days,refill_eligible,refill_method,last_checked_at,created_at from public.litix_owner_wholesale_orders where owner_sub=$1 order by created_at desc limit $2",[sub,Math.min(limit,75)]);
 }
 export async function ownerRefreshOrder(sub,id,{db=ownerDB(),operation=ownerSupplierAPI}={}){
  const rows=await db.query("select * from public.litix_owner_wholesale_orders where id=$1 and owner_sub=$2",[id,sub]);
@@ -172,7 +173,7 @@ export async function sendOwnerWholesaleNotice(id,{db=ownerDB(),event="receipt",
  const credential=process.env.RESEND_API_KEY||process.env.LITIX_RESEND_API_KEY;
  if(!credential)return {sent:false,reason:"email_not_configured"};
  const rows=await db.query(
-  "select id,provider,supplier_service_id,destination,quantity,supplier_cost_cents,total_charge_cents,payment_method,payment_state,state,supplier_order_id,supplier_status,notification_state from public.litix_owner_wholesale_orders where id=$1",[id]);
+  "select id,provider,supplier_service_id,destination,quantity,supplier_cost_cents,total_charge_cents,payment_method,payment_state,state,supplier_order_id,supplier_status,notification_state,refill_days,refill_eligible,refill_method from public.litix_owner_wholesale_orders where id=$1",[id]);
  if(rows.length!==1)return {sent:false,reason:"order_not_found"};
  const o=rows[0];
  if(event==="receipt"&&o.notification_state==="SENT")return {sent:false,reason:"already_notified"};
@@ -184,6 +185,7 @@ export async function sendOwnerWholesaleNotice(id,{db=ownerDB(),event="receipt",
   "Card total (if applicable): $"+(Number(o.total_charge_cents)/100).toFixed(2),
   "Payment: "+o.payment_method+" / "+o.payment_state,
   "Supplier ID: "+(o.supplier_order_id||"Not independently confirmed"),
+  "Refill terms at purchase: "+(o.refill_days||"unspecified")+" days; API eligible: "+!!o.refill_eligible+"; "+o.refill_method,
   "Fulfillment: "+o.state,
   "Provider status: "+String(o.supplier_status?.status||"Not yet reported").slice(0,80),
   "Supplier acceptance is not independent confirmation of Instagram delivery."
