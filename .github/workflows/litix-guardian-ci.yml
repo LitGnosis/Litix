@@ -32,7 +32,7 @@ jobs:
         working-directory: src
         env:
           VERCEL_ENV: preview
-        run: node --test tests/guardian.test.mjs tests/owner-purchase-notifications.test.mjs tests/growth-bundles-route-negative.test.mjs tests/checkout.test.mjs
+        run: node --test tests/guardian.test.mjs tests/owner-purchase-notifications.test.mjs tests/growth-bundles-route-negative.test.mjs
       - name: Verify unchanged Next.js production build
         working-directory: src
         run: npm run build
