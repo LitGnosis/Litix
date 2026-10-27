@@ -25,6 +25,30 @@ test("Guardian requires two consecutive failures and two successes; dedupes outa
  assert.equal(recovered.next.status,"healthy");assert.deepEqual(recovered.events,[{kind:"recovery",id:"gi_fixed"}]);
  assert.deepEqual(nextGuardianState(recovered.next,good,new Date("2026-10-27T11:40:00Z")).events,[]);
 });
+test("usable cached catalog stays degraded, not down; prior outage recovers after two checks",()=>{
+ const cached={component:"tiktok",ok:true,kind:"degraded",code:"CATALOG_CACHED_USABLE"};
+ const initial=nextGuardianState(null,cached,new Date("2026-10-27T16:10:00Z"));
+ assert.equal(initial.next.status,"degraded");assert.deepEqual(initial.events,[]);
+ const subsequent=nextGuardianState(initial.next,cached,new Date("2026-10-27T16:15:00Z"));
+ assert.equal(subsequent.next.status,"degraded");assert.deepEqual(subsequent.events,[]);
+ assert.equal(subsequent.next.consecutive_failures,0);
+ const incident={...initial.next,status:"down",active_incident_id:"gi_existing",consecutive_failures:2,consecutive_successes:0,alert_at:"2026-10-27T16:00:00Z"};
+ const one=nextGuardianState(incident,cached,new Date("2026-10-27T16:20:00Z"));
+ assert.equal(one.next.status,"degraded");assert.deepEqual(one.events,[]);
+ const recovered=nextGuardianState(one.next,cached,new Date("2026-10-27T16:25:00Z"));
+ assert.equal(recovered.next.status,"degraded");
+ assert.deepEqual(recovered.events,[{kind:"recovery",id:"gi_existing"}]);
+ assert.equal(recovered.next.active_incident_id,null);
+ assert.deepEqual(nextGuardianState(recovered.next,cached,new Date("2026-10-27T16:30:00Z")).events,[]);
+ const invalid={component:"tiktok",ok:false,code:"CATALOG_EMPTY_OR_INVALID"};
+ const failureOne=nextGuardianState(recovered.next,invalid,new Date("2026-10-27T16:35:00Z"));
+ const failureTwo=nextGuardianState(failureOne.next,invalid,new Date("2026-10-27T16:40:00Z"));
+ assert.equal(failureTwo.next.status,"down");
+ assert.deepEqual(failureTwo.events,[{kind:"outage"}]);
+ const publicProbe=file("app/api/guardian/probe/route.js");
+ assert.match(publicProbe,/c.status==="degraded"/);
+ assert.match(file("lib/guardianRuntime.mjs"),/CATALOG_CACHED_USABLE/);
+});
 test("not-yet-launched AutoLikes is tracked honestly, never as an outage",()=>{
  const p=nextGuardianState(null,{component:"autolikes",kind:"not_launched",ok:true,code:"AUTOLIKES_COMING_SOON"},new Date("2026-10-27"));
  assert.equal(p.next.status,"not_launched");assert.equal(p.events.length,0);
