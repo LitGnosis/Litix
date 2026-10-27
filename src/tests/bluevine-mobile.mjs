@@ -31,6 +31,7 @@ try{
    await page.route("**/api/bundles/order?*",route=>route.fulfill({status:200,contentType:"application/json",body:JSON.stringify({order:{id:orderId,package:(platform==="ig"?"Instagram ":"TikTok ")+tier+" Growth Bundle",payment:"awaiting_payment",paymentProvider:"bluevine",status:"Awaiting Payment"},posts:[],deliveries:[],instructions:"Send up to 10 post links or screenshots through WhatsApp.",whatsappUrl:"https://wa.me/12145550100?text=order"})}));
    await page.goto(base+"/bundles",{waitUntil:"networkidle"});
    assert.equal(await page.getByRole("link",{name:"Pay with Bluevine"}).count(),4,"all four cards retain Bluevine buttons");
+   assert.equal(await page.getByText("Pay with PayKings — Unavailable").count(),4,"unapproved PayKings choices are unavailable");
    if(platform==="tt")await page.getByRole("button",{name:"TikTok"}).click();
    const link=page.locator('a.lg-bundle-bluevine[href*="package='+pkg+'"]');
    assert.equal(await link.count(),1);
@@ -41,11 +42,11 @@ try{
    await page.locator('input[placeholder="@yourprofile"]').fill("@testingcreator");
    await page.locator('input[type="tel"]').fill("+1 214 555 0100");
    await page.locator('input[type="checkbox"][required]').check();
-   const disabled=await page.getByRole("button",{name:/Pay with Bluevine/}).isDisabled();
+   const disabled=await page.getByRole("button",{name:/^Pay with Bluevine —/}).isDisabled();
    assert.equal(disabled,false);
    page.on("pageerror",err=>console.error("MOBILE PAGE ERROR",pkg,err.message));
    page.on("console",msg=>{if(msg.type()==="error")console.error("MOBILE CONSOLE",pkg,msg.text().slice(0,200))});
-   await page.getByRole("button",{name:/Pay with Bluevine/}).click();
+   await page.getByRole("button",{name:/^Pay with Bluevine —/}).click();
    await page.waitForTimeout(500);
    console.info("handoff diagnostic",pkg,{submitted,external,current:page.url(),notice:(await page.locator('[role="status"]').allTextContents()).slice(-3)});
    await page.waitForURL(url,{timeout:8000});

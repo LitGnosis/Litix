@@ -6,8 +6,9 @@ const currency=n=>"$"+(n/100).toFixed(2);
 export default function GrowthBundles({standalone=false}){
  const [platform,setPlatform]=useState("Instagram");
  const [bluevineEnabled,setBluevineEnabled]=useState(false);
+ const [payKingsEnabled,setPayKingsEnabled]=useState(false);
  useEffect(()=>{const selected=growthBundle(new URLSearchParams(location.search).get("package"));if(selected)setPlatform(selected.platform);
-  fetch("/api/bundles",{cache:"no-store"}).then(r=>r.json()).then(d=>setBluevineEnabled(d.bluevineEnabled===true)).catch(()=>setBluevineEnabled(false));},[]);
+  fetch("/api/bundles",{cache:"no-store"}).then(r=>r.json()).then(d=>{setBluevineEnabled(d.bluevineEnabled===true);setPayKingsEnabled(d.checkoutEnabled===true)}).catch(()=>setBluevineEnabled(false));},[]);
  return <section id="growth-bundles" className="lg-bundles panel" aria-label="Litix Growth Bundles">
   <div className="lg-bundles-heading"><div><span className="kicker">BEST SELLERS · LITIX</span><h2>LITIX GROWTH BUNDLES</h2><p>One package. Multiple engagement services. Personalized order coordination.</p></div><span className="lg-bundles-seal">MANUALLY COORDINATED</span></div>
   <div className="lg-bundles-tabs" role="group" aria-label="Growth bundle platform">
@@ -21,8 +22,8 @@ export default function GrowthBundles({standalone=false}){
    <dl className="lg-bundle-items">{Object.entries(p.items).map(([kind,quantity])=><div key={kind}><dt>{kind}</dt><dd>{fmt(quantity)}</dd></div>)}</dl>
    <p className="lg-bundle-small">Refills: supplier-dependent only; no guaranteed refill.</p>
    <p className="lg-bundle-warning">{BUNDLE_INSTRUCTIONS}</p>
-   <div className="lg-bundle-actions"><a href={"/bundles?package="+encodeURIComponent(p.id)+"#bundle-"+p.id}>View Package</a><a className="lg-bundle-buy" href={"/bundles/checkout?package="+encodeURIComponent(p.id)}>Purchase Bundle</a>{bluevineEnabled?<a className="lg-bundle-bluevine" href={"/bundles/checkout?package="+encodeURIComponent(p.id)+"&method=bluevine"}>Pay with Bluevine</a>:null}</div>
+   <div className="lg-bundle-actions"><a href={"/bundles?package="+encodeURIComponent(p.id)+"#bundle-"+p.id}>View Package</a>{payKingsEnabled?<a className="lg-bundle-buy" href={"/bundles/checkout?package="+encodeURIComponent(p.id)+"&method=paykings"}>Pay with PayKings</a>:<span className="lg-bundle-disabled" aria-disabled="true" title="PayKings bundle checkout is unavailable until merchant activation">Pay with PayKings — Unavailable</span>}{bluevineEnabled?<a className="lg-bundle-bluevine" href={"/bundles/checkout?package="+encodeURIComponent(p.id)+"&method=bluevine"}>Pay with Bluevine</a>:null}</div>
   </article>)}</div>
-  <p className="lg-bundles-note">All bundles require the customer to submit public post URLs or identifiable screenshots through the verified LITIX WhatsApp contact. Screenshots must be matched to public post URLs before fulfillment. No delivery occurs without manual admin approval.</p>
+  <p className="lg-bundles-note">All bundles require the customer to submit their order number and up to 10 public post links or identifiable screenshots through WhatsApp, email, or Instagram. Screenshots must be matched to public post URLs before fulfillment. No delivery occurs without manual admin approval.</p>
  </section>;
 }

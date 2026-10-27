@@ -36,3 +36,12 @@
 .lg-bluevine-checkout{border-top:1px solid #7fb5d960;margin-top:24px;padding-top:18px}
 .lg-bluevine-checkout h3{margin:0 0 10px}
 .lg-bluevine-checkout .pay{min-height:48px}
+
+/* Minimal two-provider checkout controls; retain the existing Litix bundle design. */
+.lg-bundle-actions .lg-bundle-disabled{min-height:42px;display:flex;align-items:center;justify-content:center;text-align:center;border:1px solid #7993a65c;border-radius:10px;padding:6px;background:#0d1725;color:#a7b4c4;font-size:12px;font-weight:750;cursor:not-allowed}
+.lg-bundle-methods{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:17px 0}
+.lg-bundle-method{min-height:48px;border:1px solid #76b2d58c;background:#112c47;color:#dceefa;font-weight:800;border-radius:11px;padding:10px;cursor:pointer}
+.lg-bundle-method.active{border-color:#b9eaff;background:linear-gradient(115deg,#cceeff,#77bdfa);color:#062342}
+.lg-bundle-method:disabled{opacity:.45;cursor:not-allowed}
+.lg-bundle-method:focus-visible{outline:3px solid #fff;outline-offset:2px}
+@media(max-width:390px){.lg-bundle-methods{grid-template-columns:1fr}}
