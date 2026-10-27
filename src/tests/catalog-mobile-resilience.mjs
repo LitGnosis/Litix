@@ -29,7 +29,7 @@ try{
  await page.getByText("1 match current filters",{exact:false}).waitFor();
  assert.equal(await page.locator(".service-option").count(),1);
  assert.match(await page.locator(".service-option").innerText(),/TikTok Followers Demo/);
- assert.match(await page.locator(".service-option").innerText(),/\$6\.00/);
+ assert.match(await page.locator(".service-option").innerText(),/USD\s*6\.00/);
  await page.locator(".service-option .item").click();
  assert.equal(await page.locator('#checkout input[readonly]').inputValue(),"TikTok Followers Demo");
  await page.getByRole("button",{name:"Instagram services"}).click();
