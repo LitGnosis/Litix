@@ -49,19 +49,25 @@ export function boosteroFollowers(input){
   const label=[x.name,x.category].map(v=>String(v||"")).join(" ");
   const platform=/tiktok|tik[\s-]*tok/i.test(label)?"TikTok":"Instagram";
   const min=Number(x.min),max=Number(x.max),rate=Number(x.rate);
-  const desc=[x.name,x.description,x.desc,x.category,x.refill_days,x.refillDays].map(v=>String(v||"")).join(" ");
-  const explicitNoRefill=/\b(?:no|without|non)[ -]?refill\b/i.test(desc)||x.refill===false||x.refillable===false;
-  const refillClaim=(x.refill===true||x.refillable===true||String(x.refill)==="1"||/\brefill\b/i.test(desc))&&!explicitNoRefill;
+  const title=String(x.name||"");
+  const desc=[title,x.description,x.desc,x.category,x.refill_days,x.refillDays].map(v=>String(v||"")).join(" ");
+  // An SMM panel may advertise manual refills while "refill:false" means
+  // the supplier API refill button is unavailable. Do not conflate these.
+  const explicitNoRefill=/\b(?:no|without|non)[ -]?refill\b/i.test(title);
+  const apiRefillEligible=x.refill===true||x.refillable===true||String(x.refill)==="1";
+  const advertisedRefill=/\brefill\b/i.test(title)&&!explicitNoRefill;
+  const refillClaim=apiRefillEligible||advertisedRefill;
   const durations=[...desc.matchAll(/\b(\d{1,3})\s*(?:days?|d)\b/gi)].map(x=>Number(x[1])).filter(Number.isFinite);
   const lifetime=/\blifetime\b|\blife\s*time\b/i.test(desc);
   const longest=durations.length?Math.max(...durations):null;
   const thirtyPlus=refillClaim&&(lifetime||(longest!==null&&longest>=30));
+  const refillMethod=/\bmanual refill\b/i.test(title)?"manual advertised":apiRefillEligible?"API refill supported":advertisedRefill?"advertised, mechanism unverified":"not advertised";
   return {id:String(x.service??x.id??"").slice(0,30),platform,
    name:String(x.name||"").slice(0,155),category:String(x.category||"").slice(0,100),
    wholesalePer1000USD:Number.isFinite(rate)&&rate>0?rate:null,
    min:Number.isSafeInteger(min)&&min>=0?min:null,
    max:Number.isSafeInteger(max)&&max>=0?max:null,
    refillClaim,refillDays:lifetime?"lifetime":longest,refill30Plus:thirtyPlus,
-   refillEvidence:refillClaim?"provider listing":"not confirmed"};
+   apiRefillEligible,refillMethod,refillEvidence:refillClaim?"advertised in provider listing; fulfillment not tested":"not advertised"};
  }).filter(x=>x.id&&x.wholesalePer1000USD!==null&&x.min!==null&&x.max!==null&&x.max>=x.min);
 }
