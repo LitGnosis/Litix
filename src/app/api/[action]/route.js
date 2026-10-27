@@ -1,5 +1,6 @@
 import { priceCatalog, retailPer1000, supplierPricingInput, validateCheckoutQuote, servicePurchaseMinimum, minimumPurchaseQuantity, calculateOrderCents } from "../../../lib/pricing.mjs";
 import {matchesServiceQuickKind,sortServicesPer1000} from "../../../lib/catalogSort.mjs";
+import {legacyPublicServiceAllowed} from "../../../lib/publicBoosteroOnly.mjs";
 import { neon } from "@neondatabase/serverless";
 import { randomUUID, createHash } from "node:crypto";
 import { after } from "next/server";
@@ -184,7 +185,7 @@ export async function GET(req){
   const cat=bounded(p.get("category"),100),platform=bounded(p.get("platform"),30),term=bounded(p.get("q"),120).toLowerCase(),page=Math.max(1,Math.min(10000,Number(p.get("page"))||1));
   // Strict category quick filters stay separate from free-text search.
   const quickKind=["followers","likes"].includes(String(p.get("kind")||"").toLowerCase())?String(p.get("kind")).toLowerCase():"";
-  try{const all=await getServices(),filtered=sortServicesPer1000(all.filter(x=>(!cat||String(x.category||"Other")===cat)&&(!platform||platform==="All platforms"||platformName(x)===platform)&&(!term||[x.service,x.name,x.category].some(z=>String(z||"").toLowerCase().includes(term)))&&
+  try{const all=(await getServices()).filter(legacyPublicServiceAllowed),filtered=sortServicesPer1000(all.filter(x=>(!cat||String(x.category||"Other")===cat)&&(!platform||platform==="All platforms"||platformName(x)===platform)&&(!term||[x.service,x.name,x.category].some(z=>String(z||"").toLowerCase().includes(term)))&&
     (!quickKind||matchesServiceQuickKind(x,quickKind))),platformRank,retailPer1000);const goals={"Grow audience":/followers?|profile/i,"Increase engagement":/likes?|comments?|views?|saves?/i,"Launch a product":/shares?|views?|saves?/i,"Generate leads":/profile|views?/i,"Build brand awareness":/views?|shares?/i};const matcher=goals[p.get("goal")];const recommendations=matcher&&["7","30","90"].includes(p.get("horizon"))?filtered.filter(x=>/^default$/i.test(String(x.type||"Default"))&&matcher.test(String(x.name))).slice(0,3).map(shape):[];return send({recommendations,items:filtered.slice((page-1)*24,page*24).map(shape),categories:[...new Set(all.map(x=>String(x.category||"Other")))].sort(),total:filtered.length,allCount:all.length,page,
    // The raw count is from a successful read-only SMMGLOB services response;
    // 'cached' never claims a live upstream connection.
@@ -249,6 +250,7 @@ export async function POST(req){
  if(!/^[0-9]+$/.test(id)||!Number.isSafeInteger(qty)||qty<1||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||!link||token.length<10||!/^[a-f0-9-]{36}$/.test(idem))return send({error:"Invalid service, quantity, public URL, email or payment information"},400);
  let service;try{service=(await refreshServices(false)).find(s=>String(s.service)===id)}catch{return send({error:"Litix prices unavailable; no charge submitted"},503)}
  if(!service||!/^default$/i.test(String(service.type||"Default"))||qty<Number(service.min)||qty>Number(service.max))return send({error:"This service needs additional order information or a different quantity"},422);
+ if(!legacyPublicServiceAllowed(service))return send({error:"This Instagram/TikTok service is temporarily unavailable. Choose a verified Boostero service instead; no payment attempted."},409);
  const serviceMinimum=minimumPurchaseQuantity(service,retailPer1000(service));
  const supplierStep=Number(service.quantity_step??service.quantityStep??service.step??service.increment??1);
  if(serviceMinimum===null||qty<serviceMinimum||!Number.isSafeInteger(supplierStep)||supplierStep<1||(qty-Number(service.min))%supplierStep!==0)return send({error:"Minimum $5 purchase not met at a supplier-permitted quantity. Choose an eligible quantity; no payment was submitted."},422);
