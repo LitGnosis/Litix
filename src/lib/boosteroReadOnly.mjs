@@ -71,3 +71,49 @@ export function boosteroFollowers(input){
    apiRefillEligible,refillMethod,refillEvidence:refillClaim?"advertised in provider listing; fulfillment not tested":"not advertised"};
  }).filter(x=>x.id&&x.wholesalePer1000USD!==null&&x.min!==null&&x.max!==null&&x.max>=x.min);
 }
+
+
+/**
+ * Production operations are enabled ONLY after a separately authorized release.
+ * This does not register a public route or modify any current SMMGLOB code.
+ * Supplier add requests are never retried on network/timeout uncertainty.
+ */
+export async function boosteroProduction(action,parameters={},options={}){
+ const allowed=new Set(["balance","services","add","status","refill"]);
+ if(!allowed.has(action))throw Error("boostero_action_forbidden");
+ if(process.env.VERCEL_ENV!=="production"||process.env.LITIX_BOOSTERO_ENABLED!=="true")
+  throw Error("boostero_production_disabled");
+ if(!process.env.BOOSTERO_API_KEY)throw Error("boostero_key_unconfigured");
+ let params={};
+ if(action==="add"){
+  const id=String(parameters.service||""),quantity=Number(parameters.quantity),link=String(parameters.link||"");
+  if(options.claimed!==true||!/^\d{1,12}$/.test(id)||!Number.isSafeInteger(quantity)||quantity<1||quantity>1000000||
+     !/^https:\/\/www\.(instagram\.com\/[a-zA-Z0-9._]{1,30}\/|tiktok\.com\/@[A-Za-z0-9._]{2,24})$/.test(link))
+   throw Error("boostero_add_not_authorized");
+  params={service:id,quantity:String(quantity),link};
+ }else if(action==="status"||action==="refill"){
+  const order=String(parameters.order||"");
+  if(!/^\d{1,24}$/.test(order))throw Error("boostero_supplier_id_invalid");
+  if(action==="refill"&&options.adminApproved!==true)throw Error("boostero_refill_needs_approval");
+  params={order};
+ }
+ let response;
+ try{
+  response=await (options.fetcher||fetch)(endpoint(),{
+   method:"POST",headers:{"content-type":"application/x-www-form-urlencoded"},
+   body:new URLSearchParams({key:process.env.BOOSTERO_API_KEY,action,...params}).toString(),
+   cache:"no-store",redirect:"error",signal:AbortSignal.timeout(action==="services"?20000:15000)
+  });
+ }catch{throw Error("boostero_network_unknown_outcome");}
+ if(!response.ok)throw Error("boostero_http_"+response.status+(action==="add"?"_unknown_outcome":""));
+ let data;
+ try{data=await response.json()}catch{throw Error("boostero_invalid_json"+(action==="add"?"_unknown_outcome":""))}
+ if(data&&typeof data==="object"&&!Array.isArray(data)&&data.error)
+  throw Error("boostero_provider_rejected");
+ if(action==="services"&&!Array.isArray(data))throw Error("boostero_services_invalid_shape");
+ if(action==="balance"&&(!data||Array.isArray(data)||!Object.hasOwn(data,"balance")))
+  throw Error("boostero_balance_invalid_shape");
+ if(action==="add"&&(!data||!/^\d{1,24}$/.test(String(data.order||""))))
+  throw Error("boostero_add_unconfirmed_outcome");
+ return data;
+}
