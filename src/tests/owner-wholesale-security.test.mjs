@@ -5,7 +5,7 @@ import {ownerConfig,seal,unseal,createOwnerLoginFlow,challenge,validateFlow,owne
 import {normalizeWholesaleRows,wholesaleQuote,ownerProfile,ownerSupplierAPI} from "../lib/ownerWholesale.mjs";
 import {ownerPurchasesEnabled,ownerCardEnabled,ownerCreateOrder,dispatchOwnerOrder} from "../lib/ownerWholesaleOrders.mjs";
 
-const keys=["AUTH0_DOMAIN","AUTH0_CLIENT_ID","AUTH0_CLIENT_SECRET","AUTH0_SECRET","LITIX_OWNER_AUTH0_SUB","LITIX_OWNER_ALLOWED_ORIGIN","LITIX_OWNER_WHOLESALE_PURCHASES","LITIX_OWNER_PAYKINGS_ENABLED","VERCEL_ENV","SMMGLOB_API_KEY","SMMGLOB_API_URL","RESEND_API_KEY"];
+const keys=["AUTH0_DOMAIN","AUTH0_CLIENT_ID","AUTH0_CLIENT_SECRET","AUTH0_SECRET","LITIX_OWNER_AUTH0_SUB","LITIX_OWNER_ALLOWED_ORIGIN","LITIX_OWNER_WHOLESALE_PURCHASES","LITIX_OWNER_PAYKINGS_ENABLED","LITIX_OWNER_PAYKINGS_SETTLEMENT_VERIFIED","VERCEL_ENV","SMMGLOB_API_KEY","SMMGLOB_API_URL","RESEND_API_KEY"];
 const save=Object.fromEntries(keys.map(k=>[k,process.env[k]]));
 function configured(){
  Object.assign(process.env,{AUTH0_DOMAIN:"litix-testing.auth0.com",AUTH0_CLIENT_ID:"fake-public-client",
@@ -128,20 +128,20 @@ test("repeat owner PayKings submission cannot cause a second card charge or supp
  const otherKeys=["NMI_SECURITY_KEY","NEXT_PUBLIC_PAYKINGS_NMI_COLLECT_PUBLIC_KEY","LITIX_OWNER_PAYKINGS_FEE_BPS","LITIX_OWNER_PAYKINGS_FEE_FIXED_CENTS"];
  const existing=Object.fromEntries(otherKeys.map(x=>[x,process.env[x]]));
  Object.assign(process.env,{VERCEL_ENV:"production",LITIX_OWNER_WHOLESALE_PURCHASES:"true",
-  LITIX_OWNER_PAYKINGS_ENABLED:"true",NMI_SECURITY_KEY:"fake-key-not-used-live",
+  LITIX_OWNER_PAYKINGS_ENABLED:"true",LITIX_OWNER_PAYKINGS_SETTLEMENT_VERIFIED:"true",NMI_SECURITY_KEY:"fake-key-not-used-live",
   NEXT_PUBLIC_PAYKINGS_NMI_COLLECT_PUBLIC_KEY:"fake-collectjs-public",
   LITIX_OWNER_PAYKINGS_FEE_BPS:"290",LITIX_OWNER_PAYKINGS_FEE_FIXED_CENTS:"30"});
  let gatewayCalls=0,supplierCalls=0,insertCount=0,state="QUEUED";
  globalThis.fetch=async url=>{
   if(!String(url).includes("paykings.transactiongateway.com"))throw Error("Unexpected real network");
-  gatewayCalls++;return new Response("response=1&transactionid=FAKEGATEWAY123",{status:200});
+  gatewayCalls++;return new Response("response=1&transactionid=123456789",{status:200});
  };
  const orderId="low_aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
  const db={query:async(sql,args=[])=>{
   if(sql.startsWith("insert into public.litix_owner_wholesale_orders")){
    insertCount++;return insertCount===1?[{id:orderId}]:[];
   }
-  if(sql.startsWith("update public.litix_owner_wholesale_orders set payment_state='paid'"))return [{id:orderId}];
+  if(sql.startsWith("update public.litix_owner_wholesale_orders set payment_transaction_id="))return [{id:orderId}];
   if(sql.startsWith("update public.litix_owner_wholesale_orders set state='DISPATCHING'")){
    if(state!=="QUEUED")return [];state="DISPATCHING";
    return [{id:orderId,attempt_id:"unique-attempt",provider:"smmglob",supplier_service_id:"123",
@@ -169,10 +169,10 @@ test("repeat owner PayKings submission cannot cause a second card charge or supp
   idempotencyKey:"baaaaaaa-1111-4111-8111-111111111111",confirmed:true};
  try{
   const first=await ownerCreateOrder("auth0|exact_owner_123",body,{db,getQuote,operation});
-  assert.equal(first.payment,"paid");assert.equal(first.state,"SUBMITTED");
-  assert.equal(supplierCalls,1);assert.equal(gatewayCalls,1);
+  assert.equal(first.payment,"approved_pending_settlement");assert.equal(first.submitted,false);
+  assert.equal(supplierCalls,0);assert.equal(gatewayCalls,1);
   await assert.rejects(ownerCreateOrder("auth0|exact_owner_123",body,{db,getQuote,operation}),/duplicate_purchase_blocked/);
-  assert.equal(supplierCalls,1);assert.equal(gatewayCalls,1);
+  assert.equal(supplierCalls,0);assert.equal(gatewayCalls,1);
  }finally{
   globalThis.fetch=originalFetch;Object.entries(existing).forEach(([k,v])=>v==null?delete process.env[k]:process.env[k]=v);
   restore();
