@@ -11,6 +11,17 @@ export function nextGuardianState(prior,observation,at=new Date()){
   result.status="not_launched";result.consecutive_failures=0;result.consecutive_successes=0;
   return {next:result,events};
  }
+ // A usable stale catalog is degraded, not a missing/failed catalog.
+ // Clear a previously confirmed outage only after two consecutive usable reads.
+ if(observation.kind==="degraded"&&observation.ok){
+  result.status="degraded";
+  result.consecutive_failures=0;result.consecutive_successes=prev.consecutive_successes+1;
+  if(prev.active_incident_id&&result.consecutive_successes>=recoveryThreshold){
+   events.push({kind:"recovery",id:prev.active_incident_id});
+   result.active_incident_id=null;result.alert_at=null;result.escalation_at=null;
+  }
+  return {next:result,events};
+ }
  if(observation.ok){
   result.consecutive_failures=0;result.consecutive_successes=prev.consecutive_successes+1;
   if(prev.active_incident_id){
