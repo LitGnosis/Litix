@@ -24,6 +24,7 @@ async function verify(width){
  assert.equal(await wa.count(),1,"Exactly one WhatsApp floating launcher");
  const waHref=await wa.getAttribute("href");assert.ok(waHref.startsWith("https://wa.me/"));
  const a=await rect(ai),w=await rect(wa);
+ console.log("FLOAT_GEOMETRY",JSON.stringify({width,ai:a,whatsapp:w,viewport:await page.evaluate(()=>({innerWidth,innerHeight,visualWidth:visualViewport?.width,visualHeight:visualViewport?.height}))}));
  assert.equal(intersection(a,w),0,"Launcher overlap at "+width+"px");
  assert.ok(distance(a,w)>=12,"Minimum 12px gap; "+width+"px measured "+distance(a,w));
  for(const [name,r] of [["AI",a],["WhatsApp",w]]){
