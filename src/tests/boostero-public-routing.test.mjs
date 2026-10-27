@@ -16,7 +16,7 @@ function runCatalog(originalResponse,serviceCards=[boosteroCard]){
  globalThis.__boosteroCatalogMock={
   catalog:async()=>originalResponse,
   cards:async()=>serviceCards,
-  filter:async(cards,params)=>cards.filter(c=>!params.has("platform")||params.get("platform")===c.platform)
+  filter:(cards,params)=>cards.filter(c=>!params.has("platform")||params.get("platform")===c.platform)
  };
  return import("data:text/javascript,"+encodeURIComponent(modified)+"#"+Math.random());
 }
