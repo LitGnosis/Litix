@@ -231,8 +231,16 @@ export async function sendOwnerWholesaleNotice(id,{db=ownerDB(),event="receipt",
   return {sent:true};
  }catch{return {sent:false,reason:"email_delivery_unconfirmed"}}
 }
-export async function pollOwnerOrders({db=ownerDB(),limit=12}={}){
+export async function pollOwnerOrders({db=null,limit=12}={}){
  if(!ownerPurchasesEnabled())return {checked:0,disabled:true};
+ db=db||ownerDB();
+ let reconciled=0;
+ if(ownerCardEnabled()){
+  const pending=await db.query("select id,owner_sub from public.litix_owner_wholesale_orders where payment_method='paykings' and payment_state='processing' and settlement_state='pending' and payment_transaction_id is not null order by updated_at asc limit $1",[Math.min(12,limit)]);
+  for(const entry of pending){
+   try{const res=await ownerReconcileSettlement(entry.owner_sub,entry.id,{db});if(res.payment==='settled')reconciled++}catch{}
+  }
+ }
  const rows=await db.query("select id,owner_sub,created_at,last_checked_at,state from public.litix_owner_wholesale_orders where state='SUBMITTED' and (last_checked_at is null or last_checked_at<now()-interval '15 minutes') order by last_checked_at nulls first limit $1",[Math.min(12,limit)]);
  let checked=0,failed=0;
  for(const item of rows){
@@ -243,5 +251,5 @@ export async function pollOwnerOrders({db=ownerDB(),limit=12}={}){
    checked++;
   }catch{failed++}
  }
- return {checked,failed};
+ return {checked,failed,reconciled};
 }
