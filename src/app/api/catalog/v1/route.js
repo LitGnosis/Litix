@@ -1,69 +1,19 @@
-import { GET as catalog } from "../../[action]/route.js";
-import {enabledBoosteroCards,filterBoosteroCards} from "../../../../lib/boosteroCatalog.mjs";
-export const runtime = "nodejs";
-export const dynamic = "force-dynamic";
-export const maxDuration = 60;
-export async function GET(request) {
- const incoming=new URL(request.url),p=incoming.searchParams;
- const platform=p.get("platform")||"",kind=p.get("kind")||"";
- const canonical=["Instagram Followers","Instagram Likes","TikTok Followers","TikTok Likes"];
- const category=p.get("category")||"";
- const targeted=/^(Instagram|TikTok)$/.test(platform)&&/^(followers|likes)$/.test(kind)||canonical.includes(category);
- // The four Boostero-only tabs must not wait for an unrelated SMMGLOB 525.
- // This branch reads only the live approved Boostero catalog, never old numeric SKUs.
- if(targeted&&process.env.VERCEL_ENV==="production"&&process.env.LITIX_BOOSTERO_ENABLED==="true"){
-  const cat=canonical.includes(category)?category:null;
-  let cards=[];
-  try{
-   const all=await enabledBoosteroCards();
-   cards=filterBoosteroCards(all,new URLSearchParams({
-    platform:cat?cat.split(" ")[0]:platform,kind:cat?cat.split(" ")[1].toLowerCase():kind,
-    q:p.get("q")||"",category:cat||""
-   }));
-  }catch{}
-  const unavailable=cards.length===0;
-  return Response.json({items:cards,total:cards.length,allCount:cards.length,page:1,
-   categories:canonical,recommendations:[],
-   catalogStatus:unavailable?"unavailable":"live",boosteroCatalogStatus:unavailable?"unavailable":"live_allowlisted",
-   message:unavailable?"Temporarily unavailable":undefined,boosteroOnly:true},
-   {headers:{"cache-control":"no-store","x-content-type-options":"nosniff"}});
- }
- const url=new URL(request.url);
- url.pathname="/api/smmservices";
- const original=await catalog(new Request(url,request));
- // With Boostero off the SMMGLOB response is byte-for-byte unchanged.
- // If SMMGLOB is down, allow ONLY separately approved Boostero products;
- // never reroute legacy numeric service IDs or imply the original catalog is live.
- if(process.env.LITIX_BOOSTERO_ENABLED!=="true"||process.env.VERCEL_ENV!=="production")return original;
- let all;
- try{all=await enabledBoosteroCards()}catch{return original}
- if(!all.length)return original;
+import {enabledBoosteroCards} from "../../../../lib/boosteroCatalog.mjs";
+import {buildActiveStorefrontCatalog} from "../../../../lib/activeStorefrontCatalog.mjs";
+export const runtime="nodejs";
+export const dynamic="force-dynamic";
+export const maxDuration=60;
+// Boostero is the exclusive NEW-ORDER storefront catalog.
+// No historical supplier API fetch, old numeric SKUs, or supplier fallback.
+export async function GET(request){
  const params=new URL(request.url).searchParams;
- const filtered=filterBoosteroCards(all,params);
- const fourCategory=/^(Instagram|TikTok)$/.test(params.get("platform")||"")&&/^(followers|likes)$/.test(params.get("kind")||"");
- if(!filtered.length){
-  if(fourCategory&&!original.ok)return Response.json({items:[],recommendations:[],categories:[],total:0,allCount:0,
-    catalogStatus:"unavailable",message:"Temporarily unavailable",page:1,supplierOutage:true},
-    {headers:{"cache-control":"no-store"}});
-  return original;
- }
+ let rows=[];
  try{
-  const page=Math.max(1,Number(new URL(request.url).searchParams.get("page")||1));
-  // SMMGLOB is currently susceptible to 525s/timeouts. Fail over the
-  // *catalog display* only, never an already-paid SMMGLOB order.
-  const source=original.ok?await original.json():{items:[],recommendations:[],categories:[],total:0,allCount:0,page,
-   catalogStatus:"smmglob_unavailable",supplierOutage:true};
-  const originalItems=Array.isArray(source.items)?source.items:[];
-  const payload={...source,
-   items:page===1?[...originalItems,...filtered]:originalItems,
-   total:Number(source.total||0)+filtered.length,
-   allCount:Number(source.allCount||0)+all.length,
-   categories:[...new Set([...(source.categories||[]),...all.map(s=>s.category)])].sort(),
-   recommendations:(source.recommendations||[]).concat(
-    page===1&&["7","30","90"].includes(params.get("horizon"))?
-     filtered.filter(x=>params.get("goal")==="Grow audience"?x.kind==="followers":
-      params.get("goal")==="Increase engagement"?x.kind==="likes":false).slice(0,3):[]),
-   boosteroCatalogStatus:"live_allowlisted"};
-  return Response.json(payload,{headers:{"cache-control":"no-store","x-content-type-options":"nosniff"}});
- }catch{return original}
+  if(process.env.LITIX_BOOSTERO_ENABLED==="true")rows=await enabledBoosteroCards();
+ }catch{
+  // Fail closed. Never publish unverifiable services or substitute a retired provider.
+ }
+ return Response.json(buildActiveStorefrontCatalog(rows,params),{
+  headers:{"cache-control":"no-store","x-content-type-options":"nosniff"}
+ });
 }
