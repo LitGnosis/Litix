@@ -5,22 +5,24 @@ import vm from 'node:vm';
 
 // Execute the actual effect, with gateway/network/React replaced. No payments.
 const page = readFileSync(new URL('../app/page.jsx', import.meta.url), 'utf8');
-const effect = page.split(' useEffect(()=>{\n  if(!config.ready')[1].split(' },[config.ready,config.publicKey,cardRetry]);')[0];
+const effect = page.split(' useEffect(()=>{\n  if(!config.publicKey')[1].split(' },[config.ready,config.publicKey,cardRetry,detailsReady]);')[0];
 function harness() {
- const scripts=[], timers=new Map(); let next=0, ready=false, notice='', options;
- const window={setTimeout:fn=>{timers.set(++next,fn);return next;},clearTimeout:id=>timers.delete(id)};
+ const scripts=[], timers=new Map(), intervals=new Map(); let next=0, ready=false, notice='', options;
+ const window={setTimeout:fn=>{timers.set(++next,fn);return next;},clearTimeout:id=>timers.delete(id),setInterval:fn=>{intervals.set(++next,fn);return next;},clearInterval:id=>intervals.delete(id)};
  const document={
   querySelector:()=>scripts.find(s=>s.isConnected)||null,
+  querySelectorAll:()=>scripts.filter(s=>s.isConnected),
+  getElementById:()=>({getClientRects:()=>[{}]}),
   createElement:()=>({dataset:{},listeners:{},isConnected:false,
    setAttribute(k,v){this.dataset[k.replace(/^data-/, '').replace(/-([a-z])/g,(_,c)=>c.toUpperCase())]=v;},
    addEventListener(k,fn){this.listeners[k]=fn;},removeEventListener(k,fn){if(this.listeners[k]===fn)delete this.listeners[k];},
    remove(){this.isConnected=false;}}),
   head:{appendChild(s){s.isConnected=true;scripts.push(s);}}
  };
- const context={window,document,config:{ready:true,publicKey:'test-public-tokenization-key'},setCardReady:v=>ready=v,setNotice:v=>notice=v,setBusy:()=>{},done:{current:()=>{}}};
+ const context={detailsReady:true,window,document,getCollectJS:()=>window.CollectJS,getComputedStyle:()=>({visibility:"visible"}),config:{ready:true,publicKey:'test-public-tokenization-key'},setCardReady:v=>ready=v,setNotice:v=>notice=v,setBusy:()=>{},done:{current:()=>{}}};
  return {window,scripts,timers,get ready(){return ready;},get notice(){return notice;},get options(){return options;},
-  run(){return vm.runInNewContext('(function(){if(!config.ready'+effect+'})()',context);},
-  load(){window.CollectJS={configure:o=>options=o};scripts.at(-1).listeners.load();},
+  run(){return vm.runInNewContext('(function(){if(!config.publicKey'+effect+'})()',context);},
+  load(){window.CollectJS={configure:o=>options=o};scripts.at(-1).listeners.load();[...intervals.values()].forEach(fn=>fn());},
   timeout(){const callbacks=[...timers.values()];timers.clear();callbacks.forEach(fn=>fn());}
  };
 }

@@ -1,5 +1,8 @@
 import "./style.css";
 import "./metallic.css";
+import "./growthBundles.css";
+import "./litix-ai.css";
+import LitixAI from "../components/LitixAI";
 import { LITIX_BRAND_MANIFEST } from "../config/brandEngine";
 
 const keywords = [
@@ -82,6 +85,7 @@ export default function RootLayout({ children }) {
           dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
         />
         {children}
+        <LitixAI />
       </body>
     </html>
   );

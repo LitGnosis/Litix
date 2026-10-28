@@ -171,3 +171,123 @@ button:disabled{filter:saturate(.55)}
 .audience-roadmap{border-top:1px solid #c9d7e53d;margin-top:26px;padding-top:24px}.audience-roadmap p{color:#b8c9df;line-height:1.75;max-width:850px}.audience-phrase{color:#ffe071;font-weight:800;letter-spacing:.04em;margin-top:28px}
 .audience-footer{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:24px 2px;color:#aec0d6;font-size:12px}
 @media(max-width:620px){.audience-header{align-items:flex-start;flex-direction:column}.audience-header nav{gap:12px}.audience-actions{flex-direction:column}.audience-actions a{width:100%;box-sizing:border-box}.audience-footer{flex-direction:column}}
+
+.litix-new-logo{display:block;max-height:86px;width:min(36vw,165px);object-fit:contain}
+.litix-network-tabs{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0;max-width:100%;min-width:0}.litix-network-tabs button{max-width:100%;min-width:0;white-space:normal;overflow-wrap:break-word}
+.litix-network-tabs button{border:1px solid #416c89;border-radius:20px;padding:10px 12px;background:#133049;color:#e9f8ff;font-weight:700;cursor:pointer}
+.litix-network-tabs button.litix-network-active{background:#078cc4;color:white}
+.litix-feature-panel{margin-top:24px}
+.litix-feature-panel .tags{display:flex;flex-wrap:wrap;gap:10px}
+.litix-feature-panel .tags span{padding:10px 14px;border:1px solid #416078;border-radius:24px;background:#172d40}
+@media(max-width:520px){.litix-new-logo{width:110px;max-height:80px}.litix-network-tabs button{font-size:13px;padding:9px 10px}}
+
+/* Keep catalog prices readable at narrow widths and beside long service IDs. */
+.service-option{min-width:0}.service-option>.item{width:100%;min-width:0}
+.service-option .foot{flex-wrap:wrap;align-items:flex-start}
+.service-option .price{display:block;color:#fff3b0;font-size:22px;font-weight:850;line-height:1.4;overflow-wrap:anywhere}
+.price-unit{display:block;color:#c8deef;font-size:12px;font-weight:500}
+.minimum-price{margin:10px 0;color:#f2f8ff;font-size:14px;font-weight:700;line-height:1.5}
+
+
+/* Litix Platinum service cards: presentation only; existing checkout/supplier data stays intact. */
+.service-option>.item{
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  gap:11px;
+  min-height:142px;
+  padding:20px 19px;
+  background:linear-gradient(145deg,#11243b,#081321 68%,#0b1e32);
+  border:1px solid #80caff6b;
+  border-radius:16px;
+  box-shadow:inset 0 1px #ffffff15,0 12px 30px #02071270;
+}
+.service-option>.item:hover:not(:disabled){
+  border-color:#96e0ff;
+  box-shadow:0 14px 35px #0007,0 0 21px #2caef42c;
+}
+.service-option>.item.active{
+  border-color:#e0c681;
+  background:linear-gradient(145deg,#153a5a,#0b1b2f);
+}
+.service-option .service-card-name{
+  min-height:0;
+  font-size:clamp(17px,1.5vw,21px);
+  line-height:1.32;
+  letter-spacing:-.02em;
+  font-weight:850;
+  color:#f6fbff;
+  overflow-wrap:anywhere;
+}
+.service-option .service-card-foot{display:block;margin:0}
+.service-option .service-card-price{
+  display:block;
+  color:#ffedb0;
+  font-size:clamp(23px,2vw,28px);
+  font-weight:900;
+  line-height:1.22;
+  letter-spacing:-.035em;
+  font-variant-numeric:tabular-nums;
+}
+.service-option .service-card-unit{
+  display:inline;
+  font-size:13px;
+  letter-spacing:0;
+  color:#d8e6f3;
+  font-weight:600;
+  white-space:nowrap;
+}
+.service-option .service-card-start{
+  margin:0;
+  color:#bed6ed;
+  font-size:13px;
+  font-weight:700;
+  line-height:1.4;
+  font-variant-numeric:tabular-nums;
+}
+@media(max-width:575px){
+  .service-option>.item{min-height:130px;padding:17px 18px;gap:10px}
+  .service-option .service-card-price{font-size:26px}
+}
+@media(prefers-reduced-motion:reduce){
+  .service-option>.item{transition:none!important;animation:none!important}
+  .service-option>.item:hover{transform:none!important}
+}
+
+
+/* Keep the existing Compare control touch-friendly without inheriting the
+   checkout input's width:100% rule, which overflows the 320px card grid. */
+.service-option{width:100%;max-width:100%;min-width:0}
+.service-option .compare-toggle{
+  display:flex;align-items:center;flex-wrap:wrap;gap:8px;max-width:100%;
+  font-size:12px;line-height:1.5;color:#cfdeeb;overflow-wrap:anywhere;
+  margin-top:10px;
+}
+.service-option .compare-toggle input[type="checkbox"]{
+  display:inline-block;width:18px!important;min-width:18px;height:18px;
+  flex:0 0 18px;padding:0;margin:0;cursor:pointer;
+}
+
+
+/* Phase 1: clearly mark legacy references that cannot accept NEW purchases.
+   Existing card design, card count, retail prices and order references are unchanged. */
+.service-option>.item:disabled{
+  cursor:not-allowed;
+  opacity:.65;
+  border-color:#7296a955;
+  box-shadow:inset 0 1px #ffffff08;
+  transform:none;
+}
+.service-option .service-card-unavailable{
+  color:#d8e5f2;
+  font-size:12px;
+  font-weight:750;
+  line-height:1.4;
+  border-top:1px solid #8cb3ce50;
+  padding-top:8px;
+}
+.service-option>.item:disabled:hover{
+  border-color:#7296a955;
+  transform:none;
+  box-shadow:inset 0 1px #ffffff08;
+}
