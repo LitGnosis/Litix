@@ -108,9 +108,7 @@ for db in neondb litixapi;do
  encrypted="$work/$filename"
  # Use PG18 in an isolated short-lived container. Pass the secret URL only as
  # a named ENV variable (not argv), and suppress raw Postgres output on failures.
- docker run --rm --network host -e LITIX_READONLY_PG_URL "$image_name" \
-  sh -c 'exec pg_dump -Fc --no-owner --no-acl --dbname="$LITIX_READONLY_PG_URL"' \
-  2>"$work/pgdump-$db.err" |
+ python3 scripts/litix-r2-readonly-pgdump.py  2>"$work/pgdump-$db.err" |
   age --recipient "$AGE_PUBLIC_RECIPIENT" --recipient "$test_public" --output "$encrypted" \
   2>"$work/age-$db.err" ||
   fail "$db pg_dump or age encryption failed; no DB changes were made."
