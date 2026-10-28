@@ -14,7 +14,7 @@ const cardConfigured=()=>gatewayMode()==="TEST"
  ?Boolean(validTestGateway()&&process.env.NMI_TEST_SECURITY_KEY&&(process.env.NMI_TEST_COLLECT_PUBLIC_KEY||process.env.NEXT_PUBLIC_PAYKINGS_NMI_TEST_COLLECT_PUBLIC_KEY))
  :Boolean(process.env.NMI_SECURITY_KEY&&(process.env.NEXT_PUBLIC_PAYKINGS_NMI_COLLECT_PUBLIC_KEY||process.env.PAYKINGS_NMI_COLLECT_PUBLIC_KEY));
 export async function GET(){
- return output({demo:previewDemo(),paymentReady:chooseDatabaseReady()&&cardConfigured(),
+ return output({demo:previewDemo(),paymentReady:false,releaseBlocked:"Boostero multi-post checkout adapter and recovery tests not complete",
   publicKey:gatewayMode()==="TEST"?(process.env.NEXT_PUBLIC_PAYKINGS_NMI_TEST_COLLECT_PUBLIC_KEY||process.env.NMI_TEST_COLLECT_PUBLIC_KEY||null)
    :(process.env.NEXT_PUBLIC_PAYKINGS_NMI_COLLECT_PUBLIC_KEY||process.env.PAYKINGS_NMI_COLLECT_PUBLIC_KEY||null),
   customerPaymentMode:gatewayMode(),minimumCheckoutCents:500});
@@ -22,12 +22,14 @@ export async function GET(){
 export async function POST(req){
  const origin=req.headers.get("origin");
  if(origin&&origin!==new URL(req.url).origin)return output({error:"Cross-site checkout denied."},403);
+ if(!previewDemo())return output({error:"Choose Posts is a preview only. Boostero multi-post paid checkout has not been released; no charge submitted."},503);
  if(!chooseDatabaseReady())return output({error:"Choose Posts database not configured. No charge submitted."},503);
  let x,raw;
  try{raw=await req.text();if(raw.length>13000)return output({error:"Request too large."},413);x=JSON.parse(raw);}
  catch{return output({error:"Invalid JSON checkout request."},400);}
  const username=instagramUsername(x?.username),email=String(x?.email||"").trim().toLowerCase();
  const serviceId=String(x?.serviceId||""),idem=String(x?.idempotencyKey||"");
+ if(x?.simulate!==true)return output({error:"Live multi-post payments are disabled. Preview simulation only; no charge submitted."},503);
  const demo=previewDemo()&&x?.simulate===true;
  if(!username||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||email.length>254||!/^\d{1,12}$/.test(serviceId)
   ||!/^[a-f0-9-]{36}$/.test(idem))return output({error:"Valid account, service, email, and checkout ID required."},400);
