@@ -24,16 +24,12 @@ const sandboxGatewayValid = () => {
 const paymentConfigured = () => selectedGatewayMode()==="TEST"
   ? Boolean(process.env.NMI_TEST_SECURITY_KEY && sandboxGatewayValid() && publicCollectKey())
   : Boolean(process.env.NMI_SECURITY_KEY && publicCollectKey());
-const conf = () => ({database:!!conn(),supplier:!!process.env.SMMGLOB_API_KEY,payment:paymentConfigured()});
+const conf = () => ({database:!!conn(),supplier:process.env.LITIX_BOOSTERO_ENABLED==="true"&&!!process.env.BOOSTERO_API_KEY,payment:paymentConfigured()});
 const name = req => new URL(req.url).pathname.split("/").pop();
 const bounded = (v,n=120) => String(v??"").trim().slice(0,n);
-async function smm(action,params={}) {
- const u = new URL(process.env.SMMGLOB_API_URL || "https://smmglob.com/api/v2");
- if (!process.env.SMMGLOB_API_KEY || u.protocol!=="https:" || !["smmglob.com","www.smmglob.com"].includes(u.hostname)) throw Error("SMMGLOB supplier configuration invalid");
- const r = await fetch(u,{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded"},body:new URLSearchParams({key:process.env.SMMGLOB_API_KEY,action,...params}),cache:"no-store",signal:AbortSignal.timeout(action==="services"?18000:16000)});
- if(!r.ok) throw Error("Supplier returned HTTP "+r.status);
- const obj=await r.json(); if(obj?.error) throw Error(String(obj.error).slice(0,160)); return obj;
-}
+// Retired supplier integration: no outbound legacy provider API calls, ever.
+// Historical orders are still read from our own database for tracking.
+async function smm(){throw Error("Retired supplier is disabled; Boostero only.");}
 
 const publicOrderId=id=>/^ltx2_[a-f0-9-]{36}$/.test(id);
 const normalizeSupplierState=(state,current)=>{
@@ -54,8 +50,9 @@ const publicOrder=(x,refresh={})=>{
  return {id:x.id,service:x.service_name,quantity:Number(x.quantity),amount:(Number(x.amount_cents)/100).toFixed(2),payment:x.payment_state,fulfillment:x.fulfillment_state,supplierOrderId:x.supplier_order_id||null,status:supplierStatus||null,remains:validRemaining,checkedAt:stat.checked_at||null,liveSupplierStatus:refresh.live===true,deliveryConfirmed:x.fulfillment_state==="completed",statusNote:refresh.warning||(!supplierStatus?"Supplier accepted the order; delivery is not confirmed yet.":"Supplier status is based on its most recent response.")};
 };
 async function refreshSupplierOrder(sql,x){
- // The public email-order lookup also sees Boostero orders. Never send a
- // Boostero supplier order ID to SMMGLOB's status endpoint.
+ // Only live Boostero orders may use the saved Boostero fulfillment record.
+ // Historical orders retain their last persisted status without contacting
+ // the retired supplier or mutating customer data.
  try{
   const provider=await sql.query(
    "select state,supplier_order_id,supplier_status,checked_at from public.litix_boostero_fulfillment where litix_order_id=$1",
@@ -66,28 +63,12 @@ async function refreshSupplierOrder(sql,x){
    x.supplier_order_id=b.supplier_order_id||null;
    x.last_supplier_status={...b.supplier_status,provider:"boostero",
     checked_at:b.checked_at||b.supplier_status?.checked_at||null};
-   return {live:false,warning:"Showing the last saved Boostero supplier update. Live delivery is not independently verified."};
+   return {live:false,warning:"Showing the last saved Boostero status. Delivery is not independently confirmed."};
   }
- }catch{
-  // Database uncertainty must not cause a cross-provider status lookup.
-  return {live:false,warning:"Supplier tracking is temporarily unavailable; no cross-provider lookup was made."};
- }
- if(!x.supplier_order_id)return {live:false,warning:"Waiting for supplier order assignment."};
- const last=x.last_supplier_status||{},lastTime=Date.parse(String(last.checked_at||""));
- if(Number.isFinite(lastTime)&&Date.now()-lastTime<60000)return {live:false,warning:"Showing a supplier update fetched within the last minute."};
- try{
-  const stat=await smm("status",{order:String(x.supplier_order_id)});
-  if(!stat||typeof stat!=="object"||Array.isArray(stat))throw Error("Invalid supplier status payload");
-  const next={...stat,checked_at:new Date().toISOString()};
-  const state=normalizeSupplierState(next.status,x.fulfillment_state);
-  await sql.query("update litix_v2_orders set last_supplier_status=$2::jsonb,fulfillment_state=$3 where id=$1",[x.id,JSON.stringify(next),state]);
-  x.last_supplier_status=next;x.fulfillment_state=state;
-  return {live:true};
- }catch(e){
-  console.warn("Litix supplier status refresh unavailable",{orderId:x.id,error:String(e?.message||"supplier status failed").slice(0,100)});
-  return {live:false,warning:"Latest supplier update is temporarily unavailable. Previous order status is shown."};
- }
+ }catch{return {live:false,warning:"Tracking is temporarily unavailable. Saved order history remains unchanged."};}
+ return {live:false,warning:"Historical order: showing last saved status. No retired supplier requests are made."};
 }
+
 // Keep this check local: legacy numeric checkout is also loaded by the
 // existing standalone no-charge gateway regression harness.
 const legacyPublicServiceAllowed=service=>{
@@ -192,24 +173,10 @@ export async function GET(req){
  if(op==="config")return send({ready:flags.database&&flags.supplier&&flags.payment,publicKey:publicCollectKey()||null});
  if(op==="health"){let database=false;if(flags.database)try{await db().query("select 1",[]);database=true}catch{}const gatewayMode=selectedGatewayMode();const gatewayConfigured=gatewayMode==="TEST"?!!(process.env.NMI_TEST_SECURITY_KEY&&process.env.NMI_TEST_GATEWAY_URL):!!process.env.NMI_SECURITY_KEY;return send({service:"litix-v2",database,supplierConfigured:flags.supplier,paykingsConfigured:flags.payment,orderEmailConfigured:notificationsConfigured(),gatewayMode,testGatewayConfigured:gatewayMode==="TEST"?gatewayConfigured:undefined,liveTransactionVerified:false,ready:database&&flags.supplier&&flags.payment},database?200:503)}
  if(op==="smmservices"){
-  const cat=bounded(p.get("category"),100),platform=bounded(p.get("platform"),30),term=bounded(p.get("q"),120).toLowerCase(),page=Math.max(1,Math.min(10000,Number(p.get("page"))||1));
-  // Strict category quick filters stay separate from free-text search.
-  const quickKind=["followers","likes"].includes(String(p.get("kind")||"").toLowerCase())?String(p.get("kind")).toLowerCase():"";
-  // The four official Instagram/TikTok quick filters are exclusively supplied
-  // by /api/catalog/v1's verified Boostero allowlist, not legacy numeric SKUs.
-  if(process.env.VERCEL_ENV==="production"&&process.env.LITIX_BOOSTERO_ENABLED==="true"&&
-     ["Instagram","TikTok"].includes(platform)&&["followers","likes"].includes(quickKind))
-   return send({items:[],recommendations:[],categories:[],total:0,allCount:0,page,
-     catalogStatus:"boostero_only",message:"Use /api/catalog/v1 for verified Boostero services"});
-  try{const all=(await getServices()).filter(legacyPublicServiceAllowed),filtered=sortServicesPer1000(all.filter(x=>(!cat||String(x.category||"Other")===cat)&&(!platform||platform==="All platforms"||platformName(x)===platform)&&(!term||[x.service,x.name,x.category].some(z=>String(z||"").toLowerCase().includes(term)))&&
-    (!quickKind||matchesServiceQuickKind(x,quickKind))),platformRank,retailPer1000);const goals={"Grow audience":/followers?|profile/i,"Increase engagement":/likes?|comments?|views?|saves?/i,"Launch a product":/shares?|views?|saves?/i,"Generate leads":/profile|views?/i,"Build brand awareness":/views?|shares?/i};const matcher=goals[p.get("goal")];const recommendations=matcher&&["7","30","90"].includes(p.get("horizon"))?filtered.filter(x=>/^default$/i.test(String(x.type||"Default"))&&matcher.test(String(x.name))).slice(0,3).map(shape):[];return send({recommendations,items:filtered.slice((page-1)*24,page*24).map(shape),categories:[...new Set(all.map(x=>String(x.category||"Other")))].sort(),total:filtered.length,allCount:all.length,page,
-   // The raw count is from a successful read-only SMMGLOB services response;
-   // 'cached' never claims a live upstream connection.
-   catalogStatus:!catalogLastError&&Date.now()-updated<300000?"live":"cached",
-   lastSupplierSuccessAt:updated?new Date(updated).toISOString():null,
-   supplierRawCount})}
-  catch(e){console.error("SMMGLOB catalog unavailable",String(e?.message||"").slice(0,100));return send({error:"Live supplier catalog unavailable",items:[],categories:[],total:0,allCount:0,catalogStatus:"unavailable",retryable:true},503)}
+  // Deprecated legacy API. The public catalog is /api/catalog/v1, Boostero only.
+  return send({error:"Retired catalog disabled. Use the verified public catalog.",items:[],total:0},410);
  }
+
  if(op==="track"){
   const id=bounded(p.get("id"),80),secret=bounded(p.get("token"),150);
   if(!publicOrderId(id)||secret.length<25||secret.length>150)return send({error:"Invalid private tracking link"},400);
@@ -257,7 +224,7 @@ export async function POST(req){
  // production purchases. This legacy action is retained strictly for past
  // SMMGLOB order lookup, reconciliation and optional nonproduction tests.
  // Reject before reading card data, opening the DB, or calling the gateway.
- if(process.env.VERCEL_ENV==="production")return send({error:"Legacy service purchases are disabled. Choose an available verified Boostero service. No payment was attempted."},409);
+ return send({error:"Retired supplier checkout is disabled. Choose an approved Boostero service. No payment was attempted."},409);
  const flags=conf();if(!flags.database||!flags.supplier||!flags.payment)return send({error:"Secure checkout is temporarily unavailable"},503);
  const gatewayMode=selectedGatewayMode();
  // TEST mode is fail-closed: never fall back to production credentials or pretend a transaction was verified.
