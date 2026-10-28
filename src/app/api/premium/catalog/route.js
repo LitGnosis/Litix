@@ -12,7 +12,15 @@ async function load(){
     ?await boosteroReadOnly("services")
     :await boosteroProduction("services");
   const list=premiumDefaultServices(raw);
-  cached=list;expires=Date.now()+90000;return list;
+  // Auditable, aggregate-only inventory; never expose raw supplier records,
+  // service IDs, wholesale rates, or API credentials in the public response.
+  const typeCounts={};
+  for(const row of raw){
+   const type=String(row?.type||"Unknown").trim().slice(0,48);
+   typeCounts[type]=(typeCounts[type]||0)+1;
+  }
+  cached={cards:list,totalSupplierServices:raw.length,typeCounts};
+  expires=Date.now()+90000;return cached;
  })().finally(()=>{flight=null});
  return flight;
 }
@@ -22,7 +30,7 @@ export async function GET(req){
     !(process.env.VERCEL_ENV==="production"&&process.env.LITIX_PREMIUM_BOOSTERO_LIVE==="true"))
   return Response.json({error:"Premium catalog not active"},{status:503,headers:{"cache-control":"no-store"}});
  try{
-  const cards=await load(),filters=new URL(req.url).searchParams;
+  const inventory=await load(),cards=inventory.cards,filters=new URL(req.url).searchParams;
   const view=filterPremiumCards(cards,filters);
   // Preview-only IDs are not redeemable and do not expose private supplier mappings.
   const publicItems=view.items.map(({id,...fields})=>({...fields,displayKey:randomUUID()}));
@@ -30,6 +38,8 @@ export async function GET(req){
    platform,cards.filter(card=>card.platform===platform).length
   ]));
   return Response.json({...view,items:publicItems,platformCounts,totalAll:cards.length,previewOnly:process.env.VERCEL_ENV!=="production",
+   totalSupplierServices:inventory.totalSupplierServices,supplierServiceTypes:inventory.typeCounts,
+   excludedSupplierServices:inventory.totalSupplierServices-cards.length,
    purchasingEnabled:false, // not connected to a verified new supplier submission path
    note:"Supplier listings are live. Delivery/refill wording is supplier-advertised, not a verified guarantee."},
    {headers:{"cache-control":"no-store","x-content-type-options":"nosniff"}});
