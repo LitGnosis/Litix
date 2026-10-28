@@ -21,7 +21,6 @@ const KINDS=[
  ["Followers",/\bfollowers?\b/i],["Likes",/\blikes?\b/i],
  ["Views",/\bviews?\b/i],["Subscribers",/\bsubscribers?\b/i],
  ["Members",/\bmembers?\b/i],["Reactions",/\breactions?\b/i],
- ["Shares",/\bshares?\b/i],["Reposts",/\breposts?\b/i],
  ["Comments",/\bcomments?\b/i],["Shares",/\bshares?\b/i],
  ["Saves",/\bsaves?\b/i],["Reposts",/\breposts?\b/i],
  ["Impressions",/\bimpressions?\b/i],["Plays",/\bplays?\b/i]
