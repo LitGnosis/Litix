@@ -1,4 +1,4 @@
-import {premiumDefaultServices,priceAt60Percent} from "./boosteroPremiumCatalog.mjs";
+import {premiumDefaultServices,litixPreviewRate} from "./boosteroPremiumCatalog.mjs";
 const UPSERT=String.raw`insert into public.litix_boostero_premium_catalog
  (supplier_service_id,platform,kind,service_name,category,wholesale_per_1000,retail_per_1000,
   supplier_min,supplier_max,storefront_min,quantity_step,api_refill,refill_days,
@@ -26,7 +26,7 @@ export async function syncPremiumCatalog({raw,sql,batchSize=50}){
  for(let i=0;i<list.length;i+=batchSize){
   const batch=list.slice(i,i+batchSize).map(x=>{
    const id=x.id.slice("boostero_".length),original=source.get(id),rate=Number(original?.rate);
-   if(!Number.isFinite(rate)||rate<=0||Math.abs(priceAt60Percent(rate,1000).per1000-x.per1000)>0.0000001)
+   if(!Number.isFinite(rate)||rate<=0||Math.abs(litixPreviewRate(rate)/100-x.per1000)>0.0000001)
     throw Error("verified_supplier_rate_mismatch");
    return {id,platform:x.platform,kind:x.kind,name:x.name,category:x.category,
     wholesale:rate,retail:x.per1000,supplier_min:x.supplierMin,supplier_max:x.max,
