@@ -59,6 +59,20 @@ except OSError:
     data = ""
 m = re.search(r"[(]([A-Za-z][A-Za-z0-9]{0,63})[)] when calling the PutObject operation", data)
 print(m.group(1) if m else "UNCLASSIFIED")
+# Output only a fixed, allowlisted diagnostic label. Do not emit server text.
+lower = data.lower()
+if "x-amz-checksum" in lower or "checksum" in lower:
+    print("R2_DIAGNOSTIC=CHECKSUM_HEADER")
+elif "x-amz-content-sha256" in lower or "signature" in lower:
+    print("R2_DIAGNOSTIC=REQUEST_SIGNATURE")
+elif "authorization" in lower or "access key" in lower or "credential" in lower:
+    print("R2_DIAGNOSTIC=AUTHORIZATION")
+elif "bucket" in lower:
+    print("R2_DIAGNOSTIC=BUCKET_REQUEST")
+elif "endpoint" in lower or "host" in lower:
+    print("R2_DIAGNOSTIC=ENDPOINT_REQUEST")
+else:
+    print("R2_DIAGNOSTIC=UNCLASSIFIED")
 PY
 )"
   fail "Real R2 PutObject failed; S3_ERROR_CODE=$error_code. Verify endpoint, token pairing, and bucket scope."
