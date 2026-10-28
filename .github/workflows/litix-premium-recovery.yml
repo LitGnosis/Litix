@@ -1,8 +1,5 @@
 name: Litix premium migration — production source checkpoint ZIP
 on:
-  push:
-    branches:
-      - feature/boostero-premium-migration-20261027
   workflow_dispatch:
 permissions:
   contents: write
