@@ -1,0 +1,66 @@
+name: Litix Neon recovery — safe preflight only, no dumps or charges
+on:
+  push:
+    branches: [feature/litix-neon-encrypted-recovery-preflight-20261028]
+  pull_request:
+    paths:
+      - "scripts/neon-*.sh"
+      - "docs/LITIX-NEON-RECOVERY-2026-10-28.md"
+      - ".github/workflows/litix-neon-backup-preflight-ci.yml"
+permissions:
+  contents: read
+jobs:
+  safe-backup-review:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    defaults:
+      run:
+        working-directory: src
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Check scripts compile without running any DB process
+        working-directory: .
+        run: |
+          bash -n scripts/neon-backup-encrypted-offsite.sh
+          bash -n scripts/neon-restore-isolated-verify.sh
+      - name: Ensure scripts fail closed without explicitly supplied keys and bucket
+        working-directory: .
+        run: |
+          set -e
+          if env -i PATH="$PATH" HOME="$HOME" bash scripts/neon-backup-encrypted-offsite.sh >/dev/null 2>&1; then
+            echo "Unsafe: backup did not reject unset credentials" >&2
+            exit 1
+          fi
+          if env -i PATH="$PATH" HOME="$HOME" bash scripts/neon-restore-isolated-verify.sh >/dev/null 2>&1; then
+            echo "Unsafe: restore did not reject unset credentials" >&2
+            exit 1
+          fi
+          echo "BACKUP_AND_RESTORE_FAIL_CLOSED_VERIFIED"
+      - name: Ensure scripts cannot target old primary database as a restore destination
+        working-directory: .
+        run: |
+          grep -F 'src.hostname != dst.hostname' scripts/neon-restore-isolated-verify.sh
+          grep -F 'dst.path.startswith("/litix_restore_test_")' scripts/neon-restore-isolated-verify.sh
+          grep -F 'tables" == "0"' scripts/neon-restore-isolated-verify.sh
+          grep -F 'pg_dump --format=custom' scripts/neon-backup-encrypted-offsite.sh
+          grep -F 'age --recipient' scripts/neon-backup-encrypted-offsite.sh
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: src/package-lock.json
+      - name: Install locked app dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Protect checkout, Boostero, manual bundles and purchase emails with no-charge tests
+        run: |
+          node --test \
+            tests/boostero-exclusive-new-orders.test.mjs \
+            tests/boostero-four-kinds.test.mjs \
+            tests/checkout.test.mjs \
+            tests/collect-lifecycle.test.mjs \
+            tests/owner-purchase-notifications.test.mjs \
+            tests/growth-bundles-manual.test.mjs
+      - name: Verify unchanged Next.js build
+        run: npm run build
