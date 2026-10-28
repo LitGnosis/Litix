@@ -1,0 +1,144 @@
+name: Litix Global Phase 1 verified source archive
+on:
+  push:
+    branches:
+      - backup-job/litix-global-phase1-20261028
+permissions:
+  contents: write
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository with full Git objects
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+      - name: Archive pinned production source, assets, manifests, and safe restore notes
+        env:
+          SOURCE_SHA: "d6d1c6c68e0fdb31e746494e787216e446ae9fb3"
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os,json,re,hashlib,zipfile,pathlib,subprocess
+          sha=os.environ["SOURCE_SHA"]
+          name="LITIX-GLOBAL-PHASE1-VERIFIED-20261028.zip"
+          pathlist=subprocess.check_output(["git","ls-tree","-r","--name-only","-z",sha]).split(b"\0")
+          paths=[p.decode("utf-8") for p in pathlist if p]
+          excluded=[]; scanned=[]; scrubbed=[]; files={}
+          blocked={".git",".next","node_modules","coverage","dist","build","__pycache__",".vercel"}
+          secretNames={".npmrc",".netrc","credentials.json","secrets.json","id_rsa","id_ed25519"}
+          privateSuffix={".pem",".key",".p12",".pfx",".jks",".keystore",".sqlite",".sqlite3"}
+          patterns=[re.compile(rb"(?i)(sk_live_|rk_live_)[a-zA-Z0-9_-]{12,}"),
+                    re.compile(rb"(?i)(SG\.)[a-zA-Z0-9_-]{15,}"),
+                    re.compile(rb"(?i)(postgres(?:ql)?://[^\s:@/]+:)[^\s@/]+(@)"),
+                    re.compile(rb"(?i)(gh[pousr]_[a-z0-9]{25,})")]
+          vars_=set()
+          for path in paths:
+            parts=pathlib.PurePosixPath(path).parts
+            f=parts[-1]
+            if any(x in blocked for x in parts) or f in secretNames or f==".env" or f.startswith(".env.") or pathlib.PurePosixPath(path).suffix.lower() in privateSuffix:
+              excluded.append(path);continue
+            data=subprocess.check_output(["git","show",sha+":"+path])
+            if len(data)>30000000:
+              excluded.append(path);continue
+            original=data
+            if b"\0" not in data:
+              for pattern in patterns:
+                data,n=pattern.subn(lambda m: (m.group(1)+b"[REDACTED]"+m.group(2)) if m.lastindex==2 else b"[REDACTED]",data)
+                if n: scrubbed.append(path)
+              vars_.update(x.decode() for x in re.findall(rb"process\.env\.([A-Z][A-Z0-9_]*)",data))
+            files[path]=data
+            scanned.append({"path":path,"sha256":hashlib.sha256(data).hexdigest(),"size":len(data),"sanitized":original!=data})
+          if len(files)<100:
+            raise SystemExit("FATAL: archive missing expected source files")
+          envnames=sorted(vars_.union({
+           "APP_BASE_URL","SITE_URL","BOOSTERO_API_KEY","BOOSTERO_API_URL","LITIX_BOOSTERO_ENABLED",
+           "LITIX_BOOSTERO_DATABASE_URL","LITIX_BOOSTERO_ADMIN_TOKEN","CRON_SECRET",
+           "AUTH0_DOMAIN","AUTH0_SECRET","AUTH0_CLIENT_ID","AUTH0_CLIENT_SECRET",
+           "RESEND_API_KEY","RESEND_EMAIL_DOMAIN","EMAIL_FROM","DATABASE_URL","LITIX_V2_DATABASE_URL",
+           "LITIX_AUTOLIKES_DATABASE_URL","LITIX_BUNDLES_LIVE_ENABLED",
+           "NMI_SECURITY_KEY","NEXT_PUBLIC_PAYKINGS_NMI_COLLECT_PUBLIC_KEY","RETAIL_MARKUP_MULTIPLIER"}))
+          manifest={"source_git_commit":sha,"source_repo":"LitGnosis/Litix",
+           "source_branch":"fix/litix-guardian-degraded-catalog-20261027",
+           "production_deployment":"dpl_DzCNNTaFjPpUAkc7Wi6SMndWEN4B",
+           "project":"litix_final_logo_corrected_vercel_ready",
+           "project_id":"prj_ATrABQBmZbBlw3mpz04Pvnu7AxXv",
+           "restore_branch":"recovery/litix-global-localization-seo-verified-20261028",
+           "restore_tag":"litix-global-phase1-seo-verified-20261028",
+           "file_count":len(scanned),"files":scanned,
+           "excluded_sensitive_paths":excluded,
+           "sanitized_paths":sorted(set(scrubbed)),
+           "secrets_saved":False,"customer_data_saved":False}
+          notes=("LITIX DEFAULT RECOVERY POINT\n\n"
+           "This is the exact Git-tracked production SOURCE snapshot, plus safe documentation, not a copy of provider secrets or live customer database rows.\n"
+           "Git repository: LitGnosis/Litix\n"
+           "Source SHA: "+sha+"\n"
+           "Original production deployment: dpl_DzCNNTaFjPpUAkc7Wi6SMndWEN4B\n"
+           "Vercel project: litix_final_logo_corrected_vercel_ready\n"
+           "Recovery branch: recovery/litix-global-localization-seo-verified-20261028\n"
+           "Recovery tag: litix-global-phase1-seo-verified-20261028\n\n"
+           "Restore: start from the ORIGINAL SHA/tag in GitHub, check that source matches this archive, "
+           "create an isolated restore branch, verify all project env variable NAMES exist in Vercel "
+           "(never overwrite their values), restore database ONLY using a separately verified "
+           "database-provider backup when needed, run cd src && npm ci && npm test (or node --test) && npm run build, "
+           "then deploy the pinned commit to project prj_ATrABQBmZbBlw3mpz04Pvnu7AxXv. "
+           "Test the new Vercel production deployment and promote it only once checkout, Auth0, "
+           "bundles, supplier routing, notifications, and tracking pass read-only/non-charging checks.\n"
+           "To roll back site code, redeploy pinned SHA in Vercel. Never erase/replay existing orders or reset live database.\n\n"
+           "Env manifest contains names only; production values stay in Vercel.\n"
+           "Source is from Git, not an exported live DB snapshot. See BACKUP-MANIFEST.json for any sanitized/excluded paths.\n")
+          routing_info=(
+            "LITIX GLOBAL PHASE 1: SEO routing recovery\n\n"
+            "Exact production source SHA: d6d1c6c68e0fdb31e746494e787216e446ae9fb3\n"
+            "READY production deployment: dpl_DzCNNTaFjPpUAkc7Wi6SMndWEN4B\n"
+            "Current live Vercel routing version: 827388e6-0abf-4bb1-a198-0c7759048a50\n"
+            "Previous Vercel routing version: 53442328-4e3c-425b-83a3-96458ec5bd2f\n"
+            "Current routing has 53 rules and disables only litix-seo-20261019-robots and litix-seo-20261019-sitemap versus previous live version.\n"
+            "Their destinations remain recorded in Vercel. Revert SEO routing via Vercel's explicit restore-version action referencing previous routing version if needed; verify again before action.\n"
+            "The 51 other routing entries, including gateway and supplier endpoints, were not modified by the SEO routing release.\n"
+            "Database backup: NOT CURRENT. Neon snapshot quota exceeded; 2026-10-25 snapshot does not capture current state. This archive is SOURCE ONLY, never a database backup.\n"
+            "The full global upgrade is NOT COMPLETE. Do not confuse this phase archive with a paid-supplier cutover, global payment launch or final master.\n"
+          )
+          with zipfile.ZipFile(name,"w",compression=zipfile.ZIP_DEFLATED,compresslevel=9) as z:
+            for path,data in sorted(files.items()): z.writestr(path,data)
+            z.writestr("BACKUP-MANIFEST.json",json.dumps(manifest,sort_keys=True,indent=2))
+            z.writestr("ENVIRONMENT-VARIABLE-NAMES.json",json.dumps({"names_only":envnames},indent=2))
+            z.writestr("RECOVERY-INSTRUCTIONS.md",notes)
+            z.writestr("SEO-ROUTING-ROLLBACK.md",routing_info)
+          with zipfile.ZipFile(name) as z:
+            assert z.testzip() is None
+            assert len(z.namelist())==len(files)+4
+            for f in scanned:
+              assert hashlib.sha256(z.read(f["path"])).hexdigest()==f["sha256"]
+            assert z.read("BACKUP-MANIFEST.json")
+          digest=hashlib.sha256(pathlib.Path(name).read_bytes()).hexdigest()
+          pathlib.Path("LITIX-GLOBAL-PHASE1-VERIFIED-20261028.sha256").write_text(digest+"  "+name+"\n")
+          pathlib.Path("LITIX-GLOBAL-PHASE1-VERIFIED-MANIFEST.json").write_text(json.dumps(manifest,sort_keys=True,indent=2))
+          print("ARCHIVE_VERIFIED",name,"SOURCE",sha,"FILES",len(files),"BYTES",os.stat(name).st_size,"SHA256",digest)
+          print("SANITIZED_FILE_COUNT",len(set(scrubbed)),"EXCLUDED_PATH_COUNT",len(excluded))
+          PY
+      - name: Create immutable-intent annotated recovery tag pointing to exact production commit
+        env:
+          SOURCE_SHA: "d6d1c6c68e0fdb31e746494e787216e446ae9fb3"
+        run: |
+          set -euo pipefail
+          TAG=litix-global-phase1-seo-verified-20261028
+          if git ls-remote --tags origin "refs/tags/$TAG" | grep -q .; then
+            echo "Tag already exists - refusing to rewrite"
+            exit 1
+          fi
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" tag -a "$TAG" "$SOURCE_SHA" -m "Litix Phase 1 verified localization and SEO recovery"
+          git push origin "refs/tags/$TAG"
+          echo "ANNOTATED_TAG_CREATED $TAG"
+      - name: Upload verified master archive with SHA-256
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: litix-global-phase1-verified-20261028
+          path: |
+            LITIX-GLOBAL-PHASE1-VERIFIED-20261028.zip
+            LITIX-GLOBAL-PHASE1-VERIFIED-20261028.sha256
+            LITIX-GLOBAL-PHASE1-VERIFIED-MANIFEST.json
+          if-no-files-found: error
+          retention-days: 90
