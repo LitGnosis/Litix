@@ -20,7 +20,7 @@ test("864-item fixture across fourteen platforms remains preview-only and suppli
  assert.equal(items.length,864);
  assert.equal(new Set(items.map(x=>x.id)).size,864);
  assert.equal(new Set(items.map(x=>x.platform)).size,14);
- assert.deepEqual([...new Set(items.slice(0,40).map(x=>x.category))].slice(0,4),PREMIUM_CATALOG_PRIORITY);
+ assert.deepEqual([...new Set(items.map(x=>x.category))].slice(0,4),PREMIUM_CATALOG_PRIORITY);
  for(const item of items){
   assert.equal(item.purchasable,false);
   assert.equal(item.previewOnly,true);
