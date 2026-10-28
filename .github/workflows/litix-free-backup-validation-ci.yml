@@ -1,0 +1,84 @@
+name: Litix Neon no-cost backup — synthetic restore and source recovery
+on:
+  push:
+    branches:
+      - feature/litix-no-cost-backup-validation-20261028
+  pull_request:
+    paths:
+      - "scripts/neon-*.sh"
+      - "scripts/test-neon-encrypted-restore-synthetic.sh"
+      - "docs/LITIX-NEON-RECOVERY-2026-10-28.md"
+      - "docs/LITIX-GLOBAL-ROADMAP-2026-10-28.md"
+      - ".github/workflows/litix-free-backup-validation-ci.yml"
+permissions:
+  contents: read
+jobs:
+  synthetic-pg18-restore:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Validate both private-only scripts and reject absent secrets
+        run: |
+          bash -n scripts/neon-backup-encrypted-offsite.sh
+          bash -n scripts/neon-restore-isolated-verify.sh
+          bash -n scripts/test-neon-encrypted-restore-synthetic.sh
+          if env -i PATH="$PATH" HOME="$HOME" bash scripts/neon-backup-encrypted-offsite.sh >/dev/null 2>&1; then exit 1; fi
+          if env -i PATH="$PATH" HOME="$HOME" bash scripts/neon-restore-isolated-verify.sh >/dev/null 2>&1; then exit 1; fi
+          grep -F 'src.hostname != dst.hostname' scripts/neon-restore-isolated-verify.sh
+          grep -F 'dst.path.startswith("/litix_restore_test_"+os.environ["NEON_BACKUP_DATABASE"]+"_")' scripts/neon-restore-isolated-verify.sh
+          grep -F 'assert uri.path == "/"+os.environ["NEON_BACKUP_DATABASE"]' scripts/neon-backup-encrypted-offsite.sh
+      - name: Install only open-source age CLI for ephemeral synthetic encryption
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq age
+      - name: Prove PostgreSQL 18 encrypted archive roundtrip and isolated restore for both synthetic databases
+        run: bash scripts/test-neon-encrypted-restore-synthetic.sh
+      - name: No confidential data is copied into repository or test artifacts
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then echo "Unexpected working-tree files" >&2; exit 1; fi
+          echo "SYNTHETIC_ONLY_RESTORE_VERIFIED"
+  production-source-only-recovery:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Build source-only recovery ZIP pinned to existing READY production SHA
+        env:
+          VERIFIED_PRODUCTION_SHA: 86954ed6174cc8c9a100369e06e969a070e5e1ed
+        run: |
+          python - <<'PY'
+          import subprocess,pathlib,re,json,hashlib,zipfile,os
+          SHA=os.environ["VERIFIED_PRODUCTION_SHA"]
+          NAME="LITIX-VERIFIED-PRODUCTION-SOURCE-2026-10-28.zip"
+          blocked={".env",".npmrc",".netrc","credentials.json","secrets.json"}
+          ban={"node_modules",".git",".next",".vercel","coverage","dist","build","__pycache__"}
+          pattern=[re.compile(rb"\b(?:sk|rk)_(?:live|test)_[A-Za-z0-9]{10,}",re.I),
+                   re.compile(rb"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----"),
+                   re.compile(rb"\bgh[pousr]_[A-Za-z0-9]{30,}\b"),
+                   re.compile(rb"\b(?:whsec|pk_live)_[A-Za-z0-9]{18,}\b")]
+          paths=[p.decode() for p in subprocess.check_output(["git","ls-tree","-r","--name-only","-z",SHA]).split(b"\0") if p]
+          included=[];excluded=[]
+          with zipfile.ZipFile(NAME,"w",compression=zipfile.ZIP_DEFLATED,compresslevel=9) as z:
+            for name in paths:
+              p=pathlib.PurePosixPath(name)
+              if p.name in blocked or any(part in ban for part in p.parts) or p.name.startswith(".env.") or p.suffix.lower() in {".pem",".key",".p12",".pfx",".sqlite",".db"}:
+                excluded.append(name);continue
+              data=subprocess.check_output(["git","show",SHA+":"+name])
+              if len(data)>15000000 or any(rx.search(data) for rx in pattern):
+                excluded.append(name);continue
+              z.writestr(name,data)
+              included.append({"file":name,"sha256":hashlib.sha256(data).hexdigest()})
+            z.writestr("SOURCE-RECOVERY-MANIFEST.json",json.dumps({"source_commit":SHA,"kind":"PUBLIC SOURCE ONLY","contains_customer_database":False,"included":included,"excluded":excluded},indent=2))
+          print("SOURCE_ARCHIVE_SHA256",hashlib.sha256(pathlib.Path(NAME).read_bytes()).hexdigest())
+          print("SOURCE_FILES_INCLUDED",len(included),"EXCLUDED",len(excluded))
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: litix-verified-production-source-20261028
+          path: LITIX-VERIFIED-PRODUCTION-SOURCE-2026-10-28.zip
+          if-no-files-found: error
+          retention-days: 90

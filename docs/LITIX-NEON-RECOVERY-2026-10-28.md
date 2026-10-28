@@ -9,7 +9,7 @@
 - Organization: Vercel-managed `org-crimson-thunder-28377911`, current plan **free** (account metadata; no billing changes made).
 - Project: `fancy-wave-75069167`, name `neon-blue-kite`, Postgres **18**, AWS us-east-1.
 - Default main branch: `br-long-term-awmdp29b`, recognized direct endpoint confirmed through Neon account metadata (provide the expected hostname privately at execution time); expected database `neondb`.
-- Database size observed: approximately **13 MB** via `pg_database_size`, while Neon branch logical size was ~45.9 MB. These measure different things and must not be conflated.
+- Read-only PostgreSQL 18 sizes: **neondb = 13,803,520 bytes (~13 MB)** and **litixapi = 8,101,888 bytes (~7.9 MB)**. Both contain application tables and must be backed up as **two distinct pg_dump archives**; PostgreSQL built-in postgres/template1 databases are not the application backup scope. Neon branch logical size was ~45.9 MB (a different measure).
 - Plan Free: **1 manual snapshot**, **10 branches per project**, **6 hours instant restore history**. Current usage: one manual snapshot plus ten branches (both maxed). There is no configured automated snapshot schedule.
 - Existing snapshot `snap-fragrant-hat-awyjlty1`, `2026-10-25T22:06:36Z`, stored snapshot size ~43.7 MB. Preserve it until a newer backup is restored successfully. The 422 `snapshots limit exceeded` is a plan cap, not an indication the database is broken.
 - No Neon project, branch, snapshot, table, row, role, endpoint, compute setting, credentials, payment flow, or customer record was changed in this audit.
@@ -39,18 +39,20 @@ In a trusted, access-controlled executor with PostgreSQL **18** client utilities
 ```
 NEON_DIRECT_URL=...            # unpooled Neon PG18 main URL, sslmode=require
 NEON_EXPECTED_SOURCE_HOST=...  # trusted direct hostname, injected privately
+NEON_BACKUP_DATABASE=neondb       # repeat with litixapi, using its own NEON_DIRECT_URL
 BACKUP_AGE_RECIPIENT=...       # public recipient age1..., private identity kept offline
 BACKUP_S3_URI=s3://private-bucket/litix-backups
 ```
-Run `bash scripts/neon-backup-encrypted-offsite.sh`, record only the encryption **ciphertext** digest and object URI in a private backup register, with IAM permitting encrypted write/read to a private versioned bucket and encryption key stored separately.
+Run `bash scripts/neon-backup-encrypted-offsite.sh` **twice**: once with `NEON_BACKUP_DATABASE=neondb` and its direct URL, and once with `NEON_BACKUP_DATABASE=litixapi` and its direct URL. Record only the encryption **ciphertext** digest and object URI in a private backup register, with IAM permitting encrypted write/read to a private versioned bucket and encryption key stored separately.
 
-Then provision a **NEW, EMPTY** isolated database named `litix_restore_test_<date>` on a **different** Neon compute endpoint, and configure securely:
+Then provision a **NEW, EMPTY** isolated database for each source archive, named `litix_restore_test_neondb_<date>` or `litix_restore_test_litixapi_<date>` on a **different** Neon compute endpoint, and configure securely:
 ```
 NEON_DIRECT_URL=...            # same known production source ONLY for safety comparison
 NEON_EXPECTED_SOURCE_HOST=...  # trusted direct hostname, injected privately
+NEON_BACKUP_DATABASE=neondb       # repeat independently for litixapi
 RESTORE_DATABASE_URL=...       # private direct TLS connection to NEW ISOLATED DB, different host
 BACKUP_AGE_IDENTITY=...        # local private key FILE PATH, never GitHub
-BACKUP_OBJECT_URI=s3://private-bucket/litix-backups/litix-neon-production-<timestamp>.pgcustom.age
+BACKUP_OBJECT_URI=s3://private-bucket/litix-backups/litix-neon-<database>-production-<timestamp>.pgcustom.age
 BACKUP_CIPHERTEXT_SHA256=...   # observed output from successful encrypted upload
 SAFE_RESTORE_ACK=NEW_EMPTY_ISOLATED_DATABASE_ONLY
 ```
@@ -74,3 +76,19 @@ Run `bash scripts/neon-restore-isolated-verify.sh` and confirm a success marker.
 3. Test the payment gateway with approved mock responses, review idempotency uniqueness, owner/customer permission denials and Resend delivery metadata. Exact live payment and supplier execution must remain NOT VERIFIED until an authorized controlled end-to-end test.
 4. Once backup is valid, proceed with independent, reversible features in small PRs; never merge draft PR #58 (864-service premium catalog), PR #50 (select posts preview) or PR #53 (private owner wholesale) without their separate gates.
 5. Latest completed live release remains `86954ed6174cc8c9a100369e06e969a070e5e1ed`. This documentation and backup tooling branch **does not activate new retail products or change live billing**.
+
+## Additional 2026-10-28 no-new-subscription infrastructure assessment
+
+- **GitHub repository `LitGnosis/Litix` is PUBLIC.** Its Git history and attached Actions artifacts MUST NOT be treated as private offsite backup storage for customer data, even if a dump is encrypted. It is suitable for **source-only ZIPs** and **synthetic test data only**. No real database archive, identity, bucket token or database URL may be placed in this public repository or any workflow artifact.
+- **Neon branchable object storage:** enabled on main, **zero buckets present**. This lives in the same provider/account failure domain as the database and is not a verified independent offsite recovery destination. No bucket was created.
+- **Vercel:** existing Production environment variable names for payments/Neon/Resend/Auth0/Boostero are present, but no backup-bucket/S3/Blob/R2/age key variables were found in the project environment inventory; no configured storage connector was returned. No new Vercel storage store or storage credential was created. Presence of variables does not prove actual Vercel runtime database mapping.
+- **Neon Free:** one manual snapshot from 2026-10-25, ten of ten branches, six hours of restore history. Snapshot quota cannot be increased by deleting or resetting production data. Both the October 25 snapshot and all historical branches remain unchanged.
+- **PostgreSQL logical backup implementation:** both `neondb` and `litixapi` require separate encrypted `pg_dump -Fc` files; both must be separately decrypted and restored into separate, previously empty isolated databases. Scripts now enforce `NEON_BACKUP_DATABASE` in the allowlist `neondb|litixapi` and refuse a source URL pointing to a different database. Restore requires a target database explicitly named `litix_restore_test_<source_db>_*`.
+- **No-cost technical proof:** `scripts/test-neon-encrypted-restore-synthetic.sh` uses disposable PostgreSQL 18 source/target containers, fake order and checkout records, `age` encryption, SHA256 verification and independent restorations for both schemas. GitHub Actions runs this **without live Neon URLs, keys or customer data**. Passing this proves the mechanism for synthetic records; **it does not verify a real production backup**.
+- **Fresh production source checkpoint:** `recovery/litix-pre-offsite-backup-20261028` pins prior merged GitHub source, with separately pinned unchanged Vercel production source `86954ed6174cc8c9a100369e06e969a070e5e1ed`. `.github/workflows/litix-free-backup-validation-ci.yml` creates a sanitized **source-only** ZIP of that exact live commit. It is intentionally not a database backup.
+
+### Exact remaining approval for a free/previously-owned destination
+
+A **private independent offsite storage location already under the owner's control**, where private encrypted objects are permitted, plus an **offline-kept age encryption identity** and a secure runner allowed to read Neon using a direct TLS connection. For S3-compatible storage, the existing scripts require a private `s3://bucket/prefix`, least-privilege S3 credentials, a public `age1...` recipient, and a separate private restore-test database/compute endpoint. These are not discoverable as ready/authorized in the connected accounts. **Do not create paid accounts, enable a provider plan, authorize new data transfers, or export customer records until the owner approves that exact private destination and secure key custody.**
+
+Once approved, run both encrypted exports and independent isolated restores, verify the table contents/integrity without exposing records, and mark a new backup **VERIFIED** only after success. Until then, the backup status remains **NOT VERIFIED**, and paid/multi-tenant schema expansions are gated.
