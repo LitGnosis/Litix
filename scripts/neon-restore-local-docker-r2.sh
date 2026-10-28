@@ -8,8 +8,22 @@ fail(){ printf 'LOCAL_RESTORE_BLOCKED: %s\n' "$*" >&2; exit 2; }
 required(){ [[ -n "${!1:-}" ]] || fail "Missing private configuration: $1"; }
 for k in NEON_BACKUP_DATABASE BACKUP_OBJECT_URI BACKUP_CIPHERTEXT_SHA256 \
  BACKUP_AGE_IDENTITY BACKUP_S3_ENDPOINT_URL BACKUP_R2_PRIVATE_BUCKET_CONFIRMED \
- BACKUP_STORAGE_PROVIDER AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY RESTORE_LOCAL_DOCKER_ACK; do required "$k"; done
+ BACKUP_STORAGE_PROVIDER RESTORE_LOCAL_DOCKER_ACK; do required "$k"; done
 [[ "$BACKUP_STORAGE_PROVIDER" == "r2" ]] || fail "This script is R2-only."
+# Read R2 credentials ONLY from the owner's local profile or secure environment.
+if [[ -n "${R2_ACCESS_KEY_ID:-}" || -n "${R2_SECRET_ACCESS_KEY:-}" ]]; then
+  required R2_ACCESS_KEY_ID
+  required R2_SECRET_ACCESS_KEY
+  export AWS_ACCESS_KEY_ID="$R2_ACCESS_KEY_ID" AWS_SECRET_ACCESS_KEY="$R2_SECRET_ACCESS_KEY"
+  unset AWS_PROFILE AWS_DEFAULT_PROFILE 2>/dev/null || true
+fi
+if [[ -n "${AWS_ACCESS_KEY_ID:-}" || -n "${AWS_SECRET_ACCESS_KEY:-}" ]]; then
+  required AWS_ACCESS_KEY_ID
+  required AWS_SECRET_ACCESS_KEY
+elif [[ "${AWS_PROFILE:-}" != "litix-r2-backup" ]]; then
+  fail "Use the owner-local AWS_PROFILE=litix-r2-backup or inject both private R2 credentials"
+fi
+
 [[ "$BACKUP_R2_PRIVATE_BUCKET_CONFIRMED" == "I_VERIFIED_NO_PUBLIC_ACCESS" ]] || fail "Bucket privacy must be checked in Cloudflare."
 [[ "$RESTORE_LOCAL_DOCKER_ACK" == "I_APPROVE_OFFLINE_DOCKER_RESTORE" ]] || fail "Local private Docker restore needs explicit acknowledgement."
 [[ "$NEON_BACKUP_DATABASE" == "neondb" || "$NEON_BACKUP_DATABASE" == "litixapi" ]] || fail "Unknown application DB."
