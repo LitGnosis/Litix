@@ -40,14 +40,20 @@ export async function boosteroReadOnly(action,{fetcher=fetch}={}){
   throw new Error("boostero_balance_invalid_shape");
  return json;
 }
-export function boosteroFollowers(input){
+export function boosteroCompatibleServices(input){
  if(!Array.isArray(input))throw new Error("boostero_services_invalid_shape");
  return input.filter(x=>{
   const label=[x?.name,x?.category].map(z=>String(z||"")).join(" ");
-  return /followers?/i.test(label)&&/(instagram|\bIG\b|tiktok|tik[\s-]*tok)/i.test(label);
+  const title=String(x?.name||"");
+  const followers=/\bfollowers?\b/i.test(title);
+  const ordinaryLikes=/\blikes?\b/i.test(title)&&!/(?:story|comment|livestream|live stream|live|battle|poll|repl(?:y|ies)|followers?)/i.test(title);
+  const platform=/(instagram|\bIG\b|tiktok|tik[\s-]*tok)/i.test(label);
+  const standard=/^default$/i.test(String(x?.type||"Default"));
+  return platform&&standard&&(followers||ordinaryLikes);
  }).map(x=>{
   const label=[x.name,x.category].map(v=>String(v||"")).join(" ");
   const platform=/tiktok|tik[\s-]*tok/i.test(label)?"TikTok":"Instagram";
+  const kind=/\bfollowers?\b/i.test(String(x.name||""))?"followers":"likes";
   const min=Number(x.min),max=Number(x.max),rate=Number(x.rate);
   const title=String(x.name||"");
   const desc=[title,x.description,x.desc,x.category,x.refill_days,x.refillDays].map(v=>String(v||"")).join(" ");
@@ -62,16 +68,16 @@ export function boosteroFollowers(input){
   const longest=durations.length?Math.max(...durations):null;
   const thirtyPlus=refillClaim&&(lifetime||(longest!==null&&longest>=30));
   const refillMethod=/\bmanual refill\b/i.test(title)?"manual advertised":apiRefillEligible?"API refill supported":advertisedRefill?"advertised, mechanism unverified":"not advertised";
-  return {id:String(x.service??x.id??"").slice(0,30),platform,
+  return {id:String(x.service??x.id??"").slice(0,30),platform,kind,
    name:String(x.name||"").slice(0,155),category:String(x.category||"").slice(0,100),
    wholesalePer1000USD:Number.isFinite(rate)&&rate>0?rate:null,
    min:Number.isSafeInteger(min)&&min>=0?min:null,
    max:Number.isSafeInteger(max)&&max>=0?max:null,
    refillClaim,refillDays:lifetime?"lifetime":longest,refill30Plus:thirtyPlus,
    apiRefillEligible,refillMethod,refillEvidence:refillClaim?"advertised in provider listing; fulfillment not tested":"not advertised"};
- }).filter(x=>x.id&&x.wholesalePer1000USD!==null&&x.min!==null&&x.max!==null&&x.max>=x.min);
+ }).filter(x=>/^\d{1,12}$/.test(x.id)&&x.wholesalePer1000USD!==null&&x.min>=1&&x.max!==null&&x.max>=x.min);
 }
-
+export const boosteroFollowers=input=>boosteroCompatibleServices(input).filter(x=>x.kind==="followers");
 
 /**
  * Production operations are enabled ONLY after a separately authorized release.
@@ -88,7 +94,9 @@ export async function boosteroProduction(action,parameters={},options={}){
  if(action==="add"){
   const id=String(parameters.service||""),quantity=Number(parameters.quantity),link=String(parameters.link||"");
   if(options.claimed!==true||!/^\d{1,12}$/.test(id)||!Number.isSafeInteger(quantity)||quantity<1||quantity>1000000||
-     !/^https:\/\/www\.(instagram\.com\/[a-zA-Z0-9._]{1,30}\/|tiktok\.com\/@[A-Za-z0-9._]{2,24}\/)$/.test(link))
+     !(/^https:\/\/www\.(instagram\.com\/[a-zA-Z0-9._]{1,30}\/|tiktok\.com\/@[A-Za-z0-9._]{2,24}\/)$/.test(link)||
+     /^https:\/\/www\.instagram\.com\/(?:p|reel)\/[a-zA-Z0-9_-]{5,32}\/$/.test(link)||
+     /^https:\/\/www\.tiktok\.com\/@[A-Za-z0-9._]{2,24}\/video\/[0-9]{10,30}$/.test(link)))
    throw Error("boostero_add_not_authorized");
   params={service:id,quantity:String(quantity),link};
  }else if(action==="status"||action==="refill"){
