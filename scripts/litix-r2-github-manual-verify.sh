@@ -67,7 +67,7 @@ if [[ "$LITIX_RECOVERY_MODE" == "probe_only" ]];then
  echo "BACKUP_NOT_ATTEMPTED_PROBE_ONLY"
  exit 0
 fi
-[[ "${LITIX_CONFIRM_BACKUP:-}" == "BACKUP_BOTH_DBS_READ_ONLY" ]] ||
+[[ "${LITIX_CONFIRM_BACKUP:-}" == "BACKUP_BOTH_DBS_READ_ONLY" || ( "${GITHUB_EVENT_NAME:-}" == "schedule" && "${GITHUB_REF:-}" == "refs/heads/main" && "${LITIX_CONFIRM_BACKUP:-}" == "SCHEDULED_BOTH_DBS_READ_ONLY" ) ]] ||
  fail "Real database export requires the explicit manual confirmation input."
 for x in AGE_PUBLIC_RECIPIENT NEON_DIRECT_URL_NEONDB NEON_DIRECT_URL_LITIXAPI NEON_EXPECTED_SOURCE_HOST;do need "$x";done
 [[ "$AGE_PUBLIC_RECIPIENT" =~ ^age1[a-z0-9]{20,}$ ]] ||
@@ -104,7 +104,7 @@ for db in neondb litixapi;do
   litixapi) export LITIX_READONLY_PG_URL="$NEON_DIRECT_URL_LITIXAPI" ;;
  esac
  filename="litix-neon-$db-production-$timestamp-${GITHUB_RUN_ID:-0}.pgcustom.age"
- object="litix-production/$filename"
+ object="litix-production/$db/$filename"
  encrypted="$work/$filename"
  # Use PG18 in an isolated short-lived container. Pass the secret URL only as
  # a named ENV variable (not argv), and suppress raw Postgres output on failures.
