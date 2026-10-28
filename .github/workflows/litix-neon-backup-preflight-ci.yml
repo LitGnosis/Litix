@@ -42,7 +42,7 @@ jobs:
         working-directory: .
         run: |
           grep -F 'src.hostname != dst.hostname' scripts/neon-restore-isolated-verify.sh
-          grep -F 'dst.path.startswith("/litix_restore_test_")' scripts/neon-restore-isolated-verify.sh
+          grep -F 'dst.path.startswith("/litix_restore_test_"+os.environ["NEON_BACKUP_DATABASE"]+"_")' scripts/neon-restore-isolated-verify.sh
           grep -F 'tables" == "0"' scripts/neon-restore-isolated-verify.sh
           grep -F 'pg_dump --format=custom' scripts/neon-backup-encrypted-offsite.sh
           grep -F 'age --recipient' scripts/neon-backup-encrypted-offsite.sh
