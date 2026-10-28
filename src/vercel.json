@@ -4,10 +4,6 @@
   "installCommand": "npm ci --no-audit --no-fund",
   "crons": [
     {
-      "path": "/api/v2/cron/sync-catalog",
-      "schedule": "0 0 * * *"
-    },
-    {
       "path": "/api/bundles/cron",
       "schedule": "* * * * *"
     },
