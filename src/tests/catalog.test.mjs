@@ -25,7 +25,8 @@ test('product-first storefront, logo asset and service-specific claims',()=>{
  const page=read('app/page.jsx');assert.ok(page.indexOf('id="services"')<page.indexOf('litix-feature-panel'));assert.ok(!page.includes('<section className="hero">'));
  assert.match(page,/litix-logo\.webp/);assert.ok(existsSync(new URL('../public/assets/brand/litix-logo.webp',import.meta.url)));
  assert.doesNotMatch(page,/Instant Delivery|Programmatic Refills/);
- assert.match(page,/s\.refill\?/);assert.match(page,/s\.noDrop\?/);
+ assert.match(page,/publicServiceCardName\(s\)/);assert.doesNotMatch(page,/className="service-badges"/);
+ assert.match(page,/selected\.refill\?/); // Existing checkout policy metadata remains available; removed only from cards.
 });
 
 test('USA first, general next, all requested countries last with platform order inside groups',async t=>{
