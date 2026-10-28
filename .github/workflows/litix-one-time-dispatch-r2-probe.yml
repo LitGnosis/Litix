@@ -1,0 +1,29 @@
+name: Litix one-time protected manual R2 connectivity dispatch
+on:
+  push:
+    branches:
+      - feature/litix-one-time-r2-probe-dispatch-20261028
+permissions:
+  actions: write
+  contents: read
+jobs:
+  dispatch-one-time-probe:
+    if: github.repository == 'LitGnosis/Litix' && github.event.head_commit.message == 'LITIX_ONE_SHOT_AUTHORIZED_R2_PROBE'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Request only the existing manual R2 harmless probe
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -Eeuo pipefail
+          gh api -X POST \
+            -H 'Accept: application/vnd.github+json' \
+            "repos/${GH_REPO}/actions/workflows/litix-r2-manual-production-verify.yml/dispatches" \
+            -f ref=main \
+            -f 'inputs[operation]=probe_only' \
+            -f 'inputs[confirm_backup]='
+          echo 'GITHUB_R2_PROBE_DISPATCH_REQUEST_ACCEPTED'
+      # Uses ONLY scoped GitHub ephemeral workflow token, never R2/Neon secrets.
+      # This job never executes a backup or reads customer information.
