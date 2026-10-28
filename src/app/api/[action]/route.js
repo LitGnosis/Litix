@@ -185,7 +185,7 @@ const canonicalFollowerDestination=(rawValue,platform)=>{
 };
 const followerRank=x=>platformRank(x)<2&&/\bfollowers?\b/i.test([x.name,x.category].join(" "))?0:1;
 const platformName=x=>["Instagram","TikTok","YouTube","Facebook","Spotify","Other"][platformRank(x)];
-function shape(x){const first=servicePurchaseMinimum(x,retailPer1000(x));return {id:String(x.service),name:String(x.name||"Service"),category:String(x.category||"Other"),type:String(x.type||"Default"),min:first?.quantity??Number(x.min),supplierMin:Number(x.min),max:Number(x.max),unitStep:Number(x.quantity_step??x.quantityStep??x.step??x.increment??1),startingAmountCents:first?.amountCents??null,pricingReview:!first,per1000:retailPer1000(x),refill:hasRefill(x),noDrop:hasNoDrop(x),purchasable:/^default$/i.test(String(x.type||"Default"))&&!!first};}
+function shape(x){const first=servicePurchaseMinimum(x,retailPer1000(x));return {id:String(x.service),name:String(x.name||"Service"),category:String(x.category||"Other"),type:String(x.type||"Default"),min:first?.quantity??Number(x.min),supplierMin:Number(x.min),max:Number(x.max),unitStep:Number(x.quantity_step??x.quantityStep??x.step??x.increment??1),startingAmountCents:first?.amountCents??null,pricingReview:!first,per1000:retailPer1000(x),refill:hasRefill(x),noDrop:hasNoDrop(x),purchasable:process.env.VERCEL_ENV!=="production"&&/^default$/i.test(String(x.type||"Default"))&&!!first};}
 export async function GET(req){
  const op=name(req),flags=conf(),p=new URL(req.url).searchParams;
  if(!["config","health","smmservices","track"].includes(op))return send({error:"Unknown route"},404);
@@ -253,6 +253,11 @@ export async function POST(req){
  if(name(req)==="lookup-order")return lookupOrderByEmail(req);
  if(name(req)==="resend-confirmation")return resendPaidOrderConfirmation(req);
  if(name(req)!=="checkout")return send({error:"Unknown action"},404);
+ // Litix Global 2026-10-28: Boostero is the ONLY approved supplier for NEW
+ // production purchases. This legacy action is retained strictly for past
+ // SMMGLOB order lookup, reconciliation and optional nonproduction tests.
+ // Reject before reading card data, opening the DB, or calling the gateway.
+ if(process.env.VERCEL_ENV==="production")return send({error:"Legacy service purchases are disabled. Choose an available verified Boostero service. No payment was attempted."},409);
  const flags=conf();if(!flags.database||!flags.supplier||!flags.payment)return send({error:"Secure checkout is temporarily unavailable"},503);
  const gatewayMode=selectedGatewayMode();
  // TEST mode is fail-closed: never fall back to production credentials or pretend a transaction was verified.
