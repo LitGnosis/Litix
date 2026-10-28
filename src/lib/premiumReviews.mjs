@@ -29,7 +29,7 @@ export function reviewFingerprint(ip,userAgent,secret=process.env.LITIX_REVIEWS_
  return createHmac("sha256",secret).update(String(ip||"unknown")+"|"+String(userAgent||"").slice(0,150)).digest("hex");
 }
 export const reviewTokenHash=token=>createHash("sha256").update(String(token||"")).digest("hex");
-export function reviewAdmin(auth,expected=process.env.LITIX_BOOSTERO_ADMIN_TOKEN){
+export function reviewAdmin(auth,expected=process.env.VERCEL_ENV==="preview"?process.env.LITIX_PREMIUM_REVIEWS_ADMIN_TOKEN:process.env.LITIX_BOOSTERO_ADMIN_TOKEN){
  const input=String(auth||"").replace(/^Bearer /,""),secret=String(expected||"");
  return secret.length>=40&&input.length===secret.length&&timingSafeEqual(Buffer.from(input),Buffer.from(secret));
 }
