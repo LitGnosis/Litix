@@ -11,11 +11,28 @@ required(){ [[ -n "${!1:-}" ]] || fail "Missing local secret/config: $1"; }
 for key in \
   BACKUP_STORAGE_PROVIDER BACKUP_S3_ENDPOINT_URL BACKUP_S3_URI \
   BACKUP_R2_PRIVATE_BUCKET_CONFIRMED BACKUP_AGE_RECIPIENT BACKUP_AGE_IDENTITY \
-  AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY NEON_EXPECTED_SOURCE_HOST \
+  NEON_EXPECTED_SOURCE_HOST \
   LITIX_NEON_DIRECT_URL_NEONDB LITIX_NEON_DIRECT_URL_LITIXAPI; do
   required "$key"
 done
 [[ "$BACKUP_STORAGE_PROVIDER" == "r2" ]] || fail "R2 private-only backup required."
+[[ "$BACKUP_S3_URI" == "s3://litix-private-backups/"* ]] ||
+  fail "Backup destination must be the owner-authorized private bucket litix-private-backups"
+
+# Read R2 credentials ONLY from the owner's local profile or secure environment.
+if [[ -n "${R2_ACCESS_KEY_ID:-}" || -n "${R2_SECRET_ACCESS_KEY:-}" ]]; then
+  required R2_ACCESS_KEY_ID
+  required R2_SECRET_ACCESS_KEY
+  export AWS_ACCESS_KEY_ID="$R2_ACCESS_KEY_ID" AWS_SECRET_ACCESS_KEY="$R2_SECRET_ACCESS_KEY"
+  unset AWS_PROFILE AWS_DEFAULT_PROFILE 2>/dev/null || true
+fi
+if [[ -n "${AWS_ACCESS_KEY_ID:-}" || -n "${AWS_SECRET_ACCESS_KEY:-}" ]]; then
+  required AWS_ACCESS_KEY_ID
+  required AWS_SECRET_ACCESS_KEY
+elif [[ "${AWS_PROFILE:-}" != "litix-r2-backup" ]]; then
+  fail "Use the owner-local AWS_PROFILE=litix-r2-backup or inject both private R2 credentials"
+fi
+
 [[ "$BACKUP_R2_PRIVATE_BUCKET_CONFIRMED" == "I_VERIFIED_NO_PUBLIC_ACCESS" ]] ||
   fail "Verify Cloudflare R2 public access is disabled."
 [[ -f "$BACKUP_AGE_IDENTITY" && ! -L "$BACKUP_AGE_IDENTITY" ]] ||

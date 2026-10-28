@@ -15,8 +15,19 @@ aws_endpoint_args=()
 if [[ "$BACKUP_STORAGE_PROVIDER" == "r2" ]]; then
   required BACKUP_S3_ENDPOINT_URL
   required BACKUP_R2_PRIVATE_BUCKET_CONFIRMED
-  required AWS_ACCESS_KEY_ID
-  required AWS_SECRET_ACCESS_KEY
+  # Read R2 credentials ONLY from the owner's local profile or secure environment.
+  if [[ -n "${R2_ACCESS_KEY_ID:-}" || -n "${R2_SECRET_ACCESS_KEY:-}" ]]; then
+    required R2_ACCESS_KEY_ID
+    required R2_SECRET_ACCESS_KEY
+    export AWS_ACCESS_KEY_ID="$R2_ACCESS_KEY_ID" AWS_SECRET_ACCESS_KEY="$R2_SECRET_ACCESS_KEY"
+    unset AWS_PROFILE AWS_DEFAULT_PROFILE 2>/dev/null || true
+  fi
+  if [[ -n "${AWS_ACCESS_KEY_ID:-}" || -n "${AWS_SECRET_ACCESS_KEY:-}" ]]; then
+    required AWS_ACCESS_KEY_ID
+    required AWS_SECRET_ACCESS_KEY
+  elif [[ "${AWS_PROFILE:-}" != "litix-r2-backup" ]]; then
+    fail "Use the owner-local AWS_PROFILE=litix-r2-backup or inject both private R2 credentials"
+  fi
   [[ "$BACKUP_R2_PRIVATE_BUCKET_CONFIRMED" == "I_VERIFIED_NO_PUBLIC_ACCESS" ]] ||
     fail "Cloudflare dashboard private-bucket confirmation is required."
   python3 - <<'PY' || fail "Cloudflare R2 endpoint must be the canonical account-specific HTTPS S3 endpoint."
