@@ -45,7 +45,7 @@ with open(sys.argv[1],"xb") as f:f.write(secrets.token_bytes(128))
 PY
 aws --endpoint-url "$R2_ENDPOINT" s3api put-object --bucket "$R2_BUCKET" \
  --key "$probe_key" --body "$work/probe" --output json >"$work/put.status" 2>&1 ||
- fail "Real R2 PutObject failed; verify bucket-scoped token, endpoint and expiration."
+ {\n  # Print only a validated S3 error identifier, never the raw AWS response.\n  error_code="$(python3 - "$work/put.status" <<'PY'\nimport re, sys\ntry:\n    data = open(sys.argv[1], encoding="utf-8", errors="replace").read()\nexcept OSError:\n    data = ""\nm = re.search(r"\\(([A-Za-z][A-Za-z0-9]{0,63})\\) when calling the PutObject operation", data)\nprint(m.group(1) if m else "UNCLASSIFIED")\nPY\n)"\n  fail "Real R2 PutObject failed; S3_ERROR_CODE=$error_code. Verify endpoint, token pairing, and bucket scope."\n }
 probe_uploaded=true
 probe_size="$(aws --endpoint-url "$R2_ENDPOINT" s3api head-object \
  --bucket "$R2_BUCKET" --key "$probe_key" --query ContentLength --output text 2>"$work/head.err")" ||
