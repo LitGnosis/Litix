@@ -57,7 +57,8 @@ async function verify(width){
   await page.waitForFunction(()=>document.querySelectorAll("#services .service-option").length===2);
   assert.deepEqual(await cardIds(),["ig-like-6","ig-like-13"],"Like prices asc at "+width+"px");
   await page.getByRole("button",{name:"TikTok Followers",exact:true}).click();
-  await page.waitForFunction(()=>document.querySelectorAll("#services .service-option").length===2);
+  await page.waitForFunction(()=>document.querySelectorAll("#services .service-option").length===2 &&
+    document.querySelector("#services .service-option .foot .tag")?.textContent?.includes("tt-follow-8"));
   assert.deepEqual(await cardIds(),["tt-follow-8","tt-follow-17"],"TikTok follower prices asc at "+width+"px");
   assert.equal(orderRequests,0,"No checkout requests allowed in sorting tests");
   console.log("PASS CUSTOM_ORDERS_SORT "+width+"px: exact four-category ordering, refresh, quick filters, no payment");
