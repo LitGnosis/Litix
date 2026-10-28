@@ -87,3 +87,15 @@ Run `bash scripts/neon-restore-isolated-verify.sh` and repeat for `litixapi`. Th
 ## Evidence/limits
 - Existing synthetic-only PostgreSQL 18 + age + restore CI passed for both databases (PR #68).
 - Actual R2 account, token, private bucket, key custody and isolated restore target are NOT available in current connected tools. **No customer data export or new R2 subscription has been attempted.**
+
+## Optional zero-Neon-branch restore: trusted local Docker
+
+Instead of creating a new Neon branch (the project already has ten), a more cost-conscious restore can run **entirely on the owner's trusted local machine** via `scripts/neon-restore-local-docker-r2.sh`, provided it has a genuinely local Unix-socket Docker daemon. The container uses PostgreSQL 18, `--network none`, no published ports or host data volumes, a disposable database and guaranteed cleanup. The encrypted archive is downloaded from R2, SHA256 verified, decrypted as a stream directly into the isolated container and checked for expected core tables and readable rows. No plaintext production backup is written to host disk.
+
+**Prerequisites:** locally installed Docker, `age`, AWS CLI, Python 3, actual owner-controlled private decryption identity (never ChatGPT), private R2 bucket-scoped access, and encrypted production backups for both `neondb` and `litixapi`. Use the same non-secret/private R2 settings and `BACKUP_OBJECT_URI` and `BACKUP_CIPHERTEXT_SHA256` from the upload steps above; also set `RESTORE_LOCAL_DOCKER_ACK=I_APPROVE_OFFLINE_DOCKER_RESTORE`. Run `bash scripts/neon-restore-local-docker-r2.sh` **once per database**, selecting the corresponding `NEON_BACKUP_DATABASE`. Expected success messages include `LOCAL_OFFLINE_POSTGRES18_ENCRYPTED_RESTORE_VERIFIED`, `RESTORED_DATABASE=<selected database>`, `NO_PRODUCTION_DATABASE_CONNECTION_OR_PORT_EXPOSED`.
+
+Local restore transfers decrypted customer data into a locally isolated container while the test runs; use a physically trusted machine with encrypted local disks and no remote Docker daemon, take care of local access and audit requirements, and do not save stdout/screenshots containing records. The script refuses remote Docker contexts but **cannot independently attest the physical security of a user's device**. Do not use on shared machines.
+
+A synthetic CI demonstration, `scripts/test-neon-local-r2-restore-synthetic.sh`, verifies the same workflow using **fake records and a fake AWS CLI**; the synthetic test cannot substitute for actual independent restoration of current production data.
+
+This local method avoids purchasing or deleting Neon staging branches. It does **not** circumvent the requirement for a real private Cloudflare R2 account, bucket, valid credentials, owner-held age key or successful recovery of both real databases.
