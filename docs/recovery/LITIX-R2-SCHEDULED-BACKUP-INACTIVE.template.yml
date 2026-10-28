@@ -1,0 +1,64 @@
+# INACTIVE TEMPLATE — NOT a GitHub Actions workflow in this location.
+# DO NOT move under .github/workflows until BOTH ACTUAL database backups and
+# isolated PostgreSQL restores have been confirmed with genuine execution logs,
+# Vercel production DB mapping is confirmed, and the owner approves activation.
+name: LITIX R2 scheduled encrypted backup and offline recovery monitor
+on:
+  schedule:
+    - cron: '17 8 * * *' # daily UTC; GitHub schedule execution can be delayed
+permissions:
+  contents: read
+concurrency:
+  group: litix-r2-production-recovery
+  cancel-in-progress: false
+jobs:
+  backup:
+    if: github.repository == 'LitGnosis/Litix' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    environment: litix-private-backup
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Install isolated backup utilities
+        run: |
+          set -Eeuo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq age
+          command -v aws
+          command -v docker
+      - name: Perform real encrypted backup and isolated restore tests
+        env:
+          LITIX_RECOVERY_MODE: backup_and_restore
+          LITIX_CONFIRM_BACKUP: BACKUP_BOTH_DBS_READ_ONLY
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          AGE_PUBLIC_RECIPIENT: ${{ secrets.AGE_PUBLIC_RECIPIENT }}
+          NEON_DIRECT_URL_NEONDB: ${{ secrets.NEON_DIRECT_URL_NEONDB }}
+          NEON_DIRECT_URL_LITIXAPI: ${{ secrets.NEON_DIRECT_URL_LITIXAPI }}
+          NEON_EXPECTED_SOURCE_HOST: ${{ secrets.NEON_EXPECTED_SOURCE_HOST }}
+        run: bash scripts/litix-r2-github-manual-verify.sh
+  failed-backup-alert:
+    if: always() && needs.backup.result == 'failure'
+    needs: [backup]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Create sanitized private-incident prompt via GitHub issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -Eeuo pipefail
+          gh issue create --repo "$GITHUB_REPOSITORY" \
+            --title 'LITIX: scheduled encrypted database backup/restore failed' \
+            --body "Scheduled backup or isolated restore did not complete. Inspect GitHub Actions: $RUN_URL. No data or credentials are included. Keep prior verified backups; do not run migrations until recovered."
+# GitHub Issues notifications depend on repository subscription/notification settings.
+# Review per-run issue deduplication, cost controls and retention policies before activation.
