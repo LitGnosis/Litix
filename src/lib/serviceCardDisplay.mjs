@@ -3,8 +3,8 @@
 const TECHNICAL = [
   /\b(?:low|medium|high|premium)\s+quality\b/gi,
   /\b(?:no[\s-]*)?non[\s-]*drop(?:\s+claim)?\b/gi,
-  /\b(?:no\s+)?refills?(?:\s+(?:support|available|eligible|guaranteed|claim))?\b/gi,
   /\b\d+\s*(?:days?|months?)\s+(?:of\s+)?refills?\b/gi,
+  /\b(?:no\s+)?refills?(?:\s+(?:support|available|eligible|guaranteed|claim))?\b/gi,
   /\b\d+(?:[,.]\d+)?\s*[kKmM]?\s*(?:\/|per\s+)\s*day\b/gi,
   /\b(?:instant|high\s+speed|medium\s+speed|fast\s+(?:speed|delivery))\b/gi,
   /#?\b(?:boostero|smmglob|smmfollowom)[_-]?\d+\b/gi,
