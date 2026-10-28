@@ -120,3 +120,23 @@ Current official documentation:
 - https://developers.cloudflare.com/r2/pricing/
 
 R2 token: **Object Read & Write**, **selected private bucket only**. Keep public development access, public custom domain and public Workers disabled. Do not store backup keys in the live Litix storefront environment unless a dedicated secret-managed backup runner and its access rules are separately reviewed.
+
+## Single owner-local command to perform BOTH actual backups and restores
+
+After R2 Standard is activated by the owner, a private bucket is configured, the owner has locally generated and safely backed up the private `age` identity, and the two genuine Neon **direct TLS** database URLs are obtained privately, use the optional orchestrator:
+
+```sh
+bash scripts/litix-owner-run-r2-backup-and-verify.sh
+```
+
+The orchestrator requires the already documented local-only variables `BACKUP_STORAGE_PROVIDER`, `BACKUP_S3_ENDPOINT_URL`, `BACKUP_S3_URI`, `BACKUP_R2_PRIVATE_BUCKET_CONFIRMED`, `BACKUP_AGE_RECIPIENT`, `BACKUP_AGE_IDENTITY`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `NEON_EXPECTED_SOURCE_HOST`, and **both** `LITIX_NEON_DIRECT_URL_NEONDB` and `LITIX_NEON_DIRECT_URL_LITIXAPI`. Store credential values in an owner-controlled local password/secret manager and inject into the process at runtime, without echoing/pasting them into ChatGPT, GitHub or shell history. As an additional explicit authorization gate set:
+
+```sh
+export LITIX_R2_BACKUP_OWNER_ACK=I_APPROVE_ENCRYPTED_EXPORT_AND_ISOLATED_RESTORE
+```
+
+The script checks that `BACKUP_AGE_RECIPIENT` actually matches the locally held private identity **before exporting a byte of customer data**, verifies both Neon source database paths, confirms a local Docker Unix socket, and sequentially performs (`pg_dump -Fc` → `age` → private R2 upload → remote ciphertext roundtrip → independent network-isolated PostgreSQL 18 restore) for `neondb` and `litixapi`. One failure stops the process without claiming success.
+
+Only after both recoveries succeed does it print `LITIX_BOTH_PRODUCTION_DATABASES_ENCRYPTED_OFFSITE_AND_RESTORED_VERIFIED`, along with **nonsecret ciphertext SHA256s and bucket object paths**. These proof markers and the Cloudflare object's creation timestamps can be retained in a private backup register; never retain raw SQL or customer data in public logs. The script is not scheduled, not executable by a public GitHub job, and not run on Vercel.
+
+The separate GitHub CI only uses fake database URLs, mocked cloud uploads, mocked restores and throwaway age test keys to verify ordering and safety gates. **A green CI run is not actual backup proof**. For full assurance, independently review row counts/constraints and recovery tests in a physically trusted location before opening production migration gates.
