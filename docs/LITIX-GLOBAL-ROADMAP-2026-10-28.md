@@ -170,3 +170,21 @@ Isolated branch `feature/litix-global-boostero-only-hardstop-20261028` adds:
 - Do not merge large draft paid PRs (#58, #50, #53) or modify schema/fulfillment logic until fresh recoverable DB backup, production DB identity, no-charge and permitted transaction checks have passed.
 
 Current working public deployment remains `dpl_HqHcf9Sx1NfkoWYunrQvRyzeCHmX`, commit `86954ed6174cc8c9a100369e06e969a070e5e1ed`. This task is **safe backup preparation and audit**, not a declaration that the full master roadmap is complete.
+
+---
+
+## 2026-10-28 — No-new-subscription backup recovery validation
+
+**Production and customers remain unchanged.** Production Vercel SHA `86954ed6174cc8c9a100369e06e969a070e5e1ed` READY. Source GitHub now contains the earlier recovery tooling, plus the separate source checkpoint `recovery/litix-pre-offsite-backup-20261028` at current merged Git SHA before this improvement. A sanitized source-only archive is produced for the verified live commit; it contains NO database dumps, secrets or customer records.
+
+**Read-only current Neon inventory:** default project `fancy-wave-75069167`, Free, one old manual snapshot dated October 25; 10/10 branches; Neon object storage enabled but ZERO buckets. Distinct application databases `neondb` 13,803,520 bytes and `litixapi` 8,101,888 bytes. Both must be backed up and restored independently. Project storage and snapshots are NOT independent offsite backup. Neither was altered.
+
+**Public GitHub limitation:** repository `LitGnosis/Litix` is PUBLIC. Uploading an encrypted production database backup as a public-repo GitHub Actions artifact is NOT approved. GitHub is only used for sanitized source backups and 100% synthetic-data tests. No destination/key/secret is added to GitHub or Vercel.
+
+**Implemented improvements:** manual-only source database allowlist and dedicated archive names for both application databases in `scripts/neon-backup-encrypted-offsite.sh`; parallel strict isolated restore guardrails in `scripts/neon-restore-isolated-verify.sh`; `scripts/test-neon-encrypted-restore-synthetic.sh` proves PostgreSQL 18 `pg_dump -Fc` -> age -> decrypt -> `pg_restore` roundtrip for both synthetic schemas, including row counts, in separate disposable source/target containers. CI `litix-free-backup-validation-ci.yml` runs the no-secret safeguards, synthetic restore, and source-only production archive. No production tables, customer data, payment settings, catalog prices or supplier orders were changed.
+
+**Known issue:** Vercel production environment contains no verified S3/Blob backup destination or age encryption identity; Neon branchable storage has zero buckets and is the same vendor failure domain; no private offsite storage is proven available/authorized, and no isolated actual-data restore target is ready. Fresh backup remains **NOT VERIFIED**. Do not start paid PR #58 (864 Boostero services), paid post picker #50, tenant accounts, loyalty ledgers or subscription migrations until both application DBs have independent fresh encrypted backups, restored successfully and production database identity is verified.
+
+**Next owner decision, avoiding a new subscription:** authorize an already-owned PRIVATE offsite S3-compatible bucket (or choose an explicitly private independent destination), approve transfer of encrypted copies only, and hold the age private identity offline, separate from stored ciphertext. This requires new private storage/permissions and isolated restore access; never place credentials/keys in repository, public GitHub artifacts, chat or logs. Existing scripts do not execute on production without all safety prerequisites.
+
+Refer to `docs/LITIX-NEON-RECOVERY-2026-10-28.md` and the separate CI proof for backup scope, no-cost alternatives and restoration limits.
