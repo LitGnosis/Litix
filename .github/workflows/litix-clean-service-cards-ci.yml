@@ -1,0 +1,63 @@
+name: LITIX premium clean service cards — preserve prices, IDs and checkout
+on:
+  push:
+    branches:
+      - feature/litix-simplify-service-cards-20261028
+  pull_request:
+    paths:
+      - "src/app/page.jsx"
+      - "src/app/metallic.css"
+      - "src/lib/serviceCardDisplay.mjs"
+      - "src/tests/service-card-clean-*"
+      - ".github/workflows/litix-clean-service-cards-ci.yml"
+permissions:
+  contents: read
+jobs:
+  display-only-preservation:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: src
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: src/package-lock.json
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Service-card naming, pricing, checkout, supplier and ordering regressions — no charges
+        run: |
+          node --test \
+            tests/service-card-clean-display.test.mjs \
+            tests/public-supplier-display.test.mjs \
+            tests/checkout.test.mjs \
+            tests/pricing-rules.test.mjs \
+            tests/catalog.test.mjs \
+            tests/custom-orders-priority.test.mjs \
+            tests/custom-orders-mobile-desktop.mjs \
+            tests/boostero-integration.test.mjs \
+            tests/boostero-four-kinds.test.mjs \
+            tests/growth-bundles-manual.test.mjs \
+            tests/guardian.test.mjs \
+            tests/litix-ai.test.mjs
+      - name: Build unchanged Next.js purchase and supplier modules
+        run: npm run build
+      - name: Install isolated browser runner
+        run: npm install --no-save --ignore-scripts playwright@1.56.1
+      - name: Check actual service cards at 320, 375, and 1280px with mocked API (never submit payment)
+        run: |
+          npm run start -- --port 3100 >/tmp/litix-clean-service-cards.log 2>&1 &
+          app_pid=$!
+          trap 'kill $app_pid || true' EXIT
+          for i in $(seq 1 40); do
+            if curl --fail --silent --output /dev/null http://localhost:3100/; then break; fi
+            sleep 1
+          done
+          export CHROME_PATH="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
+          if [ -z "$CHROME_PATH" ]; then npx playwright install chromium; fi
+          node tests/service-card-clean-browser.mjs
