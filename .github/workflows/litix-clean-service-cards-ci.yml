@@ -39,7 +39,6 @@ jobs:
             tests/pricing-rules.test.mjs \
             tests/catalog.test.mjs \
             tests/custom-orders-priority.test.mjs \
-            tests/custom-orders-mobile-desktop.mjs \
             tests/boostero-integration.test.mjs \
             tests/boostero-four-kinds.test.mjs \
             tests/growth-bundles-manual.test.mjs \
@@ -61,3 +60,4 @@ jobs:
           export CHROME_PATH="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
           if [ -z "$CHROME_PATH" ]; then npx playwright install chromium; fi
           node tests/service-card-clean-browser.mjs
+          node tests/custom-orders-mobile-desktop.mjs
