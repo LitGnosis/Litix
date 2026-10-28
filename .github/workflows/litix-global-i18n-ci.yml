@@ -7,6 +7,8 @@ on:
       - "src/lib/globalLocales.mjs"
       - "src/app/global/**"
       - "src/app/sitemap.js"
+      - "src/app/robots.js"
+      - "src/tests/global-seo-preservation.test.mjs"
       - "src/app/page.jsx"
       - "src/tests/global-locales*"
       - ".github/workflows/litix-global-i18n-ci.yml"
@@ -34,6 +36,7 @@ jobs:
         run: |
           node --test \
             tests/global-locales.test.mjs \
+            tests/global-seo-preservation.test.mjs \
             tests/checkout.test.mjs \
             tests/collect-lifecycle.test.mjs \
             tests/boostero-integration.test.mjs \
@@ -58,5 +61,8 @@ jobs:
           done
           export CHROME_PATH="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
           if [ -z "$CHROME_PATH" ]; then npx playwright install chromium; fi
+          curl --fail --silent http://localhost:3100/sitemap.xml | grep -q 'https://litix.net/global/ar'
+          curl --fail --silent http://localhost:3100/sitemap.xml | grep -q 'https://litix.net/about'
+          curl --fail --silent http://localhost:3100/robots.txt | grep -q 'Disallow: /checkout'
           node tests/global-locales-mobile.mjs
           node tests/litix-floating-buttons-mobile.mjs
