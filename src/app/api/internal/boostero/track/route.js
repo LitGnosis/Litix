@@ -14,7 +14,7 @@ export async function GET(request){
  if(found.length!==1)return Response.json({error:"Order not found"},{status:404});
  const x=found[0];
  return Response.json({order:{id:x.id,service:x.service_name,quantity:x.quantity,amountCents:x.amount_cents,
-  payment:x.payment_state,fulfillment:x.state,supplier:"Boostero",supplierOrderId:x.supplier_order_id||null,
+  payment:x.payment_state,fulfillment:x.state,
   supplierStatus:x.supplier_status?.status||null,lastChecked:x.checked_at||null}},
   {headers:{"cache-control":"no-store","referrer-policy":"no-referrer","x-robots-tag":"noindex"}});
 }

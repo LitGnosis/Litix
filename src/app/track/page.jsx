@@ -84,7 +84,7 @@ export default function OrderTracker(){
  }
  const status=friendlyStatus(order);
  const money=order?new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(Number(order.amount||0)):null;
- const helpUrl="https://wa.me/19452106315?text="+encodeURIComponent("Hi Litix, I need help with my paid order "+(order?.id||orderId||"")+(order?.supplierOrderId?" (supplier #"+order.supplierOrderId+")":"")+". The delivery is not showing on my account.");
+ const helpUrl="https://wa.me/19452106315?text="+encodeURIComponent("Hi Litix, I need help with my paid order "+(order?.id||orderId||"")+". The delivery is not showing on my account.");
  return <main className="ltx-track">
   <div className="ltx-track-wrap">
    <header className="ltx-track-nav"><a href="/" aria-label="Litix home"><img src="/assets/brand/litix-logo.webp" width="115" alt="Litix logo"/></a><a href="/" className="ltx-track-home">Home</a></header>
@@ -101,7 +101,7 @@ export default function OrderTracker(){
      <div><small>Payment</small><strong>{order.payment==="paid"?"Paid":order.payment||"Pending"}</strong></div>
      <div><small>Quantity</small><strong>{Number(order.quantity||0).toLocaleString()}</strong></div>
      <div><small>Total</small><strong>{money}</strong></div>
-     <div><small>Supplier order #</small><strong>{order.supplierOrderId||"Not assigned"}</strong></div>
+     
      {order.remains!==null&&order.remains!==undefined&&<div><small>Supplier-reported remaining</small><strong>{Number(order.remains).toLocaleString()}</strong></div>}
      {order.status&&<div><small>Supplier's wording</small><strong>{order.status}</strong></div>}
     </div>
