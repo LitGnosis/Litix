@@ -25,8 +25,13 @@ jobs:
           bash -n scripts/test-neon-encrypted-restore-synthetic.sh
           if env -i PATH="$PATH" HOME="$HOME" bash scripts/neon-backup-encrypted-offsite.sh >/dev/null 2>&1; then exit 1; fi
           if env -i PATH="$PATH" HOME="$HOME" bash scripts/neon-restore-isolated-verify.sh >/dev/null 2>&1; then exit 1; fi
-      - name: Install CLI for mock-only endpoint denial and real synthetic encryption
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq age awscli
+      - name: Install age, mock AWS CLI locally so invalid R2 settings never reach the cloud
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq age
+          mkdir -p "$RUNNER_TEMP/litix-synthetic-bin"
+          printf '#!/bin/sh\necho "MOCK_AWS_CALL_FORBIDDEN" >&2\nexit 98\n' > "$RUNNER_TEMP/litix-synthetic-bin/aws"
+          chmod 755 "$RUNNER_TEMP/litix-synthetic-bin/aws"
+          echo "$RUNNER_TEMP/litix-synthetic-bin" >> "$GITHUB_PATH"
       - name: Reject non-Cloudflare endpoints and public buckets without hitting a network
         run: |
           set -eu
