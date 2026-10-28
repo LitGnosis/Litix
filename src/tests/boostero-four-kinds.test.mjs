@@ -37,6 +37,8 @@ test("SMMGLOB numeric card detection covers all four targeted categories only",(
   assert.equal(legacyPublicServiceAllowed({name:"TikTok Views",category:"TikTok Views"}),true);
   assert.equal(legacyPublicServiceAllowed({name:"Instagram Story Views",category:"Instagram Story Views & Likes"}),true);
   assert.equal(legacyPublicServiceAllowed({name:"YouTube Likes",category:"YouTube"}),true);
+  assert.equal(legacyPublicServiceAllowed({name:"TikTok Live Stream Likes Instant",category:"TikTok Live Stream Like"}),false);
+  assert.equal(legacyPublicServiceAllowed({name:"Instagram Story Likes",category:"Instagram Story Likes"}),false);
  }finally{restore()}
 });
 test("all four allowlisted services preserve marked retail, $5 checkout minimum, current wholesale ceilings",()=>{
@@ -118,4 +120,13 @@ test("four quick filters never call SMMGLOB and return only approved Boostero ca
   assert.equal((await res.json()).message,"Temporarily unavailable");
   assert.equal(smmCalls,0);
  }finally{delete globalThis.__fourKinds;restore()}
+});
+
+test("legacy SMMGLOB direct four-category quick filters return no numeric cards and preserve unrelated categories",()=>{
+ const route=readFileSync(new URL("../app/api/[action]/route.js",import.meta.url),"utf8");
+ assert.match(route,/catalog\/v1 for verified Boostero services/);
+ assert.match(route,/\["Instagram","TikTok"\]\.includes\(platform\)/);
+ assert.match(route,/\["followers","likes"\]\.includes\(quickKind\)/);
+ const source=readFileSync(new URL("../lib/publicBoosteroOnly.mjs",import.meta.url),"utf8");
+ assert.match(source,/const likes=\/\\blikes\?\\b\/i\.test\(title\)/);
 });

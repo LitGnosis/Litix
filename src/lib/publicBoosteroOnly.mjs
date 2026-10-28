@@ -6,7 +6,7 @@ export function restrictedSocialKind(service){
  const platform=platformOf(title+" "+category);
  if(!platform)return null;
  const followers=/\bfollowers?\b/i.test(title)||(/\bfollowers?\b/i.test(category)&&!/\b(?:views?|likes?|comments?|shares?|saves?)\b/i.test(title));
- const likes=/\blikes?\b/i.test(title)&&!/\b(?:comment|story|livestream|live stream|live|poll|battle|reply|replies)\b/i.test(title);
+ const likes=/\blikes?\b/i.test(title);
  if(followers&&likes)return null; // ambiguous service; never remap
  if(followers)return platform+" followers";
  if(likes)return platform+" likes";

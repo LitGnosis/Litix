@@ -96,7 +96,7 @@ const legacyPublicServiceAllowed=service=>{
  const label=title+" "+category;
  if(!/\b(?:instagram|ig|tiktok|tik[\s-]*tok)\b/i.test(label))return true;
  const followers=/\bfollowers?\b/i.test(title)||(/\bfollowers?\b/i.test(category)&&!/\b(?:views?|likes?|comments?|shares?|saves?)\b/i.test(title));
- const likes=/\blikes?\b/i.test(title)&&!/\b(?:comment|story|livestream|live stream|live|poll|battle|reply|replies)\b/i.test(title);
+ const likes=/\blikes?\b/i.test(title);
  return !(followers||likes);
 };
 const truth = v => v === true || String(v).toLowerCase() === "true" || String(v) === "1";
@@ -195,6 +195,12 @@ export async function GET(req){
   const cat=bounded(p.get("category"),100),platform=bounded(p.get("platform"),30),term=bounded(p.get("q"),120).toLowerCase(),page=Math.max(1,Math.min(10000,Number(p.get("page"))||1));
   // Strict category quick filters stay separate from free-text search.
   const quickKind=["followers","likes"].includes(String(p.get("kind")||"").toLowerCase())?String(p.get("kind")).toLowerCase():"";
+  // The four official Instagram/TikTok quick filters are exclusively supplied
+  // by /api/catalog/v1's verified Boostero allowlist, not legacy numeric SKUs.
+  if(process.env.VERCEL_ENV==="production"&&process.env.LITIX_BOOSTERO_ENABLED==="true"&&
+     ["Instagram","TikTok"].includes(platform)&&["followers","likes"].includes(quickKind))
+   return send({items:[],recommendations:[],categories:[],total:0,allCount:0,page,
+     catalogStatus:"boostero_only",message:"Use /api/catalog/v1 for verified Boostero services"});
   try{const all=(await getServices()).filter(legacyPublicServiceAllowed),filtered=sortServicesPer1000(all.filter(x=>(!cat||String(x.category||"Other")===cat)&&(!platform||platform==="All platforms"||platformName(x)===platform)&&(!term||[x.service,x.name,x.category].some(z=>String(z||"").toLowerCase().includes(term)))&&
     (!quickKind||matchesServiceQuickKind(x,quickKind))),platformRank,retailPer1000);const goals={"Grow audience":/followers?|profile/i,"Increase engagement":/likes?|comments?|views?|saves?/i,"Launch a product":/shares?|views?|saves?/i,"Generate leads":/profile|views?/i,"Build brand awareness":/views?|shares?/i};const matcher=goals[p.get("goal")];const recommendations=matcher&&["7","30","90"].includes(p.get("horizon"))?filtered.filter(x=>/^default$/i.test(String(x.type||"Default"))&&matcher.test(String(x.name))).slice(0,3).map(shape):[];return send({recommendations,items:filtered.slice((page-1)*24,page*24).map(shape),categories:[...new Set(all.map(x=>String(x.category||"Other")))].sort(),total:filtered.length,allCount:all.length,page,
    // The raw count is from a successful read-only SMMGLOB services response;
