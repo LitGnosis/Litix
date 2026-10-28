@@ -1,0 +1,61 @@
+name: Litix premium migration — production source checkpoint ZIP
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  checkpoint-production-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    steps:
+      - name: Checkout repository history for backup
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+      - name: Tag exact production revision, if absent
+        run: |
+          set -euo pipefail
+          tag=litix-pre-boostero-premium-2026-10-27
+          sha=40f56e3340de942c3953f676817833c1cbf1b211
+          if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+            test "$(git rev-list -n1 "$tag")" = "$sha"
+          else
+            git -c user.name='Litix Recovery Bot' -c user.email='recovery@users.noreply.github.com' \
+              tag -a "$tag" "$sha" -m 'Exact production restore point before Boostero migration'
+            git push origin "refs/tags/$tag"
+          fi
+      - name: Create sanitized source archive of exact production commit
+        run: |
+          python - <<'PY'
+          import subprocess,zipfile,pathlib,os
+          sha="40f56e3340de942c3953f676817833c1cbf1b211"
+          out="LITIX-PREMIUM-PRE-MIGRATION-2026-10-27.zip"
+          excluded={".git",".next","node_modules","coverage","dist","build","__pycache__",".vercel"}
+          sensitive={".env",".env.local",".env.production",".env.preview",".npmrc",".netrc","credentials.json","secrets.json"}
+          paths=subprocess.check_output(["git","ls-tree","-r","--name-only","-z",sha]).split(b"\0")
+          count=0
+          with zipfile.ZipFile(out,"w",compression=zipfile.ZIP_DEFLATED,compresslevel=9) as z:
+           for raw in paths:
+            if not raw:continue
+            name=raw.decode();p=pathlib.PurePosixPath(name)
+            if any(bit in excluded for bit in p.parts) or p.name in sensitive or p.name.startswith(".env.") or p.suffix.lower() in {".pem",".key",".pfx",".p12"}:continue
+            data=subprocess.check_output(["git","show",sha+":"+name])
+            if len(data)>15000000:continue
+            z.writestr(name,data);count+=1
+           z.writestr("LITIX-RECOVERY.md",f"""# Litix exact source restore point
+          Repository: LitGnosis/Litix
+          SHA: {sha}
+          Deployment: dpl_B6iFJpDPyVmDQU15rMJxm4MgVU8R
+          Git branch: recovery/litix-before-boostero-premium-20261027
+          Git tag: litix-pre-boostero-premium-2026-10-27
+          Restore the exact SHA only after verifying checkout and existing order statuses. Secrets and customer records are NOT bundled.
+          """)
+          print("Sanitized archive",out,"files",count,"bytes",os.path.getsize(out))
+          PY
+      - name: Upload source ZIP
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: litix-premium-pre-migration-2026-10-27
+          path: LITIX-PREMIUM-PRE-MIGRATION-2026-10-27.zip
+          retention-days: 90
+          if-no-files-found: error
