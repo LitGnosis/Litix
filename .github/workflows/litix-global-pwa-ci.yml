@@ -1,0 +1,44 @@
+name: Litix Global — safe app manifest, no-charge regressions
+on:
+  push:
+    branches: [feature/litix-global-mobile-manifest-20261028]
+  pull_request:
+    paths:
+      - "src/app/manifest.js"
+      - "src/public/icons/**"
+      - "src/tests/global-pwa-manifest.test.mjs"
+      - ".github/workflows/litix-global-pwa-ci.yml"
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    defaults:
+      run:
+        working-directory: src
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: src/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - name: Test manifest and existing no-charge payment, AI, Boostero, SEO and bundle behavior
+        run: |
+          node --test tests/global-pwa-manifest.test.mjs tests/litix-ai.test.mjs tests/checkout.test.mjs tests/boostero-integration.test.mjs tests/growth-bundles-manual.test.mjs tests/global-locales.test.mjs tests/global-seo-preservation.test.mjs
+      - name: Verify existing Litix logo (without modifying brand assets)
+        run: |
+          python - <<'PY'
+          import pathlib
+          p=pathlib.Path("public/assets/brand/litix-logo.webp")
+          c=p.read_bytes()
+          assert c[:4]==b"RIFF" and c[8:12]==b"WEBP",p
+          assert len(c)>1024,p
+          print("ORIGINAL_BRAND_ASSET_VERIFIED",len(c))
+          PY
+      - name: Preserve Next.js production build
+        run: npm run build
