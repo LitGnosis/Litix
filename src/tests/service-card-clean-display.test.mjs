@@ -33,8 +33,8 @@ test("customer card markup uses only clean title, current actual price and curre
   const card=source.split('<div className="cards">')[1]?.split('}{!services.length')[0]||"";
   assert.ok(card,"Service card section must exist");
   assert.match(card,/publicServiceCardName\(s\)/);
-  assert.match(card,/money\(Math\.ceil\(s\.per1000\*100\)\)/);
-  assert.match(card,/Starting at "\+money\(s\.startingAmountCents\)/);
+  assert.match(card,/cardMoney\(Math\.ceil\(s\.per1000\*100\)\)/);
+  assert.match(card,/Starting at "\+cardMoney\(s\.startingAmountCents\)/);
   assert.doesNotMatch(card,/className="service-badges"|Refill support|No refill|Non-Drop|No Non-Drop claim/);
   assert.match(style,/\.service-option \.service-card-name/);
   assert.match(style,/\.service-option \.service-card-price/);
