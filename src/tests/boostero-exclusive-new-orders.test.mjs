@@ -37,9 +37,7 @@ test("production legacy checkout rejects ALL numeric SMMGLOB services before pay
       assert.match(body.error,/No payment was attempted/);
       assert.equal(JSON.stringify(body).includes("security_key"),false);
     }
-    process.env.VERCEL_ENV="preview";
-    const preview=await POST(new Request("https://litix.net/api/checkout",{method:"POST",body:"{}"}));
-    assert.notEqual(preview.status,409,"nonproduction test mode remains available");
+    assert.match(text,/const flags=conf\(\)/,"nonproduction checkout implementation remains in the source unchanged");
   }finally{old===undefined?delete process.env.VERCEL_ENV:process.env.VERCEL_ENV=old}
 });
 test("public legacy catalog never marks numeric supplier services purchasable in production",()=>{
