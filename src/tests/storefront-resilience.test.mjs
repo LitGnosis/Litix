@@ -29,15 +29,15 @@ test('concurrent catalog requests share a read-only upstream fetch and recommend
 test('catalog prices show explicit USD rate and minimum-order total',()=>{
  assert.match(page,/className="price-unit"> per 1,000 units/);
  assert.match(page,/className="minimum-price">\{s.pricingReview/);
- assert.match(source,/action==="services"\?8000:16000/);
+ assert.match(source,/action==="services"\?18000:16000/);
  const css=readFileSync(new URL('../app/metallic.css',import.meta.url),'utf8');
  assert.match(css,/\.service-option \.foot\{flex-wrap:wrap/);
 });
 
  test('customer storefront uses Litix branding without naming the supplier',()=>{
  assert.doesNotMatch(page,/smmglob/i);
- assert.match(page,/Litix services listed/);
- assert.match(page,/Connecting securely to Litix/);
+ assert.match(page,/Litix services available/);
+ assert.match(page,/Checking supplier catalog/);
  assert.match(page,/Litix · Secure checkout/);
  assert.doesNotMatch(source,/SMMGLOB prices unavailable/);
  });
