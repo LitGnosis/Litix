@@ -30,8 +30,10 @@ jobs:
           cache-dependency-path: src/package-lock.json
       - name: Install existing locked dependencies
         run: npm ci --no-audit --no-fund
-      - name: Run all existing non-charge checkout, catalog, supplier and feature tests
-        run: node --test tests/*.test.mjs
+      - name: Run all no-charge Node regression tests (browser suites run after Chromium setup)
+        run: |
+          test_files="$(find tests -maxdepth 1 -name '*.test.mjs' ! -name 'dual-provider-mobile.test.mjs' | sort | tr '\n' ' ')"
+          node --test $test_files
       - name: Compile Next.js production bundle without payments
         run: npm run build
       - name: Install isolated browser test dependency
@@ -50,3 +52,4 @@ jobs:
             npx playwright install chromium
           fi
           node tests/custom-orders-mobile-desktop.mjs
+          node tests/dual-provider-mobile.test.mjs
