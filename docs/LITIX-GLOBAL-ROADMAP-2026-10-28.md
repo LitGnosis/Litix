@@ -108,3 +108,13 @@ This Phase 1 branch is independent of payment, supplier routing, DB migrations a
 ### Still not implemented
 - Paid Boostero 864-service expansion, allowed supplier cutover, new subscription billing, consolidated multi-post paid checkout, full Auth0 customer dashboard, cross-device agency workspaces, verified loyalty ledger, automated global taxes and international payment methods, authentic review purchase verification, official social-platform analytics and full Litix Growth OS.
 - These require separate safety checks, provider permissions or verified current DB recovery. Do not call them live just because Preview pages exist.
+
+### Staging route safety check — 2026-10-28
+
+Before any project-route promotion, a full 53-rule comparison against current live routing version 53442328-4e3c-425b-83a3-96458ec5bd2f identified an unrelated pre-existing staged change that would have enabled /api/checkout legacy proxy route `3d603fe4-a251-43df-bf13-77c6e131fd4b`. **That would have modified checkout unintentionally.** The staged route was restored using Vercel's `restore:true`, returning its enabled flag to the currently live value `false`. No live checkout route was changed.
+
+New staged version `3e5a60c5-2d7f-40c0-9370-d241b71dea4a` was then diffed rule-for-rule against live. Both contain 53 rules, and **only** `litix-seo-20261019-robots` and `litix-seo-20261019-sitemap` differ, each changing `enabled:true` to `enabled:false` and their descriptions, with external legacy destinations otherwise preserved. All API, payment, supplier, pricing and webhook routing settings match live.
+
+The safe routing version is not considered published until it is explicitly promoted and production probes confirm native Next robots/sitemap, the six languages, existing checkout readiness and currently live Boostero categories.
+
+Source branch for preserved crawler exclusions and legacy sitemap URLs: `fix/litix-global-native-seo-preservation-20261028`, PR #62. No customer data or charge is needed for this stage.
