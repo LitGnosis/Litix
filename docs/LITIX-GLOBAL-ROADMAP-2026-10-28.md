@@ -156,3 +156,17 @@ Isolated branch `feature/litix-global-boostero-only-hardstop-20261028` adds:
 4. Obtain a fresh Neon recovery point and verify Vercel runtime DB ownership before any paid post-picker, migrations, provider-wide wholesale cutovers, agency isolation or recurring billing work.
 5. Review remaining source routes for old cron/bulk SMMGLOB dispatch and any historical automation behavior before claiming complete exclusive supplier isolation across every subsystem.
 6. Keep the next phases on separate testable branches; do not merge draft PRs that have unverified supplier parameters or customer permissions.
+
+---
+
+## Neon Free-plan backup investigation and opt-in offsite PG18 recovery — 2026-10-28
+
+- Account verified Free (Vercel-managed org `org-crimson-thunder-28377911`); manual snapshots 1/1, branches 10/10, six-hour recovery window; October 25 snapshot `snap-fragrant-hat-awyjlty1` retained. **No current data backup exists**; do not delete/reset data.
+- New source recovery checkpoint: `recovery/litix-neon-free-plan-audit-20261028` at production SHA `86954ed6174cc8c9a100369e06e969a070e5e1ed`. Prior release tags and sanitized source archive unchanged.
+- `docs/LITIX-NEON-RECOVERY-2026-10-28.md` documents exact plan limits, risks/estimated Launch charges, read-only schema/payment/reconciliation checks, Resend delivery metadata, and pending backup authorization.
+- New `scripts/neon-backup-encrypted-offsite.sh` and `scripts/neon-restore-isolated-verify.sh`: manual-only streaming `pg_dump 18` + `age` private encrypted S3 object, remote ciphertext roundtrip, strict isolated restore target and database integrity checks. No credentials, database dumps or customer records stored in GitHub; automated CI tests only syntax and fail-closed preflight. **Scripts not run against live data.**
+- Neon native remedy requires owner-approved Launch billing upgrade. Offsite alternative needs a private bucket, public age recipient/private key, direct production database connection and a separate empty restore destination; no external object storage or key verified in current connected environment. Approval required before importing billing credentials or exporting customer data to offsite destination.
+- Existing seven paid records and seven unique transaction IDs found in connected Neon, no unlinked paid transaction there; this does not yet prove Vercel production runtime uses that branch. One Boostero fulfillment is SUBMITTED, not verified completed. Resend sent/delivered 19/19 in recent aggregate metrics. PayKings live charge, owner Auth0 sign-in, every email per-order guarantee, full 864 catalog and paid multi-post selection are **not** yet proven.
+- Do not merge large draft paid PRs (#58, #50, #53) or modify schema/fulfillment logic until fresh recoverable DB backup, production DB identity, no-charge and permitted transaction checks have passed.
+
+Current working public deployment remains `dpl_HqHcf9Sx1NfkoWYunrQvRyzeCHmX`, commit `86954ed6174cc8c9a100369e06e969a070e5e1ed`. This task is **safe backup preparation and audit**, not a declaration that the full master roadmap is complete.
