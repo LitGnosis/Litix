@@ -47,19 +47,32 @@ async function verify(width){
   const cards=page.locator("#services .service-option");
   await cards.first().waitFor();
   await page.waitForFunction(()=>document.querySelectorAll("#services .service-option").length===10);
-  const cardIds=async()=>cards.evaluateAll(els=>els.map(el=>el.querySelector(".item .foot .tag")?.textContent?.replace(/^#/,"")));
-  assert.deepEqual(await cardIds(),expected,"Custom Orders priority and price at "+width+"px");
+  // Verify the public category and visible retail price, never a private supplier ID.
+  const publicRows=async()=>cards.evaluateAll(els=>els.map(el=>({
+   category:el.querySelector(".cat")?.textContent?.trim(),
+   price:Number((el.querySelector(".price")?.firstChild?.textContent||"").replace(/[^0-9.]/g,""))
+  })));
+  const visible=ids=>ids.map(id=>{
+   const x=source.find(row=>row.id===id);
+   return {category:x.category,price:Math.ceil(x.per1000*100)/100};
+  });
+  const assertNoSupplierIds=async()=>{
+   const shown=await page.locator("#services").innerText();
+   assert.ok(!source.some(x=>shown.includes("#"+x.id)),"supplier IDs must remain private");
+  };
+  assert.deepEqual(await publicRows(),visible(expected),"Custom Orders priority and price at "+width+"px");
+  await assertNoSupplierIds();
   // A background service update must not replace retailer's numerical order.
   await page.getByRole("button",{name:"Refresh catalog"}).click();
   await page.waitForFunction(()=>document.querySelectorAll("#services .service-option").length===10);
-  assert.deepEqual(await cardIds(),expected,"Stable priority after catalog refresh at "+width+"px");
+  assert.deepEqual(await publicRows(),visible(expected),"Stable priority after catalog refresh at "+width+"px");
   await page.getByRole("button",{name:"Instagram Likes",exact:true}).click();
   await page.waitForFunction(()=>document.querySelectorAll("#services .service-option").length===2);
-  assert.deepEqual(await cardIds(),["ig-like-6","ig-like-13"],"Like prices asc at "+width+"px");
+  assert.deepEqual(await publicRows(),visible(["ig-like-6","ig-like-13"]),"Like prices asc at "+width+"px");
   await page.getByRole("button",{name:"TikTok Followers",exact:true}).click();
   await page.waitForFunction(()=>document.querySelectorAll("#services .service-option").length===2 &&
-    document.querySelector("#services .service-option .foot .tag")?.textContent?.includes("tt-follow-8"));
-  assert.deepEqual(await cardIds(),["tt-follow-8","tt-follow-17"],"TikTok follower prices asc at "+width+"px");
+    document.querySelector("#services .service-option .cat")?.textContent==="TikTok Followers");
+  assert.deepEqual(await publicRows(),visible(["tt-follow-8","tt-follow-17"]),"TikTok follower prices asc at "+width+"px");
   assert.equal(orderRequests,0,"No checkout requests allowed in sorting tests");
   console.log("PASS CUSTOM_ORDERS_SORT "+width+"px: exact four-category ordering, refresh, quick filters, no payment");
  }finally{await context.close()}
