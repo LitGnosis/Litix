@@ -49,12 +49,12 @@ async function verify(width){
   await page.waitForFunction(()=>document.querySelectorAll("#services .service-option").length===10);
   // Verify the public category and visible retail price, never a private supplier ID.
   const publicRows=async()=>cards.evaluateAll(els=>els.map(el=>({
-   category:el.querySelector(".cat")?.textContent?.trim(),
+   title:el.querySelector(".service-card-name")?.textContent?.trim(),
    price:Number((el.querySelector(".price")?.firstChild?.textContent||"").replace(/[^0-9.]/g,""))
   })));
   const visible=ids=>ids.map(id=>{
    const x=source.find(row=>row.id===id);
-   return {category:x.category,price:Math.ceil(x.per1000*100)/100};
+   return {title:x.name,price:Math.ceil(x.per1000*100)/100};
   });
   const assertNoSupplierIds=async()=>{
    const shown=await page.locator("#services").innerText();
@@ -71,7 +71,7 @@ async function verify(width){
   assert.deepEqual(await publicRows(),visible(["ig-like-6","ig-like-13"]),"Like prices asc at "+width+"px");
   await page.getByRole("button",{name:"TikTok Followers",exact:true}).click();
   await page.waitForFunction(()=>document.querySelectorAll("#services .service-option").length===2 &&
-    document.querySelector("#services .service-option .cat")?.textContent==="TikTok Followers");
+    document.querySelector("#services .service-option .service-card-name")?.textContent?.includes("TikTok Followers"));
   assert.deepEqual(await publicRows(),visible(["tt-follow-8","tt-follow-17"]),"TikTok follower prices asc at "+width+"px");
   assert.equal(orderRequests,0,"No checkout requests allowed in sorting tests");
   console.log("PASS CUSTOM_ORDERS_SORT "+width+"px: exact four-category ordering, refresh, quick filters, no payment");
