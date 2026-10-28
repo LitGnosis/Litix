@@ -5,7 +5,7 @@ set -euo pipefail
 umask 077
 fail(){ printf 'BACKUP_BLOCKED: %s\n' "$*" >&2; exit 2; }
 required(){ [[ -n "${!1:-}" ]] || fail "Missing required private setting: $1"; }
-for key in NEON_DIRECT_URL BACKUP_AGE_RECIPIENT BACKUP_S3_URI; do required "$key"; done
+for key in NEON_DIRECT_URL NEON_EXPECTED_SOURCE_HOST BACKUP_AGE_RECIPIENT BACKUP_S3_URI; do required "$key"; done
 for bin in pg_dump age aws python3 sha256sum mktemp cmp; do command -v "$bin" >/dev/null 2>&1 || fail "Missing executable: $bin"; done
 [[ "$BACKUP_AGE_RECIPIENT" =~ ^age1[a-z0-9]{20,}$ ]] || fail "Encryption recipient must be an age public key (age1...)."
 [[ "$BACKUP_S3_URI" =~ ^s3://[a-z0-9][a-z0-9.-]*/[a-zA-Z0-9/_-]+$ ]] || fail "Set BACKUP_S3_URI to an existing private s3://bucket/prefix."
@@ -13,7 +13,8 @@ python3 - <<'PY' || fail "Source is not the verified Neon main branch direct TLS
 import os, urllib.parse
 uri=urllib.parse.urlsplit(os.environ["NEON_DIRECT_URL"])
 assert uri.scheme in ("postgres","postgresql")
-assert uri.hostname == "ep-muddy-credit-awc80y8f.c-12.us-east-1.aws.neon.tech"
+assert uri.hostname == os.environ["NEON_EXPECTED_SOURCE_HOST"]
+assert uri.hostname is not None and uri.hostname.startswith("ep-") and uri.hostname.endswith(".neon.tech")
 assert uri.hostname is not None and "-pooler" not in uri.hostname
 assert urllib.parse.parse_qs(uri.query).get("sslmode")==["require"]
 assert uri.path not in ("", "/")
