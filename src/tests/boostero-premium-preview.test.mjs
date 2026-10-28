@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
-import {premiumDefaultServices,priceAt60Percent,safeBoosteroLink,filterPremiumCards,PREMIUM_CATALOG_PRIORITY} from "../lib/boosteroPremiumCatalog.mjs";
+import {premiumDefaultServices,priceAt60Percent,litixPreviewRate,safeBoosteroLink,filterPremiumCards,PREMIUM_CATALOG_PRIORITY} from "../lib/boosteroPremiumCatalog.mjs";
 const sample=[
  {service:5461,name:"Instagram Premium Followers",category:"Instagram - Followers",rate:3,min:10,max:500000,type:"Default",refill:false},
  {service:4751,name:"Instagram Likes Quality",category:"Instagram - Likes",rate:0.147,min:100,max:1000000,type:"Default",refill:false},
@@ -28,11 +28,28 @@ test("only compatible real supplier Default services; no invented special forms 
  assert.deepEqual(list.slice(0,4).map(x=>x.id),["boostero_5461","boostero_4751","boostero_5101","boostero_5251"]);
  assert.equal(list.some(x=>x.id==="boostero_4771"),true);
  assert.ok(!list.some(x=>["boostero_90001","boostero_90002","boostero_90003","boostero_90004"].includes(x.id)));
- assert.equal(list[0].min,1042);
- assert.equal(list[1].min,21259);
- assert.equal(list[0].per1000,4.8);
- assert.equal(list[1].per1000,0.2352);
+ assert.equal(list[0].min,334);
+ assert.equal(list[1].min,1000);
+ assert.equal(list[0].per1000,15);
+ assert.equal(list[1].per1000,5);
  assert.ok(list.every(x=>x.previewOnly===true&&x.purchasable===false&&x.startingAmountCents>=500));
+});
+test("new previews use full existing 8x/5x/2x Litix wholesale markup and $5 per-1000 floor",()=>{
+ assert.equal(litixPreviewRate(0.147),500);
+ assert.equal(litixPreviewRate(0.9),720);
+ assert.equal(litixPreviewRate(3),1500);
+ assert.equal(litixPreviewRate(20),4000);
+ assert.equal(litixPreviewRate(25),5000);
+ assert.throws(()=>litixPreviewRate(-1),/invalid/);
+ const all=premiumDefaultServices([
+  {service:40101,name:"Instagram Comments",category:"Instagram Comments",type:"Default",rate:1,min:100,max:50000},
+  {service:40102,name:"TikTok Shares",category:"TikTok Shares",type:"Default",rate:0.8,min:100,max:50000},
+  {service:40103,name:"YouTube Impressions",category:"YouTube Impressions",type:"Default",rate:3,min:100,max:50000},
+  {service:40104,name:"Instagram AutoLikes Subscriptions",category:"Instagram",type:"Subscriptions",rate:1,min:10,max:50000},
+  {service:40105,name:"TikTok Shares",category:"TikTok Shares",type:"Default",rate:0.8,min:100,max:50000}
+ ]);
+ assert.deepEqual(all.map(x=>x.id),["boostero_40101","boostero_40102","boostero_40103"]);
+ assert.ok(all.every(x=>!x.purchasable&&x.previewOnly&&x.startingAmountCents>=500));
 });
 test("retail-only API payload and priority filter; no wholesale rates or supplier API keys",()=>{
  const list=premiumDefaultServices(sample);
