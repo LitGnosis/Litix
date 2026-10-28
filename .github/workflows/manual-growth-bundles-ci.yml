@@ -1,0 +1,33 @@
+name: Manual Growth Bundles review
+on:
+  push:
+    branches: [feature/litix-manual-growth-bundles-20261026, fix/growth-bundles-followers-20pct-20261026]
+  pull_request:
+    paths:
+      - 'src/lib/growthBundles.mjs'
+      - 'src/lib/bundleOrders.mjs'
+      - 'src/components/GrowthBundles.jsx'
+      - 'src/app/bundles/**'
+      - 'src/app/api/bundles/**'
+      - 'src/db/migrations/20261026-growth-bundles-manual-fulfillment.sql'
+      - 'src/db/migrations/20261026-growth-bundles-followers-and-post-allocations.sql'
+      - 'src/tests/growth-bundles-manual.test.mjs'
+permissions:
+  contents: read
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Install
+        working-directory: src
+        run: npm ci --no-audit --no-fund
+      - name: Test entire nonfinancial regression suite
+        working-directory: src
+        run: node --test tests/*.test.mjs
+      - name: Build Next.js
+        working-directory: src
+        run: npm run build

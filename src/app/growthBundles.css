@@ -1,0 +1,47 @@
+
+.lg-bundles{margin:18px 0 25px;scroll-margin-top:24px}
+.lg-bundles-heading{display:flex;align-items:start;justify-content:space-between;gap:20px}
+.lg-bundles-heading h2{margin:10px 0 6px;font-size:clamp(25px,3.5vw,39px);letter-spacing:-.045em}
+.lg-bundles-heading p{color:#bed4e9;margin:0 0 16px;line-height:1.6}
+.lg-bundles-seal{border:1px solid #6ce1ff80;border-radius:90px;padding:9px 13px;color:#95deff;letter-spacing:.12em;font-size:10px;font-weight:800;white-space:nowrap}
+.lg-bundles-tabs{display:flex;gap:10px;margin:15px 0 22px}
+.lg-tab{min-height:46px;border:1px solid #5f9cc666;color:#c2dcf3;background:#091a30;border-radius:11px;padding:10px 25px;font-weight:800}
+.lg-tab.active{background:linear-gradient(125deg,#19658b,#123b6a);border-color:#83d6ff;color:#fff;box-shadow:0 0 24px #4bd2f022}
+.lg-bundles-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.lg-bundle-card{background:linear-gradient(155deg,#152740,#080f24);border:1px solid #64a5cb5c;border-radius:18px;padding:14px;min-width:0;box-shadow:0 12px 38px #0005}
+.lg-bundle-art{position:relative;height:116px;display:flex;align-items:center;justify-content:center;overflow:hidden;border-radius:12px;margin-bottom:15px;background:radial-gradient(circle at 50% 115%,#308cd9b0,transparent 63%),linear-gradient(115deg,#081629,#153b58 55%,#101529);border:1px solid #4e8cb65c}
+.lg-tier-power .lg-bundle-art{background:radial-gradient(circle at 50% 110%,#547cff8c,transparent 68%),linear-gradient(115deg,#101b3c,#313c74 60%,#0e142e)}
+.lg-tier-apex .lg-bundle-art{background:radial-gradient(circle at 45% 115%,#e1bd6e9c,transparent 66%),linear-gradient(115deg,#22243d,#51437e 60%,#181327)}
+.lg-art-letter{font-size:83px;font-weight:950;letter-spacing:-.1em;line-height:1;color:#e8f7ffb8;text-shadow:0 0 24px #b5eafa7e}
+.lg-art-orbit{position:absolute;border:2px solid #c5edff48;transform:rotate(-31deg);width:175px;height:61px;border-radius:50%}
+.lg-art-platform{position:absolute;bottom:7px;right:8px;color:#dcf1ffb0;font-size:10px;letter-spacing:.15em}
+.lg-bundle-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.lg-tier{font-size:20px;font-weight:900;letter-spacing:-.025em}
+.lg-popular{font-size:9px;letter-spacing:.08em;color:#f6d78c;border:1px solid #c6a95790;border-radius:20px;padding:4px 8px}
+.lg-price{display:block;font-size:31px;color:#fff;margin:8px 0;font-weight:950}
+.lg-bundle-small{font-size:11px;line-height:1.5;color:#b2cce1;margin:10px 0}
+.lg-bundle-items{display:grid;gap:5px;margin:12px 0}.lg-bundle-items div{display:flex;justify-content:space-between;align-items:center;gap:6px;padding:6px 0;border-bottom:1px solid #c0dfff20;font-size:12px}
+.lg-bundle-items dt{color:#b4c8df}.lg-bundle-items dd{font-weight:800;color:#edf9ff;margin:0;font-variant-numeric:tabular-nums}
+.lg-bundle-warning{font-size:11px;line-height:1.55;color:#d5e5f3;background:#0f2d45a6;border-left:3px solid #80d5ff;padding:11px;border-radius:4px}
+.lg-bundle-actions{display:grid;gap:9px;margin-top:15px}
+.lg-bundle-actions a{min-height:42px;display:flex;align-items:center;justify-content:center;border:1px solid #7fb5d98c;text-decoration:none;color:#e5f8ff;border-radius:10px;font-weight:750;font-size:13px}
+.lg-bundle-actions a.lg-bundle-buy{background:linear-gradient(110deg,#cceeff,#77bdfa);color:#062342;border:none}
+.lg-bundles-note{font-size:12px;color:#b3d2e8;margin:18px 0 0;line-height:1.6}
+@media(max-width:1050px){.lg-bundles-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:580px){.lg-bundles-grid{grid-template-columns:1fr}.lg-bundles-heading{display:block}.lg-bundles-seal{display:inline-block;margin:5px 0 10px}.lg-bundle-art{height:150px}.lg-art-letter{font-size:98px}}
+
+/* Targeted Bluevine additions. Existing bundle cards and PayKings styles untouched. */
+.lg-bundle-actions a.lg-bundle-bluevine{background:#e6f4ff;color:#104065;border:1px solid #84bddf}
+.lg-bundle-actions a.lg-bundle-bluevine:focus-visible{outline:3px solid #fff;outline-offset:2px}
+.lg-bluevine-checkout{border-top:1px solid #7fb5d960;margin-top:24px;padding-top:18px}
+.lg-bluevine-checkout h3{margin:0 0 10px}
+.lg-bluevine-checkout .pay{min-height:48px}
+
+/* Minimal two-provider checkout controls; retain the existing Litix bundle design. */
+.lg-bundle-actions .lg-bundle-disabled{min-height:42px;display:flex;align-items:center;justify-content:center;text-align:center;border:1px solid #7993a65c;border-radius:10px;padding:6px;background:#0d1725;color:#a7b4c4;font-size:12px;font-weight:750;cursor:not-allowed}
+.lg-bundle-methods{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:17px 0}
+.lg-bundle-method{min-height:48px;border:1px solid #76b2d58c;background:#112c47;color:#dceefa;font-weight:800;border-radius:11px;padding:10px;cursor:pointer}
+.lg-bundle-method.active{border-color:#b9eaff;background:linear-gradient(115deg,#cceeff,#77bdfa);color:#062342}
+.lg-bundle-method:disabled{opacity:.45;cursor:not-allowed}
+.lg-bundle-method:focus-visible{outline:3px solid #fff;outline-offset:2px}
+@media(max-width:390px){.lg-bundle-methods{grid-template-columns:1fr}}
