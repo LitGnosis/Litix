@@ -53,7 +53,7 @@ try:
     data = open(sys.argv[1], encoding="utf-8", errors="replace").read()
 except OSError:
     data = ""
-m = re.search(r"\\(([A-Za-z][A-Za-z0-9]{0,63})\\) when calling the PutObject operation", data)
+m = re.search(r"[(]([A-Za-z][A-Za-z0-9]{0,63})[)] when calling the PutObject operation", data)
 print(m.group(1) if m else "UNCLASSIFIED")
 PY
 )"
