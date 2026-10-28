@@ -17,6 +17,8 @@ export default function LitixAI(){
   const [orderError,setOrderError]=useState("");
   const [orderBusy,setOrderBusy]=useState(false);
   const bottom=useRef(null);
+  const launcherRef=useRef(null);
+  const closeRef=useRef(null);
   const wa=(process.env.NEXT_PUBLIC_WHATSAPP_NUMBER||"").replace(/\D/g,"");
   const whatsapp=wa.length>=10&&wa.length<=15?"https://wa.me/"+wa+"?text="+encodeURIComponent("Hello LITIX support, I need help with my order or service."):"";
   useEffect(()=>{
@@ -25,7 +27,24 @@ export default function LitixAI(){
       .catch(()=>{if(active)setStatus({available:false,verified:false})});
     return()=>{active=false};
   },[]);
-  useEffect(()=>{if(open)bottom.current?.scrollIntoView({block:"nearest",behavior:"smooth"})},[messages,busy,open]);
+  const closePanel=()=>{setOpen(false);launcherRef.current?.focus();};
+  useEffect(()=>{
+    if(!open)return;
+    closeRef.current?.focus();
+    const onEscape=e=>{
+      if(e.key==="Escape"){
+        e.preventDefault();
+        closePanel();
+      }
+    };
+    document.addEventListener("keydown",onEscape);
+    return()=>document.removeEventListener("keydown",onEscape);
+  },[open]);
+  useEffect(()=>{
+    if(!open)return;
+    const reduced=window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+    bottom.current?.scrollIntoView({block:"nearest",behavior:reduced?"auto":"smooth"});
+  },[messages,busy,open]);
   async function send(text){
     const input=String(text||"").trim();
     if(!input||busy||!status?.available)return;
@@ -56,11 +75,11 @@ export default function LitixAI(){
     finally{setOrderBusy(false);}
   }
   return <div className="lxai-shell">
-    {open&&<section className="lxai-panel" role="dialog" aria-label="LITIX AI Intelligent Growth Assistant">
+    {open&&<section id="lxai-dialog" className="lxai-panel" role="dialog" aria-label="LITIX AI Intelligent Growth Assistant">
       <header className="lxai-head"><div className="lxai-emblem" aria-hidden="true">L</div>
         <div className="lxai-titles"><strong>LITIX AI</strong><small>Intelligent Growth Assistant</small></div>
         {status?.verified&&<span className="lxai-badge">GPT-powered</span>}
-        <button type="button" className="lxai-close" aria-label="Close assistant" onClick={()=>setOpen(false)}>×</button>
+        <button type="button" ref={closeRef} className="lxai-close" aria-label="Close assistant" onClick={closePanel}>×</button>
       </header>
       <div className="lxai-tabs">
         <button type="button" aria-pressed={!orderView} className={!orderView?"lxai-active":""} onClick={()=>setOrderView(false)}>AI assistance</button>
@@ -100,7 +119,7 @@ export default function LitixAI(){
         <small>AI chat uses OpenAI. Never share passwords, payment details, or tracking tokens.</small>
       </footer>
     </section>}
-    <button type="button" className="lxai-launcher" aria-label={open?"Close LITIX AI":"Open LITIX AI"} aria-expanded={open} onClick={()=>setOpen(!open)}>
+    <button type="button" ref={launcherRef} className="lxai-launcher" aria-controls="lxai-dialog" aria-haspopup="dialog" aria-label={open?"Close LITIX AI":"Open LITIX AI"} aria-expanded={open} onClick={()=>open?closePanel():setOpen(true)}>
       <span className="lxai-orb">✦</span><span>{open?"Close assistant":"Ask LITIX AI"}</span>
     </button>
   </div>;
