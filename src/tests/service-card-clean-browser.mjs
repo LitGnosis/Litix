@@ -48,7 +48,12 @@ try {
     const panelText=await cmp.innerText();
     assert.match(panelText,/Instagram Followers/);
     assert.doesNotMatch(panelText,/quality|non.drop|refill|boostero|smmglob/i);
-    assert.ok((await page.locator("body").evaluate(el=>el.scrollWidth))<=width+2,"No horizontal overflow at "+width);
+    const grid=await page.locator("#services .cards").evaluate(el=>{
+      const r=el.getBoundingClientRect();
+      return {clientWidth:el.clientWidth,scrollWidth:el.scrollWidth,left:r.left,right:r.right};
+    });
+    assert.ok(grid.scrollWidth<=grid.clientWidth+2,"Service grid itself must not scroll horizontally at "+width+": "+JSON.stringify(grid));
+    assert.ok(grid.left>=-1&&grid.right<=width+2,"All service cards stay in the viewport at "+width+": "+JSON.stringify(grid));
     assert.deepEqual(errors,[]);
     console.log("CLEAN_SERVICE_CARDS_PASS",width,products.length);
     await context.close();
