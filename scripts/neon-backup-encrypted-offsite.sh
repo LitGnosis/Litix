@@ -10,6 +10,7 @@ for bin in pg_dump age aws python3 sha256sum mktemp cmp; do command -v "$bin" >/
 
 # Cloudflare R2 Standard, private bucket only. Account/bucket setup and billing
 # must be approved externally; NEVER store R2 keys or age private keys here.
+required BACKUP_STORAGE_PROVIDER
 aws_endpoint_args=()
 if [[ "$BACKUP_STORAGE_PROVIDER" == "r2" ]]; then
   required BACKUP_S3_ENDPOINT_URL
