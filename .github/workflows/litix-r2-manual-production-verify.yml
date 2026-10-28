@@ -6,6 +6,7 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/litix-r2-manual-production-verify.yml'
+      - 'scripts/litix-r2-github-manual-verify.sh'
   schedule:
     - cron: "0 8 * * *"
   workflow_dispatch:
