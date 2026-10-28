@@ -25,6 +25,10 @@ done
 export AWS_ACCESS_KEY_ID="$R2_ACCESS_KEY_ID" AWS_SECRET_ACCESS_KEY="$R2_SECRET_ACCESS_KEY"
 export AWS_DEFAULT_REGION=auto AWS_EC2_METADATA_DISABLED=true AWS_PAGER="" AWS_CLI_AUTO_PROMPT=off
 export AWS_MAX_ATTEMPTS=2
+# R2 compatibility: avoid newer AWS CLI automatic CRC64NVME checksums.
+# Existing explicit encrypted-object roundtrip SHA256 verification is preserved.
+export AWS_REQUEST_CHECKSUM_CALCULATION=when_required
+export AWS_RESPONSE_CHECKSUM_VALIDATION=when_required
 work="$(mktemp -d -t litix-r2-recovery.XXXXXXXX)"
 probe_key="" probe_uploaded=false current_container=""
 cleanup(){
