@@ -6,7 +6,7 @@ import {chromium} from "playwright";
 
 const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_PATH||undefined,args:["--no-sandbox"]});
 try{
-  for(const width of [375,1280]){
+  for(const width of [320,375,1280]){
     const context=await browser.newContext({viewport:{width,height:844},isMobile:width<576,hasTouch:width<576,acceptDownloads:true});
     const page=await context.newPage(),issues=[];
     page.on("pageerror",e=>issues.push(e.message));
