@@ -99,3 +99,24 @@ Local restore transfers decrypted customer data into a locally isolated containe
 A synthetic CI demonstration, `scripts/test-neon-local-r2-restore-synthetic.sh`, verifies the same workflow using **fake records and a fake AWS CLI**; the synthetic test cannot substitute for actual independent restoration of current production data.
 
 This local method avoids purchasing or deleting Neon staging branches. It does **not** circumvent the requirement for a real private Cloudflare R2 account, bucket, valid credentials, owner-held age key or successful recovery of both real databases.
+
+## Owner-controlled one-command `age` key bootstrap
+
+`scripts/litix-owner-age-keygen-local.sh` must be run **on the owner's own trusted Mac/Linux/WSL computer**, never in ChatGPT, Vercel, public GitHub Actions or a shared shell. Install the official open-source `age` utility locally first, and use the reviewed script from this repository:
+
+```sh
+bash scripts/litix-owner-age-keygen-local.sh
+```
+
+The script uses strict permissions (700 private directory, 600 identity), refuses existing keys and Git-tracked locations, and writes to the owner-only default path `~/.config/litix-backup/litix-r2-age-identity.txt`. It prints **only** the public `age1...` recipient and local file path, not the private key. Keep a separately encrypted, offline owner-controlled copy of the identity; never move it into R2, GitHub, ChatGPT, screenshots or deployment logs. A synthetic GitHub Actions test creates only temporary throwaway keys to validate file permissions and no-overwrite behavior; **that test does not generate or store the owner's actual key**.
+
+### Cloudflare R2 billing gate and jurisdiction
+
+Cloudflare requires an R2 subscription activation to enable bucket/token management, despite included free Standard usage. If the dashboard prompts for billing acceptance or payment details, the owner must separately approve that before activation. Choose Standard storage and the default jurisdiction unless a different jurisdiction was intentionally selected and the endpoint validators were updated to match; the prepared scripts currently accept `https://<32 hex chars>.r2.cloudflarestorage.com` and fail closed for jurisdiction-specific endpoints.
+
+Current official documentation:
+- https://developers.cloudflare.com/r2/get-started/
+- https://developers.cloudflare.com/r2/api/tokens/
+- https://developers.cloudflare.com/r2/pricing/
+
+R2 token: **Object Read & Write**, **selected private bucket only**. Keep public development access, public custom domain and public Workers disabled. Do not store backup keys in the live Litix storefront environment unless a dedicated secret-managed backup runner and its access rules are separately reviewed.
