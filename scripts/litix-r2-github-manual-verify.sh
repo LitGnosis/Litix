@@ -63,6 +63,16 @@ h = re.findall(r"status_code['\x22:]\\s*(\\d{3})", debug)
 if h: print("HTTP_STATUS=" + h[-1])
 ids = re.findall(r"(?:cf-ray|x-amz-request-id|x-amz-id-2)['\x22:]?\\s*[:=]\\s*['\x22]?([A-Za-z0-9-]{8,80})", debug, re.I)
 if ids: print("REQUEST_ID=" + ids[-1])
+# Extract only response metadata from botocore debug; do not print debug payload.
+codes = re.findall(r"['\\\"]status_code['\\\"]\\s*:\\s*(\\d{3})", debug)
+if codes: print("HTTP_STATUS_SAFE=" + codes[-1])
+xml_codes = re.findall(r"<Code>([A-Za-z][A-Za-z0-9]{0,63})</Code>", debug)
+if xml_codes: print("R2_RESPONSE_CODE_SAFE=" + xml_codes[-1])
+# Response message uses an explicit, non-secret allowlist.
+for phrase, label in (("unsupported", "UNSUPPORTED_PARAMETER"), ("invalid argument", "INVALID_ARGUMENT"), ("unknown parameter", "UNKNOWN_PARAMETER"), ("invalid digest", "INVALID_DIGEST"), ("checksum", "CHECKSUM_MENTION"), ("signature", "SIGNATURE_MENTION"), ("access denied", "ACCESS_DENIED")):
+ if phrase in debug.lower():
+  print("R2_RESPONSE_MESSAGE_HINT=" + label)
+  break
 low = debug.lower()
 for phrase, tag in (
  ("unsupported header", "UNSUPPORTED_HEADER"),
