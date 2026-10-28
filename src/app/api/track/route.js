@@ -14,9 +14,9 @@ export async function GET(request){
     const payload=await r.json(),x=payload.order;
     return Response.json({order:{id:x.id,service:x.service,quantity:Number(x.quantity),
      amount:(Number(x.amountCents)/100).toFixed(2),payment:x.payment,fulfillment:x.fulfillment,
-     supplierOrderId:x.supplierOrderId,status:x.supplierStatus,checkedAt:x.lastChecked,
+     status:x.supplierStatus,checkedAt:x.lastChecked,
      deliveryConfirmed:x.fulfillment==="COMPLETED",liveSupplierStatus:false,
-     statusNote:"Latest saved Boostero supplier status; delivery is not guaranteed."}},
+     statusNote:"Latest recorded delivery status; delivery is not guaranteed."}},
      {headers:{"cache-control":"no-store","referrer-policy":"no-referrer"}});
    }
   }catch{}
