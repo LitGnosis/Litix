@@ -5,7 +5,7 @@
  * verified gateway/supplier code in a later independently tested release.
  */
 const STATES=new Set(["draft","pending_payment","active","past_due","cancel_at_period_end","canceled"]);
-const validId=x=>typeof x==="string"&&/^[a-zA-Z0-9_-]{8,128}$/.test(x);
+const validId=x=>typeof x==="string"&&/^[a-zA-Z0-9_|.-]{8,256}$/.test(x);
 const cents=x=>Number.isSafeInteger(x)&&x>=500&&x<=100000000;
 export function checkRecurringEligibility({product,processor,customer,consent}={}){
  const reasons=[];
