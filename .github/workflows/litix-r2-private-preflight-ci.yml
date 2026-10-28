@@ -1,0 +1,55 @@
+name: LITIX private R2 backup compatibility — secrets-free preflight only
+on:
+  push:
+    branches: [feature/litix-r2-private-backup-preflight-20261028]
+  pull_request:
+    paths:
+      - "scripts/neon-backup-encrypted-offsite.sh"
+      - "scripts/neon-restore-isolated-verify.sh"
+      - "docs/LITIX-R2-PRIVATE-BACKUP-HANDOFF-2026-10-28.md"
+      - ".github/workflows/litix-r2-private-preflight-ci.yml"
+permissions:
+  contents: read
+jobs:
+  validate-private-r2-only:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Validate backup/restore syntax and fail-closed behavior
+        run: |
+          bash -n scripts/neon-backup-encrypted-offsite.sh
+          bash -n scripts/neon-restore-isolated-verify.sh
+          bash -n scripts/test-neon-encrypted-restore-synthetic.sh
+          if env -i PATH="$PATH" HOME="$HOME" bash scripts/neon-backup-encrypted-offsite.sh >/dev/null 2>&1; then exit 1; fi
+          if env -i PATH="$PATH" HOME="$HOME" bash scripts/neon-restore-isolated-verify.sh >/dev/null 2>&1; then exit 1; fi
+      - name: Install CLI for mock-only endpoint denial and real synthetic encryption
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq age awscli
+      - name: Reject non-Cloudflare endpoints and public buckets without hitting a network
+        run: |
+          set -eu
+          export BACKUP_STORAGE_PROVIDER=r2
+          export NEON_DIRECT_URL='postgresql://user:fake@ep-fake.us-east-1.aws.neon.tech/neondb?sslmode=require'
+          export NEON_EXPECTED_SOURCE_HOST='ep-fake.us-east-1.aws.neon.tech'
+          export NEON_BACKUP_DATABASE=neondb
+          export BACKUP_AGE_RECIPIENT='age1aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+          export BACKUP_S3_URI='s3://litix-synthetic-dummy-bucket/backups'
+          export AWS_ACCESS_KEY_ID='dummy-no-permissions'
+          export AWS_SECRET_ACCESS_KEY='dummy-no-permissions'
+          export BACKUP_S3_ENDPOINT_URL='https://bad.example.invalid'
+          export BACKUP_R2_PRIVATE_BUCKET_CONFIRMED='I_VERIFIED_NO_PUBLIC_ACCESS'
+          if bash scripts/neon-backup-encrypted-offsite.sh >/dev/null 2>&1; then
+            echo 'FAILED: non-R2 custom endpoint accepted' >&2; exit 1
+          fi
+          export BACKUP_S3_ENDPOINT_URL='https://0123456789abcdef0123456789abcdef.r2.cloudflarestorage.com'
+          export BACKUP_R2_PRIVATE_BUCKET_CONFIRMED='no'
+          if bash scripts/neon-backup-encrypted-offsite.sh >/dev/null 2>&1; then
+            echo 'FAILED: public-unverified bucket accepted' >&2; exit 1
+          fi
+          grep -F 'aws "${aws_endpoint_args[@]}" s3 cp' scripts/neon-backup-encrypted-offsite.sh
+          grep -F 'aws "${aws_endpoint_args[@]}" s3 cp' scripts/neon-restore-isolated-verify.sh
+          echo 'R2_FAIL_CLOSED_ENDPOINT_AND_BUCKET_POLICY_VERIFIED'
+      - name: Prove separate PostgreSQL18 encrypted synthetic restores for both Litix databases
+        run: bash scripts/test-neon-encrypted-restore-synthetic.sh
