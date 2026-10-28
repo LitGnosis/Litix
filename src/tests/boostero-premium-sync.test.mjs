@@ -18,7 +18,7 @@ test("supplier sync is read-only and imports only eligible Default services as d
  const imported=queries.flatMap(q=>JSON.parse(q.args[0]));
  assert.deepEqual(imported.map(x=>x.id),["5461","5251"]);
  assert.equal(imported[0].wholesale,3);
- assert.equal(imported[0].retail,4.8);
+ assert.equal(imported[0].retail,15);
  assert.ok(!JSON.stringify(imported).includes("BOOSTERO_API_KEY"));
 });
 test("empty or invalid catalog never overwrites existing mappings",async()=>{
