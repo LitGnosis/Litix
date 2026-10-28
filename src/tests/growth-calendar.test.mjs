@@ -37,7 +37,7 @@ test("CSV export escapes quotes and neutralizes spreadsheet formula injection",(
   const csv=calendarCsv(rows);
   assert.ok(csv.startsWith("\uFEFFDate,Platform,Title,Status,Notes"));
   assert.ok(csv.includes("'=HYPERLINK"));
-  assert.ok(csv.includes("'  +SUM"));
+  assert.ok(csv.includes("'+SUM")); // sanitized notes are trimmed before CSV formula escaping
   assert.ok(csv.includes('""quoted"" next'));
   assert.ok(csv.includes('"2026-10-28"'));
 });
