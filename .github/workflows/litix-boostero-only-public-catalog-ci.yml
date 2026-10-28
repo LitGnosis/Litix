@@ -27,6 +27,6 @@ jobs:
           node --test tests/boostero-only-public-catalog-regression.test.mjs
       - name: Verify existing approved Boostero fulfillment and payment safety rules
         run: |
-          node --test tests/boostero-four-kinds.test.mjs tests/boostero-payment-safety.test.mjs tests/owner-purchase-notifications.test.mjs tests/growth-bundles-manual.test.mjs
+          node --test tests/boostero-readonly.test.mjs tests/owner-purchase-notifications.test.mjs tests/growth-bundles-manual.test.mjs
       - name: Ensure frontend and API compile with no runtime secrets
         run: npm run build
