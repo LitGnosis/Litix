@@ -1,0 +1,34 @@
+name: Litix Customer & Agency identity and recurring consent — isolated draft CI
+on:
+  push:
+    branches: [feature/litix-customer-agency-subscription-foundation-20261028]
+permissions:
+  contents: read
+jobs:
+  policy-and-no-charge-regressions:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    defaults:
+      run:
+        working-directory: src
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: src/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - name: Verify strict account isolation, subscription consent, existing checkout and supplier safeguards
+        run: |
+          node --test \
+            tests/litix-customer-agency-subscription-foundation.test.mjs \
+            tests/boostero-exclusive-new-orders.test.mjs \
+            tests/boostero-four-kinds.test.mjs \
+            tests/checkout.test.mjs \
+            tests/owner-purchase-notifications.test.mjs \
+            tests/growth-bundles-manual.test.mjs
+      - name: Preserve production build with no runtime feature activation
+        run: npm run build
