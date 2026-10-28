@@ -10,6 +10,28 @@ for key in NEON_DIRECT_URL NEON_EXPECTED_SOURCE_HOST NEON_BACKUP_DATABASE RESTOR
 [[ "$BACKUP_CIPHERTEXT_SHA256" =~ ^[0-9a-f]{64}$ ]] || fail "Expected SHA256 must be a 64-character lowercase digest."
 [[ -f "$BACKUP_AGE_IDENTITY" ]] || fail "Private age identity file not found."
 for bin in age aws python3 sha256sum mktemp pg_restore psql; do command -v "$bin" >/dev/null 2>&1 || fail "Missing executable: $bin"; done
+
+# Cloudflare R2 Standard, private bucket only. Account/bucket setup and billing
+# must be approved externally; NEVER store R2 keys or age private keys here.
+aws_endpoint_args=()
+if [[ "$BACKUP_STORAGE_PROVIDER" == "r2" ]]; then
+  required BACKUP_S3_ENDPOINT_URL
+  required BACKUP_R2_PRIVATE_BUCKET_CONFIRMED
+  required AWS_ACCESS_KEY_ID
+  required AWS_SECRET_ACCESS_KEY
+  [[ "$BACKUP_R2_PRIVATE_BUCKET_CONFIRMED" == "I_VERIFIED_NO_PUBLIC_ACCESS" ]] ||
+    fail "Cloudflare dashboard private-bucket confirmation is required."
+  python3 - <<'PY' || fail "Cloudflare R2 endpoint must be the canonical account-specific HTTPS S3 endpoint."
+import os,re,urllib.parse
+s=urllib.parse.urlsplit(os.environ["BACKUP_S3_ENDPOINT_URL"])
+assert s.scheme=="https" and s.path in ("","/") and not s.query and not s.username
+assert s.hostname and re.fullmatch(r"[0-9a-f]{32}\.r2\.cloudflarestorage\.com",s.hostname)
+PY
+  export AWS_DEFAULT_REGION=auto AWS_EC2_METADATA_DISABLED=true AWS_PAGER=""
+  aws_endpoint_args=(--endpoint-url "$BACKUP_S3_ENDPOINT_URL")
+elif [[ "$BACKUP_STORAGE_PROVIDER" != "aws-s3" ]]; then
+  fail "Set BACKUP_STORAGE_PROVIDER=r2 or aws-s3. No cloud storage destination is assumed."
+fi
 # The target must be a separate host AND a uniquely named disposable database.
 # Do not accept the production name, the production host or a local database.
 python3 - <<'PY' || fail "Source/target isolation check rejected this restore."
@@ -29,7 +51,7 @@ assert dst.path.startswith("/litix_restore_test_"+os.environ["NEON_BACKUP_DATABA
 PY
 tmp="$(mktemp -d -t litix-restore-check.XXXXXXXX)"
 trap 'rm -rf -- "$tmp"' EXIT
-aws s3 cp "$BACKUP_OBJECT_URI" "$tmp/verified.age" --no-progress --only-show-errors >/dev/null
+aws "${aws_endpoint_args[@]}" s3 cp "$BACKUP_OBJECT_URI" "$tmp/verified.age" --no-progress --only-show-errors >/dev/null
 echo "$BACKUP_CIPHERTEXT_SHA256  $tmp/verified.age" | sha256sum --check --status ||
   fail "Encrypted offsite backup SHA256 mismatch."
 # List and verify archive structure without persisting plaintext content.
