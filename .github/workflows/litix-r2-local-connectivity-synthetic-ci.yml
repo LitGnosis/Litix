@@ -1,0 +1,77 @@
+name: Litix R2 safe local connection test — synthetic only
+on:
+  push:
+    branches: [feature/litix-r2-credential-connection-local-20261028]
+permissions:
+  contents: read
+jobs:
+  no-credentials-r2-preflight:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Validate bash syntax and private profile-only backup gates
+        run: |
+          set -euo pipefail
+          bash -n scripts/litix-r2-test-connection-local.sh
+          bash -n scripts/litix-owner-run-r2-backup-and-verify.sh
+          bash -n scripts/neon-backup-encrypted-offsite.sh
+          bash -n scripts/neon-restore-local-docker-r2.sh
+          bash -n scripts/neon-restore-isolated-verify.sh
+          if env -i PATH="$PATH" HOME="$HOME" bash scripts/litix-r2-test-connection-local.sh > /dev/null 2>&1; then
+            echo 'Unconfigured R2 test failed to deny access' >&2;exit 1
+          fi
+          grep -F 's3://litix-private-backups/' scripts/litix-owner-run-r2-backup-and-verify.sh
+      - name: Emulate only a private S3 endpoint with a fake AWS CLI and fake credentials
+        run: |
+          set -euo pipefail
+          work="$(mktemp -d)"
+          trap 'rm -rf "$work"' EXIT
+          mkdir -p "$work/bin" "$work/store"
+          cat > "$work/bin/aws" <<'MOCK'
+          #!/usr/bin/env python3
+          import os,sys,shutil,pathlib
+          a=sys.argv[1:]
+          if len(a)<6 or a[0]!="--endpoint-url" or a[1]!="https://0123456789abcdef0123456789abcdef.r2.cloudflarestorage.com" or a[2]!="s3api":
+              sys.exit(42)
+          cmd=a[3]
+          def arg(name):
+              return a[a.index(name)+1] if name in a else ""
+          bucket,key=arg("--bucket"),arg("--key")
+          if bucket!="litix-private-backups" or not key.startswith("litix-readiness-probes/connection-"):
+              sys.exit(43)
+          target=pathlib.Path(os.environ["FAKE_R2_STORE"])/pathlib.PurePosixPath(key).name
+          if cmd=="put-object":
+              shutil.copyfile(arg("--body"),target)
+          elif cmd=="head-object":
+              print(target.stat().st_size)
+          elif cmd=="get-object":
+              i=a.index("--key")+2
+              # Positional output filename immediately after key value.
+              shutil.copyfile(target,a[i])
+          elif cmd=="delete-object":
+              target.unlink()
+          else:
+              sys.exit(44)
+          MOCK
+          chmod 700 "$work/bin/aws"
+          export PATH="$work/bin:$PATH" FAKE_R2_STORE="$work/store"
+          export R2_ENDPOINT=https://0123456789abcdef0123456789abcdef.r2.cloudflarestorage.com
+          export R2_BUCKET=litix-private-backups
+          export R2_PRIVATE_BUCKET_CONFIRMED=I_VERIFIED_NO_PUBLIC_ACCESS
+          export R2_ACCESS_KEY_ID=synthetic-access-not-real
+          export R2_SECRET_ACCESS_KEY=synthetic-secret-not-real
+          output="$(bash scripts/litix-r2-test-connection-local.sh)"
+          grep -qx 'R2_PRIVATE_BUCKET_PUT_HEAD_GET_DELETE_VERIFIED' <<< "$output"
+          grep -qx 'BUCKET=litix-private-backups' <<< "$output"
+          grep -qx 'NO_CUSTOMER_DATA_ACCESSED' <<< "$output"
+          test -z "$(find "$work/store" -type f -print -quit)"
+          export R2_ENDPOINT=https://untrusted.invalid
+          if bash scripts/litix-r2-test-connection-local.sh >/dev/null 2>&1;then exit 1;fi
+          export R2_ENDPOINT=https://0123456789abcdef0123456789abcdef.r2.cloudflarestorage.com
+          export R2_BUCKET=another-bucket
+          if bash scripts/litix-r2-test-connection-local.sh >/dev/null 2>&1;then exit 1;fi
+          echo 'MOCK_R2_PRIVATE_BUCKET_TEST_WITH_PUT_HEAD_GET_DELETE_PASSED'
+          echo 'NO_REAL_CLOUDFLARE_API_OR_CUSTOMER_DATABASE_ACCESSED'
