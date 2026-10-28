@@ -4,16 +4,16 @@
   "installCommand": "npm ci --no-audit --no-fund",
   "crons": [
     {
-      "path": "/api/v2/cron/sync-catalog",
-      "schedule": "0 0 * * *"
-    },
-    {
       "path": "/api/bundles/cron",
       "schedule": "* * * * *"
     },
     {
       "path": "/api/guardian/cron",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/internal/boostero/cron",
+      "schedule": "*/15 * * * *"
     }
   ]
 }

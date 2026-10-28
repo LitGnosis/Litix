@@ -7,32 +7,49 @@ export function matchesServiceQuickKind(x,kind){
  if(kind==="likes")return /\blikes?\b/.test(text)&&!/\bfollowers?\b/.test(text)&&!/\b(?:views?|shares?|comments?|saves?|reposts?)\b/.test(name);
  return /\bfollowers?\b/.test(text)&&!/\blikes?\b/.test(name);
 }
-export function sortServicesPer1000(rows, platformRank, retailRate) {
-  const tierOf = (service) => {
-    const text = `${String(service?.category ?? "")} ${String(service?.name ?? "")}`;
-
-    const isCorePlatform = /\b(?:instagram|tiktok|ig)\b/i.test(text);
-    const isFollower = /\bfollowers?\b/i.test(text);
-    const isLike = /\blikes?\b/i.test(text);
-    const isBlended = /\b(?:impressions?|reach|visits?|shares?|reposts?|comments?|views?|saves?|plays?|clicks?|engagements?)\b/i.test(text);
-
-    if (!isCorePlatform || isFollower === isLike || isBlended) return 3;
-
-    const isAmerican = /🇺🇸|\b(?:american|us|usa|united states)\b/i.test(text);
-    return isAmerican ? 1 : 2;
+// Display ordering only: the four currently approved social categories first,
+// followed by all other products. Keep server-side supplier and purchase
+// eligibility rules separate; sorting does not approve or reveal a service.
+export function sortServicesPer1000(rows, _platformRank, retailRate) {
+  const categoryPriority = {
+    "instagram followers": 0,
+    "instagram likes": 1,
+    "tiktok followers": 2,
+    "tiktok likes": 3,
   };
+  const priorityOf = (service) => {
+    const category = String(service?.category ?? "").trim().toLowerCase();
+    if (Object.prototype.hasOwnProperty.call(categoryPriority, category)) {
+      return categoryPriority[category];
+    }
 
+    // Retain backwards compatibility for approved services whose category
+    // is broader than their name. Do not promote blended views, shares, etc.
+    const title = String(service?.name ?? "");
+    const text = category + " " + title;
+    const instagram = /\b(?:instagram|ig)\b/i.test(text);
+    const tiktok = /\btik[\s-]*tok\b/i.test(text);
+    const followers = /\bfollowers?\b/i.test(text);
+    const likes = /\blikes?\b/i.test(text);
+    const blended = /\b(?:impressions?|reach|visits?|shares?|reposts?|comments?|views?|saves?|plays?|clicks?|engagements?|stories?|livestreams?)\b/i.test(title);
+
+    if (instagram === tiktok || followers === likes || blended) return 4;
+    if (instagram) return followers ? 0 : 1;
+    return followers ? 2 : 3;
+  };
   const priceOf = (service) => {
     const price = Number(retailRate(service));
-    return Number.isFinite(price) ? price : Number.POSITIVE_INFINITY;
+    return Number.isFinite(price) && price >= 0 ? price : Number.POSITIVE_INFINITY;
   };
 
   return [...rows]
-    .map((service, index) => ({ service, index, tier: tierOf(service), price: priceOf(service) }))
-    .sort((a, b) => {
-      if (a.tier !== b.tier) return a.tier - b.tier;
-      if (a.price !== b.price) return a.price < b.price ? -1 : 1;
-      return a.index - b.index;
-    })
+    .map((service, index) => ({
+      service, index, priority: priorityOf(service), price: priceOf(service),
+    }))
+    .sort((a, b) =>
+      a.priority - b.priority ||
+      (a.price < b.price ? -1 : a.price > b.price ? 1 : 0) ||
+      a.index - b.index
+    )
     .map(({ service }) => service);
 }

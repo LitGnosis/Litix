@@ -1,0 +1,38 @@
+name: Litix owner local age key generator — ephemeral synthetic safety check
+on:
+  push:
+    branches: [feature/litix-owner-local-age-bootstrap-20261028]
+permissions:
+  contents: read
+jobs:
+  offline-key-preflight:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Install open-source age only (no Cloudflare/Neon tokens)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq age
+      - name: Validate safe private-key creation and no overwrite using EPHEMERAL CI test keys only
+        run: |
+          set -euo pipefail
+          bash -n scripts/litix-owner-age-keygen-local.sh
+          export LITIX_LOCAL_KEY_DIR="$RUNNER_TEMP/litix-keygen-synthetic"
+          bash scripts/litix-owner-age-keygen-local.sh > /dev/null 2>&1
+          file="$LITIX_LOCAL_KEY_DIR/litix-r2-age-identity.txt"
+          test -s "$file"
+          test "$(stat -c %a "$LITIX_LOCAL_KEY_DIR")" = "700"
+          test "$(stat -c %a "$file")" = "600"
+          public="$(age-keygen -y "$file")"
+          [[ "$public" == age1* ]]
+          original="$(sha256sum "$file" | cut -d' ' -f1)"
+          if bash scripts/litix-owner-age-keygen-local.sh > /dev/null 2>&1; then
+            echo 'FAIL private key overwritten' >&2
+            exit 1
+          fi
+          test "$(sha256sum "$file" | cut -d' ' -f1)" = "$original"
+          rm -f -- "$file"
+          rmdir -- "$LITIX_LOCAL_KEY_DIR"
+          echo 'EPHEMERAL_OWNER_KEYGEN_PERMISSIONS_AND_NO_OVERWRITE_PASS'
+          echo 'NO_OWNER_REAL_KEY_CREATED_IN_CHAT_OR_GITHUB'

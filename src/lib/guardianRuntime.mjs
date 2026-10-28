@@ -1,6 +1,7 @@
 import {neon} from "@neondatabase/serverless";
 import {randomUUID,createHash,timingSafeEqual} from "node:crypto";
 import {componentKeys,nextGuardianState,safeCode} from "./guardianCore.mjs";
+import {boosteroProduction} from "./boosteroReadOnly.mjs";
 export const guardianDb=()=>{
  const url=process.env.LITIX_AUTOLIKES_DATABASE_URL||process.env.LITIX_V2_DATABASE_URL||process.env.DATABASE_URL||process.env.POSTGRES_URL;
  if(!url)throw Error("GUARDIAN_DATABASE_UNCONFIGURED");
@@ -24,7 +25,7 @@ async function retryReadOnly(fn,max=2){
 const check=async(component,operation)=>{
  const start=Date.now();
  try{const o=await operation();return {component,ok:o.kind==="not_launched"?true:o.ok!==false,
-  kind:o.kind==="not_launched"?"not_launched":"check",code:safeCode(o.code||"OK"),
+  kind:["not_launched","degraded"].includes(o.kind)?o.kind:"check",code:safeCode(o.code||"OK"),
   detail:String(o.detail||"").slice(0,140),latencyMs:Date.now()-start}}
  catch(e){return {component,ok:false,kind:"check",code:codeOf(e),detail:"Read-only check unavailable",latencyMs:Date.now()-start}}
 };
@@ -32,28 +33,30 @@ const catalog=async(path)=>{
  const r=await retryReadOnly(()=>get("/api/catalog/v1?"+path,26000));
  const d=await r.json();
  if(!Array.isArray(d.items)||!Number.isSafeInteger(d.total)||!Number.isSafeInteger(d.allCount)||
-  d.items.length===0||d.total<=0||d.allCount<d.total||d.catalogStatus!=="live")
-  return {ok:false,code:d.catalogStatus==="cached"?"CATALOG_CACHED_NOT_LIVE":"CATALOG_EMPTY_OR_INVALID",detail:"Catalog response lacks verified live usable services"};
+  d.items.length===0||d.total<=0||d.allCount<d.total)
+  return {ok:false,code:"CATALOG_EMPTY_OR_INVALID",detail:"Catalog has no usable services"};
  if(d.items.some(x=>!x.id||!x.name||!Number.isFinite(Number(x.per1000))||Number(x.per1000)<=0))
-  return {ok:false,code:"CATALOG_UNUSABLE_PRICES",detail:"Catalog contains invalid service descriptions or retail amounts"};
- return {ok:true,code:"LIVE_SERVICES",detail:"Usable services verified: "+d.total+" filtered; "+d.allCount+" eligible"};
+  return {ok:false,code:"CATALOG_UNUSABLE_PRICES",detail:"Catalog has invalid service descriptions or retail amounts"};
+ if(d.catalogStatus==="cached")
+  return {ok:true,kind:"degraded",code:"CATALOG_CACHED_USABLE",detail:"Usable cached services are present; live supplier freshness is not verified"};
+ if(d.catalogStatus!=="live")
+  return {ok:false,code:"CATALOG_SOURCE_UNVERIFIED",detail:"Supplier catalog source status is not verified"};
+ return {ok:true,code:"LIVE_SERVICES",detail:"Usable live services: "+d.total+" filtered; "+d.allCount+" eligible"};
 };
 export async function performGuardianChecks(sql,priorByComponent={},now=new Date()){
  const every=15*60*1000, recent=name=>{const p=priorByComponent[name];return p?.checked_at && now.getTime()-new Date(p.checked_at).getTime()<every};
  const probes={
   website:()=>retryReadOnly(async()=>{const r=await get("/",9000);const t=await r.text();return {ok:t.includes("LITIX")||t.includes("Litix"),code:"WEBSITE_HTML",detail:"Homepage delivered Litix branding"}}),
-  smmglob:async()=>{
-   const endpoint=new URL(process.env.SMMGLOB_API_URL||"https://smmglob.com/api/v2");
-   if(!process.env.SMMGLOB_API_KEY||endpoint.protocol!=="https:"||!["smmglob.com","www.smmglob.com"].includes(endpoint.hostname))
-    return {ok:false,code:"SUPPLIER_CONFIG",detail:"SMMGLOB service credential or endpoint missing"};
-   const d=await retryReadOnly(async()=>{
-    const r=await fetch(endpoint,{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded"},
-     body:new URLSearchParams({key:process.env.SMMGLOB_API_KEY,action:"services"}),cache:"no-store",signal:AbortSignal.timeout(11000)});
-    if(!r.ok)throw Error("HTTP_"+r.status);
-    return r.json();
-   });
-   return {ok:Array.isArray(d)&&d.length>0,code:Array.isArray(d)&&d.length>0?"SUPPLIER_READ_ONLY_OK":"SUPPLIER_INVALID_RESPONSE",
-    detail:Array.isArray(d)?"Supplier service records: "+d.length:"Supplier service list invalid"};
+  boostero:async()=>{
+   // New-order exclusivity: only Boostero is queried. This is read-only.
+   // The paid-order and catalog handlers continue to enforce separate mapping gates.
+   if(process.env.VERCEL_ENV!=="production"||process.env.LITIX_BOOSTERO_ENABLED!=="true"||
+      !process.env.BOOSTERO_API_KEY||!process.env.BOOSTERO_API_URL)
+    return {ok:false,code:"BOOSTERO_CONFIG_MISSING",detail:"Verified Boostero production configuration unavailable"};
+   const rows=await retryReadOnly(()=>boosteroProduction("services"),2);
+   return {ok:Array.isArray(rows)&&rows.length>0,
+    code:Array.isArray(rows)&&rows.length>0?"BOOSTERO_READ_ONLY_OK":"BOOSTERO_INVALID_CATALOG",
+    detail:Array.isArray(rows)?"Boostero current service records: "+rows.length:"Boostero service list invalid"};
   },
   catalog:()=>catalog("page=1"),
   tiktok:()=>catalog("platform=TikTok&page=1"),
@@ -88,12 +91,12 @@ export async function performGuardianChecks(sql,priorByComponent={},now=new Date
   }
  };
  // Supplier calls are rate-limited to 15 minutes per persistent component row.
- const skipped=new Set(["smmglob","resend"].filter(recent));
+ const skipped=new Set(["boostero","resend"].filter(recent));
  const result=await Promise.all(componentKeys.filter(x=>!skipped.has(x)).map(x=>check(x,probes[x])));
  return result;
 }
 const sanitize=x=>({component:x.component,ok:x.ok,code:x.code,detail:x.detail,latencyMs:x.latencyMs,kind:x.kind});
-const repair={website:"Inspect Vercel routing, deployment and runtime logs",smmglob:"Verify SMMGLOB account/API and inspect read-only supplier status; retry later",catalog:"Inspect /api/catalog/v1 upstream timeout/cache and verify usable items",tiktok:"Check TikTok supplier categories and service filtering",instagram:"Check Instagram supplier categories and service filtering",paykings_readiness:"Verify gateway configuration in Vercel; do not change keys automatically",bluevine_readiness:"Verify fixed Bluevine links and bundle environment flags; do not charge",autolikes:"Confirm planned AutoLikes launch state and subscription configuration",subscriptions:"Review subscription schema/permissions without editing customer subscriptions",orders:"Inspect read-only database connectivity and order-table permissions",fulfillment:"Review supplier order statuses manually; never submit or retry orders automatically",database:"Inspect Neon branch and Vercel database connection, avoid destructive changes",resend:"Inspect Resend API permissions and verified sending domain"};
+const repair={website:"Inspect Vercel routing, deployment and runtime logs",boostero:"Verify authenticated Boostero read-only service list, credentials and selected allowlisted mappings",catalog:"Inspect /api/catalog/v1 upstream timeout/cache and verify usable items",tiktok:"Check TikTok supplier categories and service filtering",instagram:"Check Instagram supplier categories and service filtering",paykings_readiness:"Verify gateway configuration in Vercel; do not change keys automatically",bluevine_readiness:"Verify fixed Bluevine links and bundle environment flags; do not charge",autolikes:"Confirm planned AutoLikes launch state and subscription configuration",subscriptions:"Review subscription schema/permissions without editing customer subscriptions",orders:"Inspect read-only database connectivity and order-table permissions",fulfillment:"Review supplier order statuses manually; never submit or retry orders automatically",database:"Inspect Neon branch and Vercel database connection, avoid destructive changes",resend:"Inspect Resend API permissions and verified sending domain"};
 async function queueAlert(sql,component,event,incidentId,obs,at){
  const incident=await sql.query("select started_at from public.litix_guardian_incidents where id=$1",[incidentId]);
  const eventKey="guardian-"+incidentId+"-"+event.kind+(event.kind==="escalation"?"-"+Math.floor(at.getTime()/3600000):"");

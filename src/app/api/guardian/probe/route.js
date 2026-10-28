@@ -12,7 +12,7 @@ export async function GET(){
   const available=new Map(checks.map(x=>[x.component,x]));
   const fresh=required.every(x=>{
    const c=available.get(x);
-   return c&&c.status==="healthy"&&Number.isFinite(new Date(c.checked_at).getTime())&&Date.now()-new Date(c.checked_at).getTime()<20*60*1000;
+   return c&&(c.status==="healthy"||(["catalog","tiktok","instagram"].includes(x)&&c.status==="degraded"))&&Number.isFinite(new Date(c.checked_at).getTime())&&Date.now()-new Date(c.checked_at).getTime()<20*60*1000;
   });
   return Response.json({service:"litix-guardian",functional:!!fresh,checkedComponents:checks.length},
    {status:fresh?200:503,headers:{"cache-control":"no-store","x-content-type-options":"nosniff"}});

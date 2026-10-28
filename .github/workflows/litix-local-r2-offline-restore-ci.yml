@@ -1,0 +1,25 @@
+name: Litix R2 no-new-Neon-branch local restore simulation
+on:
+  push:
+    branches: [feature/litix-r2-local-isolated-restore-20261028]
+permissions:
+  contents: read
+jobs:
+  isolated-offline-restore:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 16
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Shell validation and missing private key rejection
+        run: |
+          bash -n scripts/neon-restore-local-docker-r2.sh
+          bash -n scripts/test-neon-local-r2-restore-synthetic.sh
+          if env -i PATH="$PATH" HOME="$HOME" bash scripts/neon-restore-local-docker-r2.sh >/dev/null 2>&1; then exit 1; fi
+          grep -F -- '--network none' scripts/neon-restore-local-docker-r2.sh
+          grep -F 'daemon_uri' scripts/neon-restore-local-docker-r2.sh
+      - name: Install age CLI for synthetic only, no R2/API/Neon credentials
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq age
+      - name: Prove Cloudflare R2-shaped fake archive restores offline into two temporary PG18 databases
+        run: bash scripts/test-neon-local-r2-restore-synthetic.sh

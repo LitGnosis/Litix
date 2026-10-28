@@ -25,7 +25,8 @@ test('product-first storefront, logo asset and service-specific claims',()=>{
  const page=read('app/page.jsx');assert.ok(page.indexOf('id="services"')<page.indexOf('litix-feature-panel'));assert.ok(!page.includes('<section className="hero">'));
  assert.match(page,/litix-logo\.webp/);assert.ok(existsSync(new URL('../public/assets/brand/litix-logo.webp',import.meta.url)));
  assert.doesNotMatch(page,/Instant Delivery|Programmatic Refills/);
- assert.match(page,/s\.refill\?/);assert.match(page,/s\.noDrop\?/);
+ assert.match(page,/publicServiceCardName\(s\)/);assert.doesNotMatch(page,/className="service-badges"/);
+ assert.match(page,/selected\.refill\?/); // Existing checkout policy metadata remains available; removed only from cards.
 });
 
 test('USA first, general next, all requested countries last with platform order inside groups',async t=>{
@@ -75,7 +76,7 @@ test('Instagram and TikTok followers are discoverable without USA/refill/no-drop
  const page=read('app/page.jsx');assert.match(page,/aria-label="Service quick filters"/);assert.match(page,/setQuickKind\(k.toLowerCase\(\)\)/);
 });
 
-test('followers lead each social platform with American, general, then other-country services',async t=>{
+test('within each social platform, followers lead likes and retail rates are ascending within each category',async t=>{
  const oldFetch=globalThis.fetch,oldKey=process.env.SMMGLOB_API_KEY;
  process.env.SMMGLOB_API_KEY='mock-only';
  t.after(()=>{globalThis.fetch=oldFetch;if(oldKey===undefined)delete process.env.SMMGLOB_API_KEY;else process.env.SMMGLOB_API_KEY=oldKey;});
@@ -86,7 +87,13 @@ test('followers lead each social platform with American, general, then other-cou
   const result=await (await GET(new Request('https://example.test/api/smmservices?platform='+platform))).json();
   const names=result.items.map(x=>x.name.replace(platform+' ',''));
   assert.deepEqual(new Set(names),new Set(['American followers','followers','regular followers','Germany followers','USA / India followers','USA likes']));
-  const rows=result.items;for(let i=1;i<rows.length;i++)assert.ok(rows[i-1].per1000<=rows[i].per1000,"prices must be ascending");
+  const ordered=result.items;
+  const followerRows=ordered.filter(x=>/\bfollowers?\b/i.test(x.name));
+  const likeRows=ordered.filter(x=>/\blikes?\b/i.test(x.name));
+  assert.ok(followerRows.length>0&&likeRows.length>0,"both social kinds must remain listed");
+  assert.ok(ordered.indexOf(followerRows.at(-1))<ordered.indexOf(likeRows[0]),"followers precede likes regardless of price");
+  for(const group of [followerRows,likeRows])for(let i=1;i<group.length;i++)
+    assert.ok(group[i-1].per1000<=group[i].per1000,"numerical retail rate must ascend within the category");
  }
 });
 
