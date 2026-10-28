@@ -47,32 +47,39 @@ python3 - "$work/probe" <<'PY'
 import secrets,sys
 with open(sys.argv[1],"xb") as f:f.write(secrets.token_bytes(128))
 PY
-aws --endpoint-url "$R2_ENDPOINT" s3api put-object --bucket "$R2_BUCKET" \
- --key "$probe_key" --body "$work/probe" --output json >"$work/put.status" 2>&1 ||
+aws --debug --endpoint-url "$R2_ENDPOINT" s3api put-object --bucket "$R2_BUCKET" \
+ --key "$probe_key" --body "$work/probe" --output json >"$work/put.status" 2>"$work/put.debug" ||
  {
   # Print only a validated S3 error identifier, never the raw AWS response.
-  error_code="$(python3 - "$work/put.status" <<'PY'
+  error_code="$(python3 - "$work/put.status" "$work/put.debug" <<'PY'
 import re, sys
-try:
-    data = open(sys.argv[1], encoding="utf-8", errors="replace").read()
-except OSError:
-    data = ""
-m = re.search(r"[(]([A-Za-z][A-Za-z0-9]{0,63})[)] when calling the PutObject operation", data)
+from pathlib import Path
+status = Path(sys.argv[1]).read_text(errors="replace")
+debug = Path(sys.argv[2]).read_text(errors="replace")
+m = re.search(r"[(]([A-Za-z][A-Za-z0-9]{0,63})[)] when calling the PutObject operation", status)
 print(m.group(1) if m else "UNCLASSIFIED")
-# Output only a fixed, allowlisted diagnostic label. Do not emit server text.
-lower = data.lower()
-if "x-amz-checksum" in lower or "checksum" in lower:
-    print("R2_DIAGNOSTIC=CHECKSUM_HEADER")
-elif "x-amz-content-sha256" in lower or "signature" in lower:
-    print("R2_DIAGNOSTIC=REQUEST_SIGNATURE")
-elif "authorization" in lower or "access key" in lower or "credential" in lower:
-    print("R2_DIAGNOSTIC=AUTHORIZATION")
-elif "bucket" in lower:
-    print("R2_DIAGNOSTIC=BUCKET_REQUEST")
-elif "endpoint" in lower or "host" in lower:
-    print("R2_DIAGNOSTIC=ENDPOINT_REQUEST")
-else:
-    print("R2_DIAGNOSTIC=UNCLASSIFIED")
+# No raw HTTP/XML body, headers, signed requests or secrets leave the runner.
+h = re.findall(r"status_code['\x22:]\\s*(\\d{3})", debug)
+if h: print("HTTP_STATUS=" + h[-1])
+ids = re.findall(r"(?:cf-ray|x-amz-request-id|x-amz-id-2)['\x22:]?\\s*[:=]\\s*['\x22]?([A-Za-z0-9-]{8,80})", debug, re.I)
+if ids: print("REQUEST_ID=" + ids[-1])
+low = debug.lower()
+for phrase, tag in (
+ ("unsupported header", "UNSUPPORTED_HEADER"),
+ ("invalid checksum", "CHECKSUM"),
+ ("checksum", "CHECKSUM"),
+ ("server side encryption", "ENCRYPTION_HEADER"),
+ ("x-amz-server-side-encryption", "ENCRYPTION_HEADER"),
+ ("invalid access key", "ACCESS_KEY"),
+ ("signaturedoesnotmatch", "SIGNATURE"),
+ ("invalid argument", "INVALID_ARGUMENT"),
+):
+ if phrase in low:
+  print("R2_MESSAGE_CLASS=" + tag)
+  break
+else: print("R2_MESSAGE_CLASS=UNCLASSIFIED")
+for header in ("x-amz-checksum-crc64nvme", "x-amz-checksum-crc32", "x-amz-server-side-encryption", "x-amz-acl"):
+ print("REQUEST_HEADER_" + header.upper().replace("-", "_") + "=" + ("PRESENT" if header in low else "NOT_OBSERVED"))
 PY
 )"
   fail "Real R2 PutObject failed; S3_ERROR_CODE=$error_code. Verify endpoint, token pairing, and bucket scope."
