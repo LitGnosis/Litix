@@ -1,0 +1,39 @@
+name: Pin known-working Litix recovery tag
+on:
+  push:
+    branches:
+      - ops/pin-litix-recovery-tag-20261028
+    paths:
+      - .github/workflows/litix-pin-known-working-tag.yml
+permissions:
+  contents: write
+jobs:
+  pin:
+    if: github.repository == 'LitGnosis/Litix' && github.ref == 'refs/heads/ops/pin-litix-recovery-tag-20261028'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+      - name: Pin the reviewed immutable-commit recovery ref
+        env:
+          SOURCE_SHA: a4d1d152fda00444242174bc4b668c08a18648f8
+          TAG: litix-working-2026-10-28-a4d1d152
+        run: |
+          set -Eeuo pipefail
+          git cat-file -e "${SOURCE_SHA}^{commit}"
+          existing="$(git ls-remote --tags --refs origin "refs/tags/${TAG}" | cut -f1)"
+          if [[ -n "$existing" ]]; then
+            git fetch --no-tags origin "refs/tags/${TAG}:refs/tags/${TAG}"
+            actual="$(git rev-parse "${TAG}^{commit}")"
+            test "$actual" = "$SOURCE_SHA"
+            echo "RECOVERY_TAG_ALREADY_PINNED=${TAG}"
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git tag -a "$TAG" "$SOURCE_SHA" -m "Verified Boostero-only Litix, PayKings checkout and email baseline; production dpl_68nf7SLM7QBztTTPVzHrqrsV7qhY"
+          git push origin "refs/tags/${TAG}"
+          echo "RECOVERY_TAG_CREATED=${TAG}"
+          echo "RECOVERY_SOURCE_SHA=${SOURCE_SHA}"
