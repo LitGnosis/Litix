@@ -89,3 +89,32 @@ Restoring production requires independently verifying the current target deploym
 ## Current implementation focus
 
 This Phase 1 branch is independent of payment, supplier routing, DB migrations and prices. The first low-risk change improves keyboard and reduced-motion behavior of existing Litix AI and includes simulated mobile browser tests. It must remain preview-only until all tests pass. This document records the broader work; roadmap entries marked unchecked are NOT implemented.
+
+## October 28, 2026: Released Global marketing localization and SEO route repair
+
+### Already deployed and verified
+- Six independently rendered informational landing pages (English, Spanish, Portuguese, French, German, Arabic with RTL), premium existing brand layout, language switcher, canonical and hreflang metadata; no international payment activation.
+- Production commit df21f6620082fe10f88d2af66f0bade4ed3febf1, Vercel deployment dpl_CZPf5EYLm9VgMuqUxDdHXUrnVH9q READY on litix.net.
+- PR #61 merged. CI run 40680633349 passed no-charge payments/supplier regression and mobile browser tests; production homepage, Spanish/Arabic marketing, checkout readiness, live four-kind catalog and eight manual bundles returned HTTP 200.
+- Original and Phase 1 recovery branches remain preserved; live database backup still not fresh.
+
+### SEO routing discovery and repair gating
+- The project has **53 Vercel routing rules**. Two enabled, independently configured October 19 rewrites intercepted /robots.txt and /sitemap.xml and served stale static artifacts from litix-seo-build-artifact-20261019-dbusk7dtk-litgnosisllc-9049.vercel.app.
+- Previously live Vercel routing version: 53442328-4e3c-425b-83a3-96458ec5bd2f. Do not change unrelated routes, especially payment, supplier, webhook, pricing, tracking or privacy compatibility rules.
+- Two SEO-only routes (IDs litix-seo-20261019-robots and litix-seo-20261019-sitemap) were set to enabled:false in a **staged, not-yet-promoted** routing version 3cbcb5de-e918-4862-815f-90e0ff50aa17. The original proxy URLs remain in the rule payload for restoration. The Vercel routes staging alias returned the native Next sitemap with 6 language alternates, and native robots; production route version was unchanged at this stage.
+- Before promoting the SEO route version: preserve prior crawler disallows (/api/, /account, /signin, /checkout and admin panels) in src/app/robots.js. Include legacy previously indexed marketing paths (/about, /platform, /acceptable-use, /resources/visibility-acceleration) in the native sitemap alongside original terms, privacy, refunds and all six languages. Test native Next built route content in CI and staging, deploy the pinned verified source, then re-verify Vercel staged rules with a diff limited to two SEO IDs.
+- This fix does NOT certify search engine indexing. Search Console property access and crawl outcomes remain unverified. Avoid deleting or repointing the other project routes.
+
+### Still not implemented
+- Paid Boostero 864-service expansion, allowed supplier cutover, new subscription billing, consolidated multi-post paid checkout, full Auth0 customer dashboard, cross-device agency workspaces, verified loyalty ledger, automated global taxes and international payment methods, authentic review purchase verification, official social-platform analytics and full Litix Growth OS.
+- These require separate safety checks, provider permissions or verified current DB recovery. Do not call them live just because Preview pages exist.
+
+### Staging route safety check — 2026-10-28
+
+Before any project-route promotion, a full 53-rule comparison against current live routing version 53442328-4e3c-425b-83a3-96458ec5bd2f identified an unrelated pre-existing staged change that would have enabled /api/checkout legacy proxy route `3d603fe4-a251-43df-bf13-77c6e131fd4b`. **That would have modified checkout unintentionally.** The staged route was restored using Vercel's `restore:true`, returning its enabled flag to the currently live value `false`. No live checkout route was changed.
+
+New staged version `3e5a60c5-2d7f-40c0-9370-d241b71dea4a` was then diffed rule-for-rule against live. Both contain 53 rules, and **only** `litix-seo-20261019-robots` and `litix-seo-20261019-sitemap` differ, each changing `enabled:true` to `enabled:false` and their descriptions, with external legacy destinations otherwise preserved. All API, payment, supplier, pricing and webhook routing settings match live.
+
+The safe routing version is not considered published until it is explicitly promoted and production probes confirm native Next robots/sitemap, the six languages, existing checkout readiness and currently live Boostero categories.
+
+Source branch for preserved crawler exclusions and legacy sitemap URLs: `fix/litix-global-native-seo-preservation-20261028`, PR #62. No customer data or charge is needed for this stage.

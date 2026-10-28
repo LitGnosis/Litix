@@ -40,6 +40,6 @@ test("localized marketing pages never mutate checkout, prices, or supplier and e
  assert.match(page,/hrefLang="en"/);
  assert.doesNotMatch(page,/submitSupplierOrder|NMI_SECURITY_KEY|paymentToken|checkout\/v1|BOOSTERO_API_KEY|neon\(/);
  assert.match(sitemap,/GLOBAL_CODES\.map/);
- assert.match(sitemap,/alternates:\{languages:/);
+ assert.match(sitemap,/alternates:localAlternates/);
  assert.match(footer,/href="\/global\/en"/);
 });
