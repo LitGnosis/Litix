@@ -36,7 +36,7 @@ test("localized marketing pages never mutate checkout, prices, or supplier and e
  assert.match(page,/dir=\{rtl\?"rtl":"ltr"\}/);
  assert.match(page,/href="\/#services"/);
  assert.match(page,/href="\/#growth-studio"/);
- assert.match(page,/href="\/track"/);
+ assert.match(page,/href:"\/track"/);
  assert.match(page,/hrefLang="en"/);
  assert.doesNotMatch(page,/submitSupplierOrder|NMI_SECURITY_KEY|paymentToken|checkout\/v1|BOOSTERO_API_KEY|neon\(/);
  assert.match(sitemap,/GLOBAL_CODES\.map/);
