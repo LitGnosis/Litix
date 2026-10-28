@@ -27,7 +27,9 @@ const safeText=(x,n=180)=>String(x||"").replace(/&amp;/g,"&").replace(/<[^>]*>/g
 export const PREMIUM_CATALOG_PRIORITY=["Instagram Followers","Instagram Likes","TikTok Followers","TikTok Likes"];
 export function safeBoosteroLink(input,platform,kind){
  let u;try{u=new URL(String(input||"").trim())}catch{return null}
- if(u.protocol!=="https:"||u.username||u.password||u.port||u.search||u.hash)return null;
+ if(u.protocol!=="https:"||u.username||u.password||u.port||u.hash)return null;
+ if(u.search&&!(platform==="YouTube"&&u.hostname.replace(/^www\./,"")==="youtube.com"&&u.pathname==="/watch"&&
+    [...u.searchParams.keys()].length===1&&/^[A-Za-z0-9_-]{11}$/.test(u.searchParams.get("v")||"")))return null;
  const known=PLATFORMS.find(p=>p[0]===platform);
  if(!known)return null;
  const host=u.hostname.toLowerCase().replace(/^www\./,"");
@@ -44,7 +46,7 @@ export function safeBoosteroLink(input,platform,kind){
  }
  if(/\/(?:login|settings|admin|account)\b/i.test(path))return null;
  if(platform==="YouTube"&&host==="youtu.be"&&!/^\/[A-Za-z0-9_-]{6,20}$/.test(path))return null;
- return "https://"+u.hostname.toLowerCase()+path;
+ return "https://"+u.hostname.toLowerCase()+path+(platform==="YouTube"&&u.search?u.search:"");
 }
 export function priceAt60Percent(wholesaleRate,quantity){
  const rate=Number(wholesaleRate),qty=Number(quantity);
@@ -64,6 +66,7 @@ export function premiumDefaultServices(raw){
   const match=PLATFORMS.filter(([_,re])=>re.test(title+" "+sourceCategory));
   if(match.length!==1)continue;
   const platform=match[0][0];
+  if(/\b(?:title search|keyword search|ctr search|custom|manual entry|drip[ -]?feed|poll|mentions?|auto likes|subscriptions?|live stream|watch hours)\b/i.test(title))continue;
   const kinds=KINDS.filter(([_,re])=>re.test(title));
   if(kinds.length!==1)continue;
   const kind=kinds[0][0];
@@ -72,7 +75,7 @@ export function premiumDefaultServices(raw){
   const step=Number(item.quantity_step??item.step??1),rate=Number(item.rate);
   if(!Number.isSafeInteger(min)||min<1||!Number.isSafeInteger(max)||max<min||
      !Number.isSafeInteger(step)||step<1||!Number.isFinite(rate)||rate<=0||rate>1e6)continue;
-  const minimumQty=min+Math.max(0,Math.ceil((Math.ceil(500000/(rate*1.6))-min)/step))*step;
+  const minimumQty=min+Math.max(0,Math.ceil((Math.ceil(500000/(rate*160))-min)/step))*step;
   if(!Number.isSafeInteger(minimumQty)||minimumQty>max)continue;
   const refillAPI=item.refill===true||item.refill==="1"||item.refillable===true;
   const noRefill=/\b(?:no|non|without)\s*-?\s*refill\b/i.test(name);
