@@ -5,6 +5,8 @@ export const runtime="nodejs";
 export const dynamic="force-dynamic";
 export const maxDuration=60;
 export async function POST(req){
+ // This draft does not have a verified Boostero-only retry path. Never mutate items or dispatch.
+ return Response.json({error:"Boostero multi-post retry is not released; no supplier request was sent."},{status:503,headers:{"cache-control":"no-store"}});
  const expected=String(process.env.LITIX_CHOOSE_POSTS_ADMIN_TOKEN||"");
  const supplied=String(req.headers.get("authorization")||"").replace(/^Bearer /,"");
  if(expected.length<32||expected.length!==supplied.length||!timingSafeEqual(Buffer.from(expected),Buffer.from(supplied)))

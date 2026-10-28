@@ -12,20 +12,15 @@ export const sha=value=>createHash("sha256").update(String(value)).digest("hex")
 export const choiceId=()=> "ltx2_"+randomUUID();
 export const privateToken=()=>randomUUID()+"-"+randomUUID();
 export const previewDemo=()=>process.env.VERCEL_ENV==="preview"&&process.env.LITIX_CHOOSE_POSTS_PREVIEW_DEMO==="true";
-const apiEndpoint=()=>{
- const url=new URL(process.env.SMMGLOB_API_URL||"https://smmglob.com/api/v2");
- if(url.protocol!=="https:"||!["smmglob.com","www.smmglob.com"].includes(url.hostname))throw Error("Unapproved supplier host");
- return url;
-};
-export async function supplier(action,params={}){
- if(!process.env.SMMGLOB_API_KEY)throw Error("Supplier unavailable");
- const response=await fetch(apiEndpoint(),{method:"POST",cache:"no-store",signal:AbortSignal.timeout(15000),
-  headers:{"content-type":"application/x-www-form-urlencoded"},
-  body:new URLSearchParams({key:process.env.SMMGLOB_API_KEY,action,...params})});
- if(!response.ok)throw Error("Supplier HTTP "+response.status);
- const result=await response.json();
- if(result?.error)throw Object.assign(Error("Supplier rejected request"),{rejected:true});
- return result;
+// Live supplier submission is deliberately unavailable in this UNRELEASED
+// multi-post draft. Legacy SMMGLOB may only be read from historical records in
+// existing production modules; it must never fulfill new Litix orders.
+// Replace with an independently audited Boostero-only adapter after a verified
+// database backup, idempotency controls, payment tests and explicit release.
+export async function supplier(_action,_params={}){
+ const error=new Error("Boostero multi-post adapter not released; no supplier request was sent.");
+ error.code="BOOSTERO_MULTI_POST_NOT_RELEASED";
+ throw error;
 }
 export async function getCurrentLikesService(id){
  const rows=await supplier("services");
@@ -97,6 +92,8 @@ export async function notifyPaid(orderId,token){
  return true;
 }
 export async function dispatchPaidPosts(orderId){
+ // No network dispatch or database mutation until a Boostero-specific adapter is verified.
+ return {status:"blocked_not_released",items:[]};
  const sql=chooseSql();
  const rows=await sql.query("select i.id,i.post_url,i.quantity,o.service_id from public.litix_choose_posts_items i join public.litix_choose_posts_orders o on o.id=i.order_id where i.order_id=$1 and o.payment_state='paid' and i.state='QUEUED' order by i.ordinal",[orderId]);
  // Process up to four independently, bounded to Vercel function duration.

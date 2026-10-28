@@ -7,63 +7,38 @@ const raw=readFileSync(new URL("../lib/choosePostsServer.mjs",import.meta.url),"
  .replace('"./pricing.mjs"',JSON.stringify(new URL("../lib/pricing.mjs",import.meta.url).href))
  .replace('"./choosePosts.mjs"',JSON.stringify(new URL("../lib/choosePosts.mjs",import.meta.url).href));
 const lib=await import("data:text/javascript,"+encodeURIComponent(raw));
-const orderId="ltx2_11111111-1111-4111-8111-111111111111";
-function harness(mode="reject",paid=true){
- const rows=[
-  {id:"i1",post_url:"https://www.instagram.com/p/ABCDE12345/",quantity:1000,service_id:"33630",state:"QUEUED",attempt_count:0,supplier_order_id:null},
-  {id:"i2",post_url:"https://www.instagram.com/p/ABCDE23456/",quantity:1000,service_id:"33630",state:"QUEUED",attempt_count:0,supplier_order_id:null}
- ];
- let supplierCalls=0,charges=0,emails=0;
- globalThis.__chooseTestSql={query:async(sql,params=[])=>{
-  if(sql.startsWith("select i.id,i.post_url"))return paid?rows.filter(x=>x.state==="QUEUED").map(x=>({...x})):[];
-  if(sql.startsWith("update public.litix_choose_posts_items set state='DISPATCHING'")){
-   const found=rows.find(x=>x.id===params[0]&&x.state==="QUEUED");if(!found||!paid)return [];
-   found.state="DISPATCHING";found.attempt_count++;return [{attempt_count:found.attempt_count}];
-  }
-  if(sql.startsWith("insert into public.litix_choose_posts_attempts"))return [];
-  if(sql.startsWith("update public.litix_choose_posts_items set supplier_order_id")){
-   const x=rows.find(z=>z.id===params[0]);x.state="SUBMITTED";x.supplier_order_id=params[1];return [];
-  }
-  if(sql.startsWith("update public.litix_choose_posts_items set state=$2")){
-   const x=rows.find(z=>z.id===params[0]);x.state=params[1];return [];
-  }
-  if(sql.startsWith("select state from public.litix_choose_posts_items"))return rows.map(x=>({state:x.state}));
-  if(sql.startsWith("select email,service_name,total_cents"))return [{email:"preview@example.com",service_name:"Instagram Likes",total_cents:1000}];
-  return [];
- }};
- const old=globalThis.fetch;
- globalThis.fetch=async (url,options)=>{
-  if(String(url).includes("api.resend.com")){emails++;return new Response("{}",{status:200})}
-  if(String(url).includes("smmglob.com")){supplierCalls++;
-   if(mode==="ambiguous"&&supplierCalls===2)throw Error("Supplier timed out");
-   if(mode==="reject"&&supplierCalls===2)return Response.json({error:"Definite rejection"});
-   return Response.json({order:"SUPPLIER_TEST_"+supplierCalls});
-  }
-  charges++;throw Error("Unexpected payment request");
- };
- const env={SMMGLOB_API_KEY:process.env.SMMGLOB_API_KEY,RESEND_API_KEY:process.env.RESEND_API_KEY,LITIX_CHOOSE_POSTS_DATABASE_URL:process.env.LITIX_CHOOSE_POSTS_DATABASE_URL};
- process.env.SMMGLOB_API_KEY="test-only";process.env.RESEND_API_KEY="test-only";process.env.LITIX_CHOOSE_POSTS_DATABASE_URL="postgresql://example.invalid/placeholder";
- return {rows,call:()=>lib.dispatchPaidPosts(orderId),get calls(){return supplierCalls},get charges(){return charges},get emails(){return emails},
-  restore(){globalThis.fetch=old;Object.entries(env).forEach(([key,val])=>val==null?delete process.env[key]:process.env[key]=val);delete globalThis.__chooseTestSql}};
-}
-test("post-payment two SMMGLOB orders use independent supplier IDs; a definite rejected post is retryable without extra charge",async()=>{
- const h=harness("reject");
+
+test("supplier adapter is hard-disabled for every new-order action even if legacy credentials are present",async()=>{
+ let calls=0;
+ const oldFetch=globalThis.fetch,oldKey=process.env.SMMGLOB_API_KEY;
+ globalThis.fetch=async()=>{calls++;throw Error("UNAUTHORIZED_PROVIDER_NETWORK_ATTEMPT")};
+ process.env.SMMGLOB_API_KEY="synthetic-only-do-not-use";
  try{
-  const result=await h.call();
-  assert.equal(result.status,"manual_review");
-  assert.equal(h.rows[0].state,"SUBMITTED");assert.equal(h.rows[0].supplier_order_id,"SUPPLIER_TEST_1");
-  assert.equal(h.rows[1].state,"RETRYABLE");assert.equal(h.rows[1].supplier_order_id,null);
-  assert.equal(h.calls,2);assert.equal(h.charges,0);
-  await h.call();assert.equal(h.calls,2,"no duplicate supplier submission on retry of entire workflow");
- }finally{h.restore()}
+  for(const action of ["services","add","status","refill"]){
+   await assert.rejects(lib.supplier(action,{service:"33442",quantity:"1000"}),/Boostero multi-post adapter not released/);
+  }
+  assert.equal(calls,0,"No SMMGLOB/other supplier calls");
+ }finally{
+  globalThis.fetch=oldFetch;
+  if(oldKey===undefined)delete process.env.SMMGLOB_API_KEY;
+  else process.env.SMMGLOB_API_KEY=oldKey;
+ }
 });
-test("unknown supplier outcome is not retried automatically",async()=>{
- const h=harness("ambiguous");
- try{await h.call();assert.equal(h.rows[1].state,"UNKNOWN_OUTCOME");assert.equal(h.calls,2);
-  await h.call();assert.equal(h.calls,2);assert.equal(h.charges,0)}
- finally{h.restore()}
+test("pending draft dispatch never touches DB, gateway, emails or any supplier",async()=>{
+ let dbCalls=0,network=0;
+ const old=globalThis.fetch;globalThis.__chooseTestSql={query:async()=>{dbCalls++;throw Error("MUST_NOT_TOUCH_DATABASE")}};
+ globalThis.fetch=async()=>{network++;throw Error("MUST_NOT_CALL_PROVIDER")};
+ try{
+  const result=await lib.dispatchPaidPosts("ltx2_11111111-1111-4111-8111-111111111111");
+  assert.deepEqual(result,{status:"blocked_not_released",items:[]});
+  assert.equal(dbCalls,0);assert.equal(network,0);
+ }finally{globalThis.fetch=old;delete globalThis.__chooseTestSql;}
 });
-test("unpaid multi-post order never dispatches supplier requests",async()=>{
- const h=harness("reject",false);
- try{await h.call();assert.equal(h.calls,0);assert.equal(h.charges,0)}finally{h.restore()}
+test("draft checkout is preview-only with no possible live PayKings sale or retry",()=>{
+ const checkout=readFileSync(new URL("../app/api/choose-posts/checkout/route.js",import.meta.url),"utf8");
+ const retry=readFileSync(new URL("../app/api/choose-posts/retry/route.js",import.meta.url),"utf8");
+ assert.match(checkout,/paymentReady:false/);
+ assert.match(checkout,/if\(!previewDemo\(\)\)return output/);
+ assert.match(checkout,/if\(x\?\.simulate!==true\)return output/);
+ assert.match(retry,/return Response\.json\(\{error:"Boostero multi-post retry is not released/);
 });

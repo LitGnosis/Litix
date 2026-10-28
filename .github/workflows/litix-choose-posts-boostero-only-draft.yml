@@ -1,0 +1,48 @@
+name: Litix Select Your Post — Boostero-only draft hard stop (no money or supplier)
+on:
+  push:
+    branches: [feature/litix-choose-posts-security-gates-20261028]
+permissions:
+  contents: read
+jobs:
+  draft-no-charge:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    defaults:
+      run:
+        working-directory: src
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: src/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - name: Mock only — preview and provider hard stop, no gateway or live supplier
+        run: |
+          node --test \
+            tests/choose-posts.test.mjs \
+            tests/choose-posts-dispatch.test.mjs \
+            tests/checkout.test.mjs \
+            tests/collect-lifecycle.test.mjs \
+            tests/five-dollar-floor.test.mjs \
+            tests/pricing-rules.test.mjs \
+            tests/owner-purchase-notifications.test.mjs \
+            tests/growth-bundles-manual.test.mjs
+      - run: npm run build
+      - run: npm install --no-save --ignore-scripts playwright@1.56.1
+      - name: Real browser — 390px, 412px and desktop simulated one-payment preview
+        run: |
+          npm run start -- --port 3100 >/tmp/litix-posts-draft-qa.log 2>&1 &
+          app_pid=$!
+          trap 'kill $app_pid || true' EXIT
+          for i in $(seq 1 40); do
+            if curl -fsS -o /dev/null http://localhost:3100/choose-posts; then break; fi
+            sleep 1
+          done
+          export CHROME_PATH="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
+          test -n "$CHROME_PATH"
+          node tests/choose-posts-mobile.mjs
