@@ -1,0 +1,68 @@
+name: Litix R2 — MANUAL real encrypted backup and isolated restore
+run-name: Litix R2 ${{ inputs.operation }} / ${{ github.run_id }}
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: Choose harmless R2 probe first, then backup_and_restore after secrets and owner public key are ready
+        type: choice
+        required: true
+        default: probe_only
+        options:
+          - probe_only
+          - backup_and_restore
+      confirm_backup:
+        description: For backup_and_restore only, type BACKUP_BOTH_DBS_READ_ONLY
+        type: string
+        required: false
+        default: ''
+permissions:
+  contents: read
+concurrency:
+  group: litix-r2-production-recovery
+  cancel-in-progress: false
+jobs:
+  owner-approved-recovery:
+    if: github.repository == 'LitGnosis/Litix' && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    environment: litix-private-backup
+    timeout-minutes: 45
+    steps:
+      - name: Check out trusted reviewed recovery source only
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Install age and verify isolated runner utilities
+        run: |
+          set -Eeuo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq age
+          command -v age
+          command -v age-keygen
+          command -v aws
+          command -v docker
+          docker info >/dev/null
+          bash -n scripts/litix-r2-github-manual-verify.sh
+      - name: Real private R2 probe and optionally two encrypted production backups/restores
+        env:
+          LITIX_RECOVERY_MODE: ${{ inputs.operation }}
+          LITIX_CONFIRM_BACKUP: ${{ inputs.confirm_backup }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          AGE_PUBLIC_RECIPIENT: ${{ secrets.AGE_PUBLIC_RECIPIENT }}
+          NEON_DIRECT_URL_NEONDB: ${{ secrets.NEON_DIRECT_URL_NEONDB }}
+          NEON_DIRECT_URL_LITIXAPI: ${{ secrets.NEON_DIRECT_URL_LITIXAPI }}
+          NEON_EXPECTED_SOURCE_HOST: ${{ secrets.NEON_EXPECTED_SOURCE_HOST }}
+        run: |
+          set -Eeuo pipefail
+          test "${{ github.ref }}" = refs/heads/main
+          if [[ "${{ inputs.operation }}" == backup_and_restore && "${{ inputs.confirm_backup }}" != BACKUP_BOTH_DBS_READ_ONLY ]];then
+            echo 'Backup confirmation mismatch. No DB reads, payment or supplier actions executed.' >&2
+            exit 2
+          fi
+          bash scripts/litix-r2-github-manual-verify.sh
+      # No artifacts, no database dumps, no reports with customer data, no schedule.
+      # The ephemeral runner destroys its temporary age key and restore DB.
