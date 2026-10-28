@@ -1,4 +1,5 @@
 // Read-only supplier-backed catalog used for a safely staged migration.
+import {minimumRetailCentsForWholesale} from "./pricing.mjs";
 // Supported orders require a separately verified payment+dispatch release.
 const PLATFORMS=[
  ["Instagram",/\binstagram\b|\big\b/i,["instagram.com"]],
@@ -21,7 +22,9 @@ const KINDS=[
  ["Views",/\bviews?\b/i],["Subscribers",/\bsubscribers?\b/i],
  ["Members",/\bmembers?\b/i],["Reactions",/\breactions?\b/i],
  ["Shares",/\bshares?\b/i],["Reposts",/\breposts?\b/i],
- ["Plays",/\bplays?\b/i]
+ ["Comments",/\bcomments?\b/i],["Shares",/\bshares?\b/i],
+ ["Saves",/\bsaves?\b/i],["Reposts",/\breposts?\b/i],
+ ["Impressions",/\bimpressions?\b/i],["Plays",/\bplays?\b/i]
 ];
 const safeText=(x,n=180)=>String(x||"").replace(/&amp;/g,"&").replace(/<[^>]*>/g,"").replace(/\s+/g," ").trim().slice(0,n);
 export const PREMIUM_CATALOG_PRIORITY=["Instagram Followers","Instagram Likes","TikTok Followers","TikTok Likes"];
@@ -55,9 +58,19 @@ export function priceAt60Percent(wholesaleRate,quantity){
  const retailCents=Math.ceil(rate*qty/1000*160-1e-9);
  return {per1000,retailCents,minimumCents:500};
 }
+export function litixPreviewRate(wholesaleRate){
+ const rate=Number(wholesaleRate);
+ if(!Number.isFinite(rate)||rate<=0||rate>1e6)throw Error("supplier_rate_invalid");
+ // The actual Litix wholesale markup ladder, not the old experimental 60%.
+ // Under $1: >=8x; $1–<$20: >=5x; >=$20: >=2x.
+ // All quantity-based services also require $5 per 1,000 retail minimum.
+ const floor=minimumRetailCentsForWholesale(rate);
+ if(!Number.isSafeInteger(floor)||floor<=0)throw Error("supplier_rate_invalid");
+ return Math.max(500,floor);
+}
 export function premiumDefaultServices(raw){
  if(!Array.isArray(raw))throw Error("boostero_catalog_invalid");
- const seen=new Set(),out=[];
+ const seen=new Set(),offeringKeys=new Set(),out=[];
  for(const item of raw){
   if(String(item?.type||"")!=="Default")continue;
   const id=String(item.service??item.id??"");
@@ -75,18 +88,32 @@ export function premiumDefaultServices(raw){
   const step=Number(item.quantity_step??item.step??1),rate=Number(item.rate);
   if(!Number.isSafeInteger(min)||min<1||!Number.isSafeInteger(max)||max<min||
      !Number.isSafeInteger(step)||step<1||!Number.isFinite(rate)||rate<=0||rate>1e6)continue;
-  const minimumQty=min+Math.max(0,Math.ceil((Math.ceil(500000/(rate*160))-min)/step))*step;
+  const retailCentsPer1000=litixPreviewRate(rate);
+  // The wholesale margin applies to the ACTUAL total cost as well as to the
+  // displayed per-1k rate. A service with wholesale >=$20 per 1k needs a
+  // purchase big enough to reach the >=$20 total-cost bracket before 2x applies.
+  const bracketQty=rate>=20?Math.ceil(20000/rate):rate>=1?Math.ceil(1000/rate):min;
+  const startingQty=Math.max(min,Math.ceil(500000/retailCentsPer1000),bracketQty);
+  const minimumQty=min+Math.max(0,Math.ceil((startingQty-min)/step))*step;
   if(!Number.isSafeInteger(minimumQty)||minimumQty>max)continue;
+  const startingAmountCents=Math.ceil(retailCentsPer1000*minimumQty/1000-1e-8);
+  if(startingAmountCents<500||startingAmountCents<minimumRetailCentsForWholesale(rate*minimumQty/1000))continue;
   const refillAPI=item.refill===true||item.refill==="1"||item.refillable===true;
   const noRefill=/\b(?:no|non|without)\s*-?\s*refill\b/i.test(name);
   const advertisedRefill=!noRefill&&/\brefill\b/i.test(name);
   const days=[...name.matchAll(/\b(\d{1,3})\s*(?:days?|d)\b/gi)].map(m=>Number(m[1]));
   const refillDays=(refillAPI||advertisedRefill)&&days.length?Math.max(...days):null;
-  const price=priceAt60Percent(rate,minimumQty),category=platform+" "+kind;
+  const category=platform+" "+kind;
+  // Collapse truly identical supplier listings, not genuine refill, price,
+  // quality or quantity variants. Never duplicate a current customer card.
+  const signature=[platform,kind,name.normalize("NFKC").toLowerCase().replace(/\\s+/g," "),
+   rate,min,max,step,refillAPI,refillDays].join("|");
+  if(offeringKeys.has(signature))continue;
+  offeringKeys.add(signature);
   seen.add(id);
   out.push({id:"boostero_"+id,name,category,platform,kind,
    type:"Default",min:minimumQty,supplierMin:min,max,unitStep:step,
-   per1000:price.per1000,startingAmountCents:price.retailCents,
+   per1000:retailCentsPer1000/100,startingAmountCents,
    refill:refillAPI,refillDays,refillClaim:advertisedRefill,
    noDrop:/\b(?:non|no)[-\s]?drop\b/i.test(name),
    purchasable:false,previewOnly:true});
