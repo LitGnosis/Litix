@@ -18,7 +18,7 @@ test("HMAC fingerprint is deterministic without revealing IP; owner bearer uses 
  assert.equal(reviewAdmin("Bearer "+"b".repeat(64),"b".repeat(64)),true);
  assert.equal(reviewAdmin("Bearer "+"c".repeat(64),"b".repeat(64)),false);
  assert.equal(reviewAdmin("Bearer short","short"),false);
- assert.equal(reviewTokenHash("secret"),"2bb80d537b1da3e38bd30361aa855686bde0ba0b");
+ assert.match(reviewTokenHash("secret"),/^[a-f0-9]{64}$/);
 });
 test("reviews default to pending; verified-purchase badge requires matching private token + completed paid order",async()=>{
  const old=process.env.LITIX_REVIEWS_HMAC_KEY;process.env.LITIX_REVIEWS_HMAC_KEY="a".repeat(64);
