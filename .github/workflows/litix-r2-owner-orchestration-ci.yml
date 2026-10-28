@@ -1,0 +1,83 @@
+name: Litix R2 owner-only complete-backup orchestrator — synthetic test
+on:
+  push:
+    branches: [feature/litix-r2-one-command-owner-backup-20261028]
+permissions:
+  contents: read
+jobs:
+  owner-offline-automation:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Install age for EPHEMERAL key, never a real owner identity
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq age
+      - name: Test cryptographic identity mismatch, no-storage preflight and two-stage logic with MOCK providers only
+        run: |
+          set -euo pipefail
+          bash -n scripts/litix-owner-run-r2-backup-and-verify.sh
+          d="$(mktemp -d)"
+          trap 'rm -rf "$d"' EXIT
+          mkdir -p "$d/bin" "$d/runner"
+          cp scripts/litix-owner-run-r2-backup-and-verify.sh "$d/runner/run.sh"
+          age-keygen -o "$d/identity" >/dev/null 2>&1
+          public="$(age-keygen -y "$d/identity")"
+          cat > "$d/bin/pg_dump" <<'EOF'
+          #!/bin/sh
+          echo 'FORBIDDEN_REAL_PGDUMP' >&2
+          exit 98
+          EOF
+          cat > "$d/bin/aws" <<'EOF'
+          #!/bin/sh
+          echo 'FORBIDDEN_REAL_R2_CONNECTION' >&2
+          exit 98
+          EOF
+          cat > "$d/bin/docker" <<'EOF'
+          #!/bin/sh
+          if [ "$1" = context ] && [ "$2" = show ]; then echo default;exit 0;fi
+          if [ "$1" = context ] && [ "$2" = inspect ]; then echo unix:///var/run/docker.sock;exit 0;fi
+          echo 'FORBIDDEN_REAL_DOCKER_CALL' >&2;exit 98
+          EOF
+          cat > "$d/runner/neon-backup-encrypted-offsite.sh" <<'EOF'
+          #!/bin/sh
+          set -eu
+          echo ENCRYPTED_OFFSITE_COPY_VERIFIED
+          echo "OFFSITE_OBJECT=s3://synthetic-bucket/litix-neon-$NEON_BACKUP_DATABASE-production-20261028T000000Z.pgcustom.age"
+          printf 'CIPHERTEXT_SHA256='
+          printf 'a%.0s' $(seq 1 64)
+          printf '\n'
+          EOF
+          cat > "$d/runner/neon-restore-local-docker-r2.sh" <<'EOF'
+          #!/bin/sh
+          set -eu
+          echo LOCAL_OFFLINE_POSTGRES18_ENCRYPTED_RESTORE_VERIFIED
+          echo "RESTORED_DATABASE=$NEON_BACKUP_DATABASE"
+          EOF
+          chmod 700 "$d/bin/"* "$d/runner/"*
+          export PATH="$d/bin:$PATH"
+          export BACKUP_STORAGE_PROVIDER=r2
+          export BACKUP_S3_ENDPOINT_URL=https://0123456789abcdef0123456789abcdef.r2.cloudflarestorage.com
+          export BACKUP_S3_URI=s3://synthetic-bucket/litix-production
+          export BACKUP_R2_PRIVATE_BUCKET_CONFIRMED=I_VERIFIED_NO_PUBLIC_ACCESS
+          export BACKUP_AGE_RECIPIENT="$public"
+          export BACKUP_AGE_IDENTITY="$d/identity"
+          export AWS_ACCESS_KEY_ID=synthetic-only
+          export AWS_SECRET_ACCESS_KEY=synthetic-only
+          export NEON_EXPECTED_SOURCE_HOST=ep-fake.us-east-1.aws.neon.tech
+          export LITIX_NEON_DIRECT_URL_NEONDB='postgresql://fake:dummy@ep-fake.us-east-1.aws.neon.tech/neondb?sslmode=require'
+          export LITIX_NEON_DIRECT_URL_LITIXAPI='postgresql://fake:dummy@ep-fake.us-east-1.aws.neon.tech/litixapi?sslmode=require'
+          export LITIX_R2_BACKUP_OWNER_ACK=I_APPROVE_ENCRYPTED_EXPORT_AND_ISOLATED_RESTORE
+          export DOCKER_HOST=unix:///var/run/docker.sock
+          export BACKUP_AGE_RECIPIENT=age1mismatchedrecipienttotallyinvalid
+          if bash "$d/runner/run.sh" >/dev/null 2>&1; then
+            echo 'FAIL: public and private identity mismatch accepted' >&2;exit 1
+          fi
+          export BACKUP_AGE_RECIPIENT="$public"
+          out="$(bash "$d/runner/run.sh")"
+          grep -qx 'VERIFIED_DATABASE=neondb' <<< "$out"
+          grep -qx 'VERIFIED_DATABASE=litixapi' <<< "$out"
+          grep -qx LITIX_BOTH_PRODUCTION_DATABASES_ENCRYPTED_OFFSITE_AND_RESTORED_VERIFIED <<< "$out"
+          echo MOCKED_TWO_DATABASE_ORCHESTRATION_PASS
+          echo NO_REAL_KEYS_PRODUCTION_CUSTOMERS_OR_R2_NETWORK_USED
