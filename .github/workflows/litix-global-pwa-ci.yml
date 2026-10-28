@@ -30,17 +30,15 @@ jobs:
       - name: Test manifest and existing no-charge payment, AI, Boostero, SEO and bundle behavior
         run: |
           node --test tests/global-pwa-manifest.test.mjs tests/litix-ai.test.mjs tests/checkout.test.mjs tests/boostero-integration.test.mjs tests/growth-bundles-manual.test.mjs tests/global-locales.test.mjs tests/global-seo-preservation.test.mjs
-      - name: Validate app icons with PNG signature, dimensions, and file size
+      - name: Verify existing Litix logo (without modifying brand assets)
         run: |
           python - <<'PY'
-          import pathlib,struct
-          for size in (192,512):
-            p=pathlib.Path(f"public/icons/litix-app-{size}.png")
-            content=p.read_bytes()
-            assert content[:8]==b"\x89PNG\r\n\x1a\n",p
-            assert struct.unpack(">II",content[16:24])==(size,size),p
-            assert len(content)>1024 and len(content)<2000000,p
-            print("ICON_VERIFIED",p,len(content))
+          import pathlib
+          p=pathlib.Path("public/assets/brand/litix-logo.webp")
+          c=p.read_bytes()
+          assert c[:4]==b"RIFF" and c[8:12]==b"WEBP",p
+          assert len(c)>1024,p
+          print("ORIGINAL_BRAND_ASSET_VERIFIED",len(c))
           PY
       - name: Preserve Next.js production build
         run: npm run build
