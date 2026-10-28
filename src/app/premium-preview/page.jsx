@@ -8,7 +8,12 @@ export default function PremiumPreview(){
  const [platform,setPlatform]=useState("All platforms"),[category,setCategory]=useState(""),
  [search,setSearch]=useState(""),[page,setPage]=useState(1),[result,setResult]=useState(null),
  [status,setStatus]=useState("Loading verified supplier services"),[selected,setSelected]=useState(null),
- [quantity,setQuantity]=useState(0),[destination,setDestination]=useState(""),[step,setStep]=useState(1);
+ [quantity,setQuantity]=useState(0),[destination,setDestination]=useState(""),[step,setStep]=useState(1),
+ [reviews,setReviews]=useState([]),[reviewName,setReviewName]=useState(""),
+ [reviewStars,setReviewStars]=useState(5),[reviewText,setReviewText]=useState(""),
+ [reviewCategory,setReviewCategory]=useState("Instagram Followers"),
+ [reviewOrderId,setReviewOrderId]=useState(""),[reviewToken,setReviewToken]=useState(""),
+ [reviewStatus,setReviewStatus]=useState(""),[reviewSubmitting,setReviewSubmitting]=useState(false);
  useEffect(()=>{
   let active=true;const ctrl=new AbortController();
   const p=new URLSearchParams({platform,category,q:search,page:String(page)});
@@ -19,6 +24,24 @@ export default function PremiumPreview(){
    .catch(()=>{if(active){setResult({items:[],categories:[],platforms:[],total:0,page:1});setStatus("Supplier catalog temporarily unavailable")}});
   return()=>{active=false;ctrl.abort()};
  },[platform,category,search,page]);
+ useEffect(()=>{
+  fetch("/api/premium/reviews",{cache:"no-store"}).then(r=>r.json())
+   .then(j=>setReviews(Array.isArray(j.reviews)?j.reviews:[])).catch(()=>setReviews([]));
+ },[]);
+ async function sendReview(event){
+  event.preventDefault();
+  if(reviewSubmitting)return;
+  setReviewSubmitting(true);setReviewStatus("Sending for moderation...");
+  try{
+   const res=await fetch("/api/premium/reviews",{method:"POST",headers:{"content-type":"application/json"},
+    body:JSON.stringify({displayName:reviewName,rating:reviewStars,reviewText,
+     serviceCategory:reviewCategory,orderId:reviewOrderId,trackingToken:reviewToken,companyWebsite:""})});
+   const j=await res.json();if(!res.ok)throw Error(j.error||"Review submission unavailable");
+   setReviewStatus("Review received. It will appear only after administrator moderation.");
+   setReviewText("");setReviewOrderId("");setReviewToken("");
+  }catch(e){setReviewStatus(String(e.message||"Review submission unavailable"))}
+  finally{setReviewSubmitting(false)}
+ }
  const quotation=useMemo(()=>{try{return selected?priceAt60Percent(selected.per1000/1.6,quantity):null}catch{return null}},[selected,quantity]);
  const url=safeBoosteroLink(destination,selected?.platform,selected?.kind);
  const quantityValid=selected&&Number.isSafeInteger(quantity)&&quantity>=selected.min&&quantity<=selected.max&&
@@ -106,6 +129,35 @@ export default function PremiumPreview(){
     ["Will new followers like or comment?","Follower orders provide only their listed follower service. Other engagement requires an eligible separate service."],
     ["Can I cancel my order or request a refund?","Contact support. Eligibility depends on service terms, status, and Litix’s published refund policy."]
    ].map(([question,answer])=><details key={question}><summary>{question}</summary><p>{answer}</p></details>)}
+  </section>
+  <section className="premium-panel premium-reviews" id="customer-reviews">
+   <div className="premium-section-title"><span>CUSTOMER VOICES</span><h2>REAL EXPERIENCES. REAL FEEDBACK.</h2>
+    <p>Your experience matters. Discover what customers are saying about Litix and share your own.</p></div>
+   <div className="premium-review-cards">
+    {reviews.length?reviews.map(r=><article className="premium-review-card" key={r.id}>
+      <div aria-label={r.stars+" out of 5 stars"}>{"★".repeat(r.stars)}{"☆".repeat(5-r.stars)}</div>
+      <h3>{r.display_name}</h3><p className="premium-kind">{r.service_category}</p>
+      <p>{r.body}</p>{r.verified_purchase&&<span className="premium-verified">Verified Purchase</span>}
+      {r.image_url&&<img src={r.image_url} alt="Optional customer-submitted supporting image" loading="lazy"/>}
+     </article>):<p className="premium-empty">No moderated customer reviews published yet. We never invent testimonials.</p>}
+   </div>
+   <form className="premium-review-form" onSubmit={sendReview}>
+    <h3>Write a Review</h3><p>Reviews are screened before publication. Please don't include passwords or private information.</p>
+    <div className="premium-stars" role="group" aria-label="Your rating">{[1,2,3,4,5].map(n=>
+      <button key={n} type="button" onClick={()=>setReviewStars(n)}
+       aria-label={n+" star"+(n===1?"":"s")} aria-pressed={reviewStars===n}>{n<=reviewStars?"★":"☆"}</button>)}</div>
+    <label>Display name<input required maxLength={60} minLength={2} value={reviewName} onChange={e=>setReviewName(e.target.value)} placeholder="Name to display"/></label>
+    <label>Service category<select value={reviewCategory} onChange={e=>setReviewCategory(e.target.value)}>
+     {[...new Set([...priority,...(result?.categories||[])])].map(c=><option key={c}>{c}</option>)}</select></label>
+    <label>Your experience<textarea required minLength={20} maxLength={1200} rows={4} value={reviewText} onChange={e=>setReviewText(e.target.value)} placeholder="Share your experience with the service..."/></label>
+    <details><summary>Optional: verify a completed Litix purchase</summary>
+      <label>Order ID<input value={reviewOrderId} onChange={e=>setReviewOrderId(e.target.value)} placeholder="ltx2_..." autoComplete="off"/></label>
+      <label>Private tracking token<input type="password" autoComplete="off" value={reviewToken} onChange={e=>setReviewToken(e.target.value)} placeholder="Token from your private tracking link"/></label>
+      <p>Only matching paid and completed orders may receive the Verified Purchase label.</p></details>
+    <button className="premium-primary" type="submit" disabled={reviewSubmitting||reviewName.trim().length<2||reviewText.trim().length<20}>
+     {reviewSubmitting?"Submitting...":"Submit review for approval"}</button>
+    {reviewStatus&&<p role="status" className="premium-status">{reviewStatus}</p>}
+   </form>
   </section>
   <footer className="premium-footer">LITIX · INNOVATION, IGNITED. · <a href="/terms">Terms</a> · <a href="/refunds">Refunds</a> · <a href="/">Back to live storefront</a></footer>
  </main>
