@@ -1,12 +1,6 @@
 name: Litix R2 — Daily encrypted dual-Neon backup and isolated restore
 run-name: Litix R2 backup / ${{ github.run_id }}
 on:
-  # Temporary one-time diagnostic: push of this workflow on main runs probe_only.
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/litix-r2-manual-production-verify.yml'
-      - 'scripts/litix-r2-github-manual-verify.sh'
   schedule:
     - cron: "0 8 * * *"
   workflow_dispatch:
@@ -31,7 +25,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   owner-approved-recovery:
-    if: github.repository == 'LitGnosis/Litix' && github.ref == 'refs/heads/main' && (github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' || github.event_name == 'push')
+    if: github.repository == 'LitGnosis/Litix' && github.ref == 'refs/heads/main' && (github.event_name == 'workflow_dispatch' || github.event_name == 'schedule')
     runs-on: ubuntu-24.04
     environment: litix-private-backup
     timeout-minutes: 45
@@ -54,8 +48,8 @@ jobs:
           bash -n scripts/litix-r2-github-manual-verify.sh
       - name: Real private R2 probe and optionally two encrypted production backups/restores
         env:
-          LITIX_RECOVERY_MODE: ${{ github.event_name == 'schedule' && 'backup_and_restore' || github.event_name == 'push' && 'probe_only' || inputs.operation }}
-          LITIX_CONFIRM_BACKUP: ${{ github.event_name == 'schedule' && 'SCHEDULED_BOTH_DBS_READ_ONLY' || github.event_name == 'push' && '' || inputs.confirm_backup }}
+          LITIX_RECOVERY_MODE: ${{ github.event_name == 'schedule' && 'backup_and_restore' || inputs.operation }}
+          LITIX_CONFIRM_BACKUP: ${{ github.event_name == 'schedule' && 'SCHEDULED_BOTH_DBS_READ_ONLY' || inputs.confirm_backup }}
           R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
@@ -67,7 +61,6 @@ jobs:
         run: |
           set -Eeuo pipefail
           test "${{ github.ref }}" = refs/heads/main
-          if [[ "${{ github.event_name }}" == push && "$LITIX_RECOVERY_MODE" != probe_only ]]; then exit 2; fi
           if [[ "$LITIX_RECOVERY_MODE" == backup_and_restore && "$LITIX_CONFIRM_BACKUP" != BACKUP_BOTH_DBS_READ_ONLY && "$LITIX_CONFIRM_BACKUP" != SCHEDULED_BOTH_DBS_READ_ONLY ]];then
             echo 'Backup confirmation mismatch. No DB reads, payment or supplier actions executed.' >&2
             exit 2
