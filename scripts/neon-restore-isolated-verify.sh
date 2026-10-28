@@ -4,7 +4,7 @@ set -euo pipefail
 umask 077
 fail(){ printf 'RESTORE_TEST_BLOCKED: %s\n' "$*" >&2; exit 2; }
 required(){ [[ -n "${!1:-}" ]] || fail "Missing required private setting: $1"; }
-for key in NEON_DIRECT_URL RESTORE_DATABASE_URL BACKUP_AGE_IDENTITY BACKUP_OBJECT_URI BACKUP_CIPHERTEXT_SHA256 SAFE_RESTORE_ACK; do required "$key"; done
+for key in NEON_DIRECT_URL NEON_EXPECTED_SOURCE_HOST RESTORE_DATABASE_URL BACKUP_AGE_IDENTITY BACKUP_OBJECT_URI BACKUP_CIPHERTEXT_SHA256 SAFE_RESTORE_ACK; do required "$key"; done
 [[ "$SAFE_RESTORE_ACK" == "NEW_EMPTY_ISOLATED_DATABASE_ONLY" ]] || fail "Explicit isolated restore acknowledgement required."
 [[ "$BACKUP_OBJECT_URI" =~ ^s3://[a-z0-9][a-z0-9.-]*/[a-zA-Z0-9/_-]+\.pgcustom\.age$ ]] || fail "Invalid encrypted backup object URI."
 [[ "$BACKUP_CIPHERTEXT_SHA256" =~ ^[0-9a-f]{64}$ ]] || fail "Expected SHA256 must be a 64-character lowercase digest."
@@ -17,7 +17,8 @@ import os,urllib.parse
 src=urllib.parse.urlsplit(os.environ["NEON_DIRECT_URL"])
 dst=urllib.parse.urlsplit(os.environ["RESTORE_DATABASE_URL"])
 assert src.scheme in ("postgres","postgresql") and dst.scheme in ("postgres","postgresql")
-assert src.hostname == "ep-muddy-credit-awc80y8f.c-12.us-east-1.aws.neon.tech"
+assert src.hostname == os.environ["NEON_EXPECTED_SOURCE_HOST"]
+assert src.hostname is not None and src.hostname.startswith("ep-") and src.hostname.endswith(".neon.tech")
 assert src.hostname != dst.hostname
 assert dst.hostname is not None and dst.hostname.endswith(".neon.tech")
 assert dst.hostname.startswith("ep-") and "-pooler" not in dst.hostname
