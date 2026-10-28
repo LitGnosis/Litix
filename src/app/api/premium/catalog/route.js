@@ -1,4 +1,5 @@
 import {boosteroReadOnly,boosteroProduction} from "../../../../lib/boosteroReadOnly.mjs";
+import {randomUUID} from "node:crypto";
 import {premiumDefaultServices,filterPremiumCards} from "../../../../lib/boosteroPremiumCatalog.mjs";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
@@ -23,7 +24,12 @@ export async function GET(req){
  try{
   const cards=await load(),filters=new URL(req.url).searchParams;
   const view=filterPremiumCards(cards,filters);
-  return Response.json({...view,previewOnly:process.env.VERCEL_ENV!=="production",
+  // Preview-only IDs are not redeemable and do not expose private supplier mappings.
+  const publicItems=view.items.map(({id,...fields})=>({...fields,displayKey:randomUUID()}));
+  const platformCounts=Object.fromEntries(view.platforms.map(platform=>[
+   platform,cards.filter(card=>card.platform===platform).length
+  ]));
+  return Response.json({...view,items:publicItems,platformCounts,totalAll:cards.length,previewOnly:process.env.VERCEL_ENV!=="production",
    purchasingEnabled:false, // not connected to a verified new supplier submission path
    note:"Supplier listings are live. Delivery/refill wording is supplier-advertised, not a verified guarantee."},
    {headers:{"cache-control":"no-store","x-content-type-options":"nosniff"}});

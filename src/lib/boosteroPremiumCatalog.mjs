@@ -70,7 +70,7 @@ export function premiumDefaultServices(raw){
   const kinds=KINDS.filter(([_,re])=>re.test(title));
   if(kinds.length!==1)continue;
   const kind=kinds[0][0];
-  const name=title.replace(/\s*[-—–]?\s*Boostero[’']?s?\s*Top Pick\b/gi,"").trim();
+  const name=title.replace(/\s*[-—–]?\s*Boostero[’']?s?\s*Top Pick\b/gi,"").replace(/\bBoostero(?:[’']s)?\b/gi,"Litix").trim();
   const min=Number(item.min),max=Math.min(Number(item.max),1000000);
   const step=Number(item.quantity_step??item.step??1),rate=Number(item.rate);
   if(!Number.isSafeInteger(min)||min<1||!Number.isSafeInteger(max)||max<min||

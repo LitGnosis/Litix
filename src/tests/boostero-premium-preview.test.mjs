@@ -65,3 +65,14 @@ test("preview-only catalog endpoint must have a hard production flag and no writ
  assert.match(page,/safeBoosteroLink/);
  assert.match(page,/Frequently asked questions/);
 });
+
+test("premium public preview hides supplier IDs and exposes accurate platform totals",()=>{
+ const endpoint=readFileSync(new URL("../app/api/premium/catalog/route.js",import.meta.url),"utf8");
+ const page=readFileSync(new URL("../app/premium-preview/page.jsx",import.meta.url),"utf8");
+ assert.match(endpoint,/publicItems=view\.items\.map\(\(\{id,\.\.\.fields\}\)/);
+ assert.match(endpoint,/platformCounts/);
+ assert.match(endpoint,/totalAll:cards\.length/);
+ assert.match(page,/key=\{s\.displayKey\}/);
+ assert.match(page,/premium-platform-count/);
+ assert.doesNotMatch(page,/key=\{s\.id\}/);
+});

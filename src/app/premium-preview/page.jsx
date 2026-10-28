@@ -67,7 +67,9 @@ export default function PremiumPreview(){
     {["Instagram","TikTok",...(result?.platforms||[]).filter(x=>x!=="Instagram"&&x!=="TikTok"),"All platforms"].map(p=>
      <button type="button" key={p} className={platform===p?"active":""}
      onClick={()=>{setPlatform(p);setCategory("");setPage(1);setStep(2)}}>
-      <span className="premium-platform-dot"/> {p==="All platforms"?"All Services":p}</button>)}
+      <span className="premium-platform-dot"/> {p==="All platforms"?"All Services":p}<span className="premium-platform-count">
+        {p==="All platforms"?(result?.totalAll??"—"):(result?.platformCounts?.[p]??"—")}
+       </span></button>)}
    </div>
   </section>
   <section className="premium-panel">
@@ -83,7 +85,7 @@ export default function PremiumPreview(){
      onClick={()=>{setPlatform(cat.split(" ")[0]);setCategory(cat);setPage(1);setStep(2)}}>{cat}</button>)}
    </div>
    <p className="premium-status" role="status">{status} · {result?.total??0} matching services</p>
-   <div className="premium-cards">{(result?.items||[]).map(s=><article key={s.id} className="premium-card">
+   <div className="premium-cards">{(result?.items||[]).map(s=><article key={s.displayKey} className="premium-card">
     <div className="premium-kind">{s.category}</div><h3>{s.name}</h3>
     <div className="premium-card-rate"><strong>{money(Math.ceil(s.per1000*100))}</strong><small>/ 1,000 units</small></div>
     <p>{s.min.toLocaleString()}–{s.max.toLocaleString()} units · From {money(s.startingAmountCents)} at {s.min.toLocaleString()} units</p>
