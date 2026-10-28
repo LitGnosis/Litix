@@ -45,3 +45,20 @@
 @media(max-width:700px){.premium-order-grid{grid-template-columns:1fr}.premium-steps button{min-width:42%;font-size:12px}.premium-nav img{width:108px}.premium-head{padding:58px 0 26px}}
 @media(max-width:400px){.premium-steps{gap:4px}.premium-steps button{padding:9px 7px}.premium-panel{padding:15px}.premium-card{padding:18px}}
 @media(prefers-reduced-motion:reduce){.premium-wrap *, .premium-wrap *:before,.premium-wrap *:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+/* Authentic customer feedback: pending submissions are never shown until owner moderation. */
+.premium-review-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:15px}
+.premium-review-card{border:1px solid #80b2d37a;border-radius:18px;background:#112b49ae;padding:19px;min-width:0}
+.premium-review-card>div:first-child{color:#ffda7a;font-size:24px;letter-spacing:3px}
+.premium-review-card h3{color:#fff;margin:10px 0 6px;font-size:17px}.premium-review-card p{line-height:1.65;color:#d1e4f3;overflow-wrap:anywhere}
+.premium-review-card img{max-width:100%;height:auto;border-radius:12px;display:block;margin-top:14px}
+.premium-verified{display:inline-flex;border:1px solid #85ebd7a9;color:#b4ffeb;background:#17564966;border-radius:20px;padding:6px 10px;font-size:12px;font-weight:800}
+.premium-review-form{max-width:780px;margin:26px auto 0;padding:clamp(16px,3vw,30px);border:1px solid #7cb1d477;border-radius:21px;background:linear-gradient(145deg,#15395b9f,#07182f)}
+.premium-review-form h3{font-size:24px;color:#fff;margin:0}.premium-review-form p{color:#bbd4e9;line-height:1.6}
+.premium-review-form label{display:flex;flex-direction:column;gap:9px;margin:15px 0;font-weight:600;color:#d7efff;font-size:13px}
+.premium-review-form input,.premium-review-form textarea,.premium-review-form select{background:#061527;color:#f5fbff;border:1px solid #739ec4;border-radius:12px;padding:12px 14px;font:inherit;min-width:0;max-width:100%}
+.premium-review-form details{border-top:1px solid #7ca9c544;border-bottom:1px solid #7ca9c544;margin:18px 0;padding:12px 0}
+.premium-review-form summary{cursor:pointer;color:#c9eaff;font-weight:700}
+.premium-stars{display:flex;gap:2px;align-items:center;margin:15px 0}
+.premium-stars button{border:0;background:transparent;color:#ffd775;font-size:30px;cursor:pointer;padding:3px 9px;border-radius:8px}
+.premium-stars button:focus-visible{outline:3px solid #83dfff}
