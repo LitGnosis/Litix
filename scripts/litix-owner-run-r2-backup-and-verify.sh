@@ -16,6 +16,9 @@ for key in \
   required "$key"
 done
 [[ "$BACKUP_STORAGE_PROVIDER" == "r2" ]] || fail "R2 private-only backup required."
+[[ "$BACKUP_S3_URI" == "s3://litix-private-backups/"* ]] ||
+  fail "Backup destination must be the owner-authorized private bucket litix-private-backups"
+
 # Read R2 credentials ONLY from the owner's local profile or secure environment.
 if [[ -n "${R2_ACCESS_KEY_ID:-}" || -n "${R2_SECRET_ACCESS_KEY:-}" ]]; then
   required R2_ACCESS_KEY_ID
