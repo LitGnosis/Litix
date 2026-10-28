@@ -267,3 +267,27 @@ button:disabled{filter:saturate(.55)}
   display:inline-block;width:18px!important;min-width:18px;height:18px;
   flex:0 0 18px;padding:0;margin:0;cursor:pointer;
 }
+
+
+/* Phase 1: clearly mark legacy references that cannot accept NEW purchases.
+   Existing card design, card count, retail prices and order references are unchanged. */
+.service-option>.item:disabled{
+  cursor:not-allowed;
+  opacity:.65;
+  border-color:#7296a955;
+  box-shadow:inset 0 1px #ffffff08;
+  transform:none;
+}
+.service-option .service-card-unavailable{
+  color:#d8e5f2;
+  font-size:12px;
+  font-weight:750;
+  line-height:1.4;
+  border-top:1px solid #8cb3ce50;
+  padding-top:8px;
+}
+.service-option>.item:disabled:hover{
+  border-color:#7296a955;
+  transform:none;
+  box-shadow:inset 0 1px #ffffff08;
+}
