@@ -20,7 +20,7 @@ test("every supported locale has localized complete text and explicit English US
    assert.deepEqual(Object.keys(t),fields);
    for(const key of fields)assert.ok(typeof t[key]==="string"&&t[key].trim().length>3,code+" "+key);
    assert.match(t.paymentNote,/USD/i,code+" must disclose USD");
-   assert.ok(t.paymentNote.toLowerCase().includes("ingl")||t.paymentNote.toLowerCase().includes("english")||t.paymentNote.includes("الإنجليزية")||t.paymentNote.includes("الإنجليزي"),code+" checkout-language disclosure");
+   assert.ok(/(english|ingl|angl|engl)/i.test(t.paymentNote)||t.paymentNote.includes("الإنجليزية")||t.paymentNote.includes("الإنجليزي"),code+" checkout-language disclosure");
    assert.ok(t.metaDescription.length>60,code+" metadata");
    assert.doesNotMatch(JSON.stringify(t),/boostero|smmglob|wholesale|guaranteed followers|automatic charge/i);
  }
