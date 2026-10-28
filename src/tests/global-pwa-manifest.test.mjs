@@ -13,9 +13,7 @@ test("Litix mobile app manifest stays branded and same-origin",()=>{
   assert.equal(m.short_name,"Litix");
   assert.equal(m.lang,"en");
   assert.equal(m.theme_color,"#0c1b34");
-  assert.ok(m.icons.some(i=>i.sizes==="192x192"&&i.type==="image/png"));
-  assert.ok(m.icons.some(i=>i.sizes==="512x512"&&i.type==="image/png"));
-  assert.ok(m.icons.every(i=>i.src.startsWith("/icons/")&&!i.src.includes("http")));
+  assert.deepEqual(m.icons,[{src:"/assets/brand/litix-logo.webp",sizes:"any",type:"image/webp",purpose:"any"}]);
   assert.equal(m.screenshots,undefined);
   assert.equal(m.shortcuts,undefined);
 });
