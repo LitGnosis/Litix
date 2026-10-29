@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {supportedBoosteroType,boosteroOrderCapability,validateBoosteroOrderDraft} from "../lib/boosteroFullOrderContracts.mjs";
 const s=(type="Default",platform="Instagram",extra={})=>({id:"5385",type,platform,min:10,max:10000,dripfeed:false,...extra});
 test("recognizes actual Boostero v2 types and never assumes purchasing is approved",()=>{
- for(const type of ["Default","Package","Custom Comments","Mentions Custom List","Mentions Hashtag","Mentions User Followers","Subscriptions","Comment Likes","Poll"]){
+ for(const type of ["Default","Package","SEO","Custom Comments","Mentions Custom List","Mentions","Mentions Hashtag","Mentions User Followers","Subscriptions","Comment Likes","Poll"]){
   assert.equal(supportedBoosteroType(type),type);
   assert.equal(boosteroOrderCapability(s(type)).purchasable,false);
  }
@@ -77,17 +77,31 @@ test("Mentions User Followers uses follower-source profile URL exactly as Booste
  assert.equal(valid.valid,true);assert.equal(valid.params.username,"https://www.instagram.com/litixsocial/");
  assert.equal(validateBoosteroOrderDraft(s("Mentions User Followers"),{link:"https://www.instagram.com/p/ABCDE123/",username:"litixsocial",quantity:100}).valid,false);
 });
-test("SEO and generic Mentions have no published supplier parameter contracts and remain disabled",()=>{
- for(const type of ["SEO","Mentions"]){
-  assert.equal(boosteroOrderCapability(s(type)).schemaSupported,false);
-  assert.equal(validateBoosteroOrderDraft(s(type),{link:"https://www.instagram.com/p/ABCDE123/",quantity:100}).supplierDispatchAllowed,false);
- }
+test("SEO draft uses public site URL, quantity and keywords; never auto-approves purchase",()=>{
+ const draft=validateBoosteroOrderDraft(s("SEO","Other"),{link:"https://litix.net/",quantity:1000,keywords:"marketing\nsocial media"});
+ assert.equal(draft.valid,true);
+ assert.equal(draft.params.keywords,"marketing\nsocial media");
+ assert.equal(draft.params.quantity,1000);
+ assert.equal(draft.chargeAllowed,false);
+ assert.equal(validateBoosteroOrderDraft(s("SEO","Other"),{link:"https://127.0.0.1/",quantity:1000,keywords:"marketing"}).valid,false);
+ assert.equal(validateBoosteroOrderDraft(s("SEO","Other"),{link:"https://litix.net/",quantity:1000}).valid,false);
 });
-
-test("mentions custom list sends usernames only, not an undocumented quantity",()=>{
- const service=s("Mentions Custom List","Instagram",{min:2,max:100});
+test("Mentions without quantity and Mentions Custom List with quantity both follow Boostero v2",()=>{
+ const service=s("Mentions","Instagram",{min:2,max:100});
  const draft=validateBoosteroOrderDraft(service,{link:"https://www.instagram.com/p/ABCDEFGH/",usernames:"@litixsocial\n@creator"});
  assert.equal(draft.valid,true);assert.equal(draft.estimatedTotalQuantity,2);
  assert.equal("quantity" in draft.params,false);
  assert.equal(draft.params.usernames,"@litixsocial\n@creator");
+ assert.equal(draft.supplierDispatchAllowed,false);
+});
+
+test("Mentions Custom List supplies both quantity and usernames under v2",()=>{
+ const service=s("Mentions Custom List","Instagram",{min:2,max:100});
+ const input={link:"https://www.instagram.com/p/ABCDEFGH/",quantity:50,usernames:"@litixsocial\n@creator"};
+ const draft=validateBoosteroOrderDraft(service,input);
+ assert.equal(draft.valid,true);assert.equal(draft.estimatedTotalQuantity,50);
+ assert.equal(draft.params.quantity,50);
+ assert.equal(draft.params.usernames,"@litixsocial\n@creator");
+ assert.equal(validateBoosteroOrderDraft(service,{...input,quantity:1}).valid,false);
+ assert.equal(validateBoosteroOrderDraft(service,{link:input.link,usernames:input.usernames}).valid,false);
 });
