@@ -64,6 +64,17 @@ test("digital order schema keeps payment and fulfillment states constrained", as
   assert.match(schema, /Do not store full card numbers, CVVs, raw payment tokens/i);
 });
 
+test("waitlist is gated and supports confirmation plus unsubscribe", async () => {
+  const signup = await read("../app/api/digital-products/early-access/route.js");
+  const unsubscribe = await read("../app/api/digital-products/unsubscribe/route.js");
+  const schema = await read("../db/migrations/20261029_digital_products.sql");
+  assert.match(signup, /LITIX_DIGITAL_WAITLIST_ENABLED !== "true"/);
+  assert.match(signup, /RESEND_API_KEY/);
+  assert.match(signup, /unsubscribeUrl/);
+  assert.match(unsubscribe, /unsubscribe_token_hash/);
+  assert.match(schema, /unsubscribe_token_hash char\(64\) UNIQUE/);
+});
+
 test("product policy and release plan are present", async () => {
   await exists("../content/digital-products/DIGITAL_PRODUCT_RELEASE_PLAN.md");
   await exists("../content/digital-products/DIGITAL_PRODUCT_POLICY_DRAFT.md");
