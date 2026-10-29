@@ -1,0 +1,56 @@
+name: Boostero checkout regression
+
+on:
+  push:
+    branches:
+      - fix/boostero-only-catalog-checkout
+    paths:
+      - "src/app/api/[action]/route.js"
+      - "src/app/api/status/route.js"
+      - "src/app/api/v2/cron/sync-catalog/route.js"
+      - "src/app/api/v2/bulk-import/route.js"
+      - "src/app/api/litix-multi-catalog/route.js"
+      - "src/app/page.jsx"
+      - "src/config/brandEngine.js"
+      - "src/tests/checkout.test.mjs"
+      - "src/package.json"
+      - "src/package-lock.json"
+      - ".github/workflows/boostero-checkout-tests.yml"
+  pull_request:
+    paths:
+      - "src/app/api/[action]/route.js"
+      - "src/app/api/status/route.js"
+      - "src/app/api/v2/cron/sync-catalog/route.js"
+      - "src/app/api/v2/bulk-import/route.js"
+      - "src/app/api/litix-multi-catalog/route.js"
+      - "src/app/page.jsx"
+      - "src/config/brandEngine.js"
+      - "src/tests/checkout.test.mjs"
+      - "src/package.json"
+      - "src/package-lock.json"
+      - ".github/workflows/boostero-checkout-tests.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  checkout:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: src/package-lock.json
+      - name: Install locked dependencies
+        working-directory: src
+        run: npm ci --no-audit --no-fund
+      - name: Run checkout regression tests
+        working-directory: src
+        run: npm run test:checkout
+      - name: Build Next.js app
+        working-directory: src
+        run: npm run build
