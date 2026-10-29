@@ -3,12 +3,12 @@ import EarlyAccessForm from "./EarlyAccessForm";
 import "./digital-products.css";
 
 export const metadata = {
-  title: "Digital Products | Litix",
-  description: "Practical creator and agency templates from Litix: launch planning, social growth tracking, and client workflow systems.",
+  title: "Digital Growth Studio | Litix",
+  description: "Explore Litix digital growth resources for creators, marketing teams, and agencies: launch systems, campaign measurement, and client operations.",
   alternates: { canonical: "https://litix.net/digital-products" },
   openGraph: {
-    title: "Digital Products | Litix",
-    description: "Creator-ready planning kits and agency workflow templates from Litix.",
+    title: "Digital Growth Studio | Litix",
+    description: "Creator-ready launch systems, growth measurement templates, and agency workflows from Litix.",
     url: "https://litix.net/digital-products",
     siteName: "Litix",
     type: "website",
@@ -60,8 +60,8 @@ export default function DigitalProductsPage() {
 
       <section className="digital-hero">
         <div className="digital-eyebrow"><span /> THE LITIX DIGITAL WORKSHOP</div>
-        <h1>Build smarter.<br /><span>Launch with a system.</span></h1>
-        <p>Practical planning kits for creators, growth teams, and agencies who want fewer scattered documents and a clearer next step.</p>
+        <h1>One platform.<br /><span>Every next move.</span></h1>
+        <p>Discover practical digital tools for creators, marketing teams, and agencies—from launch planning and campaign measurement to client delivery systems. Build with clarity, learn from data, and scale what works.</p>
         <a className="digital-primary" href="#products">Explore the kits <span aria-hidden="true">↘</span></a>
         <div className="digital-proofline"><span>01 / PLAN</span><i /> <span>02 / EXECUTE</span><i /> <span>03 / LEARN</span></div>
         <div className="digital-orbit" aria-hidden="true"><div className="orbit-ring orbit-ring-one" /><div className="orbit-ring orbit-ring-two" /><div className="orbit-core">L<span>✦</span></div><b className="orbit-label orbit-label-a">FOCUS</b><b className="orbit-label orbit-label-b">MOMENTUM</b><b className="orbit-label orbit-label-c">SYSTEMS</b></div>
@@ -104,7 +104,7 @@ export default function DigitalProductsPage() {
         <div className="digital-early-copy"><div className="digital-eyebrow">GET FIRST ACCESS</div><h2>Be first in line for the collection.</h2><p>Join the early-access list to hear when the kits are ready. This is a launch-interest signup only—no payment is taken and no product is being sold yet.</p><div className="digital-early-links"><Link href="/growth">Explore the content calendar ↗</Link><Link href="/">Explore Litix services ↗</Link></div></div>
         <EarlyAccessForm />
       </section>
-      <footer className="digital-footer"><Link className="digital-brand" href="/">LITIX<span>✦</span></Link><span>The Platinum Standard in Social Growth.</span><div><Link href="/privacy">Privacy</Link><Link href="/terms">Terms</Link><Link href="/refunds">Refunds</Link></div></footer>
+      <footer className="digital-footer"><Link className="digital-brand" href="/">LITIX<span>✦</span></Link><span>Analytics Amplified · Innovation Ignited · Metrics that Move</span><div><Link href="/privacy">Privacy</Link><Link href="/terms">Terms</Link><Link href="/refunds">Refunds</Link></div></footer>
     </main>
   );
 }
