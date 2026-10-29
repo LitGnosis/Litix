@@ -1,0 +1,53 @@
+name: Boostero full catalog — pricing, atomic staging import, safe contracts
+on:
+  push:
+    branches:
+      - feature/boostero-full-catalog-fulfillment-pricing-neon-20261029
+  pull_request:
+    paths:
+      - "src/lib/boosteroRetail60.mjs"
+      - "src/lib/boosteroInventorySync.mjs"
+      - "src/lib/boosteroFullOrderContracts.mjs"
+      - "src/tests/boostero-retail-60.test.mjs"
+      - "src/tests/boostero-global-catalog.test.mjs"
+      - "src/tests/boostero-full-order-contracts.test.mjs"
+permissions:
+  contents: read
+jobs:
+  full-catalog-safety:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: src/package-lock.json
+      - name: Install locked dependencies
+        working-directory: src
+        run: npm ci --no-audit --no-fund
+      - name: Check syntax and exact supplier order types
+        working-directory: src
+        run: |
+          set -e
+          node --check lib/boosteroRetail60.mjs
+          node --check lib/boosteroInventorySync.mjs
+          node --check lib/boosteroFullOrderContracts.mjs
+          node --test tests/boostero-retail-60.test.mjs tests/boostero-full-order-contracts.test.mjs tests/boostero-global-catalog.test.mjs
+      - name: Preserve existing payment idempotency and owner notifications
+        working-directory: src
+        run: |
+          node --test tests/boostero-live-fulfillment.test.mjs tests/boostero-only-public-catalog-regression.test.mjs tests/boostero-exclusive-new-orders.test.mjs
+      - name: Next.js application build
+        working-directory: src
+        run: npm run build
+      - name: No live operations and no existing retail checkout changes
+        run: |
+          set -e
+          if git diff --name-only 8bbdc59f2045198f68e085733c942255317687bd HEAD | grep -E '^src/(lib/boosteroOrderHandler[.]mjs|lib/boosteroFulfillment[.]mjs|app/api/checkout/v1/route[.]js|app/page[.]jsx|lib/pricing[.]mjs)$'; then
+            echo "Existing checked-out payment and published-price code modified: blocked"; exit 1
+          fi
+          echo "Live PayKings, Boostero dispatch, prices and homepage unchanged"
