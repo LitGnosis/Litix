@@ -1,0 +1,17 @@
+name: R2 upload compatibility static verification
+on:
+  pull_request:
+    paths:
+      - 'scripts/litix-r2-github-manual-verify.sh'
+      - 'scripts/test-r2-upload-compatibility.py'
+permissions:
+  contents: read
+jobs:
+  static:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - run: bash -n scripts/litix-r2-github-manual-verify.sh
+      - run: python3 scripts/test-r2-upload-compatibility.py
