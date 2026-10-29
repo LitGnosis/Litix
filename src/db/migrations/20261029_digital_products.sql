@@ -2,6 +2,20 @@
 -- Review and apply as a deliberate database migration; this file is NOT auto-executed.
 -- Keep digital product orders separate from social-growth supplier orders.
 
+CREATE TABLE IF NOT EXISTS litix_digital_waitlist (
+  id bigserial PRIMARY KEY,
+  email text NOT NULL,
+  email_hash char(64) NOT NULL UNIQUE,
+  product_interest text NOT NULL CHECK (product_interest IN ('creator-launch-kit','social-growth-toolkit','agency-starter-pack','all')),
+  consent_at timestamptz NOT NULL,
+  source text NOT NULL DEFAULT 'digital-products',
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS litix_digital_waitlist_created_idx
+  ON litix_digital_waitlist (created_at DESC);
+
 CREATE TABLE IF NOT EXISTS litix_digital_orders (
   id text PRIMARY KEY,
   email text NOT NULL,
