@@ -1,6 +1,6 @@
 # Litix Digital Products — Internal Source Assets
 
-These are working source files for the first three planned digital kits. They are not currently customer downloads and should not be placed in a public download directory until the license and delivery model are finalized.
+These are working sample/reference sources in the public Litix GitHub repository. Anyone can read them, so they must not be treated as private paid assets. Final sellable bundles must be materially expanded, packaged separately, and uploaded to the dedicated digital-products database through the guarded asset endpoint. The public repository must never contain private customer download tokens or final private bundle bytes.
 
 ## Creator Launch Kit
 - `creator-launch-kit/README.md`: launch brief, audience map, readiness checklist, 30-day launch rhythm, content brief, launch-day runbook, scorecard, retrospective.
@@ -21,5 +21,5 @@ These are working source files for the first three planned digital kits. They ar
 2. Decide final product scope, final pricing, licensing, and refund terms.
 3. Produce final PDF and spreadsheet downloads from these sources.
 4. Run a customer usability review and correct any confusing instructions.
-5. Store final binaries outside the public source tree and deliver only after verified purchase.
+5. Store final binaries in the dedicated private digital-products database (or an approved private object store), outside the public source tree, and deliver only after verified purchase.
 6. Add secure order entitlements, receipt, access expiry / revocation, and support workflows before accepting payment.
