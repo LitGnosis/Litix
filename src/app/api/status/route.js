@@ -10,13 +10,13 @@ export async function GET() {
     process.env.POSTGRES_URL ||
     process.env.POSTGRES_PRISMA_URL;
   const databaseConfigured = Boolean(databaseUrl);
-  const supplierConfigured = Boolean(process.env.SMMGLOB_API_KEY);
-  const supplierUrl = process.env.SMMGLOB_API_URL || "https://smmglob.com/api/v2";
+  const supplierConfigured = Boolean(process.env.LITIX_BOOSTERO_ENABLED === "true" && process.env.BOOSTERO_API_KEY);
+  const supplierUrl = process.env.BOOSTERO_API_URL || "";
   let supplierHostValid = false;
   try {
     const url = new URL(supplierUrl);
     supplierHostValid = url.protocol === "https:" &&
-      ["smmglob.com", "www.smmglob.com"].includes(url.hostname);
+      url.hostname === "boostero.com" && url.pathname.replace(/\\/+$/, "") === "/api/v2" && !url.username && !url.password && !url.search && !url.hash;
   } catch {}
 
   // Deliberately do not contact the supplier or payment gateway from a health check.
