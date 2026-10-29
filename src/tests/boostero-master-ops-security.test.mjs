@@ -58,3 +58,24 @@ test("source release gates prevent unaudited production sync",()=>{
  assert.match(migration,/litix_boostero_sync_events/);
  assert.match(migration,/validation_state/);
 });
+
+test("routine retention cannot delete without verified backup and release approval",async()=>{
+ const {pruneBoosteroRoutineLogs}=await import("../lib/boosteroSyncEvents.mjs");
+ const calls=[];
+ const db={query:async(q,args)=>{calls.push({q,args});return [{deleted:2}]}};
+ const result=await pruneBoosteroRoutineLogs(db,{authorized:false});
+ assert.equal(result.deleted,0);
+ assert.equal(calls.length,0);
+ const code=source("lib/boosteroSyncEvents.mjs");
+ assert.match(code,/protected_incident=false/);
+ assert.match(code,/NOT EXISTS/);
+ assert.doesNotMatch(code,/DELETE FROM public\.litix_v2_orders/);
+});
+test("daily maintenance route requires cron or owner session",async()=>{
+ const prev=process.env.VERCEL_ENV;process.env.VERCEL_ENV="production";
+ try{
+  const {GET,POST}=await import("../app/api/internal/boostero/maintenance/route.js");
+  assert.equal((await GET(new Request("https://www.litix.net/api/internal/boostero/maintenance"))).status,401);
+  assert.equal((await POST(new Request("https://www.litix.net/api/internal/boostero/maintenance",{method:"POST"}))).status,401);
+ }finally{if(prev===undefined)delete process.env.VERCEL_ENV;else process.env.VERCEL_ENV=prev}
+});
