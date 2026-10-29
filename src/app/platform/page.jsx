@@ -1,4 +1,5 @@
 import Link from "next/link";
+import "../digital-products/digital-products.css";
 import "./platform.css";
 
 export const metadata = {
