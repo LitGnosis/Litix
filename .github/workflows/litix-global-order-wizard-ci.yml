@@ -9,6 +9,8 @@ on:
       - 'src/lib/boosteroRetail60.mjs'
       - 'src/tests/boostero-global-*.mjs'
       - 'src/tests/boostero-retail-60.test.mjs'
+      - 'src/tests/boostero-full-order-contracts.test.mjs'
+      - 'src/lib/boosteroFullOrderContracts.mjs'
       - '.github/workflows/litix-global-order-wizard-ci.yml'
 permissions:
   contents: read
@@ -35,6 +37,12 @@ jobs:
           changed=set(subprocess.check_output(['git','diff','--name-only',base,'HEAD'],text=True).splitlines())
           allowed={
            'src/lib/boosteroRetail60.mjs','src/tests/boostero-retail-60.test.mjs',
+           'src/lib/boosteroFullOrderContracts.mjs','src/tests/boostero-full-order-contracts.test.mjs',
+           'src/tests/checkout.test.mjs','src/tests/preview-checkout.test.mjs',
+           'src/tests/boostero-integration.test.mjs',
+           'src/tests/boostero-public-routing.test.mjs',
+           'src/tests/boostero-four-kinds.test.mjs',
+           '.github/workflows/litix-global-catalog-safe-release-ci.yml',
            'src/app/api/catalog/global/route.js','src/app/api/catalog/global/quote/route.js',
            'src/app/global-services/page.jsx','src/app/global-services/GlobalOrderWizard.jsx',
            'src/app/global-services/global-services.css',
@@ -52,8 +60,9 @@ jobs:
         run: |
           set -e
           node --check lib/boosteroRetail60.mjs
+          node --check lib/boosteroFullOrderContracts.mjs
           node --check app/api/catalog/global/quote/route.js
-          node --test tests/boostero-retail-60.test.mjs tests/boostero-global-quote.test.mjs
+          node --test tests/boostero-retail-60.test.mjs tests/boostero-global-quote.test.mjs tests/boostero-full-order-contracts.test.mjs
       - name: Build complete original Litix Next.js storefront
         working-directory: src
         run: npm run build

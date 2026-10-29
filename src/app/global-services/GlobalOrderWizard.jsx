@@ -3,7 +3,7 @@ import {useEffect,useState} from "react";
 import Link from "next/link";
 const fmt=cents=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(Number(cents||0)/100);
 const normal=x=>String(x||"").toLowerCase().trim();
-const qtyTypes=new Set(["default","comment likes","mentions custom list","mentions hashtag","mentions user followers","poll","mentions"]);
+const qtyTypes=new Set(["default","seo","comment likes","mentions custom list","mentions hashtag","mentions user followers","poll"]);
 const label=(name,children)=><label className="lgc-order-field" key={name}><span>{name}</span>{children}</label>;
 const int=(data,name,set,min,max)=><input type="number" min={min} max={max} step="1" value={data[name]??""} onChange={e=>set(name,e.target.value)} aria-label={name}/>;
 export default function GlobalOrderWizard({catalog,selected,onSelect,platform,category,onCategoryChange}){
@@ -70,9 +70,11 @@ export default function GlobalOrderWizard({catalog,selected,onSelect,platform,ca
      {label("Public link / profile URL",<input value={values.link||""} placeholder="https://www.instagram.com/..." onChange={e=>set("link",e.target.value)}/>)}
      {hasQty&&label("Quantity",int(values,"quantity",set,minimum,maximum))}
      {isComments&&label("Custom comments (one per line)",<textarea rows={4} value={values.comments||""} onChange={e=>set("comments",e.target.value)} placeholder={"Great post!\nNice video!"}/>)}
-     {t==="mentions custom list"&&label("Usernames (one per line)",<textarea rows={4} value={values.usernames||""} onChange={e=>set("usernames",e.target.value)}/>)}
+     {["mentions custom list","mentions"].includes(t)&&label("Usernames (one per line)",<textarea rows={4} value={values.usernames||""} onChange={e=>set("usernames",e.target.value)}/>)}
      {t==="mentions hashtag"&&label("Hashtag",<input value={values.hashtag||""} placeholder="#yourbrand" onChange={e=>set("hashtag",e.target.value)}/>)}
-     {(t==="comment likes"||t==="mentions user followers")&&label("Target username",<input value={values.username||""} placeholder="@username" onChange={e=>set("username",e.target.value)}/>)}
+     {t==="comment likes"&&label("Comment owner username",<input value={values.username||""} placeholder="@username" onChange={e=>set("username",e.target.value)}/>)}
+     {t==="mentions user followers"&&label("Follower source profile URL",<input type="url" value={values.username||""} placeholder="https://www.instagram.com/creator/" onChange={e=>set("username",e.target.value)}/>)}
+     {t==="seo"&&label("SEO keywords (one per line)",<textarea rows={4} value={values.keywords||""} onChange={e=>set("keywords",e.target.value)} placeholder={"creator marketing\nsocial media services"}/>)}
      {t==="poll"&&label("Poll answer number",int(values,"answer_number",set,1,100))}
      {service.dripfeed&&t==="default"&&<>
       <label className="lgc-order-checkbox"><input type="checkbox" checked={!!values.dripfeedEnabled} onChange={e=>set("dripfeedEnabled",e.target.checked)}/> Schedule delivery in runs</label>
