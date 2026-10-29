@@ -47,3 +47,11 @@ test("release-gated default service IDs auto-publish without hardcoded ID list",
  assert.match(sqlCalls[1].query,/ON CONFLICT \(supplier_service_id\) DO NOTHING/);
  assert.doesNotMatch(sqlCalls[1].query,/update\s+public\.litix_v2_orders/i);
 });
+
+test("verified complete snapshot disables missing public IDs without touching historical orders",async()=>{
+ const db={query:async(q,args)=>q.includes("select count(*)::integer as n")?
+  [{n:0,last_sync:null}]:[{imported:110,activated:0,disabled_public:2,marked_unavailable:2,audit_records:1}]};
+ const result=await importBoosteroInventory(db,fixture(110));
+ assert.equal(result.disabledPublicServices,2);
+ assert.equal(result.markedUnavailable,2);
+});
