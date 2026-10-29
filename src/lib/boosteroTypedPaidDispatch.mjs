@@ -1,7 +1,7 @@
 import {randomUUID} from "node:crypto";
 import {normalizeBoosteroService} from "./boosteroGlobalCatalog.mjs";
 import {validateBoosteroOrderDraft} from "./boosteroFullOrderContracts.mjs";
-import {quoteBoostero60Order} from "./boosteroRetail60.mjs";
+import {quoteBoostero60TypedUnits} from "./boosteroRetail60.mjs";
 
 /**
  * One-shot typed Boostero API client. Never called by the existing storefront.
@@ -58,11 +58,9 @@ export async function dispatchBoosteroTypedPaidOrder(orderId,{
  if(service.type!=="Default"&&o.special_contract_verified!==true)
   return error("SPECIAL_PRICING_NOT_VERIFIED");
  const qty=draft.estimatedTotalQuantity;
- const quote=service.type==="Default"?quoteBoostero60Order({
-  wholesaleUsdPer1000:service.wholesalePer1000,quantity:Number(draft.params.quantity),
-  min:service.min,max:service.max,runs:Number(draft.params.runs||1),
-  existingApprovedRetailCents:Number(o.approved_retail_per_1000_cents)
- }):{valid:false,reason:"special_contract_supplier_cost_unverified"};
+ const quote=quoteBoostero60TypedUnits({
+  service,draft,approvedRetailPer1000Cents:Number(o.approved_retail_per_1000_cents)
+ });
  if(!quote.valid||quote.totalUnits!==qty||quote.customerAmountCents!==Number(o.amount_cents))
   return error("PAID_PRICE_NOT_MATCHING_LIVE_SUPPLIER");
  // Production DB UPDATE is a one-way atomic claim. An uncertain supplier
