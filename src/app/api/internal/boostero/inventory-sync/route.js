@@ -2,6 +2,7 @@ import {timingSafeEqual} from "node:crypto";
 import {boosteroProduction} from "../../../../../lib/boosteroReadOnly.mjs";
 import {boosteroSQL} from "../../../../../lib/boosteroFulfillment.mjs";
 import {importBoosteroInventory} from "../../../../../lib/boosteroInventorySync.mjs";
+import {alertBoosteroInventorySync} from "../../../../../lib/boosteroInventoryAlerts.mjs";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 export const maxDuration=60;
@@ -27,6 +28,7 @@ async function refresh(request,owner){
   const msg=String(error?.message||"");
   const errorClass=/^inventory_[a-z0-9_]+$/.test(msg)?msg:"inventory_sync_unavailable";
   console.error("Boostero inventory sync rejected",errorClass);
+  await alertBoosteroInventorySync(errorClass).catch(()=>{});
   return reply({ok:false,error:errorClass},503);
  }
 }
