@@ -1,6 +1,7 @@
 import {neon} from "@neondatabase/serverless";
 import {randomUUID,createHash,timingSafeEqual} from "node:crypto";
 import {componentKeys,nextGuardianState,safeCode} from "./guardianCore.mjs";
+import {boosteroProduction} from "./boosteroReadOnly.mjs";
 export const guardianDb=()=>{
  const url=process.env.LITIX_AUTOLIKES_DATABASE_URL||process.env.LITIX_V2_DATABASE_URL||process.env.DATABASE_URL||process.env.POSTGRES_URL;
  if(!url)throw Error("GUARDIAN_DATABASE_UNCONFIGURED");
@@ -46,18 +47,14 @@ export async function performGuardianChecks(sql,priorByComponent={},now=new Date
  const every=15*60*1000, recent=name=>{const p=priorByComponent[name];return p?.checked_at && now.getTime()-new Date(p.checked_at).getTime()<every};
  const probes={
   website:()=>retryReadOnly(async()=>{const r=await get("/",9000);const t=await r.text();return {ok:t.includes("LITIX")||t.includes("Litix"),code:"WEBSITE_HTML",detail:"Homepage delivered Litix branding"}}),
-  smmglob:async()=>{
-   const endpoint=new URL(process.env.SMMGLOB_API_URL||"https://smmglob.com/api/v2");
-   if(!process.env.SMMGLOB_API_KEY||endpoint.protocol!=="https:"||!["smmglob.com","www.smmglob.com"].includes(endpoint.hostname))
-    return {ok:false,code:"SUPPLIER_CONFIG",detail:"SMMGLOB service credential or endpoint missing"};
-   const d=await retryReadOnly(async()=>{
-    const r=await fetch(endpoint,{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded"},
-     body:new URLSearchParams({key:process.env.SMMGLOB_API_KEY,action:"services"}),cache:"no-store",signal:AbortSignal.timeout(11000)});
-    if(!r.ok)throw Error("HTTP_"+r.status);
-    return r.json();
-   });
-   return {ok:Array.isArray(d)&&d.length>0,code:Array.isArray(d)&&d.length>0?"SUPPLIER_READ_ONLY_OK":"SUPPLIER_INVALID_RESPONSE",
-    detail:Array.isArray(d)?"Supplier service records: "+d.length:"Supplier service list invalid"};
+  boostero:async()=>{
+   if(process.env.LITIX_BOOSTERO_ENABLED!=="true")
+    return {ok:false,code:"BOOSTERO_DISABLED",detail:"Boostero-only production integration is disabled"};
+   // Approved, read-only supplier operation. Never send an add/refill request from Guardian.
+   const d=await retryReadOnly(()=>boosteroProduction("services"));
+   return {ok:Array.isArray(d)&&d.length>0,
+    code:Array.isArray(d)&&d.length>0?"BOOSTERO_READ_ONLY_OK":"BOOSTERO_INVALID_RESPONSE",
+    detail:Array.isArray(d)?"Boostero services returned: "+d.length:"Boostero services response invalid"};
   },
   catalog:()=>catalog("page=1"),
   tiktok:()=>catalog("platform=TikTok&page=1"),
@@ -92,12 +89,12 @@ export async function performGuardianChecks(sql,priorByComponent={},now=new Date
   }
  };
  // Supplier calls are rate-limited to 15 minutes per persistent component row.
- const skipped=new Set(["smmglob","resend"].filter(recent));
+ const skipped=new Set(["boostero","resend"].filter(recent));
  const result=await Promise.all(componentKeys.filter(x=>!skipped.has(x)).map(x=>check(x,probes[x])));
  return result;
 }
 const sanitize=x=>({component:x.component,ok:x.ok,code:x.code,detail:x.detail,latencyMs:x.latencyMs,kind:x.kind});
-const repair={website:"Inspect Vercel routing, deployment and runtime logs",smmglob:"Verify SMMGLOB account/API and inspect read-only supplier status; retry later",catalog:"Inspect /api/catalog/v1 upstream timeout/cache and verify usable items",tiktok:"Check TikTok supplier categories and service filtering",instagram:"Check Instagram supplier categories and service filtering",paykings_readiness:"Verify gateway configuration in Vercel; do not change keys automatically",bluevine_readiness:"Verify fixed Bluevine links and bundle environment flags; do not charge",autolikes:"Confirm planned AutoLikes launch state and subscription configuration",subscriptions:"Review subscription schema/permissions without editing customer subscriptions",orders:"Inspect read-only database connectivity and order-table permissions",fulfillment:"Review supplier order statuses manually; never submit or retry orders automatically",database:"Inspect Neon branch and Vercel database connection, avoid destructive changes",resend:"Inspect Resend API permissions and verified sending domain"};
+const repair={website:"Inspect Vercel routing, deployment and runtime logs",boostero:"Verify Boostero account/API through the approved read-only services endpoint",catalog:"Inspect /api/catalog/v1 upstream timeout/cache and verify usable items",tiktok:"Check TikTok supplier categories and service filtering",instagram:"Check Instagram supplier categories and service filtering",paykings_readiness:"Verify gateway configuration in Vercel; do not change keys automatically",bluevine_readiness:"Verify fixed Bluevine links and bundle environment flags; do not charge",autolikes:"Confirm planned AutoLikes launch state and subscription configuration",subscriptions:"Review subscription schema/permissions without editing customer subscriptions",orders:"Inspect read-only database connectivity and order-table permissions",fulfillment:"Review supplier order statuses manually; never submit or retry orders automatically",database:"Inspect Neon branch and Vercel database connection, avoid destructive changes",resend:"Inspect Resend API permissions and verified sending domain"};
 async function queueAlert(sql,component,event,incidentId,obs,at){
  const incident=await sql.query("select started_at from public.litix_guardian_incidents where id=$1",[incidentId]);
  const eventKey="guardian-"+incidentId+"-"+event.kind+(event.kind==="escalation"?"-"+Math.floor(at.getTime()/3600000):"");
