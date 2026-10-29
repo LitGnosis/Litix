@@ -14,7 +14,8 @@ const safeText=(value,n)=>String(value||"").replace(/[\u0000-\u001f]/g," ").trim
 async function inventory(){
  if(snapshot&&Date.now()<validUntil)return snapshot;
  if(!loading)loading=(async()=>{
-  if(!["preview","production"].includes(process.env.VERCEL_ENV)||process.env.LITIX_BOOSTERO_ENABLED!=="true")
+  if(!["preview","production"].includes(process.env.VERCEL_ENV)||
+    (process.env.VERCEL_ENV==="production"&&process.env.LITIX_BOOSTERO_ENABLED!=="true"))
    throw Error("supplier_disabled");
   const raw=process.env.VERCEL_ENV==="production"
    ?await boosteroProduction("services"):await boosteroReadOnly("services");
