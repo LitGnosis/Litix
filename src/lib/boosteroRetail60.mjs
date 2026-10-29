@@ -59,3 +59,30 @@ export function publicBoosteroRetailQuote(quote){
   customerAmountCents:quote.customerAmountCents,quantity:quote.quantity,
   requiresActivation:true,checkoutAuthorized:false};
 }
+
+/**
+ * Fixed-unit service quote from a type-checked Boostero draft. Service types
+ * without a verified finite unit count cannot be prepaid or auto-submitted.
+ * The "approved" retail figure must come from server-held approval metadata.
+ */
+export function quoteBoostero60TypedUnits({service,draft,approvedRetailPer1000Cents=null}={}){
+ const unitTypes=new Set(["Default","Custom Comments","Mentions Custom List",
+  "Mentions Hashtag","Mentions User Followers","Comment Likes","Poll"]);
+ if(!service||!draft?.valid||!unitTypes.has(draft.type)||
+    draft.variableFutureCharge||!Number.isSafeInteger(draft.estimatedTotalQuantity)||
+    draft.estimatedTotalQuantity<1)
+  return {valid:false,reason:"no_verified_finite_supplier_quote"};
+ const perRun=Number(draft.params?.quantity||draft.estimatedTotalQuantity);
+ const runs=Number(draft.params?.runs||1);
+ const costUnits=draft.estimatedTotalQuantity;
+ if(!Number.isSafeInteger(perRun)||perRun<1||perRun*runs!==costUnits)
+  return {valid:false,reason:"supplier_units_not_reconciled"};
+ return quoteBoostero60Order({
+  wholesaleUsdPer1000:service.wholesalePer1000,
+  quantity:costUnits,
+  min:Number(service.min),
+  max:Number(service.max)*runs,
+  existingApprovedRetailCents:approvedRetailPer1000Cents,
+  orderType:"Default"
+ });
+}
