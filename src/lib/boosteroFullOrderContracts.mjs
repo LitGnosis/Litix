@@ -4,7 +4,7 @@
  * service enablement or assumptions about package/subscription pricing.
  */
 const KNOWN_TYPES = Object.freeze([
- "Default","Package","Custom Comments","Mentions Custom List",
+ "Default","Package","SEO","Custom Comments","Mentions Custom List","Mentions",
  "Mentions Hashtag","Mentions User Followers","Subscriptions",
  "Comment Likes","Poll"
 ]);
@@ -34,7 +34,11 @@ function publicLink(input,platform){
  if(!host||host==="localhost"||host.endsWith(".local")||
   /^(?:127\.|10\.|192\.168\.|169\.254\.|0\.|172\.(?:1[6-9]|2\d|3[01])\.)/.test(host))return null;
  const allow=hosts[platform];
- if(!allow||!allow.length)return null;
+ if(!allow)return null;
+ if(platform==="Website Traffic"){
+  if(!host.includes(".")||/^[0-9.]+$/.test(host)||host.endsWith(".internal")||host.endsWith(".test"))return null;
+  return u.href.slice(0,500);
+ }
  if(!allow.some(x=>host===x||host.endsWith("."+x)))return null;
  if(u.pathname.length<2)return null;
  if(u.search&&platform!=="YouTube"&&platform!=="Facebook"&&platform!=="Spotify")return null;
@@ -43,7 +47,7 @@ function publicLink(input,platform){
 export function boosteroOrderCapability(service){
  const type=supportedBoosteroType(service?.type);
  const platform=String(service?.platform||"");
- const knownHost=Array.isArray(hosts[platform])&&hosts[platform].length>0;
+ const knownHost=Array.isArray(hosts[platform])&&(hosts[platform].length>0||platform==="Website Traffic")||type==="SEO";
  const reason=!type?"unknown_supplier_order_type":!knownHost?"unverified_platform_destination":
   type==="Subscriptions"?"requires_recurring_billing_and_supplier_lifecycle":
   type==="Package"?"package_fixed_price_quote_not_verified":
@@ -93,7 +97,7 @@ export function validateBoosteroOrderDraft(service,input={}){
   return {valid:true,type,params,estimatedTotalQuantity:null,variableFutureCharge:true,
    chargeAllowed:false,supplierDispatchAllowed:false,reason:"subscription_billing_not_implemented"};
  }
- const link=publicLink(input.link,platform);
+ const link=publicLink(input.link,type==="SEO"?"Website Traffic":platform);
  if(!link)return fail("invalid_platform_target");
  params.link=link;
  if(type==="Package"){
@@ -109,6 +113,16 @@ export function validateBoosteroOrderDraft(service,input={}){
    variableFutureCharge:false,chargeAllowed:false,supplierDispatchAllowed:false,
    reason:"custom_comment_dispatch_not_verified"};
  }
+ if(type==="Mentions"){
+  // Official v2 API: link + usernames (no quantity).
+  const list=String(input.usernames||"").split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+  if(list.length<Number(service.min)||list.length>Number(service.max)||list.length>1000||
+    list.some(x=>!/^@?[A-Za-z0-9._]{2,40}$/.test(x)))return fail("invalid_mentions_usernames");
+  params.usernames=list.join("\n");
+  return {valid:true,type,params,estimatedTotalQuantity:list.length,
+    variableFutureCharge:false,chargeAllowed:false,supplierDispatchAllowed:false,
+    reason:"mentions_cost_requires_review"};
+ }
  const quantity=int(input.quantity,Number(service.min),Math.min(Number(service.max),1000000));
  if(quantity===null)return fail("quantity_out_of_supplier_range");
  if(type==="Default"){
@@ -120,15 +134,23 @@ export function validateBoosteroOrderDraft(service,input={}){
    params.runs=runs;params.interval=interval;
   }
  }else if(type==="Mentions Custom List"){
+  // Official v2 API: link + quantity + usernames.
   const list=String(input.usernames||"").split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
-  if(!list.length||list.length>quantity||list.some(x=>!/^@?[A-Za-z0-9._]{2,40}$/.test(x)))return fail("invalid_usernames");
+  if(!list.length||list.length>quantity||list.length>1000||
+     list.some(x=>!/^@?[A-Za-z0-9._]{2,40}$/.test(x)))return fail("invalid_usernames");
   params.usernames=list.join("\n");params.quantity=quantity;
+ }else if(type==="SEO"){
+  const list=String(input.keywords||"").split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+  if(!list.length||list.length>100||list.some(x=>x.length<1||x.length>120||/[\u0000-\u001f]/.test(x)))
+    return fail("invalid_seo_keywords");
+  params.quantity=quantity;params.keywords=list.join("\n");
  }else if(type==="Mentions Hashtag"){
   if(!/^#[A-Za-z0-9_]{2,60}$/.test(String(input.hashtag||"")))return fail("invalid_hashtag");
   params.hashtag=String(input.hashtag);params.quantity=quantity;
  }else if(type==="Mentions User Followers"){
-  const username=String(input.username||"").trim();
-  if(!/^@?[A-Za-z0-9._]{2,40}$/.test(username))return fail("invalid_username");
+  // Boostero documents this field as the URL to scrape followers from.
+  const username=publicLink(String(input.username||""),platform);
+  if(!username)return fail("invalid_follower_source_url");
   params.username=username;params.quantity=quantity;
  }else if(type==="Comment Likes"){
   if(!/^@?[A-Za-z0-9._]{2,40}$/.test(String(input.username||"")))return fail("invalid_comment_owner");
