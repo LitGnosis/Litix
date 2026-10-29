@@ -58,7 +58,7 @@ export default function GlobalServices(){
      <label>Service type<select aria-label="Filter by service type" value={kind} onChange={e=>change(setKind,e.target.value)}><option value="">All service types</option>
       {allKinds.map(([k,n])=><option key={k} value={k}>{k.replace(/_/g," ")} ({n})</option>)}</select></label>
      <label>Category
-      <input aria-label="Filter exact category" placeholder="Enter category from a listing" value={category} onChange={e=>change(setCategory,e.target.value)} maxLength={140}/></label>
+      <select aria-label="Filter by category" value={category} onChange={e=>change(setCategory,e.target.value)}><option value="">All categories</option>{(catalog?.categories||[]).map(c=><option key={c} value={c}>{c}</option>)}</select></label>
      <label>Sort by<select aria-label="Sort catalog" value={sort} onChange={e=>change(setSort,e.target.value)}>
       <option value="featured">Featured platforms</option><option value="price_low">Approved price: low to high</option><option value="price_high">Approved price: high to low</option></select></label>
      <button type="submit" className="lgc-search-button">Search services</button>
