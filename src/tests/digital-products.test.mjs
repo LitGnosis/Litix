@@ -129,7 +129,7 @@ test("unified platform hub connects existing Litix workspaces", async () => {
   assert.match(platform, /href: "\/growth"/);
   assert.match(platform, /href: "\/digital-products"/);
   assert.match(platform, /href: "\/digital-products\/agency-starter-pack"/);
-  assert.match(platform, /../digital-products/digital-products.css/);
+  assert.match(platform, /digital-products\\/digital-products\\.css/);
   assert.match(platformCss, /@media \(max-width: 720px\)/);
 });
 
