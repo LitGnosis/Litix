@@ -52,7 +52,7 @@ export async function importBoosteroInventory(sql,raw,{now=new Date(),force=fals
    dripfeed:x.dripfeed,refill_days:x.refillDays,compatible:x.supportedInputShape,
    retail:finalRetail,
    review:finalReason,
-   state:finalReason&&checked.state==="PURCHASABLE"?"PENDING_REVIEW":state,adapter:x.supportedInputShape&&checkoutCompatible?"ig_tk_default_v1":null
+   state:!checkoutCompatible&&x.supportedInputShape?"PENDING_REVIEW":finalReason&&checked.state==="PURCHASABLE"?"PENDING_REVIEW":state,adapter:x.supportedInputShape&&checkoutCompatible?"ig_tk_default_v1":null
   };
  });
  // One PostgreSQL statement = one transaction even over Neon's serverless HTTP.
