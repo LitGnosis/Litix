@@ -2,3 +2,21 @@
 @media(max-width:920px){.lgc-filters{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:580px){.lgc{padding:14px 12px 26px}.lgc-hero{padding:24px}.lgc-summary{gap:7px}.lgc-summary>div{padding:11px 10px}.lgc-summary small{font-size:10px}.lgc-summary strong{font-size:25px}.lgc-links{gap:9px}.lgc-links a{font-size:11px}.lgc-platforms{gap:8px}.lgc-platforms button{padding:9px 12px;font-size:12px}.lgc-filters{grid-template-columns:1fr}.lgc-filters .lgc-search{grid-column:auto}.lgc-filter-section{padding:17px}.lgc-card{padding:17px}.lgc-hero h1{font-size:36px}}
 @media(prefers-reduced-motion:reduce){.lgc *{transition:none!important;animation:none!important}}
+
+.lgc-preview-button{margin-top:10px;padding:9px 13px;background:#143d69;border:1px solid #598bc3;color:#d7f0ff;font-size:12px;border-radius:9px;width:100%}
+.lgc-modal-overlay{position:fixed;inset:0;background:#020714ec;overflow-y:auto;z-index:110;padding:18px}
+.lgc-modal{position:relative;max-width:670px;margin:20px auto;background:linear-gradient(145deg,#153966,#09162e);border:1px solid #6b9dd6;border-radius:18px;padding:clamp(19px,4vw,33px);box-shadow:0 28px 80px #000a}
+.lgc-modal h2{font-size:clamp(21px,3vw,28px);line-height:1.35;margin:12px 36px 9px 0}
+.lgc-modal-close{position:absolute;top:13px;right:15px;border:1px solid #527ea7;border-radius:8px;background:#102d50;color:#f4fbff;font-size:24px;width:40px}
+.lgc-muted{color:#b3cee9;font-size:13px;line-height:1.65}
+.lgc-warning{border-left:3px solid #ffd484;background:#44352158;color:#ffe9be;padding:12px 15px;border-radius:7px;margin:16px 0;font-size:13px}
+.lgc-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px}
+.lgc-form-field{display:block;font-size:13px;color:#b9d8f7;font-weight:650}
+.lgc-form-field input,.lgc-form-field select,.lgc-form-field textarea{display:block;width:100%;background:#07152a;color:#f3f9ff;border:1px solid #537eac;border-radius:10px;padding:11px;margin-top:8px;max-width:100%;font:inherit;min-height:43px}
+.lgc-form-field textarea{min-height:104px}
+.lgc-form .lgc-muted,.lgc-form-checkbox,.lgc-modal-submit{grid-column:1/-1}
+.lgc-form-checkbox{display:flex;gap:12px;align-items:center;font-size:13px}
+.lgc-form-checkbox input{width:18px;height:18px}
+.lgc-modal-submit{background:linear-gradient(120deg,#78cfff,#3180d8);border:1px solid #9de6ff;color:#06152b;padding:13px 19px;font-weight:800;border-radius:10px}
+.lgc-form-notice{margin-top:17px;background:#10385a;border:1px solid #599ac5;border-radius:10px;padding:14px;color:#d0eafa;font-size:13px}
+@media(max-width:570px){.lgc-form{grid-template-columns:1fr}.lgc-modal{padding:20px}.lgc-modal-overlay{padding:8px}}
