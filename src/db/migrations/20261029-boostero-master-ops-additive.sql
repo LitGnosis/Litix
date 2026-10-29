@@ -43,3 +43,11 @@ CREATE INDEX IF NOT EXISTS litix_boostero_events_retention_idx
  WHERE protected_incident=false AND event_level='INFO' AND operation IN ('SYNC_STARTED','SYNC_SUCCESS');
 -- Append-only event creation. No automatic deletion, no destructive triggers,
 -- no PII/wholesale details in owner responses, and no changes to bundle payments.
+
+-- Cross-request sync lease. One active worker, crashes expire after five minutes.
+CREATE TABLE IF NOT EXISTS public.litix_boostero_sync_lock (
+ lock_id text PRIMARY KEY CHECK(lock_id='global'),
+ run_id uuid NOT NULL,
+ expires_at timestamptz NOT NULL,
+ created_at timestamptz NOT NULL DEFAULT now()
+);
