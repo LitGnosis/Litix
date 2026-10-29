@@ -142,8 +142,8 @@ export async function POST(request) {
       if (!item) return send({ error: "A requested service is not in the server catalog.", row: index + 1 }, 422);
       const baseRate = Number(item.base_rate);
       const storedRetail = Number(item.retail_rate);
-      const expectedRetail = Math.round((baseRate * 11 + Number.EPSILON) * 100) / 100;
-      if (!Number.isFinite(baseRate) || baseRate < 0 || !Number.isFinite(storedRetail) ||
+      const expectedRetail = Math.round((baseRate * 2.5 + Number.EPSILON) * 10000) / 10000;
+      if (!Number.isFinite(baseRate) || baseRate <= 0 || !Number.isFinite(storedRetail) ||
           Math.abs(storedRetail - expectedRetail) > 0.0001) {
         return send({ error: "Catalog pricing needs administrator reconciliation.", serviceId: row.resolvedClusterID }, 503);
       }
@@ -162,6 +162,7 @@ export async function POST(request) {
       code: "PAYMENT_PROVIDER_NOT_CONFIGURED",
       preflightStatus: "VALIDATED",
       currency: "BDT",
+      pricingBasis: "catalog base rate × 2.5; price per 1,000 units",
       amount,
       requestHash: computedHash,
       chargeInitiated: false,
