@@ -50,7 +50,7 @@ test("special types have correct extra fields without enabling any orders",()=>{
  for(const [type,extra,expected] of [
   ["Mentions Custom List",{usernames:"@litixsocial\n@creator"},"usernames"],
   ["Mentions Hashtag",{hashtag:"#litix"},"hashtag"],
-  ["Mentions User Followers",{username:"litixsocial"},"username"],
+  ["Mentions User Followers",{username:"https://www.instagram.com/litixsocial/"},"username"],
   ["Comment Likes",{username:"litixsocial"},"username"],
   ["Poll",{answer_number:2},"answer_number"]
  ]){
@@ -63,4 +63,23 @@ test("special types have correct extra fields without enabling any orders",()=>{
 test("unknown platforms and invalid supplier identity always fail closed",()=>{
  assert.equal(validateBoosteroOrderDraft(s("Default","Other"),{link:"https://example.com",quantity:100}).valid,false);
  assert.equal(validateBoosteroOrderDraft({...s(),id:"bad"},{link:"https://www.instagram.com/test/",quantity:100}).valid,false);
+});
+
+test("Website Traffic supports valid public HTTPS homepages and rejects private-network destinations",()=>{
+ const valid=validateBoosteroOrderDraft(s("Default","Website Traffic"),{link:"https://example.com/",quantity:1000});
+ assert.equal(valid.valid,true);
+ for(const link of ["http://example.com/","https://localhost/","https://127.0.0.1/","https://192.168.1.3/"]){
+  assert.equal(validateBoosteroOrderDraft(s("Default","Website Traffic"),{link,quantity:1000}).valid,false);
+ }
+});
+test("Mentions User Followers uses follower-source profile URL exactly as Boostero documents",()=>{
+ const valid=validateBoosteroOrderDraft(s("Mentions User Followers"),{link:"https://www.instagram.com/p/ABCDE123/",username:"https://www.instagram.com/litixsocial/",quantity:100});
+ assert.equal(valid.valid,true);assert.equal(valid.params.username,"https://www.instagram.com/litixsocial/");
+ assert.equal(validateBoosteroOrderDraft(s("Mentions User Followers"),{link:"https://www.instagram.com/p/ABCDE123/",username:"litixsocial",quantity:100}).valid,false);
+});
+test("SEO and generic Mentions have no published supplier parameter contracts and remain disabled",()=>{
+ for(const type of ["SEO","Mentions"]){
+  assert.equal(boosteroOrderCapability(s(type)).schemaSupported,false);
+  assert.equal(validateBoosteroOrderDraft(s(type),{link:"https://www.instagram.com/p/ABCDE123/",quantity:100}).supplierDispatchAllowed,false);
+ }
 });
