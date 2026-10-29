@@ -5,6 +5,17 @@ import { access } from "node:fs/promises";
 
 const read = (path) => readFile(new URL(path, import.meta.url), "utf8");
 const exists = (path) => access(new URL(path, import.meta.url));
+const csvColumnCount = (row) => {
+  let columns = 1;
+  let quoted = false;
+  for (let i = 0; i < row.length; i += 1) {
+    if (row[i] === '"' && row[i + 1] === '"') { i += 1; continue; }
+    if (row[i] === '"') { quoted = !quoted; continue; }
+    if (row[i] === "," && !quoted) columns += 1;
+  }
+  assert.equal(quoted, false, "CSV row should not contain an unclosed quoted field");
+  return columns;
+};
 
 test("all three digital product source kits exist and contain substantive content", async () => {
   const files = [
@@ -30,10 +41,10 @@ test("spreadsheet-ready templates have consistent CSV column counts", async () =
   for (const file of files) {
     const body = await read(file);
     const rows = body.trim().split(/\r?\n/);
-    const headerColumns = rows[0].split(",").length;
+    const headerColumns = csvColumnCount(rows[0]);
     assert.ok(headerColumns >= 5, `${file} should have useful spreadsheet columns`);
     for (const [index, row] of rows.slice(1).entries()) {
-      assert.equal(row.split(",").length, headerColumns, `${file} row ${index + 2} has inconsistent columns`);
+      assert.equal(csvColumnCount(row), headerColumns, `${file} row ${index + 2} has inconsistent columns`);
     }
   }
 });
