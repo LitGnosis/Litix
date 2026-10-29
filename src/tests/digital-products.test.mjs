@@ -81,6 +81,7 @@ test("sales and private asset routes are fail-closed", async () => {
   const config = await read("../app/api/digital-products/config/route.js");
   const upload = await read("../app/api/digital-products/admin/assets/route.js");
   const download = await read("../app/api/digital-products/download/route.js");
+  const revoke = await read("../app/api/digital-products/admin/orders/[id]/revoke/route.js");
   assert.match(checkout, /LITIX_DIGITAL_SALES_ENABLED !== "true"/);
   assert.match(checkout, /on conflict \(idempotency_key\) do nothing/);
   assert.match(checkout, /payment_state='review'/);
@@ -91,6 +92,9 @@ test("sales and private asset routes are fail-closed", async () => {
   assert.match(download, /entitlement_token_hash/);
   assert.match(download, /download_count < max_downloads/);
   assert.match(download, /cache-control/);
+  assert.match(revoke, /LITIX_DIGITAL_ADMIN_ACTIONS_ENABLED !== "true"/);
+  assert.match(revoke, /chargeback_access_revoked/);
+  assert.match(revoke, /fulfillment_state=.{0,10}revoked/);
 });
 
 test("waitlist is gated and supports confirmation plus unsubscribe", async () => {
