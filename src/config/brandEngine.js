@@ -23,5 +23,5 @@ export const LITIX_BRAND_MANIFEST = {
       secureFaviconPath: "/favicon.ico"
     }
   },
-  supplier: { primary: "SMMFollowOM" }
+  supplier: { primary: "Boostero", allowed: ["Boostero"] }
 };
