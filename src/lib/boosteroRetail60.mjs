@@ -15,7 +15,9 @@ export const NEW_RATE_FLOOR_CENTS_PER_1000=500;
 export function proposeBoostero60RetailRate(wholesaleUsdPer1000,{existingApprovedRetailCents=null}={}){
  const wholesale=Number(wholesaleUsdPer1000);
  if(!Number.isFinite(wholesale)||wholesale<=0)return {valid:false,reason:"invalid_wholesale"};
- const proposed=Math.max(NEW_RATE_FLOOR_CENTS_PER_1000,moneyCents(wholesale*NEW_SERVICE_MARKUP)??0);
+ const markedUp=moneyCents(wholesale*NEW_SERVICE_MARKUP);
+ if(markedUp===null)return {valid:false,reason:"unbounded_retail"};
+ const proposed=Math.max(NEW_RATE_FLOOR_CENTS_PER_1000,markedUp);
  if(!Number.isSafeInteger(proposed)||proposed>MAX_CENTS)return {valid:false,reason:"unbounded_retail"};
  if(existingApprovedRetailCents!==null){
   const saved=Number(existingApprovedRetailCents);
