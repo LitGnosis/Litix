@@ -20,8 +20,10 @@ export async function importBoosteroInventory(sql,raw,{now=new Date(),force=fals
  if(previous>0&&items.length<Math.ceil(previous*0.85))
   throw Error("inventory_unexpected_catalog_shrink");
  const payload=items.map(x=>{
-  const pricing=boosteroRetailCandidate(x.wholesalePer1000);
-  if(pricing.retailCents===null)throw Error("inventory_wholesale_price_invalid");
+  const unitPriced=x.type==="Default" && x.dripfeed!==true;
+  const pricing=unitPriced?boosteroRetailCandidate(x.wholesalePer1000):
+   {retailCents:null,reviewReason:"special_service_price_contract_unverified"};
+  if(unitPriced&&pricing.retailCents===null)throw Error("inventory_wholesale_price_invalid");
   return {
    id:x.id,name:x.name,category:x.category,platform:x.platform,kind:x.kind,type:x.type,
    rate:x.wholesalePer1000,min:x.min,max:x.max,refill:x.refill,cancel:x.cancel,
