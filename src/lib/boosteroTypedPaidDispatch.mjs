@@ -14,14 +14,14 @@ import {quoteBoostero60Order} from "./boosteroRetail60.mjs";
 const validOrder=id=>/^ltx2_[a-f\d-]{36}$/i.test(String(id||""));
 const error=x=>({submitted:false,state:x,requiresReview:true});
 export async function dispatchBoosteroTypedPaidOrder(orderId,{
- sql,liveServices,fetchImpl=fetch,now=new Date(),enabled
+ sql,inventorySQL,liveServices,fetchImpl=fetch,now=new Date(),enabled
 }={}){
  if(!validOrder(orderId))return error("INVALID_ORDER_ID");
  if(enabled!==true||process.env.LITIX_BOOSTERO_TYPED_ORDERS_ENABLED!=="true"||
   process.env.VERCEL_ENV!=="production"||!process.env.BOOSTERO_API_KEY||
   process.env.LITIX_BOOSTERO_ENABLED!=="true")
   return {submitted:false,state:"TYPED_DISPATCH_DISABLED"};
- if(!sql||typeof sql.query!=="function"||!Array.isArray(liveServices)||!liveServices.length)
+ if(!sql||typeof sql.query!=="function"||!inventorySQL||typeof inventorySQL.query!=="function"||!Array.isArray(liveServices)||!liveServices.length)
   return error("VERIFICATION_NOT_READY");
  const orders=await sql.query(`
  select o.id,o.quantity,o.amount_cents,o.payment_state,o.payment_transaction_id,
@@ -29,15 +29,25 @@ export async function dispatchBoosteroTypedPaidOrder(orderId,{
         a.approved_wholesale_ceiling,a.special_contract_verified
  from public.litix_v2_orders o
  join public.litix_boostero_fulfillment f on f.litix_order_id=o.id
- join public.litix_boostero_inventory i on i.supplier_service_id=f.supplier_service_id and i.active=true
  join public.litix_boostero_full_service_approvals a
    on a.supplier_service_id=f.supplier_service_id and a.enabled=true
  where o.id=$1 and o.payment_state='paid' and o.payment_transaction_id is not null
    and f.state='QUEUED' and f.supplier_order_id is null
  limit 1`,[orderId]);
  if(orders.length!==1)return {submitted:false,state:"NOT_APPROVED_OR_ALREADY_CLAIMED"};
- const o=orders[0],fresh=liveServices.find(x=>String(x?.service??x?.id)===String(o.supplier_service_id));
+ const o=orders[0];
+ // Imported inventory and customer orders are in separate Neon projects.
+ // Check the inventory with its own read-only connection; no cross-DB join.
+ const inventory=await inventorySQL.query(
+  "select supplier_service_id,wholesale_per_1000,order_type,active,refreshed_at from public.litix_boostero_inventory where supplier_service_id=$1 and active=true and refreshed_at > now()-interval '36 hours' limit 1",
+  [String(o.supplier_service_id)]
+ );
+ if(inventory.length!==1||String(inventory[0].order_type)!==String(o.order_type))
+  return error("STAGING_INVENTORY_NOT_CURRENT_OR_DISABLED");
+ const fresh=liveServices.find(x=>String(x?.service??x?.id)===String(o.supplier_service_id));
  const service=normalizeBoosteroService(fresh);
+ if(!service||Number(inventory[0].wholesale_per_1000)!==Number(service.wholesalePer1000))
+  return error("STAGING_AND_LIVE_SUPPLIER_PRICE_DIFFER");
  if(!service||service.type!==o.order_type||Number(service.wholesalePer1000)>Number(o.approved_wholesale_ceiling))
   return error("SUPPLIER_SERVICE_OR_PRICE_CHANGED");
  const input=o.metadata?.boostero_typed_draft;
@@ -55,7 +65,8 @@ export async function dispatchBoosteroTypedPaidOrder(orderId,{
  }):{valid:false,reason:"special_contract_supplier_cost_unverified"};
  if(!quote.valid||quote.totalUnits!==qty||quote.customerAmountCents!==Number(o.amount_cents))
   return error("PAID_PRICE_NOT_MATCHING_LIVE_SUPPLIER");
- // DB UPDATE is one-way, so retries cannot make a second supplier request.
+ // Production DB UPDATE is a one-way atomic claim. An uncertain supplier
+ // result must never be retried automatically.
  const attemptId=randomUUID();
  const claimed=await sql.query(`
   update public.litix_boostero_fulfillment f
