@@ -24,8 +24,8 @@ function authorized(request) {
 export async function GET(request) {
   if (!authorized(request)) return send({ error: "Unauthorized" }, 401);
 
-  const endpoint = process.env.SMMFOLLOWOM_API_URL;
-  const apiKey = process.env.SMMFOLLOWOM_API_KEY;
+  const endpoint = process.env.BOOSTERO_API_URL;
+  const apiKey = process.env.BOOSTERO_API_KEY;
   if (!endpoint || !apiKey) {
     return send({ error: "Supplier API URL/key are not configured; catalog was not changed." }, 503);
   }
@@ -33,18 +33,18 @@ export async function GET(request) {
   let upstreamUrl;
   try {
     upstreamUrl = new URL(endpoint);
-    if (upstreamUrl.protocol !== "https:" || !["smmfollowom.com", "www.smmfollowom.com", "my.smmfollowom.com"].includes(upstreamUrl.hostname.toLowerCase())) throw new Error("Supplier HTTPS host required");
+    if (upstreamUrl.protocol !== "https:" || upstreamUrl.username || upstreamUrl.password) throw new Error("Boostero HTTPS endpoint required");
   } catch {
-    return send({ error: "SMMFOLLOWOM_API_URL must be a valid HTTPS API endpoint." }, 503);
+    return send({ error: "BOOSTERO_API_URL must be a valid HTTPS API endpoint." }, 503);
   }
 
   try {
     // SMM panel APIs commonly accept URL-encoded form fields. The exact endpoint must be
     // configured from the supplier's account documentation; credentials stay server-side.
-    const body = new URLSearchParams({ key: apiKey, action: "services" });
+    const body = JSON.stringify({ key: apiKey, action: "services" });
     const upstream = await fetch(upstreamUrl.toString(), {
       method: "POST",
-      headers: { "accept": "application/json", "content-type": "application/x-www-form-urlencoded" },
+      headers: { "accept": "application/json", "content-type": "application/json" },
       body,
       cache: "no-store",
       signal: AbortSignal.timeout(25000),
@@ -71,8 +71,8 @@ export async function GET(request) {
         continue;
       }
       seen.add(serviceId);
-      // 1000% markup means cost plus 10x cost: retail = wholesale × 11.
-      catalog.push({ serviceId, serviceName, baseRate, retailRate: Math.round((baseRate * 11 + Number.EPSILON) * 10000) / 10000 });
+      // Litix retail uses the requested 2.5× supplier-rate multiplier.
+      catalog.push({ serviceId, serviceName, baseRate, retailRate: Math.round((baseRate * 2.5 + Number.EPSILON) * 10000) / 10000 });
     }
     if (catalog.length === 0) return send({ error: "No valid services were found; catalog remains unchanged." }, 502);
 
@@ -100,7 +100,7 @@ export async function GET(request) {
       synchronizationState: "SUCCESS",
       catalogClustersUpdated: result.length,
       skippedInvalidRows: data.length - catalog.length,
-      pricingFormula: "baseRate × 11",
+      pricingFormula: "baseRate × 2.5",
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
