@@ -18,6 +18,19 @@ CREATE TABLE IF NOT EXISTS litix_digital_waitlist (
 CREATE INDEX IF NOT EXISTS litix_digital_waitlist_created_idx
   ON litix_digital_waitlist (created_at DESC);
 
+
+CREATE TABLE IF NOT EXISTS litix_digital_assets (
+  product_id text PRIMARY KEY CHECK (product_id IN ('creator-launch-kit','social-growth-toolkit','agency-starter-pack')),
+  version text NOT NULL,
+  file_name text NOT NULL,
+  content_type text NOT NULL CHECK (content_type = 'application/zip'),
+  content_base64 text NOT NULL,
+  sha256 char(64) NOT NULL,
+  is_active boolean NOT NULL DEFAULT true,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
 CREATE TABLE IF NOT EXISTS litix_digital_orders (
   id text PRIMARY KEY,
   email text NOT NULL,
