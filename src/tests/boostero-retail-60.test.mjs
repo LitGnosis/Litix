@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {NEW_SERVICE_MARKUP,proposeBoostero60RetailRate,quoteBoostero60Order,publicBoosteroRetailQuote} from "../lib/boosteroRetail60.mjs";
+import {NEW_SERVICE_MARKUP,proposeBoostero60RetailRate,quoteBoostero60Order,quoteBoostero60Package,publicBoosteroRetailQuote} from "../lib/boosteroRetail60.mjs";
 test("new standard service receives exactly 60 percent markup unless floor higher",()=>{
  assert.equal(NEW_SERVICE_MARKUP,1.6);
  assert.equal(proposeBoostero60RetailRate(10).retailPer1000Cents,1600);
@@ -36,4 +36,13 @@ test("rejects invalid quantity bounds and money overflow",()=>{
  assert.equal(quoteBoostero60Order({wholesaleUsdPer1000:2,quantity:1,min:100,max:1000}).valid,false);
  assert.equal(quoteBoostero60Order({wholesaleUsdPer1000:-1,quantity:1000,min:10,max:10000}).valid,false);
  assert.equal(quoteBoostero60Order({wholesaleUsdPer1000:100000000,quantity:1000,min:10,max:10000}).valid,false);
+});
+
+test("fixed packages use separately approved prices, never units-per-thousand",()=>{
+ const service={min:1,max:1,wholesalePer1000:21.25};
+ const draft={valid:true,type:"Package",params:{service:"5385",link:"https://www.instagram.com/litixsocial/"}};
+ const good=quoteBoostero60Package({service,draft,approvedPackagePriceCents:3400});
+ assert.equal(good.valid,true);assert.equal(good.customerAmountCents,3400);assert.equal(good.totalUnits,1);
+ assert.equal(quoteBoostero60Package({service,draft,approvedPackagePriceCents:2500}).valid,false);
+ assert.equal(quoteBoostero60Package({service:{...service,min:10},draft,approvedPackagePriceCents:3400}).valid,false);
 });
