@@ -18,6 +18,18 @@ const products = {
 
 const clean = (value, max = 254) => String(value ?? "").trim().slice(0, max);
 
+async function recordPaymentEvent(sql, orderId, gatewayEventId, eventType, outcome, payload, mode) {
+  try {
+    const digest = createHash("sha256").update(JSON.stringify(payload ?? {})).digest("hex");
+    await sql.query(
+      "insert into litix_digital_payment_events (order_id,gateway_event_id,event_type,outcome,payload_digest,metadata) values ($1,$2,$3,$4,$5,$6::jsonb) on conflict do nothing",
+      [orderId, gatewayEventId || null, eventType, outcome, digest, JSON.stringify({ gatewayMode: mode })],
+    );
+  } catch {
+    // Do not expose payment payloads or fail a confirmed payment because audit logging is unavailable.
+  }
+}
+
 function gatewayConfig() {
   const mode = process.env.LITIX_DIGITAL_GATEWAY_MODE;
   if (mode === "TEST") {
@@ -108,6 +120,7 @@ export async function POST(request) {
     if (!inserted.length) return json({ error: "This checkout was already submitted. Check your email or contact support; do not submit it again." }, 409);
 
     await sql.query("update litix_digital_orders set payment_state='processing', updated_at=now() where id=$1", [orderId]);
+    await recordPaymentEvent(sql, orderId, null, "sale_attempted", "accepted", { amountCents: product.cents }, gateway.mode);
 
     let payment;
     try {
@@ -129,21 +142,25 @@ export async function POST(request) {
       payment = Object.fromEntries(new URLSearchParams(await response.text()));
     } catch {
       await sql.query("update litix_digital_orders set payment_state='review', fulfillment_state='review', updated_at=now() where id=$1", [orderId]).catch(() => {});
+      await recordPaymentEvent(sql, orderId, null, "sale_outcome_unknown", "review", { gatewayMode: gateway.mode }, gateway.mode);
       return json({ orderId, payment: "review", message: "Payment outcome is uncertain. Do not retry or submit another order; contact support for reconciliation." }, 202);
     }
 
     if (String(payment.response) === "2") {
       await sql.query("update litix_digital_orders set payment_state='declined', updated_at=now() where id=$1", [orderId]).catch(() => {});
+      await recordPaymentEvent(sql, orderId, null, "sale_declined", "failed", { response: clean(payment.response, 16), message: clean(payment.responsetext, 100) }, gateway.mode);
       return json({ error: "Payment declined: " + clean(payment.responsetext || "Please contact your card issuer", 100) }, 402);
     }
     if (String(payment.response) !== "1") {
       await sql.query("update litix_digital_orders set payment_state='review', fulfillment_state='review', updated_at=now() where id=$1", [orderId]).catch(() => {});
+      await recordPaymentEvent(sql, orderId, null, "sale_response_unrecognized", "review", { response: clean(payment.response, 16) }, gateway.mode);
       return json({ orderId, payment: "review", message: "The gateway response could not confirm the payment outcome. Do not retry or submit another order; contact support for reconciliation." }, 202);
     }
 
     const transactionId = clean(payment.transactionid, 120);
     if (!transactionId) {
       await sql.query("update litix_digital_orders set payment_state='review', fulfillment_state='review', updated_at=now() where id=$1", [orderId]).catch(() => {});
+      await recordPaymentEvent(sql, orderId, null, "sale_approved_missing_transaction_id", "review", { response: clean(payment.response, 16) }, gateway.mode);
       return json({ orderId, payment: "review", message: "The gateway approval needs reconciliation before download access can be issued. Do not retry." }, 202);
     }
 
@@ -152,6 +169,7 @@ export async function POST(request) {
         "update litix_digital_orders set payment_state='paid', fulfillment_state='ready', payment_transaction_id=$2, paid_at=now(), entitlement_expires_at=now() + interval '30 days', updated_at=now() where id=$1",
         [orderId, transactionId],
       );
+      await recordPaymentEvent(sql, orderId, transactionId, "sale_approved", "accepted", { response: clean(payment.response, 16) }, gateway.mode);
     } catch {
       return json({ orderId, payment: "review", message: "The gateway approved payment, but order confirmation needs manual reconciliation. Do not retry." }, 202);
     }
