@@ -1,55 +1,50 @@
-// Presentation only. Numeric retail USD per 1,000, never minimum-order subtotals.
-export function matchesServiceQuickKind(x,kind){
- if(!["likes","followers"].includes(kind))return true;
- const name=String(x?.name||"").toLowerCase();
- const category=String(x?.category||"").toLowerCase();
- const text=name+" "+category;
- if(kind==="likes")return /\blikes?\b/.test(text)&&!/\bfollowers?\b/.test(text)&&!/\b(?:views?|shares?|comments?|saves?|reposts?)\b/.test(name);
- return /\bfollowers?\b/.test(text)&&!/\blikes?\b/.test(name);
+// Display ordering only; purchasability and Boostero fulfillment eligibility remain server-controlled.
+const SOCIAL_ORDER = Object.freeze({
+  "instagram followers": 0, "instagram likes": 1,
+  "tiktok followers": 2, "tiktok likes": 3,
+});
+const textOf = x => [x?.name, x?.category, x?.description, x?.country, x?.region]
+  .filter(Boolean).join(" ").toLowerCase();
+
+export function matchesServiceQuickKind(x, kind) {
+  if (!["likes", "followers"].includes(kind)) return true;
+  const name = String(x?.name || "").toLowerCase();
+  const text = name + " " + String(x?.category || "").toLowerCase();
+  if (kind === "likes") return /\blikes?\b/.test(text) && !/\bfollowers?\b/.test(name) && !/\b(?:views?|shares?|comments?|saves?|reposts?)\b/.test(name);
+  return /\bfollowers?\b/.test(text) && !/\blikes?\b/.test(name);
 }
-// Display ordering only: the four currently approved social categories first,
-// followed by all other products. Keep server-side supplier and purchase
-// eligibility rules separate; sorting does not approve or reveal a service.
+function socialPriority(x) {
+  const label = textOf(x);
+  const ig = /\b(?:instagram|ig)\b/.test(label);
+  const tt = /\btik[\s._-]*tok\b/.test(label);
+  const followers = /\bfollowers?\b/.test(label);
+  const likes = /\blikes?\b/.test(label);
+  if (ig && followers && !likes) return 0;
+  if (ig && likes && !followers) return 1;
+  if (tt && followers && !likes) return 2;
+  if (tt && likes && !followers) return 3;
+  return 99;
+}
+// Explicit USA labels first, global/standard or unqualified second,
+// named country variants last. Geography is never guessed from supplier IDs.
+function geographyPriority(x) {
+  const label = textOf(x);
+  if (/\b(?:usa|u\.?s\.?a?\.?|united states|american|us based|usa based)\b/.test(label)) return 0;
+  if (/\b(?:global|worldwide|world wide|standard|international|all countries)\b/.test(label)) return 1;
+  if (/\b(?:uk|united kingdom|canada|australia|germany|france|india|brazil|mexico|japan|korea|spain|italy|turkey|indonesia|philippines|pakistan|uae)\b/.test(label)) return 2;
+  return 1;
+}
 export function sortServicesPer1000(rows, _platformRank, retailRate) {
-  const categoryPriority = {
-    "instagram followers": 0,
-    "instagram likes": 1,
-    "tiktok followers": 2,
-    "tiktok likes": 3,
+  const priceOf = x => {
+    const value = Number(retailRate(x));
+    return Number.isFinite(value) && value >= 0 ? value : Number.POSITIVE_INFINITY;
   };
-  const priorityOf = (service) => {
-    const category = String(service?.category ?? "").trim().toLowerCase();
-    if (Object.prototype.hasOwnProperty.call(categoryPriority, category)) {
-      return categoryPriority[category];
-    }
-
-    // Retain backwards compatibility for approved services whose category
-    // is broader than their name. Do not promote blended views, shares, etc.
-    const title = String(service?.name ?? "");
-    const text = category + " " + title;
-    const instagram = /\b(?:instagram|ig)\b/i.test(text);
-    const tiktok = /\btik[\s-]*tok\b/i.test(text);
-    const followers = /\bfollowers?\b/i.test(text);
-    const likes = /\blikes?\b/i.test(text);
-    const blended = /\b(?:impressions?|reach|visits?|shares?|reposts?|comments?|views?|saves?|plays?|clicks?|engagements?|stories?|livestreams?)\b/i.test(title);
-
-    if (instagram === tiktok || followers === likes || blended) return 4;
-    if (instagram) return followers ? 0 : 1;
-    return followers ? 2 : 3;
-  };
-  const priceOf = (service) => {
-    const price = Number(retailRate(service));
-    return Number.isFinite(price) && price >= 0 ? price : Number.POSITIVE_INFINITY;
-  };
-
-  return [...rows]
-    .map((service, index) => ({
-      service, index, priority: priorityOf(service), price: priceOf(service),
-    }))
-    .sort((a, b) =>
-      a.priority - b.priority ||
-      (a.price < b.price ? -1 : a.price > b.price ? 1 : 0) ||
-      a.index - b.index
-    )
-    .map(({ service }) => service);
+  return [...rows].map((service, index) => ({
+    service, index, social: socialPriority(service),
+    geo: geographyPriority(service), price: priceOf(service),
+  })).sort((a, b) =>
+    a.social - b.social ||
+    (a.social === 99 ? 0 : a.geo - b.geo) ||
+    a.price - b.price || a.index - b.index
+  ).map(x => x.service);
 }
