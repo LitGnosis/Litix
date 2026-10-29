@@ -81,7 +81,10 @@ export async function GET(request){
    observedAt:new Date().toISOString(),supplierTotal:stats.retrieved,validTotal:stats.valid,
    invalidTotal:stats.invalid,duplicates:stats.duplicates,
    approvedLiveCount:approved.length,filteredTotal:filtered.length,page,pageSize,
-   platforms:stats.platforms,kinds:stats.kinds,categories:visibleCategories,items:result,
+   platforms:stats.platforms,kinds:stats.kinds,orderTypes:stats.types,
+   inputSchemaSupportedCount:items.filter(s=>boosteroOrderCapability(s).schemaSupported).length,
+   blockedUntilFulfillmentValidated:stats.valid-approved.length,
+   categories:visibleCategories,items:result,
    prices:"Only existing approved retail prices are shown; never supplier wholesale.",
    noChargeForUnapproved:true});
  }catch(e){
