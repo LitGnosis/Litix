@@ -1,8 +1,11 @@
 -- Additive review register for NEW Boostero order types.
 -- Does not modify existing approved litix_boostero_services, checkout, orders or payment records.
 -- An inventory record alone never authorizes purchase or supplier order submission.
+-- CRITICAL: inventory is in a separate isolated Neon project; no cross-project FK.
+-- An approval must independently match fresh inventory and live supplier pricing.
+-- Do not apply this to production before approved backup and rollback verification.
 CREATE TABLE IF NOT EXISTS public.litix_boostero_full_service_approvals (
-  supplier_service_id text PRIMARY KEY REFERENCES public.litix_boostero_inventory(supplier_service_id),
+  supplier_service_id text PRIMARY KEY,
   order_type text NOT NULL,
   approved_retail_per_1000_cents bigint,
   approved_wholesale_ceiling numeric(16,6),
