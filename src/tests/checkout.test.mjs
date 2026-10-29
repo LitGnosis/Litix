@@ -9,6 +9,7 @@ const source=readFileSync(new URL('../app/api/[action]/route.js',import.meta.url
 const cases=[
  ['price changed', {expectedAmountCents:799}, 409, 0, 0],
  ['price omitted', {expectedAmountCents:undefined}, 409, 0, 0],
+ ['below minimum', {rate:1,expectedAmountCents:250}, 422, 0, 0],
  ['approved', {}, 200, 1, 1],
  ['approved without transaction ID', {gateway:'missing-transaction'}, 202, 1, 0],
  ['declined', {gateway:'declined'}, 402, 1, 0],
@@ -34,7 +35,7 @@ for(const [label,options,status,payments,orders] of cases){
    }
    assert.equal(String(url),'https://boostero.example/api/v2');
    const action=init.body.get('action');
-   if(action==='services')return Response.json([{service:1,name:'USA Instagram likes with refill and no drop',category:'USA',rate:3,min:100,max:10000,type:'Default',refill:true,no_drop:true}]);
+   if(action==='services')return Response.json([{service:1,name:'USA Instagram likes with refill and no drop',category:'USA',rate:options.rate||3,min:100,max:10000,type:'Default',refill:true,no_drop:true}]);
    assert.equal(action,'add');orderCalls++;
    if(options.supplierTimeout)throw Error('simulated supplier timeout');
    return Response.json({order:'test-only'});
@@ -49,6 +50,14 @@ for(const [label,options,status,payments,orders] of cases){
   if(label==='uncertain payment'||label==='approved without transaction ID')assert.equal((await response.json()).payment,'review');
  });
 }
+test('server checkout and catalog importer use the same 2.5x markup',()=>{
+ const route=readFileSync(new URL('../app/api/[action]/route.js',import.meta.url),'utf8');
+ const bulk=readFileSync(new URL('../app/api/v2/bulk-import/route.js',import.meta.url),'utf8');
+ assert.match(route,/rate\)\*2\.5/);
+ assert.match(bulk,/baseRate \* 2\.5/);
+ assert.doesNotMatch(route,/SMMFOLLOWOM/);
+ assert.doesNotMatch(bulk,/SMMFOLLOWOM/);
+});
 test('browser submits the displayed total for server confirmation',()=>{
  const page=readFileSync(new URL('../app/page.jsx',import.meta.url),'utf8');
  assert.match(page,/expectedAmountCents:price/);
