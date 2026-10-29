@@ -31,3 +31,14 @@ jobs:
         working-directory: src
       - run: npm run build
         working-directory: src
+      - name: Archive safe master-repair source checkpoint
+        run: |
+          set -euo pipefail
+          git archive --format=zip --output=Litix-Boostero-Master-Repair-20261029.zip HEAD
+          unzip -t Litix-Boostero-Master-Repair-20261029.zip | tail -n 1
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: litix-boostero-master-source-checkpoint
+          path: Litix-Boostero-Master-Repair-20261029.zip
+          if-no-files-found: error
+          retention-days: 30
