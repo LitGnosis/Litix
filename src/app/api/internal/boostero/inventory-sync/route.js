@@ -26,7 +26,8 @@ export async function performBoosteroInventorySync({sql=boosteroSQL(),operation=
  try{
   await logBoosteroSyncEvent(sql,{runId,operation:"SYNC_STARTED"});
   const source=await operation("services");
-  const result=await importBoosteroInventory(sql,source,{force:true});
+  const autoPublish=process.env.LITIX_BOOSTERO_AUTOPUBLISH_DEFAULTS==="true";
+  const result=await importBoosteroInventory(sql,source,{force:true,autoPublish});
   await logBoosteroSyncEvent(sql,{runId,operation:"SYNC_SUCCESS",received:result.retrieved,
    processed:result.imported,rejected:result.invalid,activated:result.publicNewServicesEnabled,
    deactivated:result.markedUnavailable,durationMs:Date.now()-start,reasons:result.reasonCounts});
