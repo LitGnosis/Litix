@@ -10,13 +10,12 @@ export async function GET() {
     process.env.POSTGRES_URL ||
     process.env.POSTGRES_PRISMA_URL;
   const databaseConfigured = Boolean(databaseUrl);
-  const supplierConfigured = Boolean(process.env.SMMFOLLOWOM_API_KEY);
-  const supplierUrl = process.env.SMMFOLLOWOM_API_URL || "https://smmfollowom.com/api/v2";
+  const supplierConfigured = Boolean(process.env.BOOSTERO_API_KEY && process.env.BOOSTERO_API_URL);
+  const supplierUrl = process.env.BOOSTERO_API_URL || "";
   let supplierHostValid = false;
   try {
     const url = new URL(supplierUrl);
-    supplierHostValid = url.protocol === "https:" &&
-      ["smmfollowom.com", "www.smmfollowom.com", "my.smmfollowom.com"].includes(url.hostname);
+    supplierHostValid = url.protocol === "https:" && !url.username && !url.password;
   } catch {}
 
   // Deliberately do not contact the supplier or payment gateway from a health check.
@@ -35,7 +34,7 @@ export async function GET() {
     status: healthy ? "healthy" : "degraded",
     components: {
       database: !databaseConfigured ? "missing" : databaseReachable ? "reachable" : "unreachable",
-      supplierApiKey: supplierConfigured ? "configured-not-tested" : "missing",
+      supplierCredentials: supplierConfigured ? "configured-not-tested" : "missing",
       supplierEndpoint: supplierHostValid ? "valid-not-tested" : "invalid",
       payment: "not-checked"
     },
