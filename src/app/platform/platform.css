@@ -1,0 +1,18 @@
+.platform-shell { overflow: hidden; }
+.platform-hero { min-height: 600px; }
+.platform-hero > p { max-width: 660px; }
+.platform-hero-actions { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin-top: 30px; }
+.platform-hero-actions .digital-primary { margin-top: 0; }
+.platform-secondary { color: #dbeafe; text-decoration: none; font-size: .95rem; font-weight: 650; padding: 13px 0; }
+.platform-secondary:hover, .platform-secondary:focus-visible { color: #facc15; }
+.platform-workspaces { padding-top: 70px; }
+.platform-workspace-card { min-height: 330px; }
+.platform-workspace-card h3 { max-width: 300px; }
+.platform-principles { margin-top: 20px; }
+.platform-next { margin-top: 30px; }
+@media (max-width: 720px) {
+  .platform-hero { min-height: auto; }
+  .platform-hero-actions { align-items: stretch; flex-direction: column; gap: 8px; }
+  .platform-secondary { text-align: center; }
+  .platform-workspace-card { min-height: auto; }
+}
