@@ -31,6 +31,14 @@ export function checkBoosteroService(raw,{dispatchTypes=new Set(["Default"]),app
    boosteroRetailCandidate(service.wholesalePer1000):
    {retailCents:null,reviewReason:"special_service_billing_unverified"};
  if(pricing.reviewReason)return {id,state:"PENDING_REVIEW",reason:pricing.reviewReason,service,retailCents:pricing.retailCents};
+ // Preserve the published $6–$15 ceiling for ordinary Instagram/TikTok
+ // followers/views (premium long-refill exceptions require separate approval).
+ const protectedTier=["Instagram","TikTok"].includes(service.platform)&&
+  ["followers","views"].includes(service.kind);
+ if(protectedTier&&pricing.retailCents!==null&&pricing.retailCents>1500)
+  return {id,state:"PENDING_REVIEW",reason:"existing_social_price_ceiling_conflict",service,retailCents:pricing.retailCents};
+ if(!service.supportedInputShape)
+  return {id,state:"VERIFIED",reason:"checkout_adapter_not_implemented",service,retailCents:pricing.retailCents};
  if(!dispatchTypes.has(type))return {id,state:"VERIFIED",reason:"order_type_dispatch_not_verified",service,retailCents:pricing.retailCents};
  if(!approvedCheckout)return {id,state:"VERIFIED",reason:"payment_and_dispatch_release_not_approved",service,retailCents:pricing.retailCents};
  // A validated contract still requires live quote, paid ledger, and one-shot
