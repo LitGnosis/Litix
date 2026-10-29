@@ -3,6 +3,15 @@ import {useState} from "react";
 const typeName=x=>String(x||"Default").toLowerCase().trim();
 const numeric=(name,label,value,onChange,options={})=><label key={name} className="lgc-form-field">{label}<input type="number" name={name} min={options.min??0} max={options.max??1000000} required={options.required!==false} step="1" value={value??""} onChange={e=>onChange(name,e.target.value)}/></label>;
 const inputField=(name,label,value,onChange,placeholder="")=><label key={name} className="lgc-form-field">{label}<input type="text" name={name} value={value??""} maxLength={500} placeholder={placeholder} onChange={e=>onChange(name,e.target.value)}/></label>;
+const domainFor={Instagram:["instagram.com"],TikTok:["tiktok.com"],YouTube:["youtube.com","youtu.be"],Facebook:["facebook.com","fb.watch"],"Twitter/X":["x.com","twitter.com"],Spotify:["open.spotify.com"],Telegram:["t.me"],LinkedIn:["linkedin.com"],Discord:["discord.gg","discord.com"],Snapchat:["snapchat.com"],Pinterest:["pinterest.com","pin.it"],Twitch:["twitch.tv"],Reddit:["reddit.com"],"Apple Music":["music.apple.com"],Kick:["kick.com"],Rumble:["rumble.com"]};
+const validTarget=(raw,platform,kind)=>{
+ const text=String(raw||"").trim();
+ if(["Instagram","TikTok"].includes(platform)&&kind==="followers"&&/^@?[A-Za-z0-9._]{2,30}$/.test(text))return true;
+ let u;try{u=new URL(text)}catch{return false}
+ const host=u.hostname.toLowerCase().replace(/^www\./,"");
+ return u.protocol==="https:"&&!u.username&&!u.password&&!u.port&&!u.hash&&u.pathname.length>1&&
+   (domainFor[platform]||[]).some(s=>host===s||host.endsWith("."+s));
+};
 export default function GlobalServiceDraft({service,onClose}){
  const [data,setData]=useState({quantity:service.supplierMinimum||1,min:service.supplierMinimum||1,max:service.supplierMaximum||1000,
    posts:5,delay:60,runs:2,interval:30,answer_number:1});
@@ -16,6 +25,7 @@ export default function GlobalServiceDraft({service,onClose}){
  const set=(name,value)=>{setData(d=>({...d,[name]:value}));setMessage("")};
  const submit=e=>{
   e.preventDefault();
+  if(!isSub&&!validTarget(data.link,service.platform,service.kind)){setMessage("Enter a valid public link or supported @username for this platform.");return;}
   const n=Number(data.quantity);
   if(hasQty&&(!Number.isSafeInteger(n)||n<Number(service.supplierMinimum)||n>Number(service.supplierMaximum))){
    setMessage("Quantity must remain within the verified supplier limits.");return;
