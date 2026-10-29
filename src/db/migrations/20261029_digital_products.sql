@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS litix_digital_orders (
   currency char(3) NOT NULL DEFAULT 'USD',
   amount_cents integer NOT NULL CHECK (amount_cents > 0),
   payment_state text NOT NULL DEFAULT 'pending'
-    CHECK (payment_state IN ('pending','processing','paid','declined','review','refunded','partially_refunded')),
+    CHECK (payment_state IN ('pending','processing','paid','declined','review','refunded','partially_refunded','chargeback')),
   fulfillment_state text NOT NULL DEFAULT 'locked'
     CHECK (fulfillment_state IN ('locked','ready','delivered','revoked','review')),
   idempotency_key uuid NOT NULL UNIQUE,
