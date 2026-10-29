@@ -136,10 +136,10 @@ export async function POST(request) {
       const baseRate = Number(item.base_rate);
       const storedRetailRate = Number(item.retail_rate);
       if (!Number.isFinite(baseRate) || baseRate < 0 || !Number.isFinite(storedRetailRate) ||
-          Math.abs(storedRetailRate - Math.round((baseRate * 11 + Number.EPSILON) * 100) / 100) > 0.0001) {
+          Math.abs(storedRetailRate - Math.round((baseRate * 2.5 + Number.EPSILON) * 10000) / 10000) > 0.0001) {
         return send({ error: "Catalog pricing requires administrator reconciliation before checkout.", serviceId: row.resolvedClusterID }, 503);
       }
-      const retailRate = Math.round((baseRate * 11 + Number.EPSILON) * 100) / 100;
+      const retailRate = Math.round((baseRate * 2.5 + Number.EPSILON) * 10000) / 10000;
       const lineTotal = Math.round((retailRate * row.quantity / 1000 + Number.EPSILON) * 100) / 100;
       total += lineTotal;
       pricedRows.push({
@@ -173,7 +173,7 @@ export async function POST(request) {
       idempotencyKey: computedKey,
       aggregatedRetailValue: total.toFixed(2),
       verifiedItemsCount: pricedRows.length,
-      pricingBasis: "catalog base rate × 11; price per 1,000 units",
+      pricingBasis: "catalog base rate × 2.5; price per 1,000 units",
       chargeInitiated: false,
       fulfillmentDispatched: false,
       items: pricedRows,
