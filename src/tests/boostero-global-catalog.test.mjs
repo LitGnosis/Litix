@@ -42,7 +42,7 @@ test("full inventory import does not enable public services or write orders",asy
  const calls=[];
  const sql={query:async(text,params=[])=>{
   calls.push({text,params});
-  return text.startsWith("select count")?[{n:0,last_sync:null}]:[];
+  return text.startsWith("select count")?[{n:0,last_sync:null}]:[{imported:140,marked_unavailable:0,audit_records:1}];
  }};
  const list=Array.from({length:140},(_,i)=>service(6000+i));
  const out=await importBoosteroInventory(sql,list,{now:new Date("2026-10-28T12:00:00Z"),force:true});
