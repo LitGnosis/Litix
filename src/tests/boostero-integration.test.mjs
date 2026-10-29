@@ -5,7 +5,13 @@ import {boosteroCompatibleServices} from "../lib/boosteroReadOnly.mjs";
 const source=p=>readFileSync(new URL("../"+p,import.meta.url),"utf8");
 
 test("legacy numeric order requests cannot reach a PayKings or supplier API",async()=>{
- const {POST}=await import("../app/api/checkout/v1/route.js");
+ // Execute the actual App Router route with only its imported handler replaced.
+ // This prevents Next's server-only module from loading under plain Node tests.
+ let handlerCalls=0;
+ const route=source("app/api/checkout/v1/route.js")
+  .replace('import {handleBoosteroOrder} from "../../../../lib/boosteroOrderHandler.mjs";',
+    'const handleBoosteroOrder=async()=>{handlerCalls++;return Response.json({error:"not available"},{status:503})};');
+ const {POST}=await import("data:text/javascript;base64,"+Buffer.from(route).toString("base64"));
  const existing=globalThis.fetch;
  let outbound=0;
  globalThis.fetch=async()=>{outbound++;throw Error("external payment/supplier attempt")};
@@ -19,6 +25,7 @@ test("legacy numeric order requests cannot reach a PayKings or supplier API",asy
    assert.match((await result.json()).error,/verified Boostero/i);
   }
   assert.equal(outbound,0);
+  assert.equal(handlerCalls,0,"Unapproved IDs cannot reach PayKings checkout");
  }finally{globalThis.fetch=existing}
 });
 
