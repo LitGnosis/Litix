@@ -34,7 +34,7 @@ export async function GET() {
     status: healthy ? "healthy" : "degraded",
     components: {
       database: !databaseConfigured ? "missing" : databaseReachable ? "reachable" : "unreachable",
-      supplierCredentials: supplierConfigured ? "configured-not-tested" : "missing",
+      supplierApiKey: supplierConfigured ? "configured-not-tested" : "missing",
       supplierEndpoint: supplierHostValid ? "valid-not-tested" : "invalid",
       payment: "not-checked"
     },
