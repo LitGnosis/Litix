@@ -83,7 +83,7 @@ export default function DigitalProductsPage() {
               <div className="digital-includes-title">BUILT INTO THE KIT</div>
               <ul>{product.includes.map(item => <li key={item}><span>✓</span>{item}</li>)}</ul>
               <p className="digital-outcome">{product.outcome}</p>
-              <a className="digital-product-cta" href="#early-access"> {product.featured ? "Get launch updates" : "Join early access"} <span aria-hidden="true">↗</span></a>
+              <Link className="digital-product-cta" href={`/digital-products/${product.id}`}>Explore this kit <span aria-hidden="true">↗</span></Link>
             </article>
           ))}
         </div>
