@@ -30,3 +30,20 @@ test("atomic inventory candidate pricing has review flags and no public activati
  assert.match(calls[1].query,/pricing_review_reason/);
  assert.doesNotMatch(calls[1].query,/litix_v2_orders/);
 });
+
+test("release-gated default service IDs auto-publish without hardcoded ID list",async()=>{
+ const sqlCalls=[];
+ const db={query:async(query,args)=>{
+  sqlCalls.push({query,args});
+  return sqlCalls.length===1?[{n:0,last_sync:null}]:
+   [{imported:110,activated:110,marked_unavailable:0,audit_records:1}];
+ }};
+ const data=fixture(110).map(x=>({...x,rate:"0.50",type:"Default",name:"Instagram Likes Test"}));
+ const response=await importBoosteroInventory(db,data,{autoPublish:true});
+ assert.equal(response.publicNewServicesEnabled,110);
+ const rows=JSON.parse(sqlCalls[1].args[0]);
+ assert.equal(sqlCalls[1].args[5],true);
+ assert.ok(rows.every(x=>x.state==="PURCHASABLE"&&x.review===null&&x.retail>=600));
+ assert.match(sqlCalls[1].query,/ON CONFLICT \(supplier_service_id\) DO NOTHING/);
+ assert.doesNotMatch(sqlCalls[1].query,/update\s+public\.litix_v2_orders/i);
+});
