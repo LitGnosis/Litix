@@ -29,5 +29,5 @@ jobs:
         run: node --test tests/owner-purchase-notifications.test.mjs tests/growth-bundles-manual.test.mjs tests/growth-bundles-paid-mock.test.mjs
         working-directory: src
       - name: Verify only bundle settlement polling is minute-level
-        run: node --input-type=module -e 'import {readFileSync} from "node:fs"; const c=JSON.parse(readFileSync("vercel.json","utf8")); if(c.crons.find(x=>x.path==="/api/bundles/cron")?.schedule!=="* * * * *") process.exit(1); if(c.crons.find(x=>x.path==="/api/v2/cron/sync-catalog")?.schedule!=="0 0 * * *") process.exit(1)'
+        run: node --input-type=module -e 'import {readFileSync} from "node:fs"; const c=JSON.parse(readFileSync("vercel.json","utf8")); if(c.crons.find(x=>x.path==="/api/bundles/cron")?.schedule!=="* * * * *") process.exit(1); if(c.crons.find(x=>x.path==="/api/internal/boostero/inventory-sync")?.schedule!=="0 */6 * * *") process.exit(1)'
         working-directory: src
