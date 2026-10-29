@@ -19,5 +19,5 @@ jobs:
           node-version: '22'
       - run: node scripts/check-boostero-exclusive.mjs
         working-directory: src
-      - run: node --test tests/boostero-retail-25.test.mjs
+      - run: node --test tests/boostero-retail-25.test.mjs tests/boostero-inventory-25.test.mjs
         working-directory: src
