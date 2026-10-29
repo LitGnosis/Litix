@@ -30,7 +30,7 @@ export async function performBoosteroInventorySync({sql=boosteroSQL(),operation=
   const result=await importBoosteroInventory(sql,source,{force:true,autoPublish});
   await logBoosteroSyncEvent(sql,{runId,operation:"SYNC_SUCCESS",received:result.retrieved,
    processed:result.imported,rejected:result.invalid,activated:result.publicNewServicesEnabled,
-   deactivated:result.markedUnavailable,durationMs:Date.now()-start,reasons:result.reasonCounts});
+   deactivated:result.disabledPublicServices,durationMs:Date.now()-start,reasons:result.reasonCounts});
   return {ok:true,supplier:"boostero",runId,...result};
  }catch(error){
   const raw=String(error?.message||"");
