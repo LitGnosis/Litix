@@ -72,3 +72,14 @@ test('browser submits the displayed total for server confirmation',()=>{
  assert.match(page,/price<500/);
  assert.match(page,/Minimum order \$5\.00/);
 });
+
+test('full valid Boostero catalog is not hidden by geography, refill, Non-Drop, or type filters',()=>{
+ const route=readFileSync(new URL('../app/api/[action]/route.js',import.meta.url),'utf8');
+ const multi=readFileSync(new URL('../app/api/litix-multi-catalog/route.js',import.meta.url),'utf8');
+ assert.match(route,/Preserve the full valid Boostero catalog/);
+ assert.doesNotMatch(route,/regular&&usa&&!mixedGeography&&hasRefill\(x\)&&hasNoDrop\(x\)/);
+ assert.doesNotMatch(route,/33771.*33772.*33773/s);
+ assert.match(multi,/const seen = new Set\(\);[\s\S]*const items = raw\.filter/);
+ assert.doesNotMatch(multi,/regular && usa && !mixedGeography && hasRefill\(x\) && hasNoDrop\(x\)/);
+ assert.doesNotMatch(multi,/33771.*33772.*33773/s);
+});
