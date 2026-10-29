@@ -1,4 +1,4 @@
-import test from "node:test";
+import test,{after} from "node:test";
 import assert from "node:assert/strict";
 import {createHmac} from "node:crypto";
 const original=Object.fromEntries(["VERCEL_ENV","BOOSTERO_API_URL","BOOSTERO_API_KEY","LITIX_BOOSTERO_ENABLED"].map(n=>[n,process.env[n]]));
@@ -21,8 +21,7 @@ const opaque=id=>"service_"+createHmac("sha256",process.env.BOOSTERO_API_KEY).up
 const quote=async(id,input)=>POST(new Request("https://preview.example.test/api/catalog/global/quote",{
  method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({id:opaque(id),input})
 }));
-try{
- test("real supplier rate is quoted as 60 percent markup server-side and not charged",async()=>{
+test("real supplier rate is quoted as 60 percent markup server-side and not charged",async()=>{
   const r=await quote(100,{link:"https://www.instagram.com/testprofile/",quantity:1000});
   assert.equal(r.status,200);const data=await r.json();
   assert.equal(data.customerAmountCents,1600);
@@ -54,7 +53,7 @@ try{
    body:JSON.stringify({id:"service_000000000000000000000000",input:{quantity:1000}})}));
   assert.equal(r.status,409);
  });
-}finally{
+after(()=>{
  globalThis.fetch=priorFetch;
  for(const [k,v] of Object.entries(original)){if(v===undefined)delete process.env[k];else process.env[k]=v;}
-}
+});
