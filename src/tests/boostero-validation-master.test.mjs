@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {checkBoosteroService,validateBoosteroBatch} from "../lib/boosteroServiceValidation.mjs";
-const fixture=(id,extra={})=>({service:String(id),name:"Instagram Followers",
+const fixture=(id,extra={})=>({service:String(id),name:"Instagram Likes",
  category:"Instagram",type:"Default",rate:"20.00",min:"100",max:"100",...extra});
 test("fixed-quantity services are valid; no hardcoded service IDs",()=>{
  for(const id of [5461,10001,888888,1]){
@@ -32,4 +32,14 @@ test("package service is imported but needs verified package contract",()=>{
 });
 test("without approval a verified eligible service stays non-purchasable",()=>{
  assert.equal(checkBoosteroService(fixture(46)).state,"VERIFIED");
+});
+
+test("social follower price ceiling requires review, not silent activation",()=>{
+ const s=checkBoosteroService(fixture(555,{name:"Instagram Followers",rate:"20.00"}),{approvedCheckout:true});
+ assert.equal(s.state,"PENDING_REVIEW");
+ assert.equal(s.reason,"existing_social_price_ceiling_conflict");
+});
+test("no unsupported platform is authorized merely because it is a Default service",()=>{
+ const s=checkBoosteroService(fixture(556,{name:"YouTube Views",category:"YouTube"}),{approvedCheckout:true});
+ assert.equal(s.state,"VERIFIED");assert.equal(s.reason,"checkout_adapter_not_implemented");
 });
