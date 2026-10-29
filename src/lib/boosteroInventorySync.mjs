@@ -6,7 +6,8 @@
 import {normalizeBoosteroCatalog} from "./boosteroGlobalCatalog.mjs";
 import {boosteroRetailCandidate} from "./boosteroRetail25.mjs";
 import {checkBoosteroService,validateBoosteroBatch} from "./boosteroServiceValidation.mjs";
-export async function importBoosteroInventory(sql,raw,{now=new Date(),force=false}={}){
+import {proposeServiceRetail} from "./pricing.mjs";
+export async function importBoosteroInventory(sql,raw,{now=new Date(),force=false,autoPublish=false}={}){
  if(!sql||typeof sql.query!=="function")throw Error("inventory_database_unavailable");
  const {items,stats}=normalizeBoosteroCatalog(raw);
  if(items.length<100||items.length/Math.max(raw.length,1)<0.95)
@@ -22,18 +23,29 @@ export async function importBoosteroInventory(sql,raw,{now=new Date(),force=fals
  if(previous>0&&items.length<Math.ceil(previous*0.85))
   throw Error("inventory_unexpected_catalog_shrink");
  const payload=items.map(x=>{
-  const checked=checkBoosteroService(raw.find(y=>String(y?.service??y?.id??"")===x.id),{approvedCheckout:false});
+  const checked=checkBoosteroService(raw.find(y=>String(y?.service??y?.id??"")===x.id),{approvedCheckout:autoPublish});
   const unitPriced=x.type==="Default" && x.dripfeed!==true;
   const pricing=unitPriced?boosteroRetailCandidate(x.wholesalePer1000):
    {retailCents:null,reviewReason:"special_service_price_contract_unverified"};
   if(unitPriced&&pricing.retailCents===null)throw Error("inventory_wholesale_price_invalid");
+  let finalRetail=pricing.retailCents;
+  let finalReason=pricing.reviewReason||checked.reason||(x.supportedInputShape?null:"order_input_contract_unverified");
+  let state=checked.state;
+  if(x.kind==="followers"&&x.supportedInputShape&&!finalReason){
+   const ladder=proposeServiceRetail({name:x.name,category:x.category,refill:x.refill},x.wholesalePer1000);
+   if(ladder.action!=="reprice"||!Number.isSafeInteger(ladder.retailPer1000Cents)){
+    finalReason="follower_refill_ladder_unverified";state="PENDING_REVIEW";
+   }else finalRetail=Math.max(finalRetail,ladder.retailPer1000Cents);
+  }
+  // Existing IG/TK database constraint requires $6+ per thousand.
+  if(x.supportedInputShape&&finalRetail!==null)finalRetail=Math.max(finalRetail,600);
   return {
    id:x.id,name:x.name,category:x.category,platform:x.platform,kind:x.kind,type:x.type,
    rate:x.wholesalePer1000,min:x.min,max:x.max,refill:x.refill,cancel:x.cancel,
    dripfeed:x.dripfeed,refill_days:x.refillDays,compatible:x.supportedInputShape,
-   retail:pricing.retailCents,
-   review:pricing.reviewReason||checked.reason||(x.supportedInputShape?null:"order_input_contract_unverified"),
-   state:checked.state,adapter:x.supportedInputShape?"ig_tk_default_v1":null
+   retail:finalRetail,
+   review:finalReason,
+   state:finalReason&&checked.state==="PURCHASABLE"?"PENDING_REVIEW":state,adapter:x.supportedInputShape?"ig_tk_default_v1":null
   };
  });
  // One PostgreSQL statement = one transaction even over Neon's serverless HTTP.
@@ -66,6 +78,19 @@ export async function importBoosteroInventory(sql,raw,{now=new Date(),force=fals
      standard_input_compatible=excluded.standard_input_compatible,
      active=true,last_seen_at=excluded.last_seen_at,refreshed_at=excluded.refreshed_at
    RETURNING supplier_service_id
+ ), activated AS (
+   INSERT INTO public.litix_boostero_services
+     (supplier_service_id,platform,service_kind,retail_per_1000_cents,
+      wholesale_ceiling_per_1000,enabled,approved_by,approved_at)
+   SELECT id,lower(platform),kind,retail::integer,rate,true,
+     'boostero_verified_default_contract_v1',now()
+   FROM incoming
+   WHERE $6::boolean=true AND state='PURCHASABLE' AND review IS NULL
+    AND adapter='ig_tk_default_v1' AND type='Default' AND
+    platform IN('Instagram','TikTok') AND kind IN('followers','likes')
+    AND retail BETWEEN 600 AND 100000000
+   ON CONFLICT (supplier_service_id) DO NOTHING
+   RETURNING supplier_service_id
  ), retired AS (
    UPDATE public.litix_boostero_inventory AS old
      SET active=false,validation_state='DISCONTINUED',validation_reason='removed_from_supplier_catalog',refreshed_at=$2::timestamptz
@@ -80,13 +105,14 @@ export async function importBoosteroInventory(sql,raw,{now=new Date(),force=fals
    RETURNING id
  )
  SELECT (SELECT count(*)::integer FROM applied) AS imported,
+        (SELECT count(*)::integer FROM activated) AS activated,
         (SELECT count(*)::integer FROM retired) AS marked_unavailable,
         (SELECT count(*)::integer FROM logged) AS audit_records
- `,[JSON.stringify(payload),timestamp,stats.retrieved,stats.valid,stats.invalid]);
+ `,[JSON.stringify(payload),timestamp,stats.retrieved,stats.valid,stats.invalid,autoPublish===true]);
  if(Number(rows[0]?.imported)!==items.length||Number(rows[0]?.audit_records)!==1)
   throw Error("inventory_atomic_write_unconfirmed");
  return {...stats,pricingReviewCount:payload.filter(x=>x.review).length,reasonCounts:validation.reasons,
    validationStates:payload.reduce((acc,x)=>(acc[x.state]=(acc[x.state]||0)+1,acc),{}),pricingMultiplier:2.5,imported:items.length,markedUnavailable:Number(rows[0]?.marked_unavailable||0),
-  publicNewServicesEnabled:0,checkoutAllowlistUnchanged:true,syncedAt:timestamp,
+  publicNewServicesEnabled:Number(rows[0]?.activated||0),checkoutAllowlistUnchanged:autoPublish!==true,syncedAt:timestamp,
   atomicCommitVerified:true};
 }
