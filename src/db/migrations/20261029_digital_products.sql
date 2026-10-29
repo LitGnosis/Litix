@@ -8,6 +8,8 @@ CREATE TABLE IF NOT EXISTS litix_digital_waitlist (
   email_hash char(64) NOT NULL UNIQUE,
   product_interest text NOT NULL CHECK (product_interest IN ('creator-launch-kit','social-growth-toolkit','agency-starter-pack','all')),
   consent_at timestamptz NOT NULL,
+  unsubscribe_token_hash char(64) UNIQUE,
+  unsubscribed_at timestamptz,
   source text NOT NULL DEFAULT 'digital-products',
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
