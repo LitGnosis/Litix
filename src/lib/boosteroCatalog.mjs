@@ -16,14 +16,15 @@ export async function enabledBoosteroCards(){
  if(!boosteroProductionReady())return [];
  const sql=boosteroSQL();
  let rows;
- try{rows=await sql.query("select * from public.litix_boostero_services where enabled=true order by supplier_service_id limit 20");}
+ try{rows=await sql.query("select * from public.litix_boostero_services where enabled=true order by supplier_service_id limit 5000");}
  catch{return []}
  if(!rows.length)return [];
  let live;
  try{live=await liveCatalog()}catch{return []}
  const cards=[];
+ const liveById=new Map(live.map(s=>[s.id,s]));
  for(const approved of rows){
-  const service=live.find(s=>s.id===approved.supplier_service_id);
+  const service=liveById.get(approved.supplier_service_id);
   if(!service)continue;
   // $5 retail alone is insufficient when total supplier cost is below $1:
   // the global 8x wholesale floor still applies at that quantity.

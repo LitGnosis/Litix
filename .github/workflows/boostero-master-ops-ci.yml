@@ -1,0 +1,51 @@
+name: Litix Boostero master operations safe checks
+on:
+  pull_request:
+    paths:
+      - 'src/lib/boostero**'
+      - 'src/app/api/internal/boostero/**'
+      - 'src/app/api/owner/boostero/**'
+      - 'src/app/owner/boostero/**'
+      - 'src/components/OwnerBoosteroDashboard.jsx'
+      - 'src/db/migrations/**'
+      - 'src/tests/boostero-*.test.mjs'
+      - '.github/workflows/boostero-master-ops-ci.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: src/package-lock.json
+      - run: npm ci --no-audit --no-fund
+        working-directory: src
+      - run: node --test tests/boostero-retail-25.test.mjs tests/boostero-inventory-25.test.mjs tests/boostero-validation-master.test.mjs tests/boostero-master-ops-security.test.mjs tests/boostero-batch-statuses.test.mjs tests/litix-recovery-evidence.test.mjs tests/litix-core-preservation.test.mjs
+        working-directory: src
+      - run: npm run build
+        working-directory: src
+      - name: Archive safe master-repair source checkpoint
+        run: |
+          set -euo pipefail
+          git archive --format=zip --output=Litix-Boostero-Master-Repair-20261029.zip HEAD
+          unzip -t Litix-Boostero-Master-Repair-20261029.zip | tail -n 1
+          sha256sum Litix-Boostero-Master-Repair-20261029.zip > Litix-Boostero-Master-Repair-20261029.zip.sha256
+          git rev-parse --verify HEAD > SOURCE_COMMIT.txt
+          test "$(cut -c1-40 SOURCE_COMMIT.txt)" = "$GITHUB_SHA"
+          sha256sum --check Litix-Boostero-Master-Repair-20261029.zip.sha256
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: litix-boostero-master-source-checkpoint
+          path: |
+            Litix-Boostero-Master-Repair-20261029.zip
+            Litix-Boostero-Master-Repair-20261029.zip.sha256
+            SOURCE_COMMIT.txt
+          if-no-files-found: error
+          retention-days: 30

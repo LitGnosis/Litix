@@ -99,6 +99,12 @@ export async function boosteroProduction(action,parameters={},options={}){
      /^https:\/\/www\.tiktok\.com\/@[A-Za-z0-9._]{2,24}\/video\/[0-9]{10,30}$/.test(link)))
    throw Error("boostero_add_not_authorized");
   params={service:id,quantity:String(quantity),link};
+ }else if(action==="status"&&parameters.orders!==undefined){
+  const raw=Array.isArray(parameters.orders)?parameters.orders:String(parameters.orders||"").split(",");
+  const ids=raw.map(x=>String(x).trim());
+  if(ids.length<1||ids.length>100||new Set(ids).size!==ids.length||
+     ids.some(x=>!/^\d{1,24}$/.test(x)))throw Error("boostero_status_ids_invalid");
+  params={orders:ids.join(",")};
  }else if(action==="status"||action==="refill"){
   const order=String(parameters.order||"");
   if(!/^\d{1,24}$/.test(order))throw Error("boostero_supplier_id_invalid");

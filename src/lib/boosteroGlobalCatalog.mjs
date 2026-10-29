@@ -40,8 +40,10 @@ export function normalizeBoosteroService(raw){
  if(!raw||typeof raw!=="object"||Array.isArray(raw))return null;
  const id=bounded(raw.service??raw.id,16);
  const name=bounded(raw.name,240),category=bounded(raw.category,180),type=bounded(raw.type||"Default",80);
- const wholesale=Number(raw.rate),min=Number(raw.min),max=Number(raw.max);
- if(!/^\d{1,12}$/.test(id)||!name||!Number.isFinite(wholesale)||wholesale<=0||wholesale>1e7||
+ const wholesaleRateText=String(raw.rate??"").trim();
+ const wholesale=Number(wholesaleRateText),min=Number(raw.min),max=Number(raw.max);
+ if(!/^\d{1,12}$/.test(id)||!name||!category||!/^\d{1,10}(?:\.\d{1,6})?$/.test(wholesaleRateText)||
+  !Number.isFinite(wholesale)||wholesale<=0||wholesale>1e7||
   !Number.isSafeInteger(min)||min<1||!Number.isSafeInteger(max)||max<min||max>1e9)return null;
  const text=category+" "+name;
  const platform=PLATFORMS.find(([,regex])=>regex.test(text))?.[0]||"Other";
@@ -55,7 +57,7 @@ export function normalizeBoosteroService(raw){
  // These are service-type candidates, never authorization for public checkout.
  const existingCheckoutShape=isDefault&&!specialType&&["Instagram","TikTok"].includes(platform)&&["followers","likes"].includes(kind);
  return {
-  id,name,category,platform,kind,type,wholesalePer1000:wholesale,
+  id,name,category,platform,kind,type,wholesalePer1000:wholesale,wholesaleRateText,
   min,max,refill,cancel,dripfeed,refillDays,
   supportedInputShape:existingCheckoutShape,
   requiresImplementation:!existingCheckoutShape,
