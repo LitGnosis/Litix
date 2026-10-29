@@ -1,6 +1,6 @@
 /**
  * Full Boostero inventory sync. Additive and atomic: an entire complete supplier
- * snapshot commits together or not at all. Never changes enabled public cards,
+ * snapshot commits together or not at all. Public activation is separately gated,
  * payment records, supplier dispatch, customer orders, or historical inventory IDs.
  */
 import {normalizeBoosteroCatalog} from "./boosteroGlobalCatalog.mjs";
@@ -22,8 +22,9 @@ export async function importBoosteroInventory(sql,raw,{now=new Date(),force=fals
   return {skipped:"recent_successful_sync",...stats,previous};
  if(previous>0&&items.length<Math.ceil(previous*0.85))
   throw Error("inventory_unexpected_catalog_shrink");
+ const rawById=new Map(raw.filter(x=>x&&typeof x==="object").map(x=>[String(x.service??x.id??""),x]));
  const payload=items.map(x=>{
-  const checked=checkBoosteroService(raw.find(y=>String(y?.service??y?.id??"")===x.id),{approvedCheckout:autoPublish});
+  const checked=checkBoosteroService(rawById.get(x.id),{approvedCheckout:autoPublish});
   const unitPriced=x.type==="Default" && x.dripfeed!==true;
   const pricing=unitPriced?boosteroRetailCandidate(x.wholesalePer1000):
    {retailCents:null,reviewReason:"special_service_price_contract_unverified"};
@@ -49,7 +50,7 @@ export async function importBoosteroInventory(sql,raw,{now=new Date(),force=fals
   };
  });
  // One PostgreSQL statement = one transaction even over Neon's serverless HTTP.
- // The 1,814-record snapshot is sent as one bound JSON parameter, never SQL text.
+ // The complete validated supplier snapshot is one bound JSON parameter, never SQL text.
  // Source IDs are authoritative, so repeated runs are idempotent.
  const rows=await sql.query(`
  WITH incoming AS MATERIALIZED (
@@ -91,6 +92,12 @@ export async function importBoosteroInventory(sql,raw,{now=new Date(),force=fals
     AND retail BETWEEN 600 AND 100000000
    ON CONFLICT (supplier_service_id) DO NOTHING
    RETURNING supplier_service_id
+ ), deactivated AS (
+   UPDATE public.litix_boostero_services existing
+     SET enabled=false
+   WHERE existing.enabled=true
+     AND NOT EXISTS(SELECT 1 FROM incoming WHERE id=existing.supplier_service_id)
+   RETURNING existing.supplier_service_id
  ), retired AS (
    UPDATE public.litix_boostero_inventory AS old
      SET active=false,validation_state='DISCONTINUED',validation_reason='removed_from_supplier_catalog',refreshed_at=$2::timestamptz
@@ -100,11 +107,13 @@ export async function importBoosteroInventory(sql,raw,{now=new Date(),force=fals
  ), logged AS (
    INSERT INTO public.litix_boostero_inventory_syncs(
      retrieved_count,valid_count,invalid_count,enabled_count,result,notes)
-   SELECT $3::integer,$4::integer,$5::integer,0,'success',
-     'Atomic Boostero inventory snapshot; no public auto-activation'
+   SELECT $3::integer,$4::integer,$5::integer,
+     (SELECT count(*)::integer FROM activated),'success',
+     'Atomic validated Boostero inventory snapshot and gated activation'
    RETURNING id
  )
  SELECT (SELECT count(*)::integer FROM applied) AS imported,
+        (SELECT count(*)::integer FROM deactivated) AS disabled_public,
         (SELECT count(*)::integer FROM activated) AS activated,
         (SELECT count(*)::integer FROM retired) AS marked_unavailable,
         (SELECT count(*)::integer FROM logged) AS audit_records
@@ -113,6 +122,7 @@ export async function importBoosteroInventory(sql,raw,{now=new Date(),force=fals
   throw Error("inventory_atomic_write_unconfirmed");
  return {...stats,pricingReviewCount:payload.filter(x=>x.review).length,reasonCounts:validation.reasons,
    validationStates:payload.reduce((acc,x)=>(acc[x.state]=(acc[x.state]||0)+1,acc),{}),pricingMultiplier:2.5,imported:items.length,markedUnavailable:Number(rows[0]?.marked_unavailable||0),
+  disabledPublicServices:Number(rows[0]?.disabled_public||0),
   publicNewServicesEnabled:Number(rows[0]?.activated||0),checkoutAllowlistUnchanged:autoPublish!==true,syncedAt:timestamp,
   atomicCommitVerified:true};
 }
