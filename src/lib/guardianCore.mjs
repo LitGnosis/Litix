@@ -1,7 +1,7 @@
 // Pure, deterministic incident state machine. No network calls, credentials or customer data.
 export const failureThreshold=2, recoveryThreshold=2, escalateAfterMs=60*60*1000;
 export const safeCode=v=>String(v||"UNKNOWN").toUpperCase().replace(/[^A-Z0-9_]/g,"_").slice(0,48);
-export const componentKeys=Object.freeze(["website","smmglob","catalog","tiktok","instagram","paykings_readiness","bluevine_readiness","autolikes","subscriptions","orders","fulfillment","database","resend"]);
+export const componentKeys=Object.freeze(["website","boostero","catalog","tiktok","instagram","paykings_readiness","bluevine_readiness","autolikes","subscriptions","orders","fulfillment","database","resend"]);
 export function nextGuardianState(prior,observation,at=new Date()){
  const now=at instanceof Date?at:new Date(at);
  const prev={status:"unknown",consecutive_failures:0,consecutive_successes:0,active_incident_id:null,alert_at:null,escalation_at:null,...(prior||{})};
