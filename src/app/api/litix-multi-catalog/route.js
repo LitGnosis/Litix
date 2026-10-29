@@ -24,14 +24,14 @@ let cache = { at: 0, items: [] };
 
 async function getCatalog() {
   if (cache.items.length && Date.now() - cache.at < 120000) return cache.items;
-  const key = process.env.SMMGLOB_API_KEY;
-  if (!key) throw new Error("Supplier credential is not configured");
-  const endpoint = new URL(process.env.SMMGLOB_API_URL || "https://smmglob.com/api/v2");
-  if (endpoint.protocol !== "https:" || !["smmglob.com", "www.smmglob.com"].includes(endpoint.hostname)) throw new Error("Supplier endpoint is invalid");
+  const key = process.env.BOOSTERO_API_KEY;
+  if (!key || !process.env.BOOSTERO_API_URL) throw new Error("Boostero credentials are not configured");
+  const endpoint = new URL(process.env.BOOSTERO_API_URL);
+  if (endpoint.protocol !== "https:" || endpoint.username || endpoint.password) throw new Error("Boostero HTTPS endpoint is invalid");
   const response = await fetch(endpoint, {
     method: "POST",
-    headers: { "content-type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({ key, action: "services" }),
+    headers: { "accept": "application/json", "content-type": "application/json" },
+    body: JSON.stringify({ key, action: "services" }),
     cache: "no-store",
     signal: AbortSignal.timeout(15000)
   });
@@ -49,7 +49,7 @@ async function getCatalog() {
     return x.service != null && Number(x.rate) > 0 && Number(x.min) > 0 && Number(x.max) >= Number(x.min) && regular && usa && !mixedGeography && hasRefill(x) && hasNoDrop(x);
   }).map(x => ({
     id: String(x.service),
-    provider: "smmglob",
+    provider: "boostero",
     service: String(x.service),
     name: String(x.name || "Service").slice(0, 200),
     category: String(x.category || "Other"),
@@ -59,7 +59,7 @@ async function getCatalog() {
     max: Number(x.max),
     refill: hasRefill(x),
     noDrop: hasNoDrop(x),
-    retailPer1000Cents: Math.ceil(Number(x.rate) * 500)
+    retailPer1000Cents: Math.ceil(Number(x.rate) * 250)
   }));
   cache = { at: Date.now(), items };
   return items;
@@ -84,7 +84,7 @@ export async function GET(req) {
       total: filtered.length,
       allCount: all.length,
       page,
-      provider: "smmglob"
+      provider: "boostero"
     }, { headers: { "cache-control": "no-store" } });
   } catch (error) {
     console.error("Litix catalog unavailable", String(error?.message || error).slice(0, 120));
