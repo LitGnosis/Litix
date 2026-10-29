@@ -1,11 +1,14 @@
 name: Boostero global inventory preview safety
 on:
   push:
-    branches: [feature/boostero-global-catalog-stage-20261028]
+    branches: [feature/boostero-global-catalog-stage-20261028, feature/boostero-neon-inventory-completion-20261028]
   pull_request:
     paths:
       - 'src/lib/boosteroGlobalCatalog.mjs'
       - 'src/lib/boosteroInventorySync.mjs'
+      - 'src/lib/boosteroOrderForms.mjs'
+      - 'src/app/global-catalog-preview/**'
+      - 'src/tests/boostero-order-forms.test.mjs'
       - 'src/app/api/internal/boostero/**'
       - 'src/tests/boostero-global-catalog.test.mjs'
       - 'src/db/migrations/20261028-boostero-global-inventory-additive.sql'
@@ -26,10 +29,12 @@ jobs:
           node --version
           node --check src/lib/boosteroGlobalCatalog.mjs
           node --check src/lib/boosteroInventorySync.mjs
+          node --check src/lib/boosteroOrderForms.mjs
+          node --check src/app/api/internal/boostero/staging-import/route.js
           node --check src/app/api/internal/boostero/catalog-audit/route.js
           node --check src/app/api/internal/boostero/inventory-sync/route.js
       - name: Pure mocked inventory tests (no supplier add or payment)
-        run: node --test src/tests/boostero-global-catalog.test.mjs
+        run: node --test src/tests/boostero-global-catalog.test.mjs src/tests/boostero-order-forms.test.mjs
       - name: Ensure no existing checkout or production source was edited
         run: |
           set -Eeuo pipefail
