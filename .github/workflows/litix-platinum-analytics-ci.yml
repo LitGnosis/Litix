@@ -1,0 +1,67 @@
+name: Litix Platinum Analytics — private metrics and no-charge safety
+on:
+  push:
+    branches: [feature/litix-platinum-analytics-studio-20261028]
+  pull_request:
+    paths:
+      - 'src/app/analytics/**'
+      - 'src/lib/platinumAnalyticsStudio.mjs'
+      - 'src/tests/platinum-analytics-studio.test.mjs'
+      - '.github/workflows/litix-platinum-analytics-ci.yml'
+permissions:
+  contents: read
+jobs:
+  quality:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: src/package-lock.json
+      - name: Install lockfile dependencies
+        working-directory: src
+        run: npm ci --no-audit --no-fund
+      - name: Verify Analytics Studio and existing production safety guards
+        working-directory: src
+        run: |
+          set -eu
+          node --check lib/platinumAnalyticsStudio.mjs
+          node --test tests/platinum-analytics-studio.test.mjs
+          node --test tests/platinum-supplier-qualification.test.mjs tests/boostero-exclusive-new-orders.test.mjs tests/boostero-only-public-catalog-regression.test.mjs tests/boostero-live-fulfillment.test.mjs tests/preview-checkout.test.mjs tests/growth-calendar.test.mjs
+      - name: Build complete Next.js app
+        working-directory: src
+        run: npm run build
+      - name: Install Playwright browser QA runner
+        working-directory: src
+        run: npm install --no-save --ignore-scripts playwright@1.56.1
+      - name: Validate Analytics Studio at iPhone and desktop widths
+        working-directory: src
+        run: |
+          set -eu
+          npm run start -- --port 3100 >/tmp/litix-platinum-analytics.log 2>&1 &
+          app_pid=$!
+          trap 'kill $app_pid || true' EXIT
+          for i in $(seq 1 40); do
+            if curl --fail --silent --output /dev/null http://localhost:3100/analytics; then break; fi
+            sleep 1
+          done
+          export CHROME_PATH="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
+          if [ -z "$CHROME_PATH" ]; then npx playwright install chromium; fi
+          node tests/platinum-analytics-browser.mjs
+      - name: Ensure live payment and supplier paths remain exactly unchanged
+        run: |
+          set -eu
+          baseline=bf0d12d25cb987bb28c199aa9fa513460fbb936c
+          git cat-file -e "$baseline^{commit}"
+          changed="$(git diff --name-only "$baseline" HEAD -- src/)"
+          if printf "%s\n" "$changed" | grep -E '^src/(app/page\.jsx|app/api/checkout/v1/route\.js|app/api/catalog/v1/route\.js|lib/boosteroOrderHandler\.mjs|lib/boosteroFulfillment\.mjs|lib/pricing\.mjs|vercel\.json)$'; then
+            echo 'Checkout, fulfillment, prices or cron config modified — release blocked'
+            exit 1
+          fi
+          echo 'Production payment/supplier files unchanged'
