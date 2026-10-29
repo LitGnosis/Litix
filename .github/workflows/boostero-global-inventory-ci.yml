@@ -28,6 +28,10 @@ jobs:
         with:
           persist-credentials: false
           fetch-depth: 0
+      - name: Install locked dependencies before integration regression tests
+        run: |
+          cd src
+          npm ci --no-audit --no-fund
       - name: Node version and syntax validation
         run: |
           set -Eeuo pipefail
@@ -46,7 +50,6 @@ jobs:
         run: |
           set -Eeuo pipefail
           cd src
-          npm ci --no-audit --no-fund
           npm run build
       - name: Mobile and desktop no-charge browse testing
         run: |
