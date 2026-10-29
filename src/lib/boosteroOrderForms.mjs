@@ -48,15 +48,22 @@ export function orderFormSchema(service){
 }
 function normalizeTarget(raw,platform,profile){
  if(typeof raw!=="string"||raw.length>500)return null;
- let u;try{u=new URL(raw.trim())}catch{return null}
+ const value=raw.trim();
+ if(profile&&["Instagram","TikTok"].includes(platform)&&/^@?[A-Za-z0-9._]{2,30}$/.test(value)){
+  const handle=value.replace(/^@/,"");
+  const pathname=platform==="TikTok"?"/@"+handle+"/":"/"+handle+"/";
+  if(profiles[platform]?.profile.test(pathname))return "https://www."+profiles[platform].host+pathname;
+ }
+ let u;try{u=new URL(value)}catch{return null}
  const host=(profiles[platform]?.host||"").toLowerCase();
- if(!host||u.protocol!=="https:"||u.username||u.password||u.port||u.search||u.hash)return null;
+ if(!host||u.protocol!=="https:"||u.username||u.password||u.port||u.hash)return null;
  const actual=u.hostname.toLowerCase().replace(/^www\./,"");
  if(actual!==host)return null;
+ if(u.search&&(profile||platform!=="YouTube"||u.searchParams.size!==1||!u.searchParams.has("v")))return null;
  const re=profile?profiles[platform]?.profile:posts[platform];
  if(!re?.test(u.pathname))return null;
  if(!profile&&platform==="YouTube"&&!/^[A-Za-z0-9_-]{11}$/.test(u.searchParams.get("v")||""))return null;
- return "https://www."+actual+u.pathname;
+ return "https://www."+actual+u.pathname+(platform==="YouTube"&&!profile?"?v="+u.searchParams.get("v"):"");
 }
 export function validateServiceDraft(service,input){
  const schema=orderFormSchema(service),errors={};
