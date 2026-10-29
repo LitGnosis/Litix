@@ -1,0 +1,40 @@
+name: Digital products checks
+
+on:
+  pull_request:
+    paths:
+      - "src/app/digital-products/**"
+      - "src/app/api/digital-products/**"
+      - "src/content/digital-products/**"
+      - "src/db/migrations/20261029_digital_products.sql"
+      - "src/tests/digital-products.test.mjs"
+      - "src/package.json"
+      - ".github/workflows/digital-products-tests.yml"
+  push:
+    branches:
+      - "feat/digital-products-storefront-mainbase"
+    paths:
+      - "src/app/digital-products/**"
+      - "src/app/api/digital-products/**"
+      - "src/content/digital-products/**"
+      - "src/db/migrations/20261029_digital_products.sql"
+      - "src/tests/digital-products.test.mjs"
+      - "src/package.json"
+      - ".github/workflows/digital-products-tests.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  digital-products-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Run digital products regression tests
+        working-directory: src
+        run: npm run test:digital-products
