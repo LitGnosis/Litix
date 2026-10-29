@@ -9,6 +9,8 @@ on:
       - "src/lib/boosteroInventorySync.mjs"
       - "src/lib/boosteroFullOrderContracts.mjs"
       - "src/lib/boosteroTypedPaidDispatch.mjs"
+      - "src/app/api/checkout/boostero-typed/v1/route.js"
+      - "src/tests/boostero-typed-checkout-disabled.test.mjs"
       - "src/lib/boosteroInventoryAlerts.mjs"
       - "src/tests/boostero-inventory-alerts.test.mjs"
       - "src/app/api/internal/boostero/inventory-sync/route.js"
@@ -42,9 +44,10 @@ jobs:
           node --check lib/boosteroInventorySync.mjs
           node --check lib/boosteroFullOrderContracts.mjs
           node --check lib/boosteroTypedPaidDispatch.mjs
+          node --check app/api/checkout/boostero-typed/v1/route.js
           node --check lib/boosteroInventoryAlerts.mjs
           node --check app/api/internal/boostero/inventory-sync/route.js
-          node --test tests/boostero-retail-60.test.mjs tests/boostero-full-order-contracts.test.mjs tests/boostero-global-catalog.test.mjs tests/boostero-typed-paid-dispatch.test.mjs tests/boostero-inventory-alerts.test.mjs
+          node --test tests/boostero-retail-60.test.mjs tests/boostero-full-order-contracts.test.mjs tests/boostero-global-catalog.test.mjs tests/boostero-typed-paid-dispatch.test.mjs tests/boostero-typed-checkout-disabled.test.mjs tests/boostero-inventory-alerts.test.mjs
       - name: Preserve existing payment idempotency and owner notifications
         working-directory: src
         run: |
