@@ -12,7 +12,7 @@ export default function GlobalServiceDraft({service,onClose}){
  const isPackage=type==="package";
  const isComments=type==="custom comments";
  const isMentionsList=type==="mentions custom list";
- const hasQty=!isSub&&!isPackage&&!isComments&&type!=="mentions user followers";
+ const hasQty=!isSub&&!isPackage&&!isComments;
  const set=(name,value)=>{setData(d=>({...d,[name]:value}));setMessage("")};
  const submit=e=>{
   e.preventDefault();
