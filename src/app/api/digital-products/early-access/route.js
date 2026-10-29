@@ -72,18 +72,13 @@ export async function POST(request) {
   let saved = false;
 
   try {
-    const recent = await sql.query(
-      "select updated_at from litix_digital_waitlist where email_hash = $1",
-      [emailHash],
-    );
-    if (recent.length && Date.now() - new Date(recent[0].updated_at).getTime() < 60 * 60 * 1000) {
-      return json({ error: "This address was recently signed up. Please check your inbox before trying again." }, 429);
-    }
-
-    await sql.query(
-      "insert into litix_digital_waitlist (email, email_hash, product_interest, consent_at, unsubscribe_token_hash, source, unsubscribed_at) values ($1, $2, $3, now(), $4, 'digital-products', null) on conflict (email_hash) do update set email = excluded.email, product_interest = excluded.product_interest, consent_at = excluded.consent_at, unsubscribe_token_hash = excluded.unsubscribe_token_hash, unsubscribed_at = null, updated_at = now()",
+    const savedRows = await sql.query(
+      "insert into litix_digital_waitlist (email, email_hash, product_interest, consent_at, unsubscribe_token_hash, source, unsubscribed_at) values ($1, $2, $3, now(), $4, 'digital-products', null) on conflict (email_hash) do update set email = excluded.email, product_interest = excluded.product_interest, consent_at = excluded.consent_at, unsubscribe_token_hash = excluded.unsubscribe_token_hash, unsubscribed_at = null, updated_at = now() where litix_digital_waitlist.updated_at < now() - interval '1 hour' returning id",
       [email, emailHash, productInterest, unsubscribeTokenHash],
     );
+    if (!savedRows.length) {
+      return json({ error: "This address was recently signed up. Please check your inbox before trying again." }, 429);
+    }
     saved = true;
 
     const baseUrl = (process.env.SITE_URL || "https://litix.net").replace(/\/$/, "");
