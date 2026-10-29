@@ -80,6 +80,7 @@ test("sales and private asset routes are fail-closed", async () => {
   const checkout = await read("../app/api/digital-products/checkout/route.js");
   const config = await read("../app/api/digital-products/config/route.js");
   const upload = await read("../app/api/digital-products/admin/assets/route.js");
+  const uploadScript = await read("../scripts/upload-digital-product-asset.mjs");
   const download = await read("../app/api/digital-products/download/route.js");
   const revoke = await read("../app/api/digital-products/admin/orders/[id]/revoke/route.js");
   assert.match(checkout, /LITIX_DIGITAL_SALES_ENABLED !== "true"/);
@@ -89,6 +90,9 @@ test("sales and private asset routes are fail-closed", async () => {
   assert.match(config, /LITIX_DIGITAL_SALES_ENABLED === "true"/);
   assert.match(upload, /LITIX_DIGITAL_ASSET_UPLOAD_ENABLED !== "true"/);
   assert.match(upload, /timingSafeEqual/);
+  assert.match(upload, /3_000_000/);
+  assert.match(uploadScript, /LITIX_DIGITAL_ASSET_ADMIN_TOKEN/);
+  assert.match(uploadScript, /application\/json/);
   assert.match(download, /entitlement_token_hash/);
   assert.match(download, /download_count < max_downloads/);
   assert.match(download, /cache-control/);
