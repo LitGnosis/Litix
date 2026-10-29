@@ -104,6 +104,7 @@ export default async function DigitalProductDetailPage({ params }) {
       <nav className="digital-nav" aria-label="Main navigation">
         <Link className="digital-brand" href="/">LITIX<span>✦</span></Link>
         <div className="digital-navlinks">
+          <Link href="/platform">Platform</Link>
           <Link href="/digital-products">All digital kits</Link>
           <Link href="/">Litix services</Link>
         </div>
