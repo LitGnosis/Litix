@@ -34,8 +34,8 @@ jobs:
         run: |
           node --test \
             tests/boostero-exclusive-new-orders.test.mjs \
-            tests/boostero-public-routing.test.mjs \
-            tests/boostero-four-kinds.test.mjs \
+            tests/boostero-only-public-catalog-regression.test.mjs \
+            tests/boostero-order-forms.test.mjs \
             tests/boostero-live-fulfillment.test.mjs \
             tests/checkout.test.mjs \
             tests/collect-lifecycle.test.mjs \
