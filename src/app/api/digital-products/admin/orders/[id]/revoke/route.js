@@ -51,7 +51,7 @@ export async function POST(request, context) {
       return json({ error: "Only a paid order can be revoked. Reconcile any uncertain payment first." }, 409);
     }
 
-    const nextState = action === "refund" ? "refunded" : "partially_refunded";
+    const nextState = action === "refund" ? "refunded" : "chargeback";
     await sql.query(
       "update litix_digital_orders set payment_state=$2, fulfillment_state='revoked', refunded_at=now(), updated_at=now() where id=$1",
       [id, nextState],
