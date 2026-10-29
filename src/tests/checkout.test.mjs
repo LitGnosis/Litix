@@ -34,7 +34,7 @@ for(const [label,options,status,payments,orders] of cases){
     return new Response(options.gateway==='declined'?'response=2&responsetext=Declined':options.gateway==='missing-transaction'?'response=1&responsetext=Approved':'response=1&transactionid=test-only');
    }
    assert.equal(String(url),'https://boostero.example/api/v2');
-   const action=init.body.get('action');
+   const action=JSON.parse(init.body).action;
    if(action==='services')return Response.json([{service:1,name:'USA Instagram likes with refill and no drop',category:'USA',rate:options.rate||3,min:100,max:10000,type:'Default',refill:true,no_drop:true}]);
    assert.equal(action,'add');orderCalls++;
    if(options.supplierTimeout)throw Error('simulated supplier timeout');
@@ -53,7 +53,7 @@ for(const [label,options,status,payments,orders] of cases){
 test('server checkout and catalog importer use the same 2.5x markup',()=>{
  const route=readFileSync(new URL('../app/api/[action]/route.js',import.meta.url),'utf8');
  const bulk=readFileSync(new URL('../app/api/v2/bulk-import/route.js',import.meta.url),'utf8');
- assert.match(route,/rate\)\*2\.5/);
+ assert.match(route,/rate\)\*2\.5\*qty/);
  assert.match(bulk,/baseRate \* 2\.5/);
  assert.doesNotMatch(route,/SMMFOLLOWOM/);
  assert.doesNotMatch(bulk,/SMMFOLLOWOM/);
