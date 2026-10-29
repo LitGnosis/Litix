@@ -46,12 +46,12 @@ export async function POST(request) {
   if (!/^[A-Za-z0-9._-]{1,120}\.zip$/.test(fileName) || contentType !== "application/zip") {
     return json({ error: "Only a named ZIP product bundle is accepted." }, 400);
   }
-  if (!contentBase64 || contentBase64.length > 12_000_000 || !/^[A-Za-z0-9+/]+={0,2}$/.test(contentBase64)) {
+  if (!contentBase64 || contentBase64.length > 4_000_000 || !/^[A-Za-z0-9+/]+={0,2}$/.test(contentBase64)) {
     return json({ error: "Invalid or oversized asset." }, 413);
   }
 
   const bytes = Buffer.from(contentBase64, "base64");
-  if (bytes.length < 4 || bytes.length > 8_000_000 || bytes[0] !== 0x50 || bytes[1] !== 0x4b) {
+  if (bytes.length < 4 || bytes.length > 3_000_000 || bytes[0] !== 0x50 || bytes[1] !== 0x4b) {
     return json({ error: "Asset must be a valid-size ZIP file." }, 400);
   }
   const sha256 = createHash("sha256").update(bytes).digest("hex");
