@@ -42,16 +42,18 @@ test("full inventory import does not enable public services or write orders",asy
  const calls=[];
  const sql={query:async(text,params=[])=>{
   calls.push({text,params});
-  return text.startsWith("select count")?[{n:0,last_sync:null}]:[];
+  return text.startsWith("select count")?[{n:0,last_sync:null}]:[{imported:140,marked_unavailable:0,audit_records:1}];
  }};
  const list=Array.from({length:140},(_,i)=>service(6000+i));
  const out=await importBoosteroInventory(sql,list,{now:new Date("2026-10-28T12:00:00Z"),force:true});
  assert.equal(out.imported,140);
  assert.equal(out.publicNewServicesEnabled,0);
- assert.ok(calls.filter(x=>x.text.includes("insert into public.litix_boostero_inventory (")).length===2);
+ assert.equal(calls.filter(x=>x.text.includes("INSERT INTO public.litix_boostero_inventory(")).length,1);
+ assert.ok(calls.some(x=>x.text.includes("WITH incoming AS MATERIALIZED")));
  assert.ok(calls.every(x=>!/\b(insert|update|delete)\s+(?:into\s+)?(?:public\.)?(litix_v2_orders|litix_boostero_services|litix_growth_bundle_orders|litix_paykings_checkout_orders)\b/i.test(x.text)));
  assert.ok(calls.every(x=>!x.text.includes("delete from")));
- assert.ok(calls.some(x=>x.text.includes("update public.litix_boostero_inventory set active=false")));
+ assert.ok(calls.some(x=>x.text.includes("UPDATE public.litix_boostero_inventory AS old")));
+ assert.equal(out.atomicCommitVerified,true);
 });
 test("supplier snapshot shrink fails closed before writes",async()=>{
  let calls=0;const sql={query:async()=>{calls++;return [{n:2000,last_sync:null}]}};
