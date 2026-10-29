@@ -79,7 +79,7 @@ export default function DigitalProductsPage() {
               <div className="digital-product-symbol" aria-hidden="true">{index === 0 ? "↗" : index === 1 ? "⌁" : "◇"}</div>
               <h3>{product.name}</h3>
               <p className="digital-product-summary">{product.summary}</p>
-              <div className="digital-price"><strong>{product.price}</strong><span>one-time price concept</span></div>
+              <div className="digital-price"><strong>{product.price}</strong><span>planned one-time price</span></div>
               <div className="digital-includes-title">BUILT INTO THE KIT</div>
               <ul>{product.includes.map(item => <li key={item}><span>✓</span>{item}</li>)}</ul>
               <p className="digital-outcome">{product.outcome}</p>
@@ -87,7 +87,7 @@ export default function DigitalProductsPage() {
             </article>
           ))}
         </div>
-        <p className="digital-disclaimer">These are proposed product concepts and planned prices. Checkout and downloadable files are not yet available for purchase.</p>
+        <p className="digital-disclaimer">These are planned product concepts. Each kit page shows whether secure checkout is open; joining early access is not a purchase.</p>
       </section>
 
       <section className="digital-steps">
