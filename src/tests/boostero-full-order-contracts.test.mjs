@@ -86,8 +86,8 @@ test("SEO and generic Mentions have no published supplier parameter contracts an
 
 test("mentions custom list sends usernames only, not an undocumented quantity",()=>{
  const service=s("Mentions Custom List","Instagram",{min:2,max:100});
- const draft=validateBoosteroOrderDraft(service,{link:"https://www.instagram.com/p/ABCDEFGH/",usernames:"@litixsocial\\n@creator"});
+ const draft=validateBoosteroOrderDraft(service,{link:"https://www.instagram.com/p/ABCDEFGH/",usernames:"@litixsocial\n@creator"});
  assert.equal(draft.valid,true);assert.equal(draft.estimatedTotalQuantity,2);
  assert.equal("quantity" in draft.params,false);
- assert.equal(draft.params.usernames,"@litixsocial\\n@creator");
+ assert.equal(draft.params.usernames,"@litixsocial\n@creator");
 });
