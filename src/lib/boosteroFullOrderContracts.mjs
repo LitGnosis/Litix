@@ -113,6 +113,16 @@ export function validateBoosteroOrderDraft(service,input={}){
    variableFutureCharge:false,chargeAllowed:false,supplierDispatchAllowed:false,
    reason:"custom_comment_dispatch_not_verified"};
  }
+ if(type==="Mentions Custom List"){
+  // Boostero v2 specifies usernames, not a separate quantity field.
+  const list=String(input.usernames||"").split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+  if(list.length<Number(service.min)||list.length>Number(service.max)||list.length>1000||
+    list.some(x=>!/^@?[A-Za-z0-9._]{2,40}$/.test(x)))return fail("invalid_usernames");
+  params.usernames=list.join("\n");
+  return {valid:true,type,params,estimatedTotalQuantity:list.length,
+    variableFutureCharge:false,chargeAllowed:false,supplierDispatchAllowed:false,
+    reason:"mentions_list_pricing_not_verified"};
+ }
  const quantity=int(input.quantity,Number(service.min),Math.min(Number(service.max),1000000));
  if(quantity===null)return fail("quantity_out_of_supplier_range");
  if(type==="Default"){
@@ -123,10 +133,6 @@ export function validateBoosteroOrderDraft(service,input={}){
    if(runs===null||interval===null||quantity*runs>100000000)return fail("invalid_dripfeed");
    params.runs=runs;params.interval=interval;
   }
- }else if(type==="Mentions Custom List"){
-  const list=String(input.usernames||"").split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
-  if(!list.length||list.length>quantity||list.some(x=>!/^@?[A-Za-z0-9._]{2,40}$/.test(x)))return fail("invalid_usernames");
-  params.usernames=list.join("\n");params.quantity=quantity;
  }else if(type==="Mentions Hashtag"){
   if(!/^#[A-Za-z0-9_]{2,60}$/.test(String(input.hashtag||"")))return fail("invalid_hashtag");
   params.hashtag=String(input.hashtag);params.quantity=quantity;
