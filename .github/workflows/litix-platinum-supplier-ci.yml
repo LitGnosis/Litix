@@ -1,0 +1,60 @@
+name: Litix Platinum Global — no-charge supplier qualification and safety
+on:
+  push:
+    branches:
+      - feature/litix-platinum-global-qualification-20261028
+  pull_request:
+    paths:
+      - "src/lib/platinum*.mjs"
+      - "src/tests/platinum*.test.mjs"
+      - "src/app/platinum-global-preview/**"
+      - "src/app/api/internal/platinum/**"
+      - ".github/workflows/litix-platinum-supplier-ci.yml"
+permissions:
+  contents: read
+jobs:
+  supplier-qualification:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    defaults:
+      run:
+        working-directory: src
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: src/package-lock.json
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Syntax and no-charge supplier qualification tests
+        run: |
+          set -eu
+          node --check lib/platinumSupplierQualification.mjs
+          node --check lib/platinumReadOnlySupplierAdapters.mjs
+          node --check app/api/internal/platinum/qualification/route.js
+          node --test tests/platinum-supplier-qualification.test.mjs
+      - name: Preserve existing Boostero security and catalog integration
+        run: |
+          node --test \
+            tests/boostero-live-fulfillment.test.mjs \
+            tests/boostero-only-public-catalog-regression.test.mjs \
+            tests/boostero-exclusive-new-orders.test.mjs \
+            tests/boostero-order-forms.test.mjs \
+            tests/boostero-global-catalog.test.mjs \
+            tests/preview-checkout.test.mjs \
+            tests/growth-bundles-manual.test.mjs
+      - name: Build preview app without any payment or supplier calls
+        run: npm run build
+      - name: Do not touch live public catalog, checkout, payments or supplier order handler
+        run: |
+          set -eu
+          touched="$(git diff --name-only 8bbdc59f2045198f68e085733c942255317687bd HEAD -- src/)"
+          if printf "%s\n" "$touched" | grep -E '^src/(app/page\.jsx|app/api/checkout/v1/route\.js|app/api/catalog/v1/route\.js|lib/boosteroOrderHandler\.mjs|lib/boosteroFulfillment\.mjs)$'; then
+            echo 'Live checkout or supplier fulfillment modified; require dedicated review'
+            exit 1
+          fi
