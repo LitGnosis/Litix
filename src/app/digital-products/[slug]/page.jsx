@@ -45,7 +45,7 @@ const products = {
     faq: [
       ["Who is this for?", "Creators, social media managers, and small growth teams who want a repeatable measurement habit."],
       ["Does it promise a certain follower count?", "No. The toolkit helps plan and evaluate work; it does not guarantee platform outcomes."],
-      ["Is it available to buy now?", "Not yet. Join early access and we'll share an update when the final files and terms are ready."],
+      ["How do I know if checkout is open?", "The secure checkout section below shows whether this product is available. Joining early access is not a purchase."],
     ],
   },
   "agency-starter-pack": {
@@ -67,7 +67,7 @@ const products = {
     faq: [
       ["Who is this for?", "Freelancers, independent consultants, and small marketing agencies."],
       ["Is this legal advice or a contract?", "No. These are operating templates. Use written agreements appropriate to your business and seek professional advice where needed."],
-      ["Is it available to buy now?", "Not yet. Join early access and we'll share an update when the final files and terms are ready."],
+      ["How do I know if checkout is open?", "The secure checkout section below shows whether this product is available. Joining early access is not a purchase."],
     ],
   },
 };
