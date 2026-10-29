@@ -77,6 +77,13 @@ export async function GET(request){
     // Never return supplier service ID, wholesale rates, provider API key or DB metadata.
    };
   });
+  const choices=ordered.slice(0,500).map(s=>({
+   id:"service_"+createHmac("sha256",process.env.BOOSTERO_API_KEY||"unconfigured").update(s.id).digest("hex").slice(0,24),
+   name:safeText(s.name,180).replace(/^\\s*#?\\d{3,7}\\s*[-:|]\\s*/,""),
+   category:safeText(s.category,140),type:s.type,kind:s.kind,platform:s.platform,
+   minimum:s.min,maximum:s.max,dripfeed:s.dripfeed,
+   purchasable:!!byId.get("boostero_"+s.id)?.purchasable
+  }));
   return respond({supplier:"boostero",supplierExclusive:true,source:"authenticated_live_services",
    observedAt:new Date().toISOString(),supplierTotal:stats.retrieved,validTotal:stats.valid,
    invalidTotal:stats.invalid,duplicates:stats.duplicates,
@@ -84,7 +91,7 @@ export async function GET(request){
    platforms:stats.platforms,kinds:stats.kinds,orderTypes:stats.types,
    inputSchemaSupportedCount:items.filter(s=>boosteroOrderCapability(s).schemaSupported).length,
    blockedUntilFulfillmentValidated:stats.valid-approved.length,
-   categories:visibleCategories,items:result,
+   categories:visibleCategories,items:result,choices,choicesTruncated:ordered.length>choices.length,
    prices:"Only existing approved retail prices are shown; never supplier wholesale.",
    noChargeForUnapproved:true});
  }catch(e){
