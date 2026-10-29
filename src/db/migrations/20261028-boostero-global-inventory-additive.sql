@@ -41,3 +41,17 @@ CREATE TABLE IF NOT EXISTS public.litix_boostero_inventory_syncs (
  notes text
 );
 -- No DELETE, DROP, TRUNCATE, payment updates or existing-order migration.
+
+-- Candidate retail values are private and always require separate purchase approval.
+-- Never exposes wholesale prices or enables previously unapproved products.
+ALTER TABLE public.litix_boostero_inventory
+ ADD COLUMN IF NOT EXISTS retail_per_1000_cents bigint
+ CHECK (retail_per_1000_cents IS NULL OR retail_per_1000_cents >= 500);
+ALTER TABLE public.litix_boostero_inventory
+ ADD COLUMN IF NOT EXISTS pricing_review_reason text;
+ALTER TABLE public.litix_boostero_inventory
+ ADD COLUMN IF NOT EXISTS supplier_identifier text NOT NULL DEFAULT 'BOOSTERO';
+CREATE INDEX IF NOT EXISTS litix_boostero_inventory_price_review_idx
+ ON public.litix_boostero_inventory(pricing_review_reason)
+ WHERE active=true;
+-- Intentionally no public_activation or payment writes in this migration.
