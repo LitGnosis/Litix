@@ -8,6 +8,9 @@ This document defines the implementation gates for turning the current storefron
 - [x] First drafts of all three product kits.
 - [x] Spreadsheet-ready source templates.
 - [x] Draft separate order / entitlement database schema.
+- [x] Add gated PayKings/NMI tokenized checkout API with server-side product pricing and idempotency.
+- [x] Add protected ZIP asset storage/upload and time-limited download entitlements.
+- [x] Add a checkout readiness endpoint and gated checkout UI; sales stay disabled until assets and configuration are ready.
 - [x] Early-access signup API, confirmation email, and token-based unsubscribe endpoint (disabled until explicitly enabled).
 - [ ] Editorial review, consistency pass, and final branded layouts.
 - [ ] Generate final PDF / spreadsheet packages and inspect every file.
@@ -29,6 +32,14 @@ This document defines the implementation gates for turning the current storefron
 11. Support refunds/chargebacks by revoking access and keeping a minimal audit trail.
 12. Provide order receipt, download instructions, and a clear recovery/support path.
 13. Test declined payments, duplicate submissions, timeouts, webhook retries, expired links, refund revocation, and mobile usability.
+
+## Required configuration before testing or enabling sales
+
+The new commerce routes deliberately fail closed. They require a dedicated LITIX_DIGITAL_DATABASE_URL and a reviewed application of the SQL migration. Private bundles are uploaded through the protected asset endpoint only after LITIX_DIGITAL_ASSET_UPLOAD_ENABLED is explicitly set to true and LITIX_DIGITAL_ASSET_ADMIN_TOKEN is set. The upload endpoint accepts ZIP bundles up to 8 MB and stores them in the dedicated digital-products database, not in the public web root.
+
+Checkout remains disabled unless LITIX_DIGITAL_SALES_ENABLED is true. Gateway configuration uses LITIX_DIGITAL_GATEWAY_MODE=TEST with LITIX_DIGITAL_TEST_GATEWAY_URL and LITIX_DIGITAL_TEST_GATEWAY_KEY, or LITIX_DIGITAL_GATEWAY_MODE=PRODUCTION with LITIX_DIGITAL_PRODUCTION_GATEWAY_URL and LITIX_DIGITAL_PRODUCTION_GATEWAY_KEY. The production gateway host is restricted to paykings.transactiongateway.com. Never reuse the public Collect.js key as a private gateway credential. The test gateway must be a dedicated non-production HTTPS endpoint.
+
+Paid download links are random bearer tokens stored only as SHA-256 hashes. They expire after 30 days and permit at most five downloads. The product bundle must exist before a charge is attempted. Payment timeouts and uncertain responses enter review state and must never trigger automatic repeat charges.
 
 ## Waitlist configuration
 
