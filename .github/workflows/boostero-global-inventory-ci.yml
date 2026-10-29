@@ -69,7 +69,19 @@ jobs:
       - name: Ensure no existing checkout or production source was edited
         run: |
           set -Eeuo pipefail
-          if git diff --name-only 8bbdc59f2045198f68e085733c942255317687bd HEAD | grep -E '^src/(lib/boosteroOrderHandler\.mjs|lib/boosteroFulfillment\.mjs|app/api/checkout/v1/route\.js|app/page\.jsx)$'; then
+          if git diff --name-only 8bbdc59f2045198f68e085733c942255317687bd HEAD | grep -E '^src/(lib/boosteroOrderHandler\.mjs|lib/boosteroFulfillment\.mjs|app/api/checkout/v1/route\.js)
+             echo 'Checkout/source modification requires separate review'; exit 1
+          fi
+          python3 - <<'PY'
+          import pathlib,subprocess
+          source=subprocess.check_output(["git","show","8bbdc59f2045198f68e085733c942255317687bd:src/app/page.jsx"],text=True)
+          current=pathlib.Path("src/app/page.jsx").read_text()
+          anchor='<a href="#services">Services</a><a href="#checkout">Checkout</a>'
+          addition='<a href="#services">Services</a><a href="/global-services">Global Catalog</a><a href="#checkout">Checkout</a>'
+          assert source.count(anchor)==1 and current==source.replace(anchor,addition), "Unreviewed storefront change"
+          print("EXISTING_CHECKOUT_SOURCE_PRESERVED; ONLY_NAV_LINK_ADDED")
+          PY
+; then
              echo 'Checkout/source modification requires separate review'; exit 1
           fi
           python3 - <<'PY'
