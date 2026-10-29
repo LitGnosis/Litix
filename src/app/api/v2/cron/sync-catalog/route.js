@@ -66,8 +66,11 @@ export async function GET(request) {
       const serviceId = Number(item?.service);
       const serviceName = typeof item?.name === "string" ? item.name.trim().slice(0, 300) : "";
       const baseRate = Number(item?.rate);
+      const minQty = Number(item?.min);
+      const maxQty = Number(item?.max);
       if (!Number.isSafeInteger(serviceId) || serviceId <= 0 || !serviceName ||
-          !Number.isFinite(baseRate) || baseRate < 0 || baseRate > 1000000 || seen.has(serviceId)) {
+          !Number.isFinite(baseRate) || baseRate <= 0 || baseRate > 1000000 ||
+          !Number.isSafeInteger(minQty) || minQty <= 0 || !Number.isSafeInteger(maxQty) || maxQty < minQty || seen.has(serviceId)) {
         continue;
       }
       seen.add(serviceId);
