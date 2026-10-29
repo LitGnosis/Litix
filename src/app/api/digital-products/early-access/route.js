@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { neon } from "@neondatabase/serverless";
 
 export const runtime = "nodejs";
@@ -46,11 +46,6 @@ export async function POST(request) {
     return json({ error: "Please submit a valid form." }, 400);
   }
 
-  // Honeypot: respond as if accepted to avoid revealing the bot check.
-  if (String(input.website ?? "").trim()) {
-    return json({ ok: true });
-  }
-
   const email = normalizeEmail(input.email);
   const productInterest = String(input.productInterest ?? "all");
   const consent = input.consent === true;
@@ -62,30 +57,61 @@ export async function POST(request) {
     return json({ error: "Choose a product interest and consent to receive launch updates." }, 400);
   }
 
-  // Isolated database only: never fall back to the social-growth production database.
+  // Dedicated database only: never fall back to the social-growth production database.
   const databaseUrl = process.env.LITIX_DIGITAL_DATABASE_URL;
-  if (!databaseUrl) {
+  const resendKey = process.env.RESEND_API_KEY;
+  const emailFrom = process.env.EMAIL_FROM;
+  if (!databaseUrl || !resendKey || !emailFrom) {
     return json({ error: "Early access signup is being prepared. Please try again later." }, 503);
   }
 
   const sql = neon(databaseUrl);
   const emailHash = createHash("sha256").update(email).digest("hex");
+  const unsubscribeToken = randomBytes(32).toString("hex");
+  const unsubscribeTokenHash = createHash("sha256").update(unsubscribeToken).digest("hex");
+  let saved = false;
+
   try {
     const recent = await sql.query(
-      "select count(*)::int as count from litix_digital_waitlist where email_hash = $1 and created_at > now() - interval '1 hour'",
+      "select updated_at from litix_digital_waitlist where email_hash = $1",
       [emailHash],
     );
-    if (Number(recent[0]?.count ?? 0) >= 3) {
-      return json({ error: "Too many signup attempts. Please try again later." }, 429);
+    if (recent.length && Date.now() - new Date(recent[0].updated_at).getTime() < 60 * 60 * 1000) {
+      return json({ error: "This address was recently signed up. Please check your inbox before trying again." }, 429);
     }
 
     await sql.query(
-      "insert into litix_digital_waitlist (email, email_hash, product_interest, consent_at, source) values ($1, $2, $3, now(), 'digital-products') on conflict (email_hash) do update set product_interest = excluded.product_interest, consent_at = excluded.consent_at, updated_at = now()",
-      [email, emailHash, productInterest],
+      "insert into litix_digital_waitlist (email, email_hash, product_interest, consent_at, unsubscribe_token_hash, source, unsubscribed_at) values ($1, $2, $3, now(), $4, 'digital-products', null) on conflict (email_hash) do update set email = excluded.email, product_interest = excluded.product_interest, consent_at = excluded.consent_at, unsubscribe_token_hash = excluded.unsubscribe_token_hash, unsubscribed_at = null, updated_at = now()",
+      [email, emailHash, productInterest, unsubscribeTokenHash],
     );
-    return json({ ok: true, message: "You're on the early-access list. We'll contact you when the collection is ready." });
+    saved = true;
+
+    const baseUrl = (process.env.SITE_URL || "https://litix.net").replace(/\/$/, "");
+    const unsubscribeUrl = baseUrl + "/api/digital-products/unsubscribe?token=" + unsubscribeToken;
+    const emailResponse = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        authorization: "Bearer " + resendKey,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        from: emailFrom,
+        to: [email],
+        subject: "You're on the Litix digital-products early-access list",
+        text: "Thanks for your interest in Litix digital products. We'll send launch updates about the collection you selected.\n\nIf you didn't request this, or you no longer want updates, unsubscribe here: " + unsubscribeUrl,
+        html: "<div style=\"font-family:Arial,sans-serif;line-height:1.7;color:#111827\"><h2>You're on the Litix early-access list.</h2><p>Thanks for your interest in the Litix digital-product collection. We'll send launch updates about the collection you selected.</p><p>If you didn't request this or no longer want updates, <a href=\"" + unsubscribeUrl + "\">unsubscribe here</a>.</p></div>",
+      }),
+      signal: AbortSignal.timeout(7000),
+      cache: "no-store",
+    });
+    if (!emailResponse.ok) throw new Error("Launch confirmation email could not be sent");
+
+    return json({ ok: true, message: "You're on the early-access list. Check your inbox for confirmation." });
   } catch (error) {
-    console.error("Digital product early-access signup failed", String(error?.message ?? "database error").slice(0, 120));
-    return json({ error: "We couldn't save your signup right now. Please try again later." }, 503);
+    if (saved) {
+      await sql.query("delete from litix_digital_waitlist where email_hash = $1 and unsubscribe_token_hash = $2", [emailHash, unsubscribeTokenHash]).catch(() => {});
+    }
+    console.error("Digital product early-access signup failed", String(error?.message ?? "service error").slice(0, 120));
+    return json({ error: "We couldn't confirm your signup right now. Please try again later." }, 503);
   }
 }
