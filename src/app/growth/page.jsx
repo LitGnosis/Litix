@@ -82,7 +82,7 @@ export default function GrowthContentCalendar(){
   return <main className="lgrowth">
     <nav className="lgrowth-nav" aria-label="Growth OS navigation">
       <Link href="/" className="lgrowth-brand"><img src="/assets/brand/litix-logo.webp" width="126" height="40" alt="Litix home" /></Link>
-      <div><Link href="/#growth-studio">Growth Studio</Link><Link href="/track">Track Order</Link><Link href="/global/en">Global</Link></div>
+      <div><Link href="/#growth-studio">Growth Studio</Link><Link href="/analytics">Analytics Studio</Link><Link href="/track">Track Order</Link><Link href="/global/en">Global</Link></div>
     </nav>
     <header className="lgrowth-hero">
       <div><p className="lgrowth-eyebrow">LITIX GROWTH OS</p><h1>Content Calendar</h1>
