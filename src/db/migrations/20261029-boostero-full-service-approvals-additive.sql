@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS public.litix_boostero_full_service_approvals (
   supplier_service_id text PRIMARY KEY,
   order_type text NOT NULL,
   approved_retail_per_1000_cents bigint,
+  approved_package_price_cents bigint,
   approved_wholesale_ceiling numeric(16,6),
   special_contract_verified boolean NOT NULL DEFAULT false,
   enabled boolean NOT NULL DEFAULT false,
@@ -20,7 +21,8 @@ CREATE TABLE IF NOT EXISTS public.litix_boostero_full_service_approvals (
       reviewed_by IS NOT NULL AND reviewed_at IS NOT NULL AND
       approved_wholesale_ceiling IS NOT NULL AND approved_wholesale_ceiling > 0 AND
       ((order_type = 'Default' AND approved_retail_per_1000_cents >= 500)
-       OR (order_type <> 'Default' AND special_contract_verified))
+       OR (order_type = 'Package' AND special_contract_verified AND approved_package_price_cents >= 500)
+       OR (order_type NOT IN ('Default','Package') AND special_contract_verified AND approved_retail_per_1000_cents >= 500))
     )
   )
 );
