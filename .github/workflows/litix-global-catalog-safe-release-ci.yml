@@ -47,7 +47,10 @@ jobs:
             'src/tests/boostero-global-quote.test.mjs',
             'src/tests/boostero-retail-60.test.mjs',
             'src/tests/checkout.test.mjs',
-            'src/tests/preview-checkout.test.mjs'
+            'src/tests/preview-checkout.test.mjs',
+            'src/tests/boostero-integration.test.mjs',
+            'src/tests/boostero-public-routing.test.mjs',
+            'src/tests/boostero-four-kinds.test.mjs'
           }
           changed=set(subprocess.check_output(['git','diff','--name-only',original,'HEAD'],text=True).splitlines())
           assert changed<=permitted, 'Unexpected source changes; do not release: '+repr(sorted(changed-permitted))
