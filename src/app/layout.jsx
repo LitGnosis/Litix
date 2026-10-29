@@ -9,10 +9,14 @@ const keywords = [
   "marketing",
   "promotions",
   "social media growth",
+  "creator tools",
+  "content planning",
+  "digital products",
+  "agency workflows",
 ];
 const siteUrl = "https://litix.net/";
 const description =
-  "Litix provides social media promotion services with a live service catalog, secure tokenized checkout, and order tracking.";
+  "Litix is a digital growth platform connecting social marketing services, content planning tools, creator resources, and agency workflows, with secure tokenized checkout and order tracking.";
 
 export const metadata = {
   metadataBase: new URL(siteUrl),
