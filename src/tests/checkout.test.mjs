@@ -53,10 +53,18 @@ for(const [label,options,status,payments,orders] of cases){
 test('server checkout and catalog importer use the same 2.5x markup',()=>{
  const route=readFileSync(new URL('../app/api/[action]/route.js',import.meta.url),'utf8');
  const bulk=readFileSync(new URL('../app/api/v2/bulk-import/route.js',import.meta.url),'utf8');
+ const multi=readFileSync(new URL('../app/api/litix-multi-catalog/route.js',import.meta.url),'utf8');
+ const eps=readFileSync(new URL('../app/api/v2/payments/eps-init/route.js',import.meta.url),'utf8');
+ const brand=readFileSync(new URL('../config/brandEngine.js',import.meta.url),'utf8');
  assert.match(route,/rate\)\*2\.5\*qty/);
  assert.match(bulk,/baseRate \* 2\.5/);
  assert.doesNotMatch(route,/SMMFOLLOWOM/);
  assert.doesNotMatch(bulk,/SMMFOLLOWOM/);
+ assert.match(multi,/BOOSTERO_API_KEY/);
+ assert.match(multi,/retailPer1000Cents: Math.ceil\(Number\(x\.rate\) \* 250\)/);
+ assert.doesNotMatch(multi,/SMMGLOB/);
+ assert.match(eps,/baseRate \* 2\.5/);
+ assert.doesNotMatch(brand,/SMMFollowOM/);
 });
 test('browser submits the displayed total for server confirmation',()=>{
  const page=readFileSync(new URL('../app/page.jsx',import.meta.url),'utf8');
