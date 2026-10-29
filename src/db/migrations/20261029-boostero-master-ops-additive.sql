@@ -9,10 +9,16 @@ ALTER TABLE public.litix_boostero_inventory
  ADD COLUMN IF NOT EXISTS last_verified_at timestamptz;
 ALTER TABLE public.litix_boostero_inventory
  ADD COLUMN IF NOT EXISTS checkout_adapter text;
-ALTER TABLE public.litix_boostero_inventory
- ADD CONSTRAINT litix_boostero_validation_state_check
- CHECK (validation_state IN ('IMPORTED','VERIFIED','PURCHASABLE','UNSUPPORTED_TYPE',
-                            'INVALID_METADATA','SUPPLIER_UNAVAILABLE','DISCONTINUED','PENDING_REVIEW'));
+DO $
+BEGIN
+ IF NOT EXISTS(SELECT 1 FROM pg_constraint WHERE conname='litix_boostero_validation_state_check'
+   AND conrelid='public.litix_boostero_inventory'::regclass) THEN
+  ALTER TABLE public.litix_boostero_inventory
+   ADD CONSTRAINT litix_boostero_validation_state_check
+    CHECK (validation_state IN ('IMPORTED','VERIFIED','PURCHASABLE','UNSUPPORTED_TYPE',
+                               'INVALID_METADATA','SUPPLIER_UNAVAILABLE','DISCONTINUED','PENDING_REVIEW'));
+ END IF;
+END $;
 CREATE INDEX IF NOT EXISTS litix_boostero_inventory_validation_idx
  ON public.litix_boostero_inventory(validation_state,active,refreshed_at DESC);
 -- Sync operation logs contain only sanitized codes and aggregate counts.
