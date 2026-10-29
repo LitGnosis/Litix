@@ -18,6 +18,10 @@
     {
       "path": "/api/internal/boostero/inventory-sync",
       "schedule": "0 */6 * * *"
+    },
+    {
+      "path": "/api/internal/boostero/maintenance",
+      "schedule": "0 2 * * *"
     }
   ]
 }
