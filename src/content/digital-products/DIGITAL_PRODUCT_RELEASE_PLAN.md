@@ -8,6 +8,7 @@ This document defines the implementation gates for turning the current storefron
 - [x] First drafts of all three product kits.
 - [x] Spreadsheet-ready source templates.
 - [x] Draft separate order / entitlement database schema.
+- [x] Early-access signup API, confirmation email, and token-based unsubscribe endpoint (disabled until explicitly enabled).
 - [ ] Editorial review, consistency pass, and final branded layouts.
 - [ ] Generate final PDF / spreadsheet packages and inspect every file.
 - [ ] Decide final prices, customer license, terms, support contact, and refund policy.
@@ -28,6 +29,10 @@ This document defines the implementation gates for turning the current storefron
 11. Support refunds/chargebacks by revoking access and keeping a minimal audit trail.
 12. Provide order receipt, download instructions, and a clear recovery/support path.
 13. Test declined payments, duplicate submissions, timeouts, webhook retries, expired links, refund revocation, and mobile usability.
+
+## Waitlist configuration
+
+The signup route fails closed unless LITIX_DIGITAL_WAITLIST_ENABLED is set to true and LITIX_DIGITAL_DATABASE_URL, RESEND_API_KEY, EMAIL_FROM, and SITE_URL are correctly configured. Apply the waitlist schema only to a dedicated digital-products database. Test confirmation delivery and unsubscribe behavior before enabling signup publicly.
 
 ## Database
 
