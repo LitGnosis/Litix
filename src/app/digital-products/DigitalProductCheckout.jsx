@@ -1,10 +1,16 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import PremiumInlineCheckout from "../../../components/PremiumInlineCheckout";
-
 const newKey = () => {
-  try { return globalThis.crypto.randomUUID(); } catch { return ""; }
+  try {
+    if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
+    const bytes = new Uint8Array(16);
+    globalThis.crypto.getRandomValues(bytes);
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    const hex = Array.from(bytes, (value) => value.toString(16).padStart(2, "0")).join("");
+    return hex.slice(0, 8) + "-" + hex.slice(8, 12) + "-" + hex.slice(12, 16) + "-" + hex.slice(16, 20) + "-" + hex.slice(20);
+  } catch { return ""; }
 };
 
 export default function DigitalProductCheckout({ productId, productName }) {
@@ -14,6 +20,7 @@ export default function DigitalProductCheckout({ productId, productName }) {
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState("");
   const [receipt, setReceipt] = useState(null);
+  const [locked, setLocked] = useState(false);
   const [idempotencyKey, setIdempotencyKey] = useState("");
   const completePayment = useRef(null);
 
@@ -43,11 +50,16 @@ export default function DigitalProductCheckout({ productId, productName }) {
       setNotice(result.message || result.error || "Checkout response received.");
       if (response.ok && result.ok) {
         setCardReady(false);
+        setLocked(true);
       } else if (response.status === 402) {
         setIdempotencyKey(newKey());
+        setLocked(false);
+      } else if (response.status === 202 || response.status === 409 || response.status >= 500) {
+        setLocked(true);
       }
     } catch {
-      setNotice("We couldn't confirm the payment response. Do not submit a second order; contact support for reconciliation.");
+      setLocked(true);
+      setNotice("Payment response could not be confirmed. Do not submit a second order; contact support for reconciliation.");
     } finally {
       setBusy(false);
     }
@@ -149,7 +161,7 @@ export default function DigitalProductCheckout({ productId, productName }) {
     const currentCollect = getCollectJS();
 
     if (currentCollect && typeof currentCollect.configure === "function") {
-      if (script?.dataset.tokenizationKey && script.dataset.tokenizationKey !== config.publicKey) {
+      if (!script || script.dataset.tokenizationKey !== config.publicKey) {
         fail("A different tokenization key is already loaded. Refresh the page before checkout.");
       } else {
         pollStartedAt = Date.now();
@@ -215,8 +227,8 @@ export default function DigitalProductCheckout({ productId, productName }) {
             <label><span>Security code</span><div className="field" id="cvv" /></label>
           </div>
         </div>
-        <button className="digital-primary digital-waitlist-submit" type="submit" disabled={!cardReady || busy || !idempotencyKey}>
-          {busy ? "Processing securely…" : "Pay securely"} <span aria-hidden="true">↗</span>
+        <button className="digital-primary digital-waitlist-submit" type="submit" disabled={!cardReady || busy || locked || !idempotencyKey}>
+          {busy ? "Processing securely…" : locked ? "Checkout locked — contact support" : "Pay securely"} <span aria-hidden="true">↗</span>
         </button>
       </form>
       {notice ? <p className="digital-form-status" role="status" aria-live="polite">{notice}</p> : null}
