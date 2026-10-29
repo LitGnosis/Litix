@@ -16,7 +16,7 @@ export async function GET() {
   try {
     const url = new URL(supplierUrl);
     supplierHostValid = url.protocol === "https:" &&
-      url.hostname === "boostero.com" && url.pathname.replace(/\\/+$/, "") === "/api/v2" && !url.username && !url.password && !url.search && !url.hash;
+      url.hostname === "boostero.com" && url.pathname === "/api/v2" && !url.username && !url.password && !url.search && !url.hash;
   } catch {}
 
   // Deliberately do not contact the supplier or payment gateway from a health check.
