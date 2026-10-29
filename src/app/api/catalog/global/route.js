@@ -1,3 +1,4 @@
+import {createHmac} from "node:crypto";
 import {boosteroReadOnly,boosteroProduction} from "../../../../lib/boosteroReadOnly.mjs";
 import {normalizeBoosteroCatalog} from "../../../../lib/boosteroGlobalCatalog.mjs";
 import {boosteroOrderCapability} from "../../../../lib/boosteroFullOrderContracts.mjs";
@@ -58,10 +59,12 @@ export async function GET(request){
     a.platform.localeCompare(b.platform)||a.category.localeCompare(b.category)||
     a.name.localeCompare(b.name)||Number(a.id)-Number(b.id);
   });
+  const visibleCategories=[...new Set(items.filter(s=>!platform||s.platform===platform).map(s=>s.category))].sort((a,b)=>a.localeCompare(b)).slice(0,500);
   const result=ordered.slice((page-1)*pageSize,page*pageSize).map(s=>{
    const card=byId.get("boostero_"+s.id);
    const contract=boosteroOrderCapability(s);
-   return {id:card?.id||"catalog_"+s.id,platform:s.platform,
+   const opaque="service_"+createHmac("sha256",process.env.BOOSTERO_API_KEY||"unconfigured").update(s.id).digest("hex").slice(0,24);
+   return {id:opaque,platform:s.platform,
     name:safeText(s.name,180).replace(/^\s*#?\d{3,7}\s*[-:|]\s*/,""),
     category:safeText(s.category,140),kind:s.kind,type:s.type,
     supplierMinimum:s.min,supplierMaximum:s.max,refill:s.refill,dripfeed:s.dripfeed,
@@ -77,7 +80,7 @@ export async function GET(request){
    observedAt:new Date().toISOString(),supplierTotal:stats.retrieved,validTotal:stats.valid,
    invalidTotal:stats.invalid,duplicates:stats.duplicates,
    approvedLiveCount:approved.length,filteredTotal:filtered.length,page,pageSize,
-   platforms:stats.platforms,kinds:stats.kinds,items:result,
+   platforms:stats.platforms,kinds:stats.kinds,categories:visibleCategories,items:result,
    prices:"Only existing approved retail prices are shown; never supplier wholesale.",
    noChargeForUnapproved:true});
  }catch(e){
