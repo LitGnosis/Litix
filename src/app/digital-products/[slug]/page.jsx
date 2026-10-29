@@ -140,7 +140,7 @@ export default async function DigitalProductDetailPage({ params }) {
         <div className="digital-early-copy"><div className="digital-eyebrow">GET FIRST ACCESS</div><h2>We'll let you know when it's ready.</h2><p>Join the early-access list for updates on {product.name}. No payment is taken by joining.</p></div>
         <EarlyAccessForm />
       </section>
-      <footer className="digital-footer"><Link className="digital-brand" href="/">LITIX<span>✦</span></Link><span>The Platinum Standard in Social Growth.</span><div><Link href="/privacy">Privacy</Link><Link href="/terms">Terms</Link><Link href="/refunds">Refunds</Link></div></footer>
+      <footer className="digital-footer"><Link className="digital-brand" href="/">LITIX<span>✦</span></Link><span>Data Driven Discovery · Metrics that Move</span><div><Link href="/privacy">Privacy</Link><Link href="/terms">Terms</Link><Link href="/refunds">Refunds</Link></div></footer>
     </main>
   );
 }
