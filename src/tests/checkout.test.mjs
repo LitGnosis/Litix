@@ -61,4 +61,6 @@ test('server checkout and catalog importer use the same 2.5x markup',()=>{
 test('browser submits the displayed total for server confirmation',()=>{
  const page=readFileSync(new URL('../app/page.jsx',import.meta.url),'utf8');
  assert.match(page,/expectedAmountCents:price/);
+ assert.match(page,/price<500/);
+ assert.match(page,/Minimum order \$5\.00/);
 });
