@@ -1,4 +1,5 @@
 import Link from "next/link";
+import EarlyAccessForm from "./EarlyAccessForm";
 import "./digital-products.css";
 
 export const metadata = {
@@ -100,8 +101,8 @@ export default function DigitalProductsPage() {
       </section>
 
       <section className="digital-early-access" id="early-access">
-        <div><div className="digital-eyebrow">NEXT UP</div><h2>Digital tools, built the Litix way.</h2><p>We're shaping the first collection around useful templates—not empty promises. Explore the existing Litix planning workspace while the downloadable kits are prepared.</p></div>
-        <div className="digital-early-actions"><Link className="digital-primary" href="/growth">Open content calendar <span aria-hidden="true">↗</span></Link><Link className="digital-secondary" href="/">Explore Litix services</Link></div>
+        <div className="digital-early-copy"><div className="digital-eyebrow">GET FIRST ACCESS</div><h2>Be first in line for the collection.</h2><p>Join the early-access list to hear when the kits are ready. This is a launch-interest signup only—no payment is taken and no product is being sold yet.</p><div className="digital-early-links"><Link href="/growth">Explore the content calendar ↗</Link><Link href="/">Explore Litix services ↗</Link></div></div>
+        <EarlyAccessForm />
       </section>
       <footer className="digital-footer"><Link className="digital-brand" href="/">LITIX<span>✦</span></Link><span>The Platinum Standard in Social Growth.</span><div><Link href="/privacy">Privacy</Link><Link href="/terms">Terms</Link><Link href="/refunds">Refunds</Link></div></footer>
     </main>
