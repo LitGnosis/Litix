@@ -1,5 +1,6 @@
 "use client";
 import {useEffect,useState} from "react";
+import ServiceDraft from "./ServiceDraft";
 export default function CatalogExplorer(){
  const [platform,setPlatform]=useState("");
  const [kind,setKind]=useState("");
@@ -10,6 +11,7 @@ export default function CatalogExplorer(){
  const [listing,setListing]=useState(null);
  const [error,setError]=useState("");
  const [loading,setLoading]=useState(true);
+ const [selected,setSelected]=useState(null);
  useEffect(()=>{
   const controller=new AbortController();
   fetch("/api/internal/boostero/catalog-audit",{cache:"no-store",signal:controller.signal})
@@ -80,6 +82,7 @@ export default function CatalogExplorer(){
     <div className="lg-notice" role="status">Preview inventory only. No purchasing is available from this page. Existing approved services remain on the live Litix storefront.</div>
     {error?<p role="alert" className="lg-muted">{error}</p>:null}
     <p className="lg-muted">{loading?"Retrieving available supplier services…":(listing?.total||0).toLocaleString()+" matching services"} • Page {page}{pages?" of "+pages:""}</p>
+    {selected?<ServiceDraft service={selected} onClose={()=>setSelected(null)}/>:null}
     <div className="lg-list">{(listing?.items||[]).map(s=><article className="lg-card" key={s.id}>
      <small>{s.platform} / {s.kind.replaceAll("_"," ")} / {s.id}</small>
      <h3>{s.name}</h3>
@@ -87,6 +90,7 @@ export default function CatalogExplorer(){
       {s.refill?<span className="lg-chip">Refill listed</span>:null}{s.dripfeed?<span className="lg-chip">Drip-feed listed</span>:null}
      </div>
      <span className="lg-inactive">Owner approval required · Not purchasable</span>
+     <div style={{marginTop:12}}><button type="button" onClick={()=>setSelected(s)}>Preview required fields</button></div>
     </article>)}</div>
     <nav className="lg-pages" aria-label="Catalog pages">
      <button type="button" onClick={()=>setPage(p=>Math.max(1,p-1))} disabled={page<=1}>Previous</button>
