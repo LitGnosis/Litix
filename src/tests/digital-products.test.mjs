@@ -126,6 +126,9 @@ test("unified platform hub connects existing Litix workspaces", async () => {
   const platformCss = await read("../app/platform/platform.css");
   const homepage = await read("../app/page.jsx");
   const layout = await read("../app/layout.jsx");
+  const siteCss = await read("../app/style.css");
+  assert.match(siteCss, /@media\(max-width:700px\)/);
+  assert.match(siteCss, /\.nav>div\{width:100%/);
   assert.match(layout, /digital growth platform connecting social marketing services/);
   assert.match(layout, /agency workflows/);
   assert.match(homepage, /href="\/platform">Platform/);
