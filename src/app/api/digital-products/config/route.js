@@ -32,6 +32,9 @@ export async function GET(request) {
   const productId = new URL(request.url).searchParams.get("productId") || "";
   const publicKey = process.env.NEXT_PUBLIC_PAYKINGS_NMI_COLLECT_PUBLIC_KEY || process.env.PAYKINGS_NMI_COLLECT_PUBLIC_KEY || "";
   const baseReady = process.env.LITIX_DIGITAL_SALES_ENABLED === "true" &&
+    process.env.LITIX_DIGITAL_PRICING_APPROVED === "true" &&
+    process.env.LITIX_DIGITAL_TERMS_APPROVED === "true" &&
+    process.env.LITIX_DIGITAL_ASSETS_APPROVED === "true" &&
     Boolean(process.env.LITIX_DIGITAL_DATABASE_URL) &&
     Boolean(publicKey) &&
     gatewayReady() &&
