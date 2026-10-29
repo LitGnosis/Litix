@@ -4,7 +4,7 @@
  * service enablement or assumptions about package/subscription pricing.
  */
 const KNOWN_TYPES = Object.freeze([
- "Default","Package","Custom Comments","Mentions Custom List",
+ "Default","Package","SEO","Custom Comments","Mentions Custom List","Mentions",
  "Mentions Hashtag","Mentions User Followers","Subscriptions",
  "Comment Likes","Poll"
 ]);
@@ -47,7 +47,7 @@ function publicLink(input,platform){
 export function boosteroOrderCapability(service){
  const type=supportedBoosteroType(service?.type);
  const platform=String(service?.platform||"");
- const knownHost=Array.isArray(hosts[platform])&&(hosts[platform].length>0||platform==="Website Traffic");
+ const knownHost=Array.isArray(hosts[platform])&&(hosts[platform].length>0||platform==="Website Traffic")||type==="SEO";
  const reason=!type?"unknown_supplier_order_type":!knownHost?"unverified_platform_destination":
   type==="Subscriptions"?"requires_recurring_billing_and_supplier_lifecycle":
   type==="Package"?"package_fixed_price_quote_not_verified":
@@ -97,7 +97,7 @@ export function validateBoosteroOrderDraft(service,input={}){
   return {valid:true,type,params,estimatedTotalQuantity:null,variableFutureCharge:true,
    chargeAllowed:false,supplierDispatchAllowed:false,reason:"subscription_billing_not_implemented"};
  }
- const link=publicLink(input.link,platform);
+ const link=publicLink(input.link,type==="SEO"?"Website Traffic":platform);
  if(!link)return fail("invalid_platform_target");
  params.link=link;
  if(type==="Package"){
@@ -113,15 +113,15 @@ export function validateBoosteroOrderDraft(service,input={}){
    variableFutureCharge:false,chargeAllowed:false,supplierDispatchAllowed:false,
    reason:"custom_comment_dispatch_not_verified"};
  }
- if(type==="Mentions Custom List"){
-  // Boostero v2 specifies usernames, not a separate quantity field.
+ if(type==="Mentions"){
+  // Official v2 API: link + usernames (no quantity).
   const list=String(input.usernames||"").split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
   if(list.length<Number(service.min)||list.length>Number(service.max)||list.length>1000||
-    list.some(x=>!/^@?[A-Za-z0-9._]{2,40}$/.test(x)))return fail("invalid_usernames");
+    list.some(x=>!/^@?[A-Za-z0-9._]{2,40}$/.test(x)))return fail("invalid_mentions_usernames");
   params.usernames=list.join("\n");
   return {valid:true,type,params,estimatedTotalQuantity:list.length,
     variableFutureCharge:false,chargeAllowed:false,supplierDispatchAllowed:false,
-    reason:"mentions_list_pricing_not_verified"};
+    reason:"mentions_cost_requires_review"};
  }
  const quantity=int(input.quantity,Number(service.min),Math.min(Number(service.max),1000000));
  if(quantity===null)return fail("quantity_out_of_supplier_range");
@@ -133,6 +133,17 @@ export function validateBoosteroOrderDraft(service,input={}){
    if(runs===null||interval===null||quantity*runs>100000000)return fail("invalid_dripfeed");
    params.runs=runs;params.interval=interval;
   }
+ }else if(type==="Mentions Custom List"){
+  // Official v2 API: link + quantity + usernames.
+  const list=String(input.usernames||"").split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+  if(!list.length||list.length>quantity||list.length>1000||
+     list.some(x=>!/^@?[A-Za-z0-9._]{2,40}$/.test(x)))return fail("invalid_usernames");
+  params.usernames=list.join("\n");params.quantity=quantity;
+ }else if(type==="SEO"){
+  const list=String(input.keywords||"").split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+  if(!list.length||list.length>100||list.some(x=>x.length<1||x.length>120||/[\u0000-\u001f]/.test(x)))
+    return fail("invalid_seo_keywords");
+  params.quantity=quantity;params.keywords=list.join("\n");
  }else if(type==="Mentions Hashtag"){
   if(!/^#[A-Za-z0-9_]{2,60}$/.test(String(input.hashtag||"")))return fail("invalid_hashtag");
   params.hashtag=String(input.hashtag);params.quantity=quantity;
