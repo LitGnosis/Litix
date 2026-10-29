@@ -27,7 +27,7 @@ jobs:
           cache-dependency-path: src/package-lock.json
       - run: npm ci --no-audit --no-fund
         working-directory: src
-      - run: node --test tests/boostero-retail-25.test.mjs tests/boostero-inventory-25.test.mjs tests/boostero-validation-master.test.mjs tests/boostero-master-ops-security.test.mjs
+      - run: node --test tests/boostero-retail-25.test.mjs tests/boostero-inventory-25.test.mjs tests/boostero-validation-master.test.mjs tests/boostero-master-ops-security.test.mjs tests/boostero-batch-statuses.test.mjs
         working-directory: src
       - run: npm run build
         working-directory: src
