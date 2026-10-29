@@ -81,7 +81,7 @@ export default function DigitalProductCheckout({ productId, productName }) {
     let pollStartedAt = 0;
     let script = document.querySelector('script[data-litix-paykings-collect="true"]');
 
-    const getCollectJS = () => typeof window !== "undefined" ? window.CollectJS : undefined;
+    const getCollectJS = () => { try { if (typeof CollectJS !== "undefined") return CollectJS; } catch {} return typeof window !== "undefined" ? window.CollectJS : undefined; };
     const fail = (message) => {
       if (!active || configured) return;
       failed = true;
