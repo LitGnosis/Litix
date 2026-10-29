@@ -1,0 +1,23 @@
+name: Boostero live supplier exclusivity gate
+on:
+  pull_request:
+    paths:
+      - 'src/**'
+      - '.github/workflows/boostero-live-exclusivity-20261029.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  supplier-policy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+      - run: node scripts/check-boostero-exclusive.mjs
+        working-directory: src
+      - run: node --test tests/boostero-retail-25.test.mjs
+        working-directory: src
