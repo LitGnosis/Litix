@@ -64,7 +64,7 @@ test("each planned product has a dedicated detail page and early-access form", a
 test("storefront makes non-purchasable status explicit", async () => {
   const page = await read("../app/digital-products/page.jsx");
   assert.match(page, /not yet available for purchase/i);
-  assert.match(page, /one-time price concept/i);
+  assert.match(page, /planned one-time price/i);
   assert.doesNotMatch(page, /fetch\(["'\x60].*checkout/i);
 });
 
