@@ -21,3 +21,14 @@ jobs:
         working-directory: src
       - run: node --test tests/boostero-retail-25.test.mjs tests/boostero-inventory-25.test.mjs
         working-directory: src
+      - name: Create source recovery ZIP from reviewed commit
+        run: |
+          set -euo pipefail
+          git archive --format=zip --output=Litix-Boostero-Exclusive-Source-20261029.zip HEAD
+          unzip -t Litix-Boostero-Exclusive-Source-20261029.zip | tail -n 1
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: litix-boostero-source-recovery-20261029
+          path: Litix-Boostero-Exclusive-Source-20261029.zip
+          if-no-files-found: error
+          retention-days: 30
