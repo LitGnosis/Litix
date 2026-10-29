@@ -23,7 +23,7 @@ const products = {
     faq: [
       ["Who is this for?", "Independent creators, small brands, and solo operators planning a launch or campaign."],
       ["Does it guarantee sales or growth?", "No. It provides planning structure. Outcomes depend on the offer, audience, execution, timing, and other factors."],
-      ["Is it available to buy now?", "Not yet. Join early access and we'll share an update when the final files and terms are ready."],
+      ["How do I know if checkout is open?", "The secure checkout section below shows whether this product is available. Joining early access is not a purchase."],
     ],
   },
   "social-growth-toolkit": {
