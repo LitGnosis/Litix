@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import EarlyAccessForm from "../EarlyAccessForm";
+import DigitalProductCheckout from "../DigitalProductCheckout";
 
 const products = {
   "creator-launch-kit": {
@@ -114,7 +115,7 @@ export default async function DigitalProductDetailPage({ params }) {
         <p className="digital-detail-summary">{product.summary}</p>
         <p className="digital-detail-promise">{product.promise}</p>
         <a className="digital-primary" href="#early-access">Get launch updates <span aria-hidden="true">↘</span></a>
-        <div className="digital-detail-status">PLANNED PRICE: {product.price} · NOT YET AVAILABLE FOR PURCHASE</div>
+        <div className="digital-detail-status">PLANNED PRICE: {product.price} · CHECKOUT STATUS BELOW</div>
       </section>
       <section className="digital-detail-content">
         <div>
@@ -129,6 +130,7 @@ export default async function DigitalProductDetailPage({ params }) {
           <span className="digital-preview-label">SAMPLE PREVIEW · FINAL FILES IN PROGRESS</span>
         </aside>
       </section>
+      <DigitalProductCheckout productId={slug} productName={product.name} />
       <section className="digital-detail-faq">
         <div className="digital-eyebrow">BEFORE YOU JOIN</div>
         <h2>Frequently asked questions</h2>
