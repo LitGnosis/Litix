@@ -90,6 +90,8 @@ test("sales and private asset routes are fail-closed", async () => {
   assert.match(checkout, /on conflict \(idempotency_key\) do nothing/);
   assert.match(checkout, /payment_state='review'/);
   assert.match(checkout, /payment_state='paid'/);
+  assert.match(checkout, /sale_approved/);
+  assert.match(checkout, /sale_outcome_unknown/);
   assert.match(config, /LITIX_DIGITAL_SALES_ENABLED === "true"/);
   assert.match(upload, /LITIX_DIGITAL_ASSET_UPLOAD_ENABLED !== "true"/);
   assert.match(upload, /timingSafeEqual/);
