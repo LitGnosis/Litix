@@ -50,7 +50,7 @@ function validGateway(config) {
 }
 
 export async function POST(request) {
-  if (process.env.LITIX_DIGITAL_SALES_ENABLED !== "true") {
+  if (process.env.LITIX_DIGITAL_SALES_ENABLED !== "true" || process.env.LITIX_DIGITAL_PRICING_APPROVED !== "true" || process.env.LITIX_DIGITAL_TERMS_APPROVED !== "true" || process.env.LITIX_DIGITAL_ASSETS_APPROVED !== "true") {
     return json({ error: "Digital product checkout is not open yet." }, 503);
   }
 
