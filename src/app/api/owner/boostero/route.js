@@ -1,6 +1,7 @@
 import {boosteroSQL} from "../../../../lib/boosteroFulfillment.mjs";
 import {ownerRequest,ownerResponse,safeOrigin} from "../../../../lib/ownerAuth.mjs";
 import {readBoosteroSyncEvents,previewBoosteroRetention} from "../../../../lib/boosteroSyncEvents.mjs";
+import {litixRecoveryEvidence} from "../../../../lib/litixRecoveryEvidence.mjs";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 export const maxDuration=45;
@@ -36,6 +37,7 @@ export async function GET(req){
   ]);
   const val=(x)=>x.status==="fulfilled"?x.value:null;
   return ownerResponse({asOf:new Date().toISOString(),supplier:"boostero",
+   recoveryEvidence:litixRecoveryEvidence(process.env),
    approvedServiceCount:val(approved)?.[0]||null,
    inventory:val(inventory)?.[0]||null,
    orderHealth:val(orders)?.[0]||null,
