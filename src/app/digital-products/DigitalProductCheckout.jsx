@@ -74,6 +74,7 @@ export default function DigitalProductCheckout({ productId, productName }) {
 
     let active = true;
     let configured = false;
+    let initializing = false;
     let failed = false;
     let pollId = null;
     let timeoutId = null;
@@ -85,6 +86,9 @@ export default function DigitalProductCheckout({ productId, productName }) {
       if (!active || configured) return;
       failed = true;
       if (timeoutId !== null) window.clearTimeout(timeoutId);
+      if (pollId !== null) window.clearInterval(pollId);
+      pollId = null;
+      initializing = false;
       setCardReady(false);
       setNotice(message);
     };
@@ -100,7 +104,8 @@ export default function DigitalProductCheckout({ productId, productName }) {
 
     const initialize = () => {
       const collect = getCollectJS();
-      if (!active || configured || !collect || typeof collect.configure !== "function") return;
+      if (!active || configured || initializing || !collect || typeof collect.configure !== "function") return;
+      initializing = true;
       if (timeoutId !== null) window.clearTimeout(timeoutId);
       timeoutId = window.setTimeout(() => {
         fail("Secure card fields did not finish initializing. Retry or contact support.");
@@ -129,18 +134,22 @@ export default function DigitalProductCheckout({ productId, productName }) {
           fieldsAvailableCallback: () => {
             if (!active || configured) return;
             configured = true;
+            initializing = false;
             if (timeoutId !== null) window.clearTimeout(timeoutId);
+            if (pollId !== null) window.clearInterval(pollId);
+            pollId = null;
             setCardReady(true);
             setNotice("");
           },
         });
       } catch {
+        initializing = false;
         fail("PayKings could not initialize secure card fields. Check the public tokenization key and retry.");
       }
     };
 
     const poll = () => {
-      if (!active || configured || failed) return;
+      if (!active || configured || failed || initializing) return;
       const collect = getCollectJS();
       const apiReady = Boolean(collect && typeof collect.configure === "function");
       const fields = ["ccnumber", "ccexp", "cvv"].map((id) => document.getElementById(id));
