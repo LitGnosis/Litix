@@ -65,6 +65,9 @@ test("storefront makes non-purchasable status explicit", async () => {
   const page = await read("../app/digital-products/page.jsx");
   assert.match(page, /Each kit page shows whether secure checkout is open/i);
   assert.match(page, /planned one-time price/i);
+  assert.match(page, /One platform\.<br \/><span>Every next move\.<\/span>/);
+  assert.match(page, /digital growth resources|digital tools for creators/i);
+  assert.doesNotMatch(page, /The Platinum Standard in Social Growth/);
   assert.doesNotMatch(page, /fetch\(["'\x60].*checkout/i);
 });
 
