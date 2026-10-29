@@ -1,0 +1,93 @@
+name: Litix Global Catalog — proven-production-source release gate
+on:
+  push:
+    branches: [release/boostero-global-browse-from-working-a4d1-20261029]
+  pull_request:
+    paths:
+      - 'src/app/global-services/**'
+      - 'src/app/api/catalog/global/**'
+      - 'src/lib/boosteroGlobalCatalog.mjs'
+      - 'src/lib/boosteroFullOrderContracts.mjs'
+      - 'src/tests/boostero-full-order-contracts.test.mjs'
+      - 'src/tests/boostero-global-catalog-browser.mjs'
+      - '.github/workflows/litix-global-catalog-safe-release-ci.yml'
+permissions:
+  contents: read
+jobs:
+  release-gate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 22
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Verify exact working-source checkout protection
+        run: |
+          set -Eeuo pipefail
+          python3 - <<'PY'
+          import pathlib,subprocess
+          original='a4d1d152fda00444242174bc4b668c08a18648f8'
+          permitted={
+            'src/lib/boosteroGlobalCatalog.mjs',
+            'src/lib/boosteroFullOrderContracts.mjs',
+            'src/app/api/catalog/global/route.js',
+            'src/app/global-services/page.jsx',
+            'src/app/global-services/GlobalServiceDraft.jsx',
+            'src/app/global-services/global-services.css',
+            'src/app/global-services/layout.jsx',
+            'src/app/page.jsx',
+            'src/tests/boostero-full-order-contracts.test.mjs',
+            'src/tests/boostero-global-catalog-browser.mjs',
+            '.github/workflows/litix-global-catalog-safe-release-ci.yml'
+          }
+          changed=set(subprocess.check_output(['git','diff','--name-only',original,'HEAD'],text=True).splitlines())
+          assert changed<=permitted, 'Unexpected source changes; do not release: '+repr(sorted(changed-permitted))
+          prior=subprocess.check_output(['git','show',original+':src/app/page.jsx'],text=True)
+          present=pathlib.Path('src/app/page.jsx').read_text()
+          old='<a href="#services">Services</a><a href="#checkout">Checkout</a>'
+          new='<a href="#services">Services</a><a href="/global-services">Global Catalog</a><a href="#checkout">Checkout</a>'
+          assert prior.count(old)==1 and present==prior.replace(old,new), 'Production homepage changed beyond one catalog link'
+          assert not any(s.startswith(('src/app/api/checkout/','src/lib/boosteroOrderHandler','src/lib/boosteroFulfillment','src/app/api/bundles/','src/app/api/internal/boostero/')) for s in changed)
+          print('PROVEN_PRODUCTION_CHECKOUT_SOURCE_UNCHANGED',len(changed),'allowlisted files')
+          PY
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: src/package-lock.json
+      - name: Install lockfile dependencies
+        working-directory: src
+        run: npm ci --no-audit --no-fund
+      - name: New Boostero type contracts and known-working payment regressions
+        working-directory: src
+        run: |
+          set -Eeuo pipefail
+          node --check lib/boosteroGlobalCatalog.mjs
+          node --check lib/boosteroFullOrderContracts.mjs
+          node --check app/api/catalog/global/route.js
+          node --test \
+            tests/boostero-full-order-contracts.test.mjs \
+            tests/boostero-exclusive-new-orders.test.mjs \
+            tests/boostero-only-public-catalog-regression.test.mjs \
+            tests/boostero-live-fulfillment.test.mjs \
+            tests/preview-checkout.test.mjs \
+            tests/boostero-readonly.test.mjs
+      - name: Build exact protected-source Next.js application
+        working-directory: src
+        run: npm run build
+      - name: Check real browser flow without payments or supplier orders
+        working-directory: src
+        run: |
+          set -Eeuo pipefail
+          npm install --no-save --ignore-scripts playwright@1.56.1
+          npm run start -- --port 3100 >/tmp/litix-global-catalog-verified-release.log 2>&1 &
+          app_pid=$!
+          trap 'kill $app_pid || true' EXIT
+          for i in $(seq 1 40); do
+            if curl --fail --silent --output /dev/null http://localhost:3100/global-services; then break; fi
+            sleep 1
+          done
+          export CHROME_PATH="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
+          if [ -z "$CHROME_PATH" ]; then npx playwright install chromium; fi
+          node tests/boostero-global-catalog-browser.mjs
