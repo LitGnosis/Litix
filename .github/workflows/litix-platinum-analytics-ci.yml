@@ -37,6 +37,23 @@ jobs:
       - name: Build complete Next.js app
         working-directory: src
         run: npm run build
+      - name: Install Playwright browser QA runner
+        working-directory: src
+        run: npm install --no-save --ignore-scripts playwright@1.56.1
+      - name: Validate Analytics Studio at iPhone and desktop widths
+        working-directory: src
+        run: |
+          set -eu
+          npm run start -- --port 3100 >/tmp/litix-platinum-analytics.log 2>&1 &
+          app_pid=$!
+          trap 'kill $app_pid || true' EXIT
+          for i in $(seq 1 40); do
+            if curl --fail --silent --output /dev/null http://localhost:3100/analytics; then break; fi
+            sleep 1
+          done
+          export CHROME_PATH="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
+          if [ -z "$CHROME_PATH" ]; then npx playwright install chromium; fi
+          node tests/platinum-analytics-browser.mjs
       - name: Ensure live payment and supplier paths remain exactly unchanged
         run: |
           set -eu
