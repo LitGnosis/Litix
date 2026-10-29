@@ -39,7 +39,15 @@ jobs:
             'src/app/page.jsx',
             'src/tests/boostero-full-order-contracts.test.mjs',
             'src/tests/boostero-global-catalog-browser.mjs',
-            '.github/workflows/litix-global-catalog-safe-release-ci.yml'
+            '.github/workflows/litix-global-catalog-safe-release-ci.yml',
+            '.github/workflows/litix-global-order-wizard-ci.yml',
+            'src/app/api/catalog/global/quote/route.js',
+            'src/app/global-services/GlobalOrderWizard.jsx',
+            'src/lib/boosteroRetail60.mjs',
+            'src/tests/boostero-global-quote.test.mjs',
+            'src/tests/boostero-retail-60.test.mjs',
+            'src/tests/checkout.test.mjs',
+            'src/tests/preview-checkout.test.mjs'
           }
           changed=set(subprocess.check_output(['git','diff','--name-only',original,'HEAD'],text=True).splitlines())
           assert changed<=permitted, 'Unexpected source changes; do not release: '+repr(sorted(changed-permitted))
@@ -49,6 +57,18 @@ jobs:
           new='<a href="#services">Services</a><a href="/global-services">Global Catalog</a><a href="#checkout">Checkout</a>'
           assert prior.count(old)==1 and present==prior.replace(old,new), 'Production homepage changed beyond one catalog link'
           assert not any(s.startswith(('src/app/api/checkout/','src/lib/boosteroOrderHandler','src/lib/boosteroFulfillment','src/app/api/bundles/','src/app/api/internal/boostero/')) for s in changed)
+          # The retired SMMGLOB tests were updated to REQUIRE zero card/supplier calls.
+          # Payment and supplier executable modules remain identical to production.
+          baseline_sensitive=[
+            'src/app/api/checkout/v1/route.js',
+            'src/lib/boosteroOrderHandler.mjs',
+            'src/lib/boosteroFulfillment.mjs',
+            'src/app/api/[action]/route.js',
+            'src/lib/orderNotifications.mjs'
+          ]
+          for target in baseline_sensitive:
+            original_text=subprocess.check_output(['git','show',original+':'+target])
+            assert pathlib.Path(target).read_bytes()==original_text, 'Working checkout / notification changed: '+target
           print('PROVEN_PRODUCTION_CHECKOUT_SOURCE_UNCHANGED',len(changed),'allowlisted files')
           PY
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
