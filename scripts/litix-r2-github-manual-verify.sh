@@ -25,7 +25,8 @@ done
 export AWS_ACCESS_KEY_ID="$R2_ACCESS_KEY_ID" AWS_SECRET_ACCESS_KEY="$R2_SECRET_ACCESS_KEY"
 export AWS_DEFAULT_REGION=auto AWS_EC2_METADATA_DISABLED=true AWS_PAGER="" AWS_CLI_AUTO_PROMPT=off
 export AWS_MAX_ATTEMPTS=2
-# R2 compatibility: explicitly request CRC32 for every upload; newer AWS CLI defaults may use CRC64NVME.\n# Independently verify encrypted round-trip bytes with SHA256 after GET.
+# R2 compatibility: explicitly request CRC32 for every upload; newer AWS CLI defaults may use CRC64NVME.
+# Independently verify encrypted round-trip bytes with SHA256 after GET.
 # Existing explicit encrypted-object roundtrip SHA256 verification is preserved.
 export AWS_REQUEST_CHECKSUM_CALCULATION=when_required
 export AWS_RESPONSE_CHECKSUM_VALIDATION=when_required
