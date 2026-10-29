@@ -96,7 +96,7 @@ test("scheduled monitoring is additive and independent of existing Vercel crons"
  assert.equal(crons.filter(x=>x.path==="/api/bundles/cron").length,1);
  assert.equal(crons.filter(x=>x.path==="/api/internal/boostero/inventory-sync").length,1);
  const runtime=file("lib/guardianRuntime.mjs");
- assert.match(runtime,/boosteroProduction\\("services"\\)/);
+ assert.ok(runtime.includes('boosteroProduction("services")'));
  assert.match(runtime,/select count\(\*\)/);
  assert.match(runtime,/idempotency-key/);
  assert.doesNotMatch(runtime,/action:"add"|type:"sale"|security_key/);
