@@ -8,7 +8,7 @@ try{
   page.on("pageerror",e=>jsErrors.push(e.message));
   page.on("request",r=>{if(r.method()!=="GET"&&/\/api\/(checkout|internal\/boostero)|transactiongateway|api\/v2/.test(r.url()))unsafeCalls.push(r.url())});
   await page.route("**/api/catalog/global?**",async route=>{
-   const u=new URL(route.request().url),p=u.searchParams.get("platform")||"";
+   const u=new URL(route.request().url()),p=u.searchParams.get("platform")||"";
    const items=[
     {id:"service_opaque_one",platform:"Instagram",kind:"followers",name:"Instagram Premium Followers",category:"Instagram Followers",type:"Default",supplierMinimum:100,supplierMaximum:10000,refill:false,dripfeed:false,purchasable:false,pricePer1000:null},
     {id:"service_opaque_two",platform:"TikTok",kind:"auto_engagement",name:"TikTok New Post Auto Likes",category:"TikTok Subscriptions",type:"Subscriptions",supplierMinimum:100,supplierMaximum:10000,refill:false,dripfeed:false,purchasable:false,pricePer1000:null},
