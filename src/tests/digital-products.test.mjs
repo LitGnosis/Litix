@@ -121,6 +121,18 @@ test("waitlist is gated and supports confirmation plus unsubscribe", async () =>
   assert.match(schema, /unsubscribe_token_hash char\(64\) UNIQUE/);
 });
 
+test("unified platform hub connects existing Litix workspaces", async () => {
+  const platform = await read("../app/platform/page.jsx");
+  const platformCss = await read("../app/platform/platform.css");
+  assert.match(platform, /title: "Litix Growth Platform/);
+  assert.match(platform, /href: "\/"/);
+  assert.match(platform, /href: "\/growth"/);
+  assert.match(platform, /href: "\/digital-products"/);
+  assert.match(platform, /href: "\/digital-products\/agency-starter-pack"/);
+  assert.match(platform, /../digital-products/digital-products.css/);
+  assert.match(platformCss, /@media \(max-width: 720px\)/);
+});
+
 test("product policy and release plan are present", async () => {
   await exists("../content/digital-products/DIGITAL_PRODUCT_RELEASE_PLAN.md");
   await exists("../content/digital-products/DIGITAL_PRODUCT_POLICY_DRAFT.md");
