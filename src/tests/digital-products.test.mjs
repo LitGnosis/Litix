@@ -76,6 +76,23 @@ test("digital order schema keeps payment and fulfillment states constrained", as
   assert.match(schema, /Do not store full card numbers, CVVs, raw payment tokens/i);
 });
 
+test("sales and private asset routes are fail-closed", async () => {
+  const checkout = await read("../app/api/digital-products/checkout/route.js");
+  const config = await read("../app/api/digital-products/config/route.js");
+  const upload = await read("../app/api/digital-products/admin/assets/route.js");
+  const download = await read("../app/api/digital-products/download/route.js");
+  assert.match(checkout, /LITIX_DIGITAL_SALES_ENABLED !== "true"/);
+  assert.match(checkout, /on conflict \(idempotency_key\) do nothing/);
+  assert.match(checkout, /payment_state='review'/);
+  assert.match(checkout, /payment_state='paid'/);
+  assert.match(config, /LITIX_DIGITAL_SALES_ENABLED === "true"/);
+  assert.match(upload, /LITIX_DIGITAL_ASSET_UPLOAD_ENABLED !== "true"/);
+  assert.match(upload, /timingSafeEqual/);
+  assert.match(download, /entitlement_token_hash/);
+  assert.match(download, /download_count < max_downloads/);
+  assert.match(download, /cache-control/);
+});
+
 test("waitlist is gated and supports confirmation plus unsubscribe", async () => {
   const signup = await read("../app/api/digital-products/early-access/route.js");
   const unsubscribe = await read("../app/api/digital-products/unsubscribe/route.js");
