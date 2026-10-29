@@ -124,6 +124,9 @@ test("waitlist is gated and supports confirmation plus unsubscribe", async () =>
 test("unified platform hub connects existing Litix workspaces", async () => {
   const platform = await read("../app/platform/page.jsx");
   const platformCss = await read("../app/platform/platform.css");
+  const homepage = await read("../app/page.jsx");
+  assert.match(homepage, /href="\/platform">Platform/);
+  assert.match(homepage, /href="\/digital-products">Digital Kits/);
   assert.match(platform, /title: "Litix Growth Platform/);
   assert.match(platform, /href: "\/"/);
   assert.match(platform, /href: "\/growth"/);
