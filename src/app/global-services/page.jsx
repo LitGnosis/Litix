@@ -2,6 +2,7 @@
 import {useEffect,useMemo,useState} from "react";
 import Link from "next/link";
 import "./global-services.css";
+import GlobalServiceDraft from "./GlobalServiceDraft";
 const priority=["Instagram","TikTok","YouTube"];
 const fmt=n=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(n);
 export default function GlobalServices(){
@@ -9,6 +10,7 @@ export default function GlobalServices(){
  const [query,setQuery]=useState(""),[appliedQuery,setAppliedQuery]=useState(""),[sort,setSort]=useState("featured");
  const [page,setPage]=useState(1),[catalog,setCatalog]=useState(null);
  const [error,setError]=useState(""),[loading,setLoading]=useState(true),[expanded,setExpanded]=useState(false);
+ const [selected,setSelected]=useState(null);
  const parameters=useMemo(()=>new URLSearchParams({page:String(page),sort,platform,category,kind,q:appliedQuery}),[page,sort,platform,category,kind,appliedQuery]);
  useEffect(()=>{
   const controller=new AbortController();
@@ -50,6 +52,7 @@ export default function GlobalServices(){
      {allPlatforms.length>11&&<button type="button" className="lgc-more" onClick={()=>setExpanded(s=>!s)}>{expanded?"Show fewer":"+ "+(allPlatforms.length-11)+" more"}</button>}
     </div>
    </section>
+   {selected&&<GlobalServiceDraft service={selected} onClose={()=>setSelected(null)}/>}
    <section className="lgc-filter-section" aria-label="Filter supplier services">
     <div className="lgc-section-title"><span className="lgc-eyebrow">02 / FIND YOUR SERVICE</span><h2>Find the right service</h2></div>
     <form className="lgc-filters" onSubmit={e=>{e.preventDefault();change(setAppliedQuery,query)}}>
@@ -77,7 +80,7 @@ export default function GlobalServices(){
        {item.refill&&<span>Refill</span>}{item.refill&&<b>Supplier listed</b>}
       </div>
       {item.purchasable?<div className="lgc-card-action"><strong>{fmt(item.pricePer1000)} / 1,000</strong><Link href={item.checkoutPath||"/"}>Shop verified service</Link></div>:
-       <div className="lgc-card-pending"><span>Pricing &amp; checkout verification in progress</span><small>Not purchasable yet. No payment attempted.</small></div>}
+       <div className="lgc-card-pending"><span>Pricing &amp; checkout verification in progress</span><small>Not purchasable yet. No payment attempted.</small><button type="button" className="lgc-preview-button" onClick={()=>setSelected(item)}>Preview required inputs</button></div>}
      </article>)}
     </div>
     {!loading&&!catalog?.items?.length&&!error&&<p className="lgc-empty">No services match these filters. Try another platform or search term.</p>}
