@@ -7,21 +7,25 @@ const products = new Set(["creator-launch-kit", "social-growth-toolkit", "agency
 
 function gatewayReady() {
   const mode = process.env.LITIX_DIGITAL_GATEWAY_MODE;
-  if (mode === "TEST") {
-    return Boolean(process.env.LITIX_DIGITAL_TEST_GATEWAY_KEY && process.env.LITIX_DIGITAL_TEST_GATEWAY_URL);
+  const key = mode === "TEST"
+    ? process.env.LITIX_DIGITAL_TEST_GATEWAY_KEY
+    : mode === "PRODUCTION"
+      ? process.env.LITIX_DIGITAL_PRODUCTION_GATEWAY_KEY
+      : "";
+  const urlValue = mode === "TEST"
+    ? process.env.LITIX_DIGITAL_TEST_GATEWAY_URL
+    : mode === "PRODUCTION"
+      ? process.env.LITIX_DIGITAL_PRODUCTION_GATEWAY_URL
+      : "";
+  if (!key || !urlValue) return false;
+  try {
+    const url = new URL(urlValue);
+    if (url.protocol !== "https:") return false;
+    if (mode === "PRODUCTION") return url.hostname === "paykings.transactiongateway.com";
+    return mode === "TEST" && url.hostname !== "paykings.transactiongateway.com";
+  } catch {
+    return false;
   }
-  if (mode === "PRODUCTION") {
-    try {
-      return Boolean(
-        process.env.LITIX_DIGITAL_PRODUCTION_GATEWAY_KEY &&
-        new URL(process.env.LITIX_DIGITAL_PRODUCTION_GATEWAY_URL).protocol === "https:" &&
-        new URL(process.env.LITIX_DIGITAL_PRODUCTION_GATEWAY_URL).hostname === "paykings.transactiongateway.com"
-      );
-    } catch {
-      return false;
-    }
-  }
-  return false;
 }
 
 export async function GET(request) {
