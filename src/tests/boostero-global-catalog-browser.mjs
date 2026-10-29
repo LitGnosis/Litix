@@ -33,8 +33,10 @@ try{
   await page.getByText("Draft recorded only in this browser",{exact:false}).waitFor();
   await page.getByRole("button",{name:"Close service requirements"}).click();
   await page.getByRole("button",{name:/TikTok 166/}).click();
-  await page.getByRole("heading",{name:"TikTok New Post Auto Likes"}).waitFor();
-  await page.getByRole("button",{name:"Preview required inputs"}).click();
+  const tiktok=page.locator(".lgc-card").filter({hasText:"TikTok New Post Auto Likes"});
+  await tiktok.waitFor();
+  await page.waitForFunction(()=>document.querySelectorAll(".lgc-grid .lgc-card").length===1);
+  await tiktok.getByRole("button",{name:"Preview required inputs"}).click();
   await page.getByText("Boostero bills subscriptions as future posts are processed.",{exact:false}).waitFor();
   await page.getByRole("button",{name:"Close service requirements"}).click();
   const overflow=await page.locator("body").evaluate(el=>el.scrollWidth);
