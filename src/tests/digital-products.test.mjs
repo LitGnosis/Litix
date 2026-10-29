@@ -49,6 +49,18 @@ test("spreadsheet-ready templates have consistent CSV column counts", async () =
   }
 });
 
+test("each planned product has a dedicated detail page and early-access form", async () => {
+  const details = await read("../app/digital-products/[slug]/page.jsx");
+  const form = await read("../app/digital-products/EarlyAccessForm.jsx");
+  const signup = await read("../app/api/digital-products/early-access/route.js");
+  assert.match(details, /generateStaticParams/);
+  assert.match(details, /notFound\(\)/);
+  assert.match(details, /Frequently asked questions/);
+  assert.match(form, /type="email"/);
+  assert.match(form, /required/);
+  assert.match(signup, /LITIX_DIGITAL_WAITLIST_ENABLED !== "true"/);
+});
+
 test("storefront makes non-purchasable status explicit", async () => {
   const page = await read("../app/digital-products/page.jsx");
   assert.match(page, /not yet available for purchase/i);
