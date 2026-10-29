@@ -61,7 +61,7 @@ export async function POST(request) {
   const databaseUrl = process.env.LITIX_DIGITAL_DATABASE_URL;
   const resendKey = process.env.RESEND_API_KEY;
   const emailFrom = process.env.EMAIL_FROM;
-  if (!databaseUrl || !resendKey || !emailFrom) {
+  if (process.env.LITIX_DIGITAL_WAITLIST_ENABLED !== "true" || !databaseUrl || !resendKey || !emailFrom) {
     return json({ error: "Early access signup is being prepared. Please try again later." }, 503);
   }
 
