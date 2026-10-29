@@ -71,7 +71,7 @@ test("rejects unauthenticated paid-order evidence and unverified special order t
   const fake=fakeSql();let network=0;
   const noPrice=await dispatchBoosteroTypedPaidOrder(oid,{sql:fake.sql,inventorySQL:fake.sql,
    liveServices:[{...catalog[0],rate:"30"}],enabled:true,fetchImpl:async()=>{network++}});
-  assert.equal(noPrice.state,"SUPPLIER_SERVICE_OR_PRICE_CHANGED");
+  assert.equal(noPrice.state,"STAGING_AND_LIVE_SUPPLIER_PRICE_DIFFER");
   const special=await dispatchBoosteroTypedPaidOrder(oid,{sql:fake.sql,inventorySQL:fake.sql,
    liveServices:[{...catalog[0],type:"Package"}],enabled:true,fetchImpl:async()=>{network++}});
   assert.equal(special.submitted,false);assert.equal(network,0);
