@@ -12,7 +12,7 @@ test("the existing PayKings Collect.js checkout cannot be replaced by a guessed 
  assert.match(handler,/idempotencyKey/);
  assert.doesNotMatch(handler,/PAYKINGS_API_URL/);
  assert.match(publicCheckout,/handleBoosteroOrder/);
- assert.match(publicCheckout,/boostero_\\[0-9\\]/);
+ assert.ok(publicCheckout.includes("boostero_[0-9]{1,12}"));
 });
 
 test("supplier requests remain form encoded and require a prior one-way claim",()=>{
