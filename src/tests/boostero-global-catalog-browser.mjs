@@ -28,6 +28,7 @@ try{
   assert.equal(await page.getByText("Not purchasable yet. No payment attempted.").count(),3);
   await page.getByRole("button",{name:"Preview required inputs"}).first().click();
   await page.getByRole("dialog",{name:"Supplier service requirements"}).waitFor();
+  await page.getByRole("dialog",{name:"Supplier service requirements"}).getByLabel("Public target/profile/post link").fill("https://www.instagram.com/litixsocial/");
   await page.getByRole("button",{name:"Validate draft — no purchase"}).click();
   await page.getByText("Draft recorded only in this browser",{exact:false}).waitFor();
   await page.getByRole("button",{name:"Close service requirements"}).click();
