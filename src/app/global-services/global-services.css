@@ -20,3 +20,30 @@
 .lgc-modal-submit{background:linear-gradient(120deg,#78cfff,#3180d8);border:1px solid #9de6ff;color:#06152b;padding:13px 19px;font-weight:800;border-radius:10px}
 .lgc-form-notice{margin-top:17px;background:#10385a;border:1px solid #599ac5;border-radius:10px;padding:14px;color:#d0eafa;font-size:13px}
 @media(max-width:570px){.lgc-form{grid-template-columns:1fr}.lgc-modal{padding:20px}.lgc-modal-overlay{padding:8px}}
+
+.lgc-order-wizard{border:1px solid #6a9bc8;border-radius:22px;background:linear-gradient(145deg,#103560,#091b39 50%,#081124);box-shadow:0 16px 50px #0006,inset 0 1px #a0dafa70;padding:clamp(22px,4vw,38px);margin-bottom:23px;scroll-margin-top:15px}
+.lgc-order-heading h2,.lgc-order-detail h2,.lgc-order-confirm h2{font-size:clamp(23px,3vw,32px);letter-spacing:-.025em;margin:9px 0 23px}
+.lgc-order-selects,.lgc-order-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.lgc-order-field{display:block;font-size:13px;font-weight:700;color:#b6d9fc;min-width:0}
+.lgc-order-field>span{display:block;margin-bottom:8px}
+.lgc-order-field input,.lgc-order-field select,.lgc-order-field textarea{display:block;width:100%;min-height:49px;border:1px solid #608dbb;color:#f4f9ff;background:#07132a;border-radius:12px;padding:12px;font:inherit;font-size:14px}
+.lgc-order-field input::placeholder,.lgc-order-field textarea::placeholder{color:#9dadd0}
+.lgc-order-field textarea{min-height:94px;resize:vertical}
+.lgc-order-checkbox{grid-column:1/-1;display:flex;gap:12px;align-items:center;font-size:13px;color:#c8ddfa;min-height:44px}
+.lgc-order-checkbox input{width:19px;height:19px}
+.lgc-order-selected{background:#0c2850;border:1px solid #547eb3;border-radius:14px;padding:18px 20px;margin-top:22px}
+.lgc-order-selected strong{display:block;font-size:18px;color:#e9f6ff;overflow-wrap:anywhere}
+.lgc-order-selected p{font-size:13px;color:#aed0f0;margin:7px 0}
+.lgc-order-range{display:inline-block;font-size:11px;font-weight:700;color:#8edcfb}
+.lgc-order-detail{margin-top:26px;padding-top:24px;border-top:1px solid #3f6891}
+.lgc-order-confirm{margin-top:26px;padding:23px;background:linear-gradient(150deg,#071d3c,#0c2851);border:1px solid #74b5e5;border-radius:17px;box-shadow:inset 0 1px #9cdeff55}
+.lgc-order-confirm h2{margin-bottom:12px}
+.lgc-order-total{font-size:clamp(37px,5vw,58px);font-weight:850;letter-spacing:-.05em;color:#8ddfff;line-height:1.2;margin:15px 0 23px}
+.lgc-order-summary{display:grid;grid-template-columns:minmax(90px,1fr) minmax(0,2fr);gap:13px 15px;padding:15px 0;border-block:1px solid #4b7095;font-size:13px}
+.lgc-order-summary span{color:#aac7e5}
+.lgc-order-summary strong{text-align:right;overflow-wrap:anywhere}
+.lgc-order-warning{color:#ffe3b2;background:#4b3e2a77;border:1px solid #9a7247;padding:12px 15px;border-radius:9px;font-size:13px;line-height:1.55}
+.lgc-checkout-link,.lgc-checkout-disabled{display:block;text-align:center;width:100%;background:linear-gradient(130deg,#9ee8ff,#58a1f5);border:1px solid #b5ecff;border-radius:12px;color:#08182f!important;text-decoration:none!important;font-weight:850;padding:15px;margin-top:18px;font-size:14px}
+.lgc-checkout-disabled{background:#293b50;color:#aab8c8!important;border-color:#50667e;cursor:not-allowed;opacity:1}
+.lgc-order-safety{color:#92b8d6;font-size:11px;text-align:center;margin-bottom:0}
+@media(max-width:630px){.lgc-order-wizard{padding:19px 16px}.lgc-order-selects,.lgc-order-fields{grid-template-columns:1fr}.lgc-order-confirm{padding:17px}.lgc-order-total{font-size:41px}}
