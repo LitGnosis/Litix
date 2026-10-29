@@ -28,7 +28,7 @@ export function checkBoosteroService(raw,{dispatchTypes=new Set(["Default"]),app
  const capability=boosteroOrderCapability(service);
  if(!capability.schemaSupported)return {id,state:"PENDING_REVIEW",reason:capability.status,service};
  const pricing=service.type==="Default"&&!service.dripfeed?
-   boosteroRetailCandidate(service.wholesalePer1000):
+   boosteroRetailCandidate(service.wholesaleRateText):
    {retailCents:null,reviewReason:"special_service_billing_unverified"};
  if(pricing.reviewReason)return {id,state:"PENDING_REVIEW",reason:pricing.reviewReason,service,retailCents:pricing.retailCents};
  // Preserve the published $6–$15 ceiling for ordinary Instagram/TikTok
