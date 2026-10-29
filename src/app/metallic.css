@@ -214,3 +214,44 @@ body{background:radial-gradient(ellipse at 12% 0%,#07598555,transparent 46%),rad
  .checkout-steps{gap:6px;flex-wrap:wrap}
  .hero h1{font-size:clamp(30px,9vw,48px)}
 }
+
+/* Litix blue-metallic storefront refresh inspired by the Boostero mobile flow. */
+:root{--gold:#38bdf8;--blue:#38bdf8;--platinum:#dbeafe}
+body{background:radial-gradient(ellipse at 12% 0%,#1252a35c,transparent 52%),radial-gradient(ellipse at 88% 12%,#38bdf81c,transparent 42%),linear-gradient(145deg,#030712,#090d1a 60%,#030712)}
+.nav .brand{display:flex;align-items:center;gap:10px;text-decoration:none}
+.brand-logo{display:block;width:46px;height:46px;object-fit:contain;filter:drop-shadow(0 0 12px #38bdf844)}
+.brand-wordmark{display:flex;flex-direction:column;gap:3px;font-weight:950;letter-spacing:.18em;font-size:25px;background:linear-gradient(115deg,#fff 5%,#b9d8f7 38%,#38bdf8 68%,#e2e8f0);background-clip:text;color:transparent}
+.brand-submark{font-size:8px;letter-spacing:.14em;color:#9fc7ed}
+.hero-brandline{display:flex;align-items:center;gap:15px;margin-bottom:22px}
+.hero-orb{display:grid;place-items:center;width:54px;height:54px;border:1px solid #38bdf899;border-radius:16px;background:linear-gradient(145deg,#dbeafe25,#38bdf80b);color:#e0f2fe;font-weight:950;font-size:25px;box-shadow:inset 0 1px #fff3,0 0 28px #38bdf820}
+.hero-motto{color:#a9c7e8;font-size:10px;letter-spacing:.13em;margin-top:3px}
+.nav .brand{margin-left:0}
+.nav .brand-wordmark{background:linear-gradient(115deg,#fff 5%,#b9d8f7 38%,#38bdf8 68%,#e2e8f0);background-clip:text;color:transparent}
+.primary{border-color:#bae6fd;background:linear-gradient(125deg,#effaff,#7dd3fc 48%,#dbeafe);color:#07172b;box-shadow:0 4px 20px #38bdf818}
+.primary:hover:not(:disabled){box-shadow:0 5px 26px #38bdf83d}
+.total,.price,.eyebrow,.kicker,.faq-links a,.service-note strong,.trust-symbol{color:#7dd3fc}
+.totalbox{border-color:#38bdf86b;background:linear-gradient(130deg,#38bdf81c,#dbeafe08)}
+.platform-step{margin-bottom:22px}
+.step-heading{display:grid;grid-template-columns:42px auto 1fr;align-items:center;gap:12px;margin-bottom:18px}
+.step-heading h2{margin:0;font-size:clamp(20px,3vw,26px);color:#f4f8ff}
+.step-number{display:grid;place-items:center;width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,#e0f2fe,#38bdf8);color:#08203a;font-weight:950}
+.step-label{font-size:11px;letter-spacing:.15em;font-weight:900;color:#7dd3fc}
+.platform-pills{display:flex;flex-wrap:wrap;gap:10px}
+.platform-pill{display:inline-flex;align-items:center;gap:8px;min-height:46px;padding:10px 15px;border:1px solid #9fc7ed40;border-radius:13px;background:linear-gradient(135deg,#0c172a,#080f1d);color:#d9e8f8;font-weight:650}
+.platform-pill span{color:#7dd3fc;font-size:18px}
+.platform-pill:hover,.platform-pill.selected{border-color:#38bdf8;background:linear-gradient(135deg,#123c60,#10213a);box-shadow:0 0 0 1px #38bdf844,0 0 22px #38bdf81b}
+.bundle-showcase{margin:0 0 22px}
+.bundle-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:18px}
+.bundle-card{padding:20px;border:1px solid #9fc7ed40;border-radius:16px;background:linear-gradient(145deg,#101c30,#080f1d);box-shadow:inset 0 1px #fff1}
+.bundle-featured{border-color:#38bdf899;background:linear-gradient(145deg,#123a5c,#0a1425);box-shadow:0 0 26px #38bdf811,inset 0 1px #fff2}
+.bundle-label{font-size:10px;letter-spacing:.16em;color:#7dd3fc;font-weight:900}
+.bundle-card h3{margin:10px 0;font-size:22px;color:#f3f8ff}
+.bundle-card p{color:#b3c8e1;font-size:13px;line-height:1.65;min-height:42px}
+.bundle-price{font-size:32px;font-weight:900;letter-spacing:-.04em;color:#dbeafe;margin:16px 0}
+.bundle-card .primary{width:100%}
+.bundle-note{margin-top:14px;line-height:1.6}
+.service-badges{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px}
+.service-option{min-width:0}
+.compare-toggle{display:flex;align-items:center;gap:6px;margin:8px 3px;color:#a9c7e5;font-size:11px}
+.compare-toggle input{width:auto;margin:0}
+@media(max-width:575px){.brand-logo{width:38px;height:38px}.brand-wordmark{font-size:21px}.brand-submark{font-size:7px}.step-heading{grid-template-columns:36px auto 1fr;gap:8px}.step-number{width:34px;height:34px}.platform-pills{gap:7px}.platform-pill{min-height:42px;padding:9px 11px;font-size:12px}.bundle-grid{grid-template-columns:1fr}.bundle-card p{min-height:0}}
