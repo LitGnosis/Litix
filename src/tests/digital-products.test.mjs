@@ -111,6 +111,7 @@ test("waitlist is gated and supports confirmation plus unsubscribe", async () =>
   assert.match(signup, /LITIX_DIGITAL_WAITLIST_ENABLED !== "true"/);
   assert.match(signup, /RESEND_API_KEY/);
   assert.match(signup, /unsubscribeUrl/);
+  assert.match(signup, /updated_at < now\(\) - interval/);
   assert.match(unsubscribe, /unsubscribe_token_hash/);
   assert.match(schema, /unsubscribe_token_hash char\(64\) UNIQUE/);
 });
