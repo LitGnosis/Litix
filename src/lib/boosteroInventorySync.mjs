@@ -7,12 +7,17 @@ import {normalizeBoosteroCatalog} from "./boosteroGlobalCatalog.mjs";
 import {boosteroRetailCandidate} from "./boosteroRetail25.mjs";
 import {checkBoosteroService,validateBoosteroBatch} from "./boosteroServiceValidation.mjs";
 import {proposeServiceRetail} from "./pricing.mjs";
+import {boosteroCompatibleServices} from "./boosteroReadOnly.mjs";
 export async function importBoosteroInventory(sql,raw,{now=new Date(),force=false,autoPublish=false}={}){
  if(!sql||typeof sql.query!=="function")throw Error("inventory_database_unavailable");
  const {items,stats}=normalizeBoosteroCatalog(raw);
  if(items.length<100||items.length/Math.max(raw.length,1)<0.95)
   throw Error("inventory_supplier_snapshot_incomplete");
  const validation=validateBoosteroBatch(raw,{approvedCheckout:false});
+ // An ambiguous duplicate service ID could point to two different wholesale prices.
+ // Reject the snapshot before any database write; keep the last-known-good catalog.
+ if(validation.reasons.duplicate_service_id)throw Error("inventory_duplicate_supplier_ids");
+ const compatibleIds=new Set(boosteroCompatibleServices(raw).map(x=>x.id));
  const date=new Date(now),timestamp=date.toISOString();
  const existing=await sql.query(
   "select count(*)::integer as n, max(refreshed_at) as last_sync from public.litix_boostero_inventory"
@@ -24,13 +29,14 @@ export async function importBoosteroInventory(sql,raw,{now=new Date(),force=fals
   throw Error("inventory_unexpected_catalog_shrink");
  const rawById=new Map(raw.filter(x=>x&&typeof x==="object").map(x=>[String(x.service??x.id??""),x]));
  const payload=items.map(x=>{
-  const checked=checkBoosteroService(rawById.get(x.id),{approvedCheckout:autoPublish});
+  const checkoutCompatible=compatibleIds.has(x.id);
+  const checked=checkBoosteroService(rawById.get(x.id),{approvedCheckout:autoPublish&&checkoutCompatible});
   const unitPriced=x.type==="Default" && x.dripfeed!==true;
   const pricing=unitPriced?boosteroRetailCandidate(x.wholesalePer1000):
    {retailCents:null,reviewReason:"special_service_price_contract_unverified"};
   if(unitPriced&&pricing.retailCents===null)throw Error("inventory_wholesale_price_invalid");
   let finalRetail=pricing.retailCents;
-  let finalReason=pricing.reviewReason||checked.reason||(x.supportedInputShape?null:"order_input_contract_unverified");
+  let finalReason=pricing.reviewReason||(!checkoutCompatible&&x.supportedInputShape?"checkout_adapter_incompatible":null)||checked.reason||(x.supportedInputShape?null:"order_input_contract_unverified");
   let state=checked.state;
   if(x.kind==="followers"&&x.supportedInputShape&&!finalReason){
    const ladder=proposeServiceRetail({name:x.name,category:x.category,refill:x.refill},x.wholesalePer1000);
@@ -46,7 +52,7 @@ export async function importBoosteroInventory(sql,raw,{now=new Date(),force=fals
    dripfeed:x.dripfeed,refill_days:x.refillDays,compatible:x.supportedInputShape,
    retail:finalRetail,
    review:finalReason,
-   state:finalReason&&checked.state==="PURCHASABLE"?"PENDING_REVIEW":state,adapter:x.supportedInputShape?"ig_tk_default_v1":null
+   state:finalReason&&checked.state==="PURCHASABLE"?"PENDING_REVIEW":state,adapter:x.supportedInputShape&&checkoutCompatible?"ig_tk_default_v1":null
   };
  });
  // One PostgreSQL statement = one transaction even over Neon's serverless HTTP.
