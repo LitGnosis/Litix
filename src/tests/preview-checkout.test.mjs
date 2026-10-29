@@ -20,8 +20,8 @@ test("preview cannot charge through production PayKings credentials",async()=>{
   assert.equal(cfg.status,200);const result=await cfg.json();
   assert.equal(result.ready,false);assert.equal(result.publicKey,null);
   const denied=await mod.POST(new Request("https://example.test/api/checkout",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({serviceId:"33588",quantity:1000,email:"test@example.com",link:"https://instagram.com/test",paymentToken:"mock-only",idempotencyKey:"00000000-0000-0000-0000-000000000000",expectedAmountCents:699})}));
-  assert.equal(denied.status,503);
-  assert.match(JSON.stringify(await denied.json()),/checkout is temporarily unavailable/i);
+  assert.equal(denied.status,409);
+  assert.match(JSON.stringify(await denied.json()),/retired supplier checkout is disabled/i);
   assert.equal(outbound,0);
  }finally{
   for(const [k,v]of Object.entries(saved)){if(v===undefined)delete process.env[k];else process.env[k]=v}
