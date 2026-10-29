@@ -86,3 +86,20 @@ export function quoteBoostero60TypedUnits({service,draft,approvedRetailPer1000Ce
   orderType:"Default"
  });
 }
+
+/** Single fixed-price package, never a quantity-per-1000 quote. */
+export function quoteBoostero60Package({service,draft,approvedPackagePriceCents}={}){
+ if(!service||draft?.type!=="Package"||draft.valid!==true||
+   Number(service.min)!==1||Number(service.max)!==1||
+   !draft.params?.link||draft.params.quantity!==undefined)
+  return {valid:false,reason:"unverified_fixed_package_contract"};
+ const wholesale=Number(service.wholesalePer1000);
+ const supplierCostCents=moneyCents(wholesale);
+ const minimum=moneyCents(wholesale*NEW_SERVICE_MARKUP);
+ const retail=Number(approvedPackagePriceCents);
+ if(supplierCostCents===null||minimum===null||!Number.isSafeInteger(retail)||
+   retail<Math.max(CUSTOMER_MINIMUM_CENTS,minimum)||retail>MAX_CENTS)
+  return {valid:false,reason:"package_price_not_individually_approved"};
+ return {valid:true,totalUnits:1,customerAmountCents:retail,
+  supplierCostCents,eligibleForAutomaticActivation:false,packageFixedPrice:true};
+}
