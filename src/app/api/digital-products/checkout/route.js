@@ -132,9 +132,13 @@ export async function POST(request) {
       return json({ orderId, payment: "review", message: "Payment outcome is uncertain. Do not retry or submit another order; contact support for reconciliation." }, 202);
     }
 
-    if (String(payment.response) !== "1") {
+    if (String(payment.response) === "2") {
       await sql.query("update litix_digital_orders set payment_state='declined', updated_at=now() where id=$1", [orderId]).catch(() => {});
       return json({ error: "Payment declined: " + clean(payment.responsetext || "Please contact your card issuer", 100) }, 402);
+    }
+    if (String(payment.response) !== "1") {
+      await sql.query("update litix_digital_orders set payment_state='review', fulfillment_state='review', updated_at=now() where id=$1", [orderId]).catch(() => {});
+      return json({ orderId, payment: "review", message: "The gateway response could not confirm the payment outcome. Do not retry or submit another order; contact support for reconciliation." }, 202);
     }
 
     const transactionId = clean(payment.transactionid, 120);
