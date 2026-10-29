@@ -66,7 +66,7 @@ export function publicBoosteroRetailQuote(quote){
  * The "approved" retail figure must come from server-held approval metadata.
  */
 export function quoteBoostero60TypedUnits({service,draft,approvedRetailPer1000Cents=null}={}){
- const unitTypes=new Set(["Default","Custom Comments","Mentions Custom List",
+ const unitTypes=new Set(["Default","SEO","Custom Comments","Mentions","Mentions Custom List",
   "Mentions Hashtag","Mentions User Followers","Comment Likes","Poll"]);
  if(!service||!draft?.valid||!unitTypes.has(draft.type)||
     draft.variableFutureCharge||!Number.isSafeInteger(draft.estimatedTotalQuantity)||
