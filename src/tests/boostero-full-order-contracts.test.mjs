@@ -54,7 +54,7 @@ test("special types have correct extra fields without enabling any orders",()=>{
   ["Comment Likes",{username:"litixsocial"},"username"],
   ["Poll",{answer_number:2},"answer_number"]
  ]){
-  const v=validateBoosteroOrderDraft(s(type),{link,quantity:50,...extra});
+  const v=validateBoosteroOrderDraft(s(type,"Instagram",{min:type==="Mentions Custom List"?2:10}),{link,quantity:50,...extra});
   assert.equal(v.valid,true,type);
   assert.ok(Object.hasOwn(v.params,expected),type);
   assert.equal(v.supplierDispatchAllowed,false);
@@ -82,4 +82,12 @@ test("SEO and generic Mentions have no published supplier parameter contracts an
   assert.equal(boosteroOrderCapability(s(type)).schemaSupported,false);
   assert.equal(validateBoosteroOrderDraft(s(type),{link:"https://www.instagram.com/p/ABCDE123/",quantity:100}).supplierDispatchAllowed,false);
  }
+});
+
+test("mentions custom list sends usernames only, not an undocumented quantity",()=>{
+ const service=s("Mentions Custom List","Instagram",{min:2,max:100});
+ const draft=validateBoosteroOrderDraft(service,{link:"https://www.instagram.com/p/ABCDEFGH/",usernames:"@litixsocial\\n@creator"});
+ assert.equal(draft.valid,true);assert.equal(draft.estimatedTotalQuantity,2);
+ assert.equal("quantity" in draft.params,false);
+ assert.equal(draft.params.usernames,"@litixsocial\\n@creator");
 });
