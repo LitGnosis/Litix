@@ -4,6 +4,7 @@
  * payment records, supplier dispatch, customer orders, or historical inventory IDs.
  */
 import {normalizeBoosteroCatalog} from "./boosteroGlobalCatalog.mjs";
+import {boosteroRetailCandidate} from "./boosteroRetail25.mjs";
 export async function importBoosteroInventory(sql,raw,{now=new Date(),force=false}={}){
  if(!sql||typeof sql.query!=="function")throw Error("inventory_database_unavailable");
  const {items,stats}=normalizeBoosteroCatalog(raw);
@@ -18,11 +19,17 @@ export async function importBoosteroInventory(sql,raw,{now=new Date(),force=fals
   return {skipped:"recent_successful_sync",...stats,previous};
  if(previous>0&&items.length<Math.ceil(previous*0.85))
   throw Error("inventory_unexpected_catalog_shrink");
- const payload=items.map(x=>({
-  id:x.id,name:x.name,category:x.category,platform:x.platform,kind:x.kind,type:x.type,
-  rate:x.wholesalePer1000,min:x.min,max:x.max,refill:x.refill,cancel:x.cancel,
-  dripfeed:x.dripfeed,refill_days:x.refillDays,compatible:x.supportedInputShape
- }));
+ const payload=items.map(x=>{
+  const pricing=boosteroRetailCandidate(x.wholesalePer1000);
+  if(pricing.retailCents===null)throw Error("inventory_wholesale_price_invalid");
+  return {
+   id:x.id,name:x.name,category:x.category,platform:x.platform,kind:x.kind,type:x.type,
+   rate:x.wholesalePer1000,min:x.min,max:x.max,refill:x.refill,cancel:x.cancel,
+   dripfeed:x.dripfeed,refill_days:x.refillDays,compatible:x.supportedInputShape,
+   retail:pricing.retailCents,
+   review:pricing.reviewReason||(x.supportedInputShape?null:"order_input_contract_unverified")
+  };
+ });
  // One PostgreSQL statement = one transaction even over Neon's serverless HTTP.
  // The 1,814-record snapshot is sent as one bound JSON parameter, never SQL text.
  // Source IDs are authoritative, so repeated runs are idempotent.
@@ -30,20 +37,22 @@ export async function importBoosteroInventory(sql,raw,{now=new Date(),force=fals
  WITH incoming AS MATERIALIZED (
    SELECT * FROM jsonb_to_recordset($1::jsonb) as x(
      id text,name text,category text,platform text,kind text,type text,
-     rate numeric,min integer,max integer,refill boolean,cancel boolean,
+     rate numeric,min integer,max integer,retail bigint,review text,refill boolean,cancel boolean,
      dripfeed boolean,refill_days integer,compatible boolean)
  ), applied AS (
    INSERT INTO public.litix_boostero_inventory(
      supplier_service_id,service_name,supplier_category,platform,service_kind,order_type,
-     wholesale_per_1000,minimum_quantity,maximum_quantity,refill_eligible,cancel_eligible,
+     wholesale_per_1000,minimum_quantity,maximum_quantity,retail_per_1000_cents,pricing_review_reason,refill_eligible,cancel_eligible,
      dripfeed_eligible,refill_days,standard_input_compatible,active,last_seen_at,refreshed_at)
-   SELECT id,name,category,platform,kind,type,rate,min,max,refill,cancel,dripfeed,
+   SELECT id,name,category,platform,kind,type,rate,min,max,retail,review,refill,cancel,dripfeed,
      refill_days,compatible,true,$2::timestamptz,$2::timestamptz FROM incoming
    ON CONFLICT(supplier_service_id) DO UPDATE SET
      service_name=excluded.service_name,supplier_category=excluded.supplier_category,
      platform=excluded.platform,service_kind=excluded.service_kind,
      order_type=excluded.order_type,wholesale_per_1000=excluded.wholesale_per_1000,
      minimum_quantity=excluded.minimum_quantity,maximum_quantity=excluded.maximum_quantity,
+     retail_per_1000_cents=excluded.retail_per_1000_cents,
+     pricing_review_reason=excluded.pricing_review_reason,
      refill_eligible=excluded.refill_eligible,cancel_eligible=excluded.cancel_eligible,
      dripfeed_eligible=excluded.dripfeed_eligible,refill_days=excluded.refill_days,
      standard_input_compatible=excluded.standard_input_compatible,
@@ -68,7 +77,7 @@ export async function importBoosteroInventory(sql,raw,{now=new Date(),force=fals
  `,[JSON.stringify(payload),timestamp,stats.retrieved,stats.valid,stats.invalid]);
  if(Number(rows[0]?.imported)!==items.length||Number(rows[0]?.audit_records)!==1)
   throw Error("inventory_atomic_write_unconfirmed");
- return {...stats,imported:items.length,markedUnavailable:Number(rows[0]?.marked_unavailable||0),
+ return {...stats,pricingReviewCount:payload.filter(x=>x.review).length,pricingMultiplier:2.5,imported:items.length,markedUnavailable:Number(rows[0]?.marked_unavailable||0),
   publicNewServicesEnabled:0,checkoutAllowlistUnchanged:true,syncedAt:timestamp,
   atomicCommitVerified:true};
 }
