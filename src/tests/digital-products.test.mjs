@@ -84,6 +84,9 @@ test("sales and private asset routes are fail-closed", async () => {
   const download = await read("../app/api/digital-products/download/route.js");
   const revoke = await read("../app/api/digital-products/admin/orders/[id]/revoke/route.js");
   assert.match(checkout, /LITIX_DIGITAL_SALES_ENABLED !== "true"/);
+  assert.match(checkout, /LITIX_DIGITAL_PRICING_APPROVED !== "true"/);
+  assert.match(checkout, /LITIX_DIGITAL_TERMS_APPROVED !== "true"/);
+  assert.match(checkout, /LITIX_DIGITAL_ASSETS_APPROVED !== "true"/);
   assert.match(checkout, /on conflict \(idempotency_key\) do nothing/);
   assert.match(checkout, /payment_state='review'/);
   assert.match(checkout, /payment_state='paid'/);
