@@ -1,7 +1,7 @@
 import {randomUUID} from "node:crypto";
 import {normalizeBoosteroService} from "./boosteroGlobalCatalog.mjs";
 import {validateBoosteroOrderDraft} from "./boosteroFullOrderContracts.mjs";
-import {quoteBoostero60TypedUnits} from "./boosteroRetail60.mjs";
+import {quoteBoostero60TypedUnits,quoteBoostero60Package} from "./boosteroRetail60.mjs";
 
 /**
  * One-shot typed Boostero API client. Never called by the existing storefront.
@@ -9,7 +9,8 @@ import {quoteBoostero60TypedUnits} from "./boosteroRetail60.mjs";
  * current supplier details, and a separately enabled production release flag.
  *
  * A request timeout is UNKNOWN_OUTCOME, not "failed": no automatic replay.
- * This deliberately does not yet authorize package or subscription billing.
+ * Fixed packages require separately approved fixed retail prices; subscriptions
+ * remain blocked until per-post billing, reserves and cancellation are verified.
  */
 const validOrder=id=>/^ltx2_[a-f\d-]{36}$/i.test(String(id||""));
 const error=x=>({submitted:false,state:x,requiresReview:true});
@@ -26,7 +27,7 @@ export async function dispatchBoosteroTypedPaidOrder(orderId,{
  const orders=await sql.query(`
  select o.id,o.quantity,o.amount_cents,o.payment_state,o.payment_transaction_id,
         o.metadata,f.state,f.supplier_service_id,a.order_type,a.approved_retail_per_1000_cents,
-        a.approved_wholesale_ceiling,a.special_contract_verified
+        a.approved_wholesale_ceiling,a.special_contract_verified,a.approved_package_price_cents
  from public.litix_v2_orders o
  join public.litix_boostero_fulfillment f on f.litix_order_id=o.id
  join public.litix_boostero_full_service_approvals a
@@ -57,10 +58,12 @@ export async function dispatchBoosteroTypedPaidOrder(orderId,{
  // Packages and custom types require separately verified commercial terms.
  if(service.type!=="Default"&&o.special_contract_verified!==true)
   return error("SPECIAL_PRICING_NOT_VERIFIED");
- const qty=draft.estimatedTotalQuantity;
- const quote=quoteBoostero60TypedUnits({
-  service,draft,approvedRetailPer1000Cents:Number(o.approved_retail_per_1000_cents)
- });
+ const qty=draft.type==="Package"?1:draft.estimatedTotalQuantity;
+ const quote=draft.type==="Package"?
+  quoteBoostero60Package({service,draft,approvedPackagePriceCents:o.approved_package_price_cents}):
+  quoteBoostero60TypedUnits({
+   service,draft,approvedRetailPer1000Cents:Number(o.approved_retail_per_1000_cents)
+  });
  if(!quote.valid||quote.totalUnits!==qty||quote.customerAmountCents!==Number(o.amount_cents))
   return error("PAID_PRICE_NOT_MATCHING_LIVE_SUPPLIER");
  // Production DB UPDATE is a one-way atomic claim. An uncertain supplier
