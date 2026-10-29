@@ -52,6 +52,7 @@ export default function DigitalProductsPage() {
       <nav className="digital-nav" aria-label="Main navigation">
         <Link className="digital-brand" href="/">LITIX<span>✦</span></Link>
         <div className="digital-navlinks">
+          <Link href="/platform">Platform</Link>
           <Link href="/">Social growth</Link>
           <Link href="/growth">Content calendar</Link>
           <a href="#products">Digital kits</a>
