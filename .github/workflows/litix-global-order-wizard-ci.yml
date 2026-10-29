@@ -1,0 +1,74 @@
+name: Litix Global Order Wizard Safe Release
+on:
+  push:
+    branches: [feature/litix-global-order-wizard-20261029]
+  pull_request:
+    paths:
+      - 'src/app/global-services/**'
+      - 'src/app/api/catalog/global/**'
+      - 'src/lib/boosteroRetail60.mjs'
+      - 'src/tests/boostero-global-*.mjs'
+      - 'src/tests/boostero-retail-60.test.mjs'
+      - '.github/workflows/litix-global-order-wizard-ci.yml'
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: src/package-lock.json
+      - name: Enforce proven production checkout and payment source unchanged
+        run: |
+          set -Eeuo pipefail
+          python3 - <<'PY'
+          import subprocess,pathlib
+          base='ea9e3798c031a857c8dfe697d39f220722f2ee38'
+          changed=set(subprocess.check_output(['git','diff','--name-only',base,'HEAD'],text=True).splitlines())
+          allowed={
+           'src/lib/boosteroRetail60.mjs','src/tests/boostero-retail-60.test.mjs',
+           'src/app/api/catalog/global/route.js','src/app/api/catalog/global/quote/route.js',
+           'src/app/global-services/page.jsx','src/app/global-services/GlobalOrderWizard.jsx',
+           'src/app/global-services/global-services.css',
+           'src/tests/boostero-global-quote.test.mjs','src/tests/boostero-global-catalog-browser.mjs',
+           '.github/workflows/litix-global-order-wizard-ci.yml'
+          }
+          assert changed <= allowed, 'Unexpected checkout or backend mutations: '+str(sorted(changed-allowed))
+          print('NO_CHECKOUT_OR_PAYMENT_SOURCE_CHANGED')
+          PY
+      - name: Install locked dependencies
+        working-directory: src
+        run: npm ci --no-audit --no-fund
+      - name: Verify 60% server quote and no-charge service contracts
+        working-directory: src
+        run: |
+          set -e
+          node --check lib/boosteroRetail60.mjs
+          node --check app/api/catalog/global/quote/route.js
+          node --test tests/boostero-retail-60.test.mjs tests/boostero-global-quote.test.mjs
+      - name: Build complete original Litix Next.js storefront
+        working-directory: src
+        run: npm run build
+      - name: Mobile Safari-sized browser E2E with mocked provider responses
+        working-directory: src
+        run: |
+          set -Eeuo pipefail
+          npm install --no-save --ignore-scripts playwright@1.56.1
+          npm run start -- --port 3100 >/tmp/litix-global-order-wizard.log 2>&1 &
+          app_pid=$!
+          trap 'kill $app_pid || true' EXIT
+          for i in $(seq 1 40); do
+            if curl --fail --silent --output /dev/null http://localhost:3100/global-services; then break; fi
+            sleep 1
+          done
+          export CHROME_PATH="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
+          if [ -z "$CHROME_PATH" ]; then npx playwright install chromium; fi
+          node tests/boostero-global-catalog-browser.mjs
