@@ -171,3 +171,46 @@ button:disabled{filter:saturate(.55)}
 .audience-roadmap{border-top:1px solid #c9d7e53d;margin-top:26px;padding-top:24px}.audience-roadmap p{color:#b8c9df;line-height:1.75;max-width:850px}.audience-phrase{color:#ffe071;font-weight:800;letter-spacing:.04em;margin-top:28px}
 .audience-footer{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:24px 2px;color:#aec0d6;font-size:12px}
 @media(max-width:620px){.audience-header{align-items:flex-start;flex-direction:column}.audience-header nav{gap:12px}.audience-actions{flex-direction:column}.audience-actions a{width:100%;box-sizing:border-box}.audience-footer{flex-direction:column}}
+
+
+/* Reference-inspired mobile catalog and checkout; preserve Litix blue-platinum metallic palette. */
+:root{--gold:#facc15;--blue:#38bdf8;--platinum:#dbeafe;--metal-cyan:#7dd3fc}
+body{background:radial-gradient(ellipse at 12% 0%,#07598555,transparent 46%),radial-gradient(ellipse at 90% 18%,#38bdf825,transparent 38%),linear-gradient(145deg,#020617,#071426 55%,#030712);background-attachment:fixed}
+.nav .brand-logo{display:block;max-width:58px;max-height:58px;width:auto;height:auto;object-fit:contain;filter:drop-shadow(0 0 12px #38bdf866)}
+.nav .brand{display:flex;align-items:center;gap:10px}
+.nav .brand-wordmark{display:flex;flex-direction:column;line-height:1.05}
+.nav .brand-submark{display:block;font-size:8px;letter-spacing:.12em;margin-top:5px;color:#b9dfff}
+.wrap{max-width:1240px}
+.cols{align-items:start}
+.panel{border:1px solid #7dd3fc55;background:linear-gradient(145deg,#0a1b31ed,#071426f5 58%,#0b1a30f0);box-shadow:0 22px 65px #0008,inset 0 1px #e0f2fe24}
+.item{background:linear-gradient(135deg,#0a1b31,#06101f);border-color:#7dd3fc38}
+.item.active{border-color:#38bdf8;background:linear-gradient(145deg,#123d61,#0d2542);box-shadow:inset 3px 0 #38bdf8,0 0 24px #38bdf822}
+.primary{border-color:#bae6fd;background:linear-gradient(125deg,#f0f9ff,#7dd3fc 46%,#cbd5e1);color:#071426;box-shadow:0 4px 20px #38bdf822}
+.primary:hover:not(:disabled){box-shadow:0 5px 28px #38bdf855}
+.hero:after{background:linear-gradient(90deg,#38bdf8,#e2e8f0,#7dd3fc,transparent);background-size:200% 100%}
+.hero h1{background:linear-gradient(115deg,#fff 5%,#7dd3fc 42%,#e2e8f0 72%,#38bdf8);background-clip:text}
+.bundle-showcase{margin:22px 0}
+.bundle-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:18px}
+.bundle-card{border:1px solid #7dd3fc55;border-radius:16px;padding:22px;background:linear-gradient(145deg,#102944,#071426 75%);box-shadow:inset 0 1px #e0f2fe18}
+.bundle-featured{border-color:#38bdf8;box-shadow:0 0 28px #38bdf81c,inset 0 1px #e0f2fe22}
+.bundle-label{font-size:10px;font-weight:900;letter-spacing:.16em;color:#7dd3fc}
+.bundle-card h3{margin:10px 0;font-size:22px}
+.bundle-card p{color:#c4d8ed;line-height:1.6}
+.bundle-price{font-size:32px;font-weight:900;letter-spacing:-.04em;color:#dbeafe;margin:18px 0}
+.bundle-card .primary{width:100%}
+.bundle-note{margin-top:14px;color:#9fb7d1}
+@media(max-width:760px){
+ .wrap{padding-left:12px;padding-right:12px}
+ .nav{gap:10px;align-items:center}
+ .nav>div{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:10px}
+ .nav>div a{font-size:12px}
+ .nav .brand-logo{max-width:42px;max-height:42px}
+ .cols{grid-template-columns:minmax(0,1fr);gap:16px}
+ .sticky{position:static;top:auto}
+ .panel{padding:16px;border-radius:18px}
+ .filters{grid-template-columns:minmax(0,1fr)}
+ .cards{grid-template-columns:minmax(0,1fr)}
+ .bundle-grid{grid-template-columns:minmax(0,1fr)}
+ .checkout-steps{gap:6px;flex-wrap:wrap}
+ .hero h1{font-size:clamp(30px,9vw,48px)}
+}
