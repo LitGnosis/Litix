@@ -1,13 +1,17 @@
 name: Boostero global inventory preview safety
 on:
   push:
-    branches: [feature/boostero-global-catalog-stage-20261028, feature/boostero-neon-inventory-completion-20261028]
+    branches: [feature/boostero-global-catalog-stage-20261028, feature/boostero-neon-inventory-completion-20261028, feature/boostero-full-catalog-production-gates-20261029]
   pull_request:
     paths:
       - 'src/lib/boosteroGlobalCatalog.mjs'
       - 'src/lib/boosteroInventorySync.mjs'
       - 'src/lib/boosteroOrderForms.mjs'
       - 'src/app/global-catalog-preview/**'
+      - 'src/app/global-services/**'
+      - 'src/app/api/catalog/global/**'
+      - 'src/lib/boosteroFullOrderContracts.mjs'
+      - 'src/tests/boostero-full-order-contracts.test.mjs'
       - 'src/tests/boostero-order-forms.test.mjs'
       - 'src/app/api/internal/boostero/**'
       - 'src/tests/boostero-global-catalog.test.mjs'
@@ -30,14 +34,22 @@ jobs:
           node --check src/lib/boosteroGlobalCatalog.mjs
           node --check src/lib/boosteroInventorySync.mjs
           node --check src/lib/boosteroOrderForms.mjs
+          node --check src/lib/boosteroFullOrderContracts.mjs
+          node --check src/app/api/catalog/global/route.js
           node --check src/app/api/internal/boostero/staging-import/route.js
           node --check src/app/api/internal/boostero/catalog-audit/route.js
           node --check src/app/api/internal/boostero/inventory-sync/route.js
       - name: Pure mocked inventory tests (no supplier add or payment)
-        run: node --test src/tests/boostero-global-catalog.test.mjs src/tests/boostero-order-forms.test.mjs
+        run: node --test src/tests/boostero-global-catalog.test.mjs src/tests/boostero-order-forms.test.mjs src/tests/boostero-full-order-contracts.test.mjs
+      - name: Install locked Next.js dependencies and build global catalog
+        run: |
+          set -Eeuo pipefail
+          cd src
+          npm ci --no-audit --no-fund
+          npm run build
       - name: Ensure no existing checkout or production source was edited
         run: |
           set -Eeuo pipefail
-          if git diff --name-only HEAD~1 HEAD | grep -E '^src/(lib/boosteroOrderHandler\.mjs|lib/boosteroFulfillment\.mjs|app/api/checkout/v1/route\.js|app/page\.jsx)$'; then
+          if git diff --name-only 8bbdc59f2045198f68e085733c942255317687bd HEAD | grep -E '^src/(lib/boosteroOrderHandler\.mjs|lib/boosteroFulfillment\.mjs|app/api/checkout/v1/route\.js|app/page\.jsx)$'; then
              echo 'Checkout/source modification requires separate review'; exit 1
           fi
