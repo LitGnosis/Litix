@@ -40,7 +40,8 @@ jobs:
             tests/guardian.test.mjs \
             tests/owner-purchase-notifications.test.mjs \
             tests/growth-bundles-manual.test.mjs \
-            tests/boostero-integration.test.mjs \
+            tests/boostero-exclusive-new-orders.test.mjs \
+            tests/boostero-only-public-catalog-regression.test.mjs \
             tests/public-supplier-display.test.mjs
       - name: Build Next.js in isolated CI
         env:
