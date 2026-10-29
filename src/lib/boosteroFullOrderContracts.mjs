@@ -34,7 +34,11 @@ function publicLink(input,platform){
  if(!host||host==="localhost"||host.endsWith(".local")||
   /^(?:127\.|10\.|192\.168\.|169\.254\.|0\.|172\.(?:1[6-9]|2\d|3[01])\.)/.test(host))return null;
  const allow=hosts[platform];
- if(!allow||!allow.length)return null;
+ if(!allow)return null;
+ if(platform==="Website Traffic"){
+  if(!host.includes(".")||/^[0-9.]+$/.test(host)||host.endsWith(".internal")||host.endsWith(".test"))return null;
+  return u.href.slice(0,500);
+ }
  if(!allow.some(x=>host===x||host.endsWith("."+x)))return null;
  if(u.pathname.length<2)return null;
  if(u.search&&platform!=="YouTube"&&platform!=="Facebook"&&platform!=="Spotify")return null;
@@ -43,7 +47,7 @@ function publicLink(input,platform){
 export function boosteroOrderCapability(service){
  const type=supportedBoosteroType(service?.type);
  const platform=String(service?.platform||"");
- const knownHost=Array.isArray(hosts[platform])&&hosts[platform].length>0;
+ const knownHost=Array.isArray(hosts[platform])&&(hosts[platform].length>0||platform==="Website Traffic");
  const reason=!type?"unknown_supplier_order_type":!knownHost?"unverified_platform_destination":
   type==="Subscriptions"?"requires_recurring_billing_and_supplier_lifecycle":
   type==="Package"?"package_fixed_price_quote_not_verified":
@@ -127,8 +131,9 @@ export function validateBoosteroOrderDraft(service,input={}){
   if(!/^#[A-Za-z0-9_]{2,60}$/.test(String(input.hashtag||"")))return fail("invalid_hashtag");
   params.hashtag=String(input.hashtag);params.quantity=quantity;
  }else if(type==="Mentions User Followers"){
-  const username=String(input.username||"").trim();
-  if(!/^@?[A-Za-z0-9._]{2,40}$/.test(username))return fail("invalid_username");
+  // Boostero documents this field as the URL to scrape followers from.
+  const username=publicLink(String(input.username||""),platform);
+  if(!username)return fail("invalid_follower_source_url");
   params.username=username;params.quantity=quantity;
  }else if(type==="Comment Likes"){
   if(!/^@?[A-Za-z0-9._]{2,40}$/.test(String(input.username||"")))return fail("invalid_comment_owner");
