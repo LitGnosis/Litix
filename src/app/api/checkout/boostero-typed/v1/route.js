@@ -4,7 +4,7 @@ import {neon} from "@neondatabase/serverless";
 import {boosteroProduction} from "../../../../../lib/boosteroReadOnly.mjs";
 import {normalizeBoosteroService} from "../../../../../lib/boosteroGlobalCatalog.mjs";
 import {validateBoosteroOrderDraft} from "../../../../../lib/boosteroFullOrderContracts.mjs";
-import {quoteBoostero60TypedUnits} from "../../../../../lib/boosteroRetail60.mjs";
+import {quoteBoostero60TypedUnits,quoteBoostero60Package} from "../../../../../lib/boosteroRetail60.mjs";
 import {boosteroProductionReady,boosteroSQL,boosteroOrderId,boosteroToken,
  hashBoostero,boosteroNotice} from "../../../../../lib/boosteroFulfillment.mjs";
 import {dispatchBoosteroTypedPaidOrder} from "../../../../../lib/boosteroTypedPaidDispatch.mjs";
@@ -37,15 +37,16 @@ async function quoteForOrder(service,input,orderSQL,inventorySQL){
  if(record.length!==1||record[0].order_type!==service.type||
   Number(record[0].wholesale_per_1000)!==Number(service.wholesalePer1000))return null;
  const approval=await orderSQL.query(
-  "select approved_retail_per_1000_cents,approved_wholesale_ceiling,order_type,special_contract_verified from public.litix_boostero_full_service_approvals where supplier_service_id=$1 and enabled=true and reviewed_at is not null limit 1",
+  "select approved_retail_per_1000_cents,approved_package_price_cents,approved_wholesale_ceiling,order_type,special_contract_verified from public.litix_boostero_full_service_approvals where supplier_service_id=$1 and enabled=true and reviewed_at is not null limit 1",
   [String(service.id)]
  );
  if(approval.length!==1||approval[0].order_type!==service.type||
   Number(service.wholesalePer1000)>Number(approval[0].approved_wholesale_ceiling)||
   (service.type!=="Default"&&!approval[0].special_contract_verified))return null;
  const retail=Number(approval[0].approved_retail_per_1000_cents);
- if(!Number.isSafeInteger(retail)||retail<500)return null;
- const quote=quoteBoostero60TypedUnits({service,draft,approvedRetailPer1000Cents:retail});
+ const quote=draft.type==="Package"?
+  quoteBoostero60Package({service,draft,approvedPackagePriceCents:approval[0].approved_package_price_cents}):
+  quoteBoostero60TypedUnits({service,draft,approvedRetailPer1000Cents:retail});
  if(!quote.valid||quote.customerAmountCents<500)return null;
  return {draft,quote,retail};
 }
