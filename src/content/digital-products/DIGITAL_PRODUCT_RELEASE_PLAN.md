@@ -10,6 +10,7 @@ This document defines the implementation gates for turning the current storefron
 - [x] Draft separate order / entitlement database schema.
 - [x] Add gated PayKings/NMI tokenized checkout API with server-side product pricing and idempotency.
 - [x] Add protected ZIP asset storage/upload and time-limited download entitlements.
+- [x] Add guarded admin revocation for verified refunds and chargebacks.
 - [x] Add a checkout readiness endpoint and gated checkout UI; sales stay disabled until assets and configuration are ready.
 - [x] Early-access signup API, confirmation email, and token-based unsubscribe endpoint (disabled until explicitly enabled).
 - [ ] Editorial review, consistency pass, and final branded layouts.
