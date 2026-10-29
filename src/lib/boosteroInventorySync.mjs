@@ -32,7 +32,7 @@ export async function importBoosteroInventory(sql,raw,{now=new Date(),force=fals
   const checkoutCompatible=compatibleIds.has(x.id);
   const checked=checkBoosteroService(rawById.get(x.id),{approvedCheckout:autoPublish&&checkoutCompatible});
   const unitPriced=x.type==="Default" && x.dripfeed!==true;
-  const pricing=unitPriced?boosteroRetailCandidate(x.wholesalePer1000):
+  const pricing=unitPriced?boosteroRetailCandidate(x.wholesaleRateText):
    {retailCents:null,reviewReason:"special_service_price_contract_unverified"};
   if(unitPriced&&pricing.retailCents===null)throw Error("inventory_wholesale_price_invalid");
   let finalRetail=pricing.retailCents;
@@ -48,7 +48,7 @@ export async function importBoosteroInventory(sql,raw,{now=new Date(),force=fals
   if(x.supportedInputShape&&finalRetail!==null)finalRetail=Math.max(finalRetail,600);
   return {
    id:x.id,name:x.name,category:x.category,platform:x.platform,kind:x.kind,type:x.type,
-   rate:x.wholesalePer1000,min:x.min,max:x.max,refill:x.refill,cancel:x.cancel,
+   rate:x.wholesaleRateText,min:x.min,max:x.max,refill:x.refill,cancel:x.cancel,
    dripfeed:x.dripfeed,refill_days:x.refillDays,compatible:x.supportedInputShape,
    retail:finalRetail,
    review:finalReason,
