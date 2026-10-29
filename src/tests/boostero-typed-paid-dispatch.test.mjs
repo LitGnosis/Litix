@@ -21,6 +21,7 @@ function fakeSql(){
  const calls=[],sql={query:async(text,params=[])=>{
   calls.push(text);
   if(text.includes("select o.id,o.quantity"))return state==="QUEUED"?[row]:[];
+  if(text.includes("from public.litix_boostero_inventory where supplier_service_id"))return [{supplier_service_id:"9876",order_type:"Default",wholesale_per_1000:"10",active:true}];
   if(text.includes("set state='DISPATCHING'")){if(state!=="QUEUED")return [];state="DISPATCHING";return [{supplier_service_id:"9876"}]}
   if(text.includes("set state='UNKNOWN_OUTCOME'")){state="UNKNOWN_OUTCOME";return []}
   if(text.includes("set supplier_order_id=$2,state='SUBMITTED'")){if(state!=="DISPATCHING")return [];state="SUBMITTED";providerId=params[1];return [{supplier_order_id:providerId}]}
@@ -29,7 +30,7 @@ function fakeSql(){
  return {sql,calls,getState:()=>state,getSupplier:()=>providerId};
 }
 test("typed service dispatch is disabled unless a separately approved production release is active",async()=>{
- const fake=fakeSql();const x=await dispatchBoosteroTypedPaidOrder(oid,{sql:fake.sql,enabled:true,liveServices:catalog,
+ const fake=fakeSql();const x=await dispatchBoosteroTypedPaidOrder(oid,{sql:fake.sql,inventorySQL:fake.sql,enabled:true,liveServices:catalog,
   fetchImpl:async()=>{throw Error("network must stay unused")}});
  assert.equal(x.state,"TYPED_DISPATCH_DISABLED");assert.equal(fake.calls.length,0);
 });
@@ -46,9 +47,9 @@ test("confirmed paid order is submitted at most once with a durable DB claim",as
    assert.equal(new URLSearchParams(options.body).get("quantity"),"500");
    return new Response(JSON.stringify({order:456789}),{status:200});
   };
-  const first=await dispatchBoosteroTypedPaidOrder(oid,{sql:fake.sql,liveServices:catalog,enabled:true,fetchImpl});
+  const first=await dispatchBoosteroTypedPaidOrder(oid,{sql:fake.sql,inventorySQL:fake.sql,liveServices:catalog,enabled:true,fetchImpl});
   assert.equal(first.submitted,true);assert.equal(first.supplierOrderId,"456789");
-  const second=await dispatchBoosteroTypedPaidOrder(oid,{sql:fake.sql,liveServices:catalog,enabled:true,fetchImpl});
+  const second=await dispatchBoosteroTypedPaidOrder(oid,{sql:fake.sql,inventorySQL:fake.sql,liveServices:catalog,enabled:true,fetchImpl});
   assert.equal(second.submitted,false);
   assert.equal(network,1);assert.equal(fake.getState(),"SUBMITTED");assert.equal(fake.getSupplier(),"456789");
  }finally{cleanup()}
@@ -58,9 +59,9 @@ test("unknown supplier response never automatically retries",async()=>{
  try{
   const fake=fakeSql();let network=0;
   const fetchImpl=async()=>{network++;throw Error("ambiguous supplier timeout")};
-  const x=await dispatchBoosteroTypedPaidOrder(oid,{sql:fake.sql,liveServices:catalog,enabled:true,fetchImpl});
+  const x=await dispatchBoosteroTypedPaidOrder(oid,{sql:fake.sql,inventorySQL:fake.sql,liveServices:catalog,enabled:true,fetchImpl});
   assert.equal(x.state,"UNKNOWN_OUTCOME");assert.equal(fake.getState(),"UNKNOWN_OUTCOME");
-  await dispatchBoosteroTypedPaidOrder(oid,{sql:fake.sql,liveServices:catalog,enabled:true,fetchImpl});
+  await dispatchBoosteroTypedPaidOrder(oid,{sql:fake.sql,inventorySQL:fake.sql,liveServices:catalog,enabled:true,fetchImpl});
   assert.equal(network,1);
  }finally{cleanup()}
 });
@@ -68,10 +69,10 @@ test("rejects unauthenticated paid-order evidence and unverified special order t
  setLiveFake();
  try{
   const fake=fakeSql();let network=0;
-  const noPrice=await dispatchBoosteroTypedPaidOrder(oid,{sql:fake.sql,
+  const noPrice=await dispatchBoosteroTypedPaidOrder(oid,{sql:fake.sql,inventorySQL:fake.sql,
    liveServices:[{...catalog[0],rate:"30"}],enabled:true,fetchImpl:async()=>{network++}});
   assert.equal(noPrice.state,"SUPPLIER_SERVICE_OR_PRICE_CHANGED");
-  const special=await dispatchBoosteroTypedPaidOrder(oid,{sql:fake.sql,
+  const special=await dispatchBoosteroTypedPaidOrder(oid,{sql:fake.sql,inventorySQL:fake.sql,
    liveServices:[{...catalog[0],type:"Package"}],enabled:true,fetchImpl:async()=>{network++}});
   assert.equal(special.submitted,false);assert.equal(network,0);
   assert.equal(fake.getState(),"QUEUED");
