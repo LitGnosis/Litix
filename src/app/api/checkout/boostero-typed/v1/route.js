@@ -1,4 +1,4 @@
-import {after} from "next/server";
+import {after} from "next/server.js";
 import {createHmac,randomUUID,timingSafeEqual} from "node:crypto";
 import {neon} from "@neondatabase/serverless";
 import {boosteroProduction} from "../../../../../lib/boosteroReadOnly.mjs";
