@@ -1,0 +1,66 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import {supportedBoosteroType,boosteroOrderCapability,validateBoosteroOrderDraft} from "../lib/boosteroFullOrderContracts.mjs";
+const s=(type="Default",platform="Instagram",extra={})=>({id:"5385",type,platform,min:10,max:10000,dripfeed:false,...extra});
+test("recognizes actual Boostero v2 types and never assumes purchasing is approved",()=>{
+ for(const type of ["Default","Package","Custom Comments","Mentions Custom List","Mentions Hashtag","Mentions User Followers","Subscriptions","Comment Likes","Poll"]){
+  assert.equal(supportedBoosteroType(type),type);
+  assert.equal(boosteroOrderCapability(s(type)).purchasable,false);
+ }
+ assert.equal(boosteroOrderCapability(s("Auto Likes")).schemaSupported,false);
+});
+test("validates default Instagram and YouTube targets with supplier bounds",()=>{
+ const valid=validateBoosteroOrderDraft(s(),{link:"https://www.instagram.com/litixsocial/",quantity:1000});
+ assert.equal(valid.valid,true);
+ assert.deepEqual(valid.params,{service:"5385",link:"https://www.instagram.com/litixsocial/",quantity:1000});
+ assert.equal(valid.chargeAllowed,false);
+ assert.equal(validateBoosteroOrderDraft(s(),{link:"http://www.instagram.com/litixsocial/",quantity:1000}).valid,false);
+ assert.equal(validateBoosteroOrderDraft(s(),{link:"https://evil.example.com/secret",quantity:1000}).valid,false);
+ assert.equal(validateBoosteroOrderDraft(s(),{link:"https://www.instagram.com/litixsocial/",quantity:10001}).valid,false);
+ assert.equal(validateBoosteroOrderDraft(s("Default","YouTube"),{link:"https://www.youtube.com/watch?v=abcdefghijk",quantity:30}).valid,true);
+});
+test("validates drip feed with correctly multiplied total units and no surprise billing",()=>{
+ const service=s("Default","TikTok",{dripfeed:true});
+ const d=validateBoosteroOrderDraft(service,{link:"https://www.tiktok.com/@creator/video/12345678901234567",quantity:100,runs:5,interval:30});
+ assert.equal(d.valid,true);assert.equal(d.estimatedTotalQuantity,500);
+ assert.equal(d.params.quantity,100);assert.equal(d.params.runs,5);assert.equal(d.params.interval,30);
+ assert.equal(validateBoosteroOrderDraft(s(),{link:"https://www.instagram.com/litixsocial/",quantity:100,runs:5,interval:30}).error,"dripfeed_not_supported_by_supplier");
+});
+test("package drafts omit numeric quantity and stay blocked until verified fixed-price quote",()=>{
+ const v=validateBoosteroOrderDraft(s("Package"),{link:"https://www.instagram.com/litixsocial/"});
+ assert.equal(v.valid,true);assert.equal("quantity" in v.params,false);
+ assert.equal(v.reason,"package_price_not_verified");assert.equal(v.supplierDispatchAllowed,false);
+});
+test("custom comments match supplier contract without separate quantity",()=>{
+ const v=validateBoosteroOrderDraft(s("Custom Comments","Instagram",{min:2}),{link:"https://www.instagram.com/p/ABCDE123/",comments:"Nice!\nGreat post!"});
+ assert.equal(v.valid,true);assert.equal(v.params.comments,"Nice!\nGreat post!");
+ assert.equal("quantity" in v.params,false);assert.equal(v.estimatedTotalQuantity,2);
+ assert.equal(validateBoosteroOrderDraft(s("Custom Comments"),{link:"https://www.instagram.com/p/ABCDE123/",comments:""}).valid,false);
+});
+test("subscription requires post limit and exact supported delay, no direct one-time charge",()=>{
+ const base={username:"litixsocial",min:100,max:500,posts:5,delay:60};
+ const v=validateBoosteroOrderDraft(s("Subscriptions"),base);
+ assert.equal(v.valid,true);assert.equal(v.params.username,"litixsocial");assert.equal(v.variableFutureCharge,true);
+ assert.equal(v.chargeAllowed,false);
+ assert.equal(validateBoosteroOrderDraft(s("Subscriptions"),{...base,delay:13}).valid,false);
+ assert.equal(validateBoosteroOrderDraft(s("Subscriptions"),{...base,posts:""}).valid,false);
+});
+test("special types have correct extra fields without enabling any orders",()=>{
+ const link="https://www.instagram.com/p/ABCDEFGH/";
+ for(const [type,extra,expected] of [
+  ["Mentions Custom List",{usernames:"@litixsocial\n@creator"},"usernames"],
+  ["Mentions Hashtag",{hashtag:"#litix"},"hashtag"],
+  ["Mentions User Followers",{username:"litixsocial"},"username"],
+  ["Comment Likes",{username:"litixsocial"},"username"],
+  ["Poll",{answer_number:2},"answer_number"]
+ ]){
+  const v=validateBoosteroOrderDraft(s(type),{link,quantity:50,...extra});
+  assert.equal(v.valid,true,type);
+  assert.ok(Object.hasOwn(v.params,expected),type);
+  assert.equal(v.supplierDispatchAllowed,false);
+ }
+});
+test("unknown platforms and invalid supplier identity always fail closed",()=>{
+ assert.equal(validateBoosteroOrderDraft(s("Default","Other"),{link:"https://example.com",quantity:100}).valid,false);
+ assert.equal(validateBoosteroOrderDraft({...s(),id:"bad"},{link:"https://www.instagram.com/test/",quantity:100}).valid,false);
+});
