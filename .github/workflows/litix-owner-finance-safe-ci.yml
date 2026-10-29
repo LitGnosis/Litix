@@ -1,0 +1,64 @@
+name: Litix owner finance — Auth0-only, read-only release gate
+on:
+  push:
+    branches: [feature/litix-private-financial-operations-20261029]
+  pull_request:
+    paths:
+      - 'src/lib/ownerAuth.mjs'
+      - 'src/app/owner/**'
+      - 'src/app/api/owner/finance/**'
+      - 'src/components/OwnerFinanceDashboard.jsx'
+      - 'src/tests/owner-financial-dashboard.test.mjs'
+      - '.github/workflows/litix-owner-finance-safe-ci.yml'
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 16
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: src/package-lock.json
+      - name: Protect existing checkout, pricing, supplier fulfillment, and bundles
+        run: |
+          set -Eeuo pipefail
+          python3 - <<'PY'
+          import subprocess
+          base='9b07afa25225267255716b0dfcbbe270b25da308'
+          changed=set(subprocess.check_output(['git','diff','--name-only',base,'HEAD'],text=True).splitlines())
+          permitted={
+           'src/lib/ownerAuth.mjs',
+           'src/app/owner/wholesale/login/route.js',
+           'src/app/owner/wholesale/callback/route.js',
+           'src/app/owner/wholesale/logout/route.js',
+           'src/app/owner/wholesale/page.jsx',
+           'src/app/owner/finance/page.jsx',
+           'src/app/owner/finance/owner-finance.css',
+           'src/app/api/owner/finance/route.js',
+           'src/components/OwnerFinanceDashboard.jsx',
+           'src/tests/owner-financial-dashboard.test.mjs',
+           '.github/workflows/litix-owner-finance-safe-ci.yml'
+          }
+          assert changed<=permitted,'Unreviewed changes: '+repr(sorted(changed-permitted))
+          print('EXISTING_PRODUCTION_PAYMENT_AND_SUPPLIER_SOURCE_UNMODIFIED')
+          PY
+      - name: Install locked project packages
+        working-directory: src
+        run: npm ci --no-audit --no-fund
+      - name: Security regression tests for owner authentication, finance and no-charge checkout
+        working-directory: src
+        run: |
+          set -Eeuo pipefail
+          node --check lib/ownerAuth.mjs
+          node --check app/api/owner/finance/route.js
+          node --test tests/owner-financial-dashboard.test.mjs tests/boostero-readonly.test.mjs tests/boostero-live-fulfillment.test.mjs
+      - name: Next.js full build
+        working-directory: src
+        run: npm run build
