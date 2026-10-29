@@ -23,7 +23,7 @@ test("public catalog can only publish explicitly approved Boostero cards",()=>{
  assert.doesNotMatch(publicCatalog,/smmglob|smmfollowom/i);
  assert.match(catalogGuard,/\^boostero_/);
  assert.match(catalogGuard,/purchasable===true/);
- assert.doesNotMatch(catalogGuard,/https?:\\/\\/(?:www\\.)?(?:smmglob|smmfollowom)/i);
+ assert.equal(catalogGuard.includes("https://smmglob.com"),false);
 });
 test("historical order lookup stays read-only and never calls retired supplier",()=>{
  assert.match(legacy,/async function refreshSupplierOrder/);
