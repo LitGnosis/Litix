@@ -28,7 +28,7 @@ export async function enabledBoosteroCards(){
   // $5 retail alone is insufficient when total supplier cost is below $1:
   // the global 8x wholesale floor still applies at that quantity.
   const retail=Number(approved.retail_per_1000_cents),wholesale=Number(service.wholesalePer1000USD);
-  const floorQty=Math.max(Number(service.min),Math.ceil(500000/retail));
+  const floorQty=Math.max(Number(service.min),Math.ceil(100000/retail));
   const candidates=[floorQty,Math.max(floorQty,Math.ceil(1000/wholesale)),
     Math.max(floorQty,Math.ceil(20000/wholesale))].filter(q=>Number.isSafeInteger(q)&&q<=Number(service.max));
   let quantity=null,quote=null;
