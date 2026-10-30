@@ -1,5 +1,6 @@
 "use client";
 import {useEffect,useState} from "react";
+import {litixCustomerServiceName} from "../../lib/serviceCardDisplay.mjs";
 import "./track.css";
 
 const validId=value=>/^ltx2_[a-f0-9-]{36}$/.test(String(value||"").trim());
@@ -117,7 +118,7 @@ export default function OrderTracker(){
      {order.remains!==null&&order.remains!==undefined&&<div><small>Remaining to deliver</small><strong>{Number(order.remains).toLocaleString()}</strong></div>}
      {order.status&&<div><small>Latest Litix status</small><strong>{order.status}</strong></div>}
     </div>
-    <p className="ltx-track-service"><b>Service:</b> {order.service}</p>
+    <p className="ltx-track-service"><b>Service:</b> {litixCustomerServiceName(order.service)}</p>
     {order.checkedAt&&<p className="ltx-track-meta">Status updated: {new Date(order.checkedAt).toLocaleString()} {order.liveSupplierStatus?"(live update)":"(last recorded update)"}</p>}
     <div className="ltx-track-actions"><button type="button" className="ltx-track-btn" disabled={busy} onClick={()=>runStatus(method)}>{busy?"Checking status…":"Refresh status"}</button><a className="ltx-track-btn ltx-track-btn-secondary" href={helpUrl} target="_blank" rel="noreferrer noopener">Get order help</a></div>
     <p className="ltx-track-footnote">Payment confirmation and actual follower delivery are separate steps. Litix displays the latest recorded delivery update; followers will be confirmed when delivery is reported complete.</p>
