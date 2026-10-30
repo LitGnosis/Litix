@@ -4,14 +4,6 @@ import {useEffect,useRef,useState} from "react";
 const currency=n=>typeof n==="number"&&Number.isFinite(n)
   ?new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(n):null;
 const contactNumber=(process.env.NEXT_PUBLIC_WHATSAPP_NUMBER||"").replace(/\D/g,"")||"19452106315";
-const manualMessage=service=>[
- "Hi Litix, I would like to order this Litix service.",
- "Service: "+service.name,
- "Service ID: "+service.id.replace(/^boostero_/,""),
- "Platform: "+service.platform,
- "Minimum quantity: "+(service.min??"confirm with support"),
- "Please confirm my exact price, accepted destination link, and fulfillment requirements before payment."
-].join("\n");
 const topFilters=["Instagram","TikTok","YouTube","Facebook","Twitter (X)","Spotify","Telegram","LinkedIn"];
 const focusFilters=[
  {label:"Instagram Followers",platform:"Instagram",kind:"followers"},
@@ -28,7 +20,6 @@ export default function LitixDirectory({standalone=false}){
  const [platform,setPlatform]=useState("");
  const [kind,setKind]=useState("");
  const [category,setCategory]=useState("");
- const [onlyReady,setOnlyReady]=useState(false);
  const [page,setPage]=useState(1);
  const [entries,setEntries]=useState([]);
  const [platforms,setPlatforms]=useState([]);
@@ -50,7 +41,6 @@ export default function LitixDirectory({standalone=false}){
   if(platform)qs.set("platform",platform);
   if(kind)qs.set("kind",kind);
   if(category)qs.set("category",category);
-  if(onlyReady)qs.set("ready","true");
   fetch("/api/catalog/global?"+qs,{cache:"no-store",signal:abort.signal})
    .then(async r=>{
     const body=await r.json();
@@ -70,7 +60,7 @@ export default function LitixDirectory({standalone=false}){
    .catch(e=>{if(!abort.signal.aborted){setEntries([]);setStatus("error");setProblem(e.message)}})
    .finally(()=>{});
   return()=>abort.abort();
- },[debounced,platform,kind,category,onlyReady,page,retry]);
+ },[debounced,platform,kind,category,page,retry]);
  const changePlatform=name=>{setPlatform(name);setKind("");setCategory("");setPage(1)};
  const selectFocus=filter=>{setPlatform(filter.platform);setKind(filter.kind);setCategory("");setPage(1)};
  const selectedFocus=focusFilters.find(f=>f.platform===platform&&f.kind===kind);
@@ -128,8 +118,7 @@ export default function LitixDirectory({standalone=false}){
      </label>
     </div>
     <div className="litix-directory-ready-filter">
-     <label><input type="checkbox" checked={onlyReady} onChange={e=>{setOnlyReady(e.target.checked);setPage(1)}} /> Ready for instant checkout only</label>
-     <button type="button" onClick={()=>{setSearch("");setPlatform("");setKind("");setCategory("");setOnlyReady(false);setPage(1);setRetry(x=>x+1)}}>Reset filters</button>
+     <button type="button" onClick={()=>{setSearch("");setPlatform("");setKind("");setCategory("");setPage(1);setRetry(x=>x+1)}}>Reset filters</button>
     </div>
     <div className="litix-directory-result-header" aria-live="polite">
      <strong>{status==="loading"?"Loading your services…":status==="error"?"Catalog connection needs attention":count.toLocaleString()+" matching Litix services"}</strong>
@@ -141,7 +130,6 @@ export default function LitixDirectory({standalone=false}){
      {entries.filter(s=>s.purchasable===true).map(s=>{
       const approved=s.purchasable===true;
       const wholesaleEstimate=currency(s.per1000);
-      const manualUrl="https://wa.me/"+contactNumber+"?text="+encodeURIComponent(manualMessage(s));
       return <article className="litix-directory-service" key={s.id}>
        <div className="litix-directory-service-top"><span className="litix-directory-network">{s.platform}</span><span className={approved?"litix-directory-state is-ready":"litix-directory-state"}>Instant checkout</span></div>
        <h3>{s.name}</h3>
