@@ -2,6 +2,19 @@
 import { useEffect, useState } from "react";
 
 const ink="#e9f3ff",muted="#a9c4d5",blue="#73c5ed";
+function litixTrackingUrl(raw){
+ try{
+  const u=new URL(raw,window.location.origin);
+  const id=u.searchParams.get("track")||u.searchParams.get("order");
+  const token=u.searchParams.get("token");
+  if(!/^ltx2_[a-f0-9-]{36}$/.test(id||"")||!token||token.length<25||token.length>150)return raw;
+  const target=new URL("/track",window.location.origin);
+  target.searchParams.set("track",id);
+  target.searchParams.set("token",token);
+  return target.href;
+ }catch{return raw}
+}
+
 export default function ConfirmationPage(){
  const [receipt,setReceipt]=useState(null);
  const [status,setStatus]=useState("");
@@ -56,7 +69,7 @@ export default function ConfirmationPage(){
   finally{setSendingEmail(false)}
  }
  async function copyTracking(){
-  try{await navigator.clipboard.writeText(receipt.trackingUrl);setCopied(true)}catch{setStatus("Select and copy the tracking link shown below.")}
+  try{await navigator.clipboard.writeText(litixTrackingUrl(receipt.trackingUrl));setCopied(true)}catch{setStatus("Select and copy the tracking link shown below.")}
  }
  const paid=receipt?.payment==="paid";
  const box={background:"linear-gradient(160deg,#0d2e43,#091d2e)",border:"1px solid #31617a",borderRadius:20,padding:24,boxShadow:"0 18px 45px #0006"};
@@ -74,7 +87,7 @@ export default function ConfirmationPage(){
      <p style={{fontSize:18,color:muted,margin:"0 0 22px"}}>{paid?"Your payment was approved. Your order details and private tracking link are below.":"Your order is still being reviewed. Do not submit another payment."}</p>
      <div style={{borderTop:"1px solid #375b6b",paddingTop:18,display:"grid",gap:13}}>
       <div><div style={{color:muted,fontSize:13}}>Order number</div><div style={{overflowWrap:"anywhere",fontWeight:700}}>{receipt.orderId}</div></div>
-      <div><div style={{color:muted,fontSize:13}}>Payment / supplier</div><div style={{textTransform:"capitalize"}}>{receipt.payment} · {String(receipt.fulfillment||"pending").replaceAll("_"," ")}</div></div>
+      <div><div style={{color:muted,fontSize:13}}>Payment / Litix delivery</div><div style={{textTransform:"capitalize"}}>{receipt.payment} · {String(receipt.fulfillment||"pending").replaceAll("_"," ")}</div></div>
       <div><div style={{color:muted,fontSize:13}}>Total</div><div style={{fontSize:27,fontWeight:800}}>USD {receipt.amountCents==null?"Checking…":new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(receipt.amountCents/100)}</div></div>
       <div><div style={{color:muted,fontSize:13}}>Service</div><div>{receipt.service}</div></div>
       {receipt.quantity!=null&&<div><div style={{color:muted,fontSize:13}}>Quantity</div><div>{Number(receipt.quantity).toLocaleString()}</div></div>}
@@ -83,10 +96,10 @@ export default function ConfirmationPage(){
      <div style={{marginTop:25,borderTop:"1px solid #375b6b",paddingTop:20}}>
       <h2 style={{fontSize:21,margin:"0 0 8px"}}>Private tracking link</h2>
       <p style={{color:muted,fontSize:14}}>Keep this link private. You can use it to check your order status.</p>
-      <input aria-label="Your private tracking URL" readOnly value={receipt.trackingUrl} onFocus={e=>e.target.select()} style={{width:"100%",boxSizing:"border-box",padding:"15px 12px",background:"#07131d",border:"1px solid #487088",borderRadius:10,color:ink,fontSize:15}}/>
+      <input aria-label="Your private tracking URL" readOnly value={litixTrackingUrl(receipt.trackingUrl)} onFocus={e=>e.target.select()} style={{width:"100%",boxSizing:"border-box",padding:"15px 12px",background:"#07131d",border:"1px solid #487088",borderRadius:10,color:ink,fontSize:15}}/>
       <div style={{display:"flex",gap:10,flexWrap:"wrap",marginTop:14}}>
        <button style={button} type="button" onClick={copyTracking}>{copied?"Copied":"Copy tracking link"}</button>
-       <a href={"/track?order="+encodeURIComponent(receipt.orderId)} style={button}>Track order</a>
+       <a href={litixTrackingUrl(receipt.trackingUrl)} style={button}>Track order</a>
        <button type="button" onClick={requestEmails} disabled={sendingEmail} style={{...button,background:"#153951",opacity:sendingEmail?.6:1}}>{sendingEmail?"Requesting emails…":"Send confirmation & tracking emails"}</button>
       </div>
      </div>
