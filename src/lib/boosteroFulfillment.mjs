@@ -4,6 +4,7 @@ import {createHash,randomUUID,timingSafeEqual} from "node:crypto";
 import {boosteroProduction,boosteroCompatibleServices} from "./boosteroReadOnly.mjs";
 import {litixRetailPer1000Cents,litixOrderCents,litixPurchasableDefault,litixSupplierSafeLink} from "./litixRetail60.mjs";
 import {litixPlatform,litixKind} from "./litixServiceClassify.mjs";
+import {queueCustomerDeliveryChange,sendCustomerDeliveryUpdates} from "./litixCustomerUpdates.mjs";
 
 export const boosteroDatabaseURL=()=>process.env.LITIX_BOOSTERO_DATABASE_URL||process.env.LITIX_V2_DATABASE_URL||
  process.env.DATABASE_URL||process.env.POSTGRES_URL||"";
@@ -192,9 +193,10 @@ export async function dispatchBoostero(orderId,{sql=boosteroSQL(),operation=boos
   return {submitted:true,state:"SUBMITTED",supplierOrderId:providerId};
  }catch{return {submitted:false,state:"UNKNOWN_OUTCOME",requiresReview:true};}
 }
+export const deliverLitixCustomerUpdates=({sql=boosteroSQL(),limit=12}={})=>sendCustomerDeliveryUpdates({sql,sendEmail:resend,limit});
 export async function syncBoosteroStatuses({sql=boosteroSQL(),operation=boosteroProduction,limit=20}={}){
  if(!boosteroProductionReady())return {checked:0,disabled:true};
- const orders=await sql.query("select litix_order_id,supplier_order_id,attempted_at,checked_at from public.litix_boostero_fulfillment where state='SUBMITTED' and supplier_order_id is not null and (checked_at is null or checked_at<now()-interval '15 minutes') order by checked_at nulls first limit $1",[Math.min(20,limit)]);
+ const orders=await sql.query("select litix_order_id,supplier_order_id,attempted_at,checked_at,supplier_status,state from public.litix_boostero_fulfillment where state='SUBMITTED' and supplier_order_id is not null and (checked_at is null or checked_at<now()-interval '15 minutes') order by checked_at nulls first limit $1",[Math.min(20,limit)]);
  let checked=0,failed=0;
  for(const item of orders){
   try{
@@ -203,6 +205,11 @@ export async function syncBoosteroStatuses({sql=boosteroSQL(),operation=boostero
    const state=/^completed|complete|finished$/.test(name)?"COMPLETED":/^(canceled|cancelled|failed|error)$/.test(name)?"FAILED":"SUBMITTED";
    const snapshot={provider:"boostero",status:String(res.status||"Unknown").slice(0,80),
     remains:res.remains??null,checked_at:new Date().toISOString()};
+   // Record meaningful changes before overwriting the previous snapshot. If the outbox
+   // is unavailable, the next poll retries instead of silently dropping the update.
+   const info=await sql.query("select quantity from public.litix_v2_orders where id=$1 and payment_state=\'paid\'",[item.litix_order_id]);
+   if(info.length===1)await queueCustomerDeliveryChange({sql,orderId:item.litix_order_id,supplierOrderId:item.supplier_order_id,
+    previous:item.supplier_status,latest:snapshot,state,quantity:info[0].quantity});
    await sql.query("update public.litix_boostero_fulfillment set state=$2,supplier_status=$3::jsonb,checked_at=now(),updated_at=now() where litix_order_id=$1 and supplier_order_id=$4",
     [item.litix_order_id,state,JSON.stringify(snapshot),item.supplier_order_id]);
    // Keep the generic customer/owner tracking record in sync as well.
