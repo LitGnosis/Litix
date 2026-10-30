@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import {litixCustomerServiceName} from "../../lib/serviceCardDisplay.mjs";
 
 const ink="#e9f3ff",muted="#a9c4d5",blue="#73c5ed";
 function litixTrackingUrl(raw){
@@ -89,7 +90,7 @@ export default function ConfirmationPage(){
       <div><div style={{color:muted,fontSize:13}}>Order number</div><div style={{overflowWrap:"anywhere",fontWeight:700}}>{receipt.orderId}</div></div>
       <div><div style={{color:muted,fontSize:13}}>Payment / Litix delivery</div><div style={{textTransform:"capitalize"}}>{receipt.payment} · {String(receipt.fulfillment||"pending").replaceAll("_"," ")}</div></div>
       <div><div style={{color:muted,fontSize:13}}>Total</div><div style={{fontSize:27,fontWeight:800}}>USD {receipt.amountCents==null?"Checking…":new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(receipt.amountCents/100)}</div></div>
-      <div><div style={{color:muted,fontSize:13}}>Service</div><div>{receipt.service}</div></div>
+      <div><div style={{color:muted,fontSize:13}}>Service</div><div>{litixCustomerServiceName(receipt.service)}</div></div>
       {receipt.quantity!=null&&<div><div style={{color:muted,fontSize:13}}>Quantity</div><div>{Number(receipt.quantity).toLocaleString()}</div></div>}
       {receipt.destination&&<div><div style={{color:muted,fontSize:13}}>Profile / post submitted</div><div style={{overflowWrap:"anywhere"}}>{receipt.destination}</div></div>}
      </div>
