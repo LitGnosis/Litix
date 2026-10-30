@@ -37,6 +37,16 @@ export function sortServicesPer1000(rows, _platformRank, retailRate) {
     if (instagram) return followers ? 0 : 1;
     return followers ? 2 : 3;
   };
+  // Geography is display priority only; no supplier eligibility is inferred.
+  const geoOf = (service) => {
+    const label=[service?.name,service?.category,service?.country,service?.region,service?.location,service?.geo]
+      .map(x=>String(x??"")).join(" ").toLowerCase();
+    const foreign=/\b(?:canada|canadian|uk|united kingdom|british|india|indian|brazil|brazilian|mexico|mexican|france|french|germany|german|italy|italian|australia|australian|philippines|filipino|pakistan|pakistani|indonesia|indonesian|turkey|turkish|spain|spanish|vietnam|vietnamese|japan|japanese|korea|korean|nigeria|nigerian|uae|emirates|saudi|russia|russian|egypt|egyptian|africa|europe|asia)\b/.test(label);
+    const usa=/\b(?:american|usa|united states|u\.?s\.?a?\.?|us[- ]based)\b|🇺🇸/.test(label);
+    if(foreign)return 2;
+    if(usa)return 0;
+    return 1; // Global/regular/standard and unlabeled services.
+  };
   const priceOf = (service) => {
     const price = Number(retailRate(service));
     return Number.isFinite(price) && price >= 0 ? price : Number.POSITIVE_INFINITY;
@@ -44,10 +54,11 @@ export function sortServicesPer1000(rows, _platformRank, retailRate) {
 
   return [...rows]
     .map((service, index) => ({
-      service, index, priority: priorityOf(service), price: priceOf(service),
+      service, index, priority: priorityOf(service), geo: geoOf(service), price: priceOf(service),
     }))
     .sort((a, b) =>
       a.priority - b.priority ||
+      (a.priority < 4 ? a.geo - b.geo : 0) ||
       (a.price < b.price ? -1 : a.price > b.price ? 1 : 0) ||
       a.index - b.index
     )
