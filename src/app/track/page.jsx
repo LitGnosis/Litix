@@ -70,6 +70,15 @@ export default function OrderTracker(){
   }catch(e){setNotice(e?.message||"Unable to retrieve the order. Please try again.")}
   finally{setBusy(false)}
  }
+ // Private tracking refreshes from the existing Litix database only; it
+ // does not call the supplier or generate another charge or fulfillment order.
+ useEffect(()=>{
+  if(!method||!order?.id)return;
+  const timer=setInterval(()=>{
+   if(document.visibilityState==="visible"&&!busy)void runStatus(method);
+  },120000);
+  return()=>clearInterval(timer);
+ },[method,order?.id,busy]);
  function submitEmail(e){
   e.preventDefault();
   if(busy)return;
@@ -91,7 +100,7 @@ export default function OrderTracker(){
  return <main className="ltx-track">
   <div className="ltx-track-wrap">
    <header className="ltx-track-nav"><a href="/" aria-label="Litix home"><img src="/assets/brand/litix-logo.webp" width="115" alt="Litix logo"/></a><a href="/" className="ltx-track-home">Home</a></header>
-   <div className="ltx-track-intro"><div className="ltx-track-eyebrow">LITIX ORDER CENTER</div><h1>Track your order</h1><p>See your payment, Litix processing, and delivery status in one place. No account or password required.</p><p className="ltx-track-email-updates">Automatic Litix email updates are sent to your checkout email whenever your delivery status meaningfully changes. No signup or repeat purchase is required.</p></div>
+   <div className="ltx-track-intro"><div className="ltx-track-eyebrow">LITIX ORDER CENTER</div><h1>Track your order</h1><p>See your payment, Litix processing, and delivery status in one place. No account or password required.</p><p className="ltx-track-email-updates">Automatic Litix email updates are sent to your checkout email whenever your delivery status meaningfully changes. Your open tracking page also refreshes every two minutes. No signup or repeat purchase is required.</p></div>
    {order&&<section className="ltx-track-card ltx-track-result" aria-label="Order status">
     <div className="ltx-track-kicker">LATEST ORDER STATUS</div>
     <div className={"ltx-track-pill ltx-track-pill-"+status.kind}>{status.title}</div>
