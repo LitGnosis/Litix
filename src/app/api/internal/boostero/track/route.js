@@ -12,7 +12,7 @@ export async function GET(request){
   const target=new URL("/track",request.url);
   target.searchParams.set("track",id);
   target.searchParams.set("token",token);
-  return Response.redirect(target,303);
+  return new Response(null,{status:303,headers:{"location":target.toString(),"cache-control":"no-store","referrer-policy":"no-referrer","x-robots-tag":"noindex"}});
  }
  let found;
  try{
@@ -24,6 +24,6 @@ export async function GET(request){
  const x=found[0];
  return Response.json({order:{id:x.id,service:x.service_name,quantity:x.quantity,amountCents:x.amount_cents,
   payment:x.payment_state,fulfillment:x.state,
-  supplierStatus:x.supplier_status?.status||null,lastChecked:x.checked_at||null}},
+  supplierStatus:x.supplier_status?.status||null,remains:x.supplier_status?.remains??null,lastChecked:x.checked_at||null}},
   {headers:{"cache-control":"no-store","referrer-policy":"no-referrer","x-robots-tag":"noindex"}});
 }
