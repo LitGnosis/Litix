@@ -91,6 +91,22 @@ export async function handleBoosteroOrder(request,{adminOnly=true}={}){
  if(paymentMode==="card"&&!process.env.NMI_SECURITY_KEY)return send({error:"Production gateway unavailable"},503);
  if(paymentMode==="admin"&&String(data?.approvedCostCents)!==String(quote.wholesaleCents))
   return send({error:"Admin must explicitly approve live supplier cost"},409);
+ // Some live Default TikTok Likes options are not yet in the legacy FK catalog.
+ // A fresh server-only Boostero quote can register a compatible ID before any charge.
+ // Never override a disabled record or relax the existing approval constraints.
+ if(paymentMode==="card"&&String(quote.platform).toLowerCase()==="tiktok"&&quote.kind==="likes"){
+  if(quote.retailPer1000Cents<600)
+   return send({error:"This TikTok Likes option is not yet configured for secure checkout; no payment attempted"},409);
+  try{
+   const registered=await sql.query(
+    "with added as (insert into public.litix_boostero_services(supplier_service_id,platform,service_kind,retail_per_1000_cents,wholesale_ceiling_per_1000,enabled,approved_by,approved_at) values($1,'tiktok','likes',$2,$3,true,'verified_live_checkout',now()) on conflict(supplier_service_id) do nothing returning supplier_service_id) select supplier_service_id from added union all select supplier_service_id from public.litix_boostero_services where supplier_service_id=$1 and enabled=true",
+    [id,quote.retailPer1000Cents,Number(supplierService?.rate)]);
+   if(!registered.length)return send({error:"This TikTok Likes option is not enabled for checkout; no charge attempted"},409);
+  }catch{
+   return send({error:"TikTok Likes checkout registration unavailable; no payment attempted"},503);
+  }
+ }
+
  // Only validated Default services with a current supplier quote can enter this idempotent payment ledger.
  let balance;
  try{balance=await boosteroProduction("balance")}
