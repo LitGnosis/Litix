@@ -1,4 +1,5 @@
 "use client";
+import {litixCustomerServiceName} from "../lib/serviceCardDisplay.mjs";
 import {useEffect,useRef,useState} from "react";
 
 const currency=n=>typeof n==="number"&&Number.isFinite(n)
@@ -113,7 +114,7 @@ export default function LitixDirectory({standalone=false}){
      <label>Category
       <select value={category} onChange={e=>{setCategory(e.target.value);setPage(1)}}>
        <option value="">All categories</option>
-       {categories.map(x=><option key={x.name} value={x.name}>{x.name} ({x.count})</option>)}
+       {categories.map(x=><option key={x.name} value={x.name}>{litixCustomerServiceName(x.name)} ({x.count})</option>)}
       </select>
      </label>
     </div>
@@ -132,8 +133,8 @@ export default function LitixDirectory({standalone=false}){
       const wholesaleEstimate=currency(s.per1000);
       return <article className="litix-directory-service" key={s.id}>
        <div className="litix-directory-service-top"><span className="litix-directory-network">{s.platform}</span><span className={approved?"litix-directory-state is-ready":"litix-directory-state"}>Instant checkout</span></div>
-       <h3>{s.name}</h3>
-       <p className="litix-directory-service-category">{s.category}</p>
+       <h3>{litixCustomerServiceName(s.name)}</h3>
+       <p className="litix-directory-service-category">{litixCustomerServiceName(s.category)}</p>
        <div className="litix-directory-service-price">{wholesaleEstimate||"Ask for price"} <small>/ 1,000 {approved?"":"· indicative"}</small></div>
        <div className="litix-directory-service-range">
         {Number.isInteger(s.min)&&Number.isInteger(s.max)?s.min.toLocaleString()+"–"+s.max.toLocaleString()+" units":"Quantity confirmed on request"}
@@ -149,7 +150,7 @@ export default function LitixDirectory({standalone=false}){
      <button type="button" disabled={page*24>=count} onClick={()=>{setPage(n=>n+1);filterRef.current?.scrollIntoView({behavior:"smooth"})}}>Next page</button>
     </div>}
     <div className="litix-directory-footnote">
-     <strong>Litix orders made simple.</strong> All displayed services are ready for PayKings checkout. Prices use the current Boostero rate plus a 60% markup.
+     <strong>Litix orders made simple.</strong> All displayed services are ready for PayKings checkout. Prices use the current wholesale rate plus a 60% markup.
      <div><a href={"https://wa.me/"+contactNumber} target="_blank" rel="noopener noreferrer">WhatsApp</a><a href="https://www.instagram.com/litixsocial/" target="_blank" rel="noopener noreferrer">Instagram DM @Litixsocial</a><a href="mailto:Litixsocial@gmail.com">Email Litix</a></div>
     </div>
    </div>
