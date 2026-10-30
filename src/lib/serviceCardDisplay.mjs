@@ -19,9 +19,23 @@ function cleanPiece(value) {
   for (const rule of TECHNICAL) text = text.replace(rule," ");
   return compact(text.replace(/^[\s.:/|,;()[\]{}–—\-]+|[\s.:/|,;()[\]{}–—\-]+$/g,""));
 }
+// Public catalog label cleanup only. Preserve raw supplier data for pricing and fulfillment.
+export function litixCustomerServiceName(value) {
+  return String(value ?? "")
+    .replace(/\s*(?:[-–—]\s*)?\bBoostero(?:['’]s)?\s+Top\s+Pick\b(?:\s*🔥)?/gi, "")
+    .replace(/\s*\|\s*(?:\d+\s*(?:days?|months?|years?)\s*)?Manual\s+Refills?(?:\s+Button)?\b/gi, "")
+    .replace(/\b(?:\d+\s*(?:days?|months?|years?)\s*)?Manual\s+Refills?(?:\s+Button)?\s*\|\s*/gi, "")
+    .replace(/\b(?:\d+\s*(?:days?|months?|years?)\s*)?Manual\s+Refills?(?:\s+Button)?\b/gi, "")
+    .replace(/\s*(?:[-–—]\s*)?\bBoostero(?:['’]s)?\b/gi, "")
+    .replace(/\[\s*\]/g, "")
+    .replace(/\s+\]/g, " ]")
+    .replace(/[ \t]{2,}/g, " ")
+    .trim();
+}
+
 export function publicServiceCardName(service){
   // Prefer the actual named product; the category is only a readable fallback.
-  const source = String(service?.name??"").slice(0,400);
+  const source = litixCustomerServiceName(service?.name??"").slice(0,400);
   let name = source.replace(/\[[^\]]*]/g,match=>{
     const value=match.slice(1,-1).split("|").map(cleanPiece).filter(Boolean);
     return value.length?" "+value.join(" ")+" ":" ";
