@@ -1,33 +1,30 @@
-// Customer-facing catalog contract: only verified, approved, ACTIVE Boostero
-// listings may be advertised as purchasable in the production storefront.
-// Historical numeric SMMGLOB listings remain in existing tracking/history.
+// All standard link-and-quantity Boostero services are offered on the main
+// Litix store. Unusual API types remain visible in /services for manual review.
 import {sortServicesPer1000} from "./catalogSort.mjs";
 import {filterBoosteroCards} from "./boosteroCatalog.mjs";
 
-const CATEGORIES=["Instagram Followers","Instagram Likes","TikTok Followers","TikTok Likes"];
-const CANONICAL_IDS=new Set(CATEGORIES);
-
-export function buildActiveStorefrontCatalog(all,params){
- const list=(Array.isArray(all)?all:[]).filter(x=>
-  /^boostero_\d+$/.test(String(x?.id||"")) &&
-  x?.purchasable===true &&
-  CANONICAL_IDS.has(String(x?.category||"")) &&
-  Number.isFinite(Number(x?.per1000))&&Number(x.per1000)>0 &&
-  Number.isSafeInteger(Number(x?.startingAmountCents))&&Number(x.startingAmountCents)>=100
- );
- const unique=[...new Map(list.map(x=>[String(x.id),x])).values()];
- const available=sortServicesPer1000(unique,null,s=>s.per1000);
- const filtered=filterBoosteroCards(available,params);
- const pageInput=Number(params.get("page")||1);
- const page=Number.isSafeInteger(pageInput)&&pageInput>0?Math.min(pageInput,100000):1;
- const size=24, items=filtered.slice((page-1)*size,page*size);
+export function buildActiveStorefrontCatalog(rows,params){
+ const unique=new Map();
+ for(const x of Array.isArray(rows)?rows:[]){
+  if(!/^boostero_\d+$/.test(String(x?.id||""))||x?.purchasable!==true||
+     !Number.isFinite(Number(x?.per1000))||Number(x.per1000)<=0||
+     !Number.isSafeInteger(Number(x?.startingAmountCents))||Number(x.startingAmountCents)<100)continue;
+  unique.set(x.id,x);
+ }
+ const all=sortServicesPer1000([...unique.values()],null,x=>x.per1000);
+ const filtered=filterBoosteroCards(all,params);
+ const requested=Number(params.get("page")||1);
+ const page=Number.isSafeInteger(requested)&&requested>0?Math.min(requested,100000):1;
+ const size=24;
+ const categories=[...new Set(all.map(x=>x.category))].sort();
  const goal=String(params.get("goal")||"");
  const recommendations=goal==="Grow audience"?filtered.filter(x=>x.kind==="followers").slice(0,3):
   goal==="Increase engagement"?filtered.filter(x=>x.kind==="likes").slice(0,3):[];
- return {items,total:filtered.length,allCount:available.length,page,
-  categories:CATEGORIES,recommendations,
-  catalogStatus:available.length?"live":"unavailable",
-  boosteroCatalogStatus:available.length?"live_allowlisted":"unavailable",
-  message:available.length?undefined:"Verified services temporarily unavailable",
-  boosteroOnly:true};
+ return {
+  items:filtered.slice((page-1)*size,page*size),total:filtered.length,allCount:all.length,page,
+  categories,recommendations,catalogStatus:all.length?"live":"unavailable",
+  boosteroCatalogStatus:all.length?"live_supplier_priced":"unavailable",
+  message:all.length?undefined:"Litix services are temporarily unavailable",
+  boosteroOnly:true,markupPercent:60,minimumOrderCents:100
+ };
 }
