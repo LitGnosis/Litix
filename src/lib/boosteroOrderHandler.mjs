@@ -1,5 +1,6 @@
 import {after} from "next/server";
 import {randomUUID} from "node:crypto";
+import {resolveTikTokVideoLink} from "./tiktokVideoLinks.mjs";
 import {boosteroProduction,boosteroCompatibleServices} from "./boosteroReadOnly.mjs";
 import {boosteroAdminAuthorized,boosteroProductionReady,boosteroSQL,boosteroDestination,verifyBoosteroQuote,
  boosteroOrderId,boosteroToken,hashBoostero,dispatchBoostero,boosteroNotice} from "./boosteroFulfillment.mjs";
@@ -45,7 +46,12 @@ export async function handleBoosteroOrder(request,{adminOnly=true}={}){
  let quote;
  try{({quote}=await verifyBoosteroQuote(id,quantity,sql))}
  catch(e){return send({error:String(e.message||"Unable to verify live quote").slice(0,100)},409)}
- const destination=boosteroDestination(data?.destination,quote.platform,quote.kind);
+ let destinationInput=data?.destination;
+ if(String(quote.platform).toLowerCase()==="tiktok"&&quote.kind==="likes"){
+  try{destinationInput=await resolveTikTokVideoLink(destinationInput);}
+  catch(e){return send({error:String(e.message||"TikTok video link could not be verified").slice(0,160)},422)}
+ }
+ const destination=boosteroDestination(destinationInput,quote.platform,quote.kind);
  if(!destination)return send({error:"Enter a valid public service destination URL. Followers need a public profile; Likes need a post/video link."},422);
  if(action==="quote")return send({approved:true,serviceId:id,serviceName:quote.serviceName,quantity,
   amountCents:quote.amountCents,supplierCostCents:quote.wholesaleCents,destination,minimumCheckoutCents:100});
