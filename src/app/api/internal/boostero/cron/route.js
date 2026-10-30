@@ -1,5 +1,5 @@
 import {timingSafeEqual} from "node:crypto";
-import {syncBoosteroStatuses,boosteroProductionReady} from "../../../../../lib/boosteroFulfillment.mjs";
+import {syncBoosteroStatuses,boosteroProductionReady,deliverLitixCustomerUpdates} from "../../../../../lib/boosteroFulfillment.mjs";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 export const maxDuration=60;
@@ -11,6 +11,7 @@ export async function GET(req){
  if(!boosteroProductionReady())return Response.json({ok:true,skipped:"boostero_disabled"});
  try{
   const results=await syncBoosteroStatuses();
-  return Response.json({ok:true,...results},{headers:{"cache-control":"no-store"}});
+  const notifications=await deliverLitixCustomerUpdates({limit:5});
+  return Response.json({ok:true,...results,customerNotifications:notifications},{headers:{"cache-control":"no-store"}});
  }catch{return Response.json({ok:false,error:"Private supplier polling unavailable"},{status:503,headers:{"cache-control":"no-store"}})}
 }
