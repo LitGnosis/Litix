@@ -22,6 +22,8 @@ const focusFilters=[
 
 export default function LitixDirectory({standalone=false}){
  const [search,setSearch]=useState("");
+ useEffect(()=>{const q=new URLSearchParams(location.search).get("q")||new URLSearchParams(location.search).get("service")||"";
+  if(q)setSearch(q.replace(/^boostero_/,""));},[]);
  const [debounced,setDebounced]=useState("");
  const [platform,setPlatform]=useState("");
  const [kind,setKind]=useState("");
@@ -106,7 +108,7 @@ export default function LitixDirectory({standalone=false}){
       onClick={()=>changePlatform(name)}>{name}<span>{stat?.count?.toLocaleString()}</span></button>
     })}
    </nav>
-   <div className="litix-directory-results">
+   <div className="litix-directory-results" ref={filterRef}>
     <div className="litix-directory-toolbar">
      <label className="litix-directory-search">Search Litix Services
       <input type="search" placeholder="Search by service, category or ID" value={search}
@@ -121,7 +123,7 @@ export default function LitixDirectory({standalone=false}){
      <label>Category
       <select value={category} onChange={e=>{setCategory(e.target.value);setPage(1)}}>
        <option value="">All categories</option>
-       {categories.filter(x=>!platform||x.name.toLowerCase().includes(platform.toLowerCase())||platform==="Other").slice(0,300).map(x=><option key={x.name} value={x.name}>{x.name} ({x.count})</option>)}
+       {categories.map(x=><option key={x.name} value={x.name}>{x.name} ({x.count})</option>)}
       </select>
      </label>
     </div>
