@@ -1,53 +1,61 @@
-import {boosteroProduction,boosteroCompatibleServices} from "./boosteroReadOnly.mjs";
-import {boosteroSQL,boosteroQuote,boosteroProductionReady} from "./boosteroFulfillment.mjs";
-// Read-only catalog requests are coalesced for 90 seconds to avoid hammering
-// Boostero when SMMGLOB is unavailable. Paid order quotes ALWAYS use fresh
-// supplier price and balance in boosteroFulfillment.mjs before dispatch.
-let catalogCache=null,catalogExpires=0,catalogFlight=null;
-async function liveCatalog(){
- if(catalogCache&&Date.now()<catalogExpires)return catalogCache;
- if(!catalogFlight)catalogFlight=boosteroProduction("services")
-  .then(rows=>{const services=boosteroCompatibleServices(rows);catalogCache=services;catalogExpires=Date.now()+90000;return services})
-  .finally(()=>{catalogFlight=null});
- return catalogFlight;
+import {boosteroProduction} from "./boosteroReadOnly.mjs";
+import {boosteroProductionReady} from "./boosteroFulfillment.mjs";
+import {litixRetailPer1000Cents,litixOrderCents,litixPurchasableDefault} from "./litixRetail60.mjs";
+let cache=null,expires=0,flight=null;
+export function litixPlatform(name,category){
+ const label=(String(name||"")+" "+String(category||"")).toLowerCase();
+ const patterns=[
+ ["Instagram",/instagram|\big\b/],["TikTok",/tik[\s._-]*tok/],["YouTube",/youtube|\byt\b/],
+ ["Facebook",/facebook|\bfb\b/],["Twitter (X)",/twitter|\bx\s*(followers|likes|retweets|views)/],
+ ["Spotify",/spotify/],["Telegram",/telegram/],["LinkedIn",/linkedin/],
+ ["Discord",/discord/],["Snapchat",/snapchat/],["Pinterest",/pinterest/],
+ ["Website Traffic",/website|traffic/],["Twitch",/twitch/],["Kick",/\bkick\b/],
+ ["Reddit",/reddit/],["Apple Music",/apple\s*music/]
+ ];
+ return patterns.find(([,regex])=>regex.test(label))?.[0]||"Other";
 }
-// Never publish from supplier API alone: both production enablement and explicit DB allowlist required.
-export async function enabledBoosteroCards(){
- if(!boosteroProductionReady())return [];
- const sql=boosteroSQL();
- let rows;
- try{rows=await sql.query("select * from public.litix_boostero_services where enabled=true order by supplier_service_id limit 20");}
- catch{return []}
- if(!rows.length)return [];
- let live;
- try{live=await liveCatalog()}catch{return []}
- const cards=[];
- for(const approved of rows){
-  const service=live.find(s=>s.id===approved.supplier_service_id);
-  if(!service)continue;
-  // $5 retail alone is insufficient when total supplier cost is below $1:
-  // the global 8x wholesale floor still applies at that quantity.
-  const retail=Number(approved.retail_per_1000_cents),wholesale=Number(service.wholesalePer1000USD);
-  const floorQty=Math.max(Number(service.min),Math.ceil(100000/retail));
-  const candidates=[floorQty,Math.max(floorQty,Math.ceil(1000/wholesale)),
-    Math.max(floorQty,Math.ceil(20000/wholesale))].filter(q=>Number.isSafeInteger(q)&&q<=Number(service.max));
-  let quantity=null,quote=null;
-  for(const candidate of [...new Set(candidates)].sort((a,b)=>a-b)){
-   try{quote=boosteroQuote({service,approved,quantity:candidate});quantity=candidate;break}catch{}
-  }
-  if(!quote||quantity===null)continue;
-  const category=service.platform+" "+(service.kind==="followers"?"Followers":"Likes");
-  cards.push({id:"boostero_"+service.id,name:service.name,category,platform:service.platform,
-   type:"Default",kind:service.kind,min:quantity,supplierMin:Number(service.min),max:Number(service.max),unitStep:1,
-   startingAmountCents:quote.amountCents,pricingReview:false,per1000:quote.retailPer1000Cents/100,
-   refill:service.apiRefillEligible===true,noDrop:false,purchasable:true});
+export function litixKind(name,category){
+ const label=(String(name||"")+" "+String(category||"")).toLowerCase();
+ for(const type of ["followers","likes","views","comments","subscribers","shares","members","plays","traffic"]){
+  const re=new RegExp("\\b"+type.replace(/s$/,"")+"s?\\b");
+  if(re.test(label))return type;
  }
- return cards;
+ return "other";
 }
+export async function allBoosteroCards(){
+ if(!boosteroProductionReady())return [];
+ if(cache&&Date.now()<expires)return cache;
+ if(!flight)flight=boosteroProduction("services").then(items=>{
+  const unique=new Map();
+  for(const item of items){
+   const supplierId=String(item?.service??"");
+   if(!/^\d{1,12}$/.test(supplierId)||unique.has(supplierId))continue;
+   const retailCents=litixRetailPer1000Cents(item.rate);
+   const minimum=litixPurchasableDefault(item);
+   if(!minimum||!retailCents)continue;
+   const platform=litixPlatform(item.name,item.category),kind=litixKind(item.name,item.category);
+   const name=String(item.name||"").slice(0,200);
+   const category=String(item.category||"Other").slice(0,140);
+   unique.set(supplierId,{
+    id:"boostero_"+supplierId,name,category,platform,kind,type:"Default",
+    min:minimum,supplierMin:Number(item.min),max:Number(item.max),unitStep:1,
+    per1000:retailCents/100,startingAmountCents:litixOrderCents(retailCents,minimum),
+    pricingReview:false,purchasable:true,
+    refill:item.refill===true||String(item.refill)==="1",noDrop:false,
+    pricingPolicy:"Boostero live cost + 60% markup",supplier:"Boostero"
+   });
+  }
+  const rows=[...unique.values()];
+  cache=rows;expires=Date.now()+90000;
+  return rows;
+ }).finally(()=>{flight=null});
+ return flight;
+}
+export const enabledBoosteroCards=allBoosteroCards;
 export function filterBoosteroCards(items,params){
- const name=String(params.get("q")||"").toLowerCase(),kind=String(params.get("kind")||"").toLowerCase(),
+ const q=String(params.get("q")||"").toLowerCase(),kind=String(params.get("kind")||"").toLowerCase(),
   cat=String(params.get("category")||""),platform=String(params.get("platform")||"");
- return items.filter(s=>(!name||[s.id,s.name,s.category].some(x=>String(x).toLowerCase().includes(name)))&&
+ return items.filter(s=>(!q||[s.id,s.name,s.category,s.platform].some(x=>String(x).toLowerCase().includes(q)))&&
   (!cat||cat===s.category)&&(!platform||platform==="All platforms"||platform===s.platform)&&
   (!kind||kind===s.kind));
 }
