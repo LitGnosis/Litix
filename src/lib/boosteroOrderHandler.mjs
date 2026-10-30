@@ -46,9 +46,9 @@ export async function handleBoosteroOrder(request,{adminOnly=true}={}){
  try{({quote}=await verifyBoosteroQuote(id,quantity,sql))}
  catch(e){return send({error:String(e.message||"Unable to verify live quote").slice(0,100)},409)}
  const destination=boosteroDestination(data?.destination,quote.platform,quote.kind);
- if(!destination)return send({error:quote.kind==="likes"?"Enter a direct public post/video URL for Likes":"Enter a direct public profile URL for Followers"},422);
+ if(!destination)return send({error:"Enter a valid public service destination URL. Followers need a public profile; Likes need a post/video link."},422);
  if(action==="quote")return send({approved:true,serviceId:id,serviceName:quote.serviceName,quantity,
-  amountCents:quote.amountCents,supplierCostCents:quote.wholesaleCents,destination,minimumCheckoutCents:500});
+  amountCents:quote.amountCents,supplierCostCents:quote.wholesaleCents,destination,minimumCheckoutCents:100});
  if(Number(data?.expectedAmountCents)!==quote.amountCents)return send({error:"Live price changed; no payment attempted"},409);
  const idem=String(data?.idempotencyKey||"");
  if(!/^[a-f0-9-]{36}$/.test(idem))return send({error:"Idempotency key required"},422);
@@ -58,7 +58,7 @@ export async function handleBoosteroOrder(request,{adminOnly=true}={}){
  if(paymentMode==="card"&&!process.env.NMI_SECURITY_KEY)return send({error:"Production gateway unavailable"},503);
  if(paymentMode==="admin"&&String(data?.approvedCostCents)!==String(quote.wholesaleCents))
   return send({error:"Admin must explicitly approve live supplier cost"},409);
- // A newly listed service is not automatically published: exact DB allowlist and price must already exist.
+ // Only validated Default services with a current supplier quote can enter this idempotent payment ledger.
  let balance;
  try{balance=await boosteroProduction("balance")}
  catch{return send({error:"Cannot verify Boostero balance; no payment attempted"},503)}
