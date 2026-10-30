@@ -44,8 +44,8 @@ test("customer card markup uses only clean title, current actual price and curre
 
 test("all Litix directory product labels remove supplier promotions and manual-refill terms only",async()=>{
   const cases=[
-    ["🇺🇸 Instagram USA Followers ➡️ [ Super Real Accounts | 5K/Day | 30 Days Manual Refill ] - Boostero’s Top Pick 🔥","🇺🇸 Instagram USA Followers ➡️ [ Super Real Accounts | 5K/Day ]"],
-    ["🇺🇸 Instagram USA Followers ➡️ [ Real Accounts | 1K/Day | 365 Days Manual Refill ]","🇺🇸 Instagram USA Followers ➡️ [ Real Accounts | 1K/Day ]"],
+    ["🇺🇸 Instagram USA Followers ➡️ [ Super Real Accounts | 5K/Day | 30 Days Manual Refill ] - Boostero’s Top Pick 🔥","🇺🇸 Instagram USA Followers ➡️ [ Super Active Accounts | 5K/Day ]"],
+    ["🇺🇸 Instagram USA Followers ➡️ [ Real Accounts | 1K/Day | 365 Days Manual Refill ]","🇺🇸 Instagram USA Followers ➡️ [ Active Accounts | 1K/Day ]"],
     ["👱 Instagram Latin Followers ➡️ [ High Quality | 5K/Day | 30 Days Manual Refill ]","👱 Instagram Latin Followers ➡️ [ High Quality | 5K/Day ]"],
     ["Instagram Followers [ Premium Quality | 20K/Day | 30 Days Refill Button ]","Instagram Followers [ Premium Quality | 20K/Day | 30 Days Refill Button ]"],
     ["Boostero Instagram Likes","Instagram Likes"]
@@ -56,4 +56,21 @@ test("all Litix directory product labels remove supplier promotions and manual-r
   assert.match(directory,/<h3>\{litixCustomerServiceName\(s\.name\)\}<\/h3>/);
   assert.match(directory,/litixCustomerServiceName\(s\.category\)/);
   assert.doesNotMatch(directory,/current Boostero rate/);
+});
+
+test("customer-facing Real labels read Active without altering service records",()=>{
+  const examples=[
+    ["Instagram Arab Male Followers [ Super Real Accounts | 1K/Day ]","Instagram Arab Male Followers [ Super Active Accounts | 1K/Day ]"],
+    ["Instagram Arab Female Followers [ Super Real Accounts | 1K/Day ]","Instagram Arab Female Followers [ Super Active Accounts | 1K/Day ]"],
+    ["Instagram Real Followers","Instagram Active Followers"],
+    ["TikTok REAL Likes","TikTok ACTIVE Likes"],
+    ["YouTube real views","YouTube active views"]
+  ];
+  for(const [raw,expected] of examples){
+    const service={name:raw,id:"boostero_4491",per1000:12.86,min:78,max:100000};
+    assert.equal(litixCustomerServiceName(service.name),expected);
+    assert.deepEqual(service,{name:raw,id:"boostero_4491",per1000:12.86,min:78,max:100000});
+    assert.doesNotMatch(publicServiceCardName(service),/\\breal\\b/i);
+  }
+  assert.equal(publicServiceCardName({name:"",category:"Real Instagram Followers"}),"Active Instagram Followers");
 });
