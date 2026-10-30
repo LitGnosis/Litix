@@ -5,6 +5,15 @@ export async function GET(request){
  const p=new URL(request.url).searchParams,id=String(p.get("order")||""),token=String(p.get("token")||"");
  if(!/^ltx2_[a-f0-9-]{36}$/.test(id)||token.length<25||token.length>150)
   return Response.json({error:"Private order tracking link required"},{status:400});
+ // Existing emailed links used to open a JSON API endpoint in Safari.
+ // Navigate browsers to the branded Litix tracking page instead while
+ // preserving JSON responses for fetch clients (/api/track).
+ if((request.headers.get("accept")||"").includes("text/html")){
+  const target=new URL("/track",request.url);
+  target.searchParams.set("track",id);
+  target.searchParams.set("token",token);
+  return Response.redirect(target,303);
+ }
  let found;
  try{
   found=await boosteroSQL().query(
