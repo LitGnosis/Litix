@@ -72,7 +72,7 @@ async function directory(){
     provider:"Litix",quoteStatus:validRange&&validRate?"manual":"unavailable"
    });
   }
-  const items=sortServicesPer1000([...unique.values()],null,x=>x.per1000==null?Number.POSITIVE_INFINITY:Number(x.per1000));
+  const items=sortServicesPer1000([...unique.values()].filter(s=>s.purchasable===true),null,x=>x.per1000==null?Number.POSITIVE_INFINITY:Number(x.per1000));
   const counts={};const categories={};
   for(const s of items){
    counts[s.platform]=(counts[s.platform]||0)+1;
