@@ -1,6 +1,7 @@
 import {boosteroProduction} from "../../../../lib/boosteroReadOnly.mjs";
 import {enabledBoosteroCards} from "../../../../lib/boosteroCatalog.mjs";
 import {sortServicesPer1000} from "../../../../lib/catalogSort.mjs";
+import {litixRetailPer1000Cents} from "../../../../lib/litixRetail60.mjs";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 export const maxDuration=60;
@@ -57,10 +58,9 @@ async function directory(){
    const validRate=Number.isFinite(rate)&&rate>0;
    const id="boostero_"+supplierId;
    const purchasable=allowed.get(id);
-   // Indicative customer-facing retail for discovery only; actual margin,
+   // 60% retail markup for discovery; actual payment still requires a live quote.
    // supplier terms and the $1 order floor must be checked before checkout.
-   const factor=rate<1?8:rate<20?5:2;
-   const indicative=validRate?Math.max(5,Math.ceil(rate*factor*100-1e-8)/100):null;
+   const indicative=validRate?litixRetailPer1000Cents(rate)/100:null;
    unique.set(supplierId,purchasable?{
     ...purchasable,platform,kind,category:purchasable.category||category,
     supplierCategory:category,provider:"Litix",quoteStatus:"approved"
@@ -107,7 +107,7 @@ export async function GET(request){
    total:filtered.length,allCount:data.liveCount,page,pageSize,
    platforms:data.platformOptions,categories:data.categoryOptions,
    verifiedPurchasableCount:data.approvedCount,checkoutPath:"/#checkout",currency:"USD",
-   notice:"Ready-to-order services use verified PayKings checkout. Other listings need a confirmed manual quote; estimates are not payment offers."
+   notice:"All displayed rates use supplier cost + 60%. Default services use live PayKings checkout; other API types require a manual quote.",markupPercent:60
   },{headers:{"cache-control":"no-store","x-content-type-options":"nosniff"}});
  }catch(err){
   console.error("Litix supplier directory error",String(err?.message||"unknown").slice(0,85));
