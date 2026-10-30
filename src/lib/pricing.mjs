@@ -34,7 +34,7 @@ const SORTED_TIERS = Object.freeze([
 const MAX_NON_PREMIUM_PER_1000_CENTS = 1500;
 const MIN_INSTAGRAM_TIKTOK_PER_1000_CENTS = 600;
 const MIN_GLOBAL_PER_1000_CENTS = 500;
-const MIN_PURCHASE_CENTS = 500;
+const MIN_PURCHASE_CENTS = 100;
 
 function cents(usd) {
   if (typeof usd !== 'number' || !Number.isFinite(usd) || usd < 0) return null;
@@ -172,7 +172,7 @@ function validateCheckoutQuote({
   if (!Number.isSafeInteger(customerSubtotalCents) || customerSubtotalCents < 0)
     return { allowed: false, reason: 'customer subtotal invalid' };
   if (customerSubtotalCents < MIN_PURCHASE_CENTS)
-    return { allowed: false, reason: 'minimum service purchase is $5 USD', requiredSubtotalCents: MIN_PURCHASE_CENTS };
+    return { allowed: false, reason: 'minimum service purchase is $1 USD', requiredSubtotalCents: MIN_PURCHASE_CENTS };
   if (customerSubtotalCents < floor)
     return { allowed: false, reason: 'customer charge below required supplier markup', requiredSubtotalCents: floor };
 
@@ -196,7 +196,7 @@ function validateCheckoutQuote({
 }
 
 /**
- * Minimum legal supplier quantity at which retail charges at least $5,
+ * Minimum legal supplier quantity at which retail charges at least $1,
  * without an arbitrary surcharge or changed supplier min/max.
  */
 function minimumPurchaseQuantity(service, per1000) {
