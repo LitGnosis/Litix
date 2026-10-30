@@ -79,8 +79,8 @@ export function boosteroQuote({service,approved,quantity}){
  const validated=validateCheckoutQuote({actualSupplierWholesaleUsd:costUSD,customerSubtotalCents:amountCents,
   displayedPer1000:retailPer1000Cents/100,quantity:qty,
   service:{name:service.name,category:service.category,refill:service.refillClaim}});
- if(amountCents<500||!Number.isSafeInteger(amountCents)||amountCents>100000000||floor===null||amountCents<floor||!validated.allowed)
-  throw Error("boostero_five_dollar_or_margin_floor_not_met");
+ if(amountCents<100||!Number.isSafeInteger(amountCents)||amountCents>100000000||floor===null||amountCents<floor||!validated.allowed)
+  throw Error("boostero_one_dollar_or_margin_floor_not_met");
  return {quantity:qty,amountCents,wholesaleCents,costUSD,retailPer1000Cents,platform:approved.platform,
   serviceId:String(service.id),serviceName:String(service.name),kind};
 }
