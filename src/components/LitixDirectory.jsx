@@ -138,12 +138,12 @@ export default function LitixDirectory({standalone=false}){
     {status==="error"&&<div className="litix-directory-error" role="alert">{problem}<button type="button" onClick={()=>setRetry(v=>v+1)}>Retry catalog</button></div>}
     {status==="ready"&&entries.length===0&&<p className="litix-directory-empty">No matching services. Try another platform or clear the filters.</p>}
     <div className="litix-directory-cards">
-     {entries.map(s=>{
+     {entries.filter(s=>s.purchasable===true).map(s=>{
       const approved=s.purchasable===true;
       const wholesaleEstimate=currency(s.per1000);
       const manualUrl="https://wa.me/"+contactNumber+"?text="+encodeURIComponent(manualMessage(s));
       return <article className="litix-directory-service" key={s.id}>
-       <div className="litix-directory-service-top"><span className="litix-directory-network">{s.platform}</span><span className={approved?"litix-directory-state is-ready":"litix-directory-state"}>{approved?"Instant checkout":s.quoteStatus==="unavailable"?"Quote required":"Request quote"}</span></div>
+       <div className="litix-directory-service-top"><span className="litix-directory-network">{s.platform}</span><span className={approved?"litix-directory-state is-ready":"litix-directory-state"}>Instant checkout</span></div>
        <h3>{s.name}</h3>
        <p className="litix-directory-service-category">{s.category}</p>
        <div className="litix-directory-service-price">{wholesaleEstimate||"Ask for price"} <small>/ 1,000 {approved?"":"· indicative"}</small></div>
@@ -151,8 +151,7 @@ export default function LitixDirectory({standalone=false}){
         {Number.isInteger(s.min)&&Number.isInteger(s.max)?s.min.toLocaleString()+"–"+s.max.toLocaleString()+" units":"Quantity confirmed on request"}
         <span>Service {s.id.replace(/^boostero_/,"")}</span>
        </div>
-       {approved?<a className="litix-directory-buy" href={"/?service="+encodeURIComponent(s.id)+"#checkout"}>Review & pay with PayKings</a>:
-        <a className="litix-directory-manual" href={manualUrl} target="_blank" rel="noopener noreferrer">Request a confirmed quote</a>}
+       <a className="litix-directory-buy" href={"/?service="+encodeURIComponent(s.id)+"#checkout"}>Review & pay with PayKings</a>
       </article>
      })}
     </div>
@@ -162,7 +161,7 @@ export default function LitixDirectory({standalone=false}){
      <button type="button" disabled={page*24>=count} onClick={()=>{setPage(n=>n+1);filterRef.current?.scrollIntoView({behavior:"smooth"})}}>Next page</button>
     </div>}
     <div className="litix-directory-footnote">
-     <strong>Litix orders made simple.</strong> Verified services use live PayKings checkout. Other services require a manual price and fulfillment review before payment; estimated prices are not final quotes.
+     <strong>Litix orders made simple.</strong> All displayed services are ready for PayKings checkout. Prices use the current Boostero rate plus a 60% markup.
      <div><a href={"https://wa.me/"+contactNumber} target="_blank" rel="noopener noreferrer">WhatsApp</a><a href="https://www.instagram.com/litixsocial/" target="_blank" rel="noopener noreferrer">Instagram DM @Litixsocial</a><a href="mailto:Litixsocial@gmail.com">Email Litix</a></div>
     </div>
    </div>
