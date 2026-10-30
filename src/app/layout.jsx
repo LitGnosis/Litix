@@ -2,6 +2,7 @@ import "./style.css";
 import "./metallic.css";
 import "./growthBundles.css";
 import "./litix-ai.css";
+import "./catalog.css";
 import LitixAI from "../components/LitixAI";
 import { LITIX_BRAND_MANIFEST } from "../config/brandEngine";
 
