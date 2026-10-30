@@ -2,7 +2,8 @@
 import {neon} from "@neondatabase/serverless";
 import {createHash,randomUUID,timingSafeEqual} from "node:crypto";
 import {boosteroProduction,boosteroCompatibleServices} from "./boosteroReadOnly.mjs";
-import {proposeServiceRetail,minimumRetailCentsForWholesale,calculateOrderCents,proposeGeneralRetail,validateCheckoutQuote} from "./pricing.mjs";
+import {litixRetailPer1000Cents,litixOrderCents,litixPurchasableDefault,litixSupplierSafeLink} from "./litixRetail60.mjs";
+import {litixPlatform,litixKind} from "./boosteroCatalog.mjs";
 
 export const boosteroDatabaseURL=()=>process.env.LITIX_BOOSTERO_DATABASE_URL||process.env.LITIX_V2_DATABASE_URL||
  process.env.DATABASE_URL||process.env.POSTGRES_URL||"";
@@ -37,8 +38,10 @@ export function boosteroProfile(input,platform){
  return "https://"+origin+"/"+(platform==="tiktok"?"@":"")+username+"/";
 }
 export function boosteroDestination(input,platform,kind="followers"){
- if(kind==="followers")return boosteroProfile(input,platform);
- if(kind!=="likes"||!["instagram","tiktok"].includes(platform))return null;
+ if(["instagram","tiktok"].includes(String(platform).toLowerCase())&&kind==="followers")return boosteroProfile(input,String(platform).toLowerCase());
+ if(!["instagram","tiktok"].includes(String(platform).toLowerCase())||kind!=="likes")
+  return litixSupplierSafeLink(input);
+ platform=String(platform).toLowerCase();
  let u;try{u=new URL(String(input||"").trim())}catch{return null}
  const host=u.hostname.toLowerCase().replace(/^www\./,"");
  if(u.protocol!=="https:"||host!==(platform==="instagram"?"instagram.com":"tiktok.com")||
@@ -50,47 +53,34 @@ export function boosteroDestination(input,platform,kind="followers"){
  const m=u.pathname.match(/^\/@([a-zA-Z0-9._]{2,24})\/video\/([0-9]{10,30})\/?$/);
  return m?"https://www.tiktok.com/@"+m[1]+"/video/"+m[2]:null;
 }
-export function boosteroQuote({service,approved,quantity}){
- if(!approved||approved.enabled!==true)throw Error("boostero_service_not_approved");
- if(String(service.id)!==String(approved.supplier_service_id)||service.platform.toLowerCase()!==approved.platform||
-   String(service.kind||"followers")!==String(approved.service_kind||"followers"))
-  throw Error("boostero_service_mapping_changed");
- const qty=Number(quantity),step=1,min=Number(service.min),max=Number(service.max);
- if(!Number.isSafeInteger(qty)||!Number.isSafeInteger(min)||!Number.isSafeInteger(max)||qty<min||qty>max||(qty-min)%step)
-  throw Error("boostero_quantity_out_of_range");
- const wholesalePer1000=Number(service.wholesalePer1000USD);
- if(!Number.isFinite(wholesalePer1000)||wholesalePer1000<=0||
-    wholesalePer1000>Number(approved.wholesale_ceiling_per_1000))
-  throw Error("boostero_wholesale_changed");
- const kind=String(approved.service_kind||"followers");
- const repriced=kind==="followers"
-  ?proposeServiceRetail({name:service.name,category:service.category,refill:service.refillClaim},wholesalePer1000)
-  :proposeGeneralRetail(wholesalePer1000,Number(approved.retail_per_1000_cents)/100);
- if(!["reprice","unchanged"].includes(repriced.action))throw Error("boostero_service_breaks_litix_retail_ladder");
- const retailPer1000Cents=Number(approved.retail_per_1000_cents);
- // Never automatically reprice, and never sell below currently required margin.
- if(!Number.isSafeInteger(retailPer1000Cents)||retailPer1000Cents<(kind==="followers"?repriced.retailPer1000Cents:repriced.retailCents)||
-    (kind==="followers"&&retailPer1000Cents>1500&&!["365","lifetime"].includes(repriced.classification.tier)))
-  throw Error("boostero_retail_not_approved_for_current_cost");
- const amountCents=calculateOrderCents(qty,retailPer1000Cents/100);
- const costUSD=wholesalePer1000*qty/1000;
+// Price and eligibility are verified directly against the latest Boostero service
+// every time before charging a real card. The catalog alone is not authority.
+export function boosteroQuote({service,quantity}){
+ const id=String(service?.service??service?.id??"");
+ const qty=Number(quantity),min=Number(service?.min),max=Number(service?.max);
+ const lowest=litixPurchasableDefault(service);
+ if(!lowest||!Number.isSafeInteger(qty)||qty<lowest||qty>max||qty>1000000)
+  throw Error("boostero_quantity_or_type_not_supported");
+ const rate=Number(service?.rate);
+ const retailPer1000Cents=litixRetailPer1000Cents(rate);
+ const amountCents=litixOrderCents(retailPer1000Cents,qty);
+ const costUSD=rate*qty/1000;
  const wholesaleCents=Math.ceil(costUSD*100-1e-8);
- const floor=minimumRetailCentsForWholesale(costUSD);
- const validated=validateCheckoutQuote({actualSupplierWholesaleUsd:costUSD,customerSubtotalCents:amountCents,
-  displayedPer1000:retailPer1000Cents/100,quantity:qty,
-  service:{name:service.name,category:service.category,refill:service.refillClaim}});
- if(amountCents<100||!Number.isSafeInteger(amountCents)||amountCents>100000000||floor===null||amountCents<floor||!validated.allowed)
-  throw Error("boostero_one_dollar_or_margin_floor_not_met");
- return {quantity:qty,amountCents,wholesaleCents,costUSD,retailPer1000Cents,platform:approved.platform,
-  serviceId:String(service.id),serviceName:String(service.name),kind};
+ if(!Number.isSafeInteger(amountCents)||amountCents<100||amountCents>100000000||
+    !Number.isFinite(costUSD)||costUSD<=0||amountCents<Math.ceil(costUSD*160-1e-8))
+  throw Error("boostero_price_must_cover_60_percent_markup");
+ const name=String(service.name||"Service").slice(0,200);
+ const category=String(service.category||"Other").slice(0,140);
+ return {quantity:qty,amountCents,wholesaleCents,costUSD,retailPer1000Cents,
+  platform:litixPlatform(name,category),serviceId:id,serviceName:name,
+  kind:litixKind(name,category),supplierMin:min,minimum:lowest,type:"Default"};
 }
-export async function verifyBoosteroQuote(serviceId,quantity,sql=boosteroSQL()){
- const enabled=await sql.query("select * from public.litix_boostero_services where supplier_service_id=$1 and enabled=true",[serviceId]);
- if(enabled.length!==1)throw Error("boostero_service_not_explicitly_enabled");
- const rows=boosteroCompatibleServices(await boosteroProduction("services"));
- const service=rows.find(x=>x.id===serviceId);
+export async function verifyBoosteroQuote(serviceId,quantity,_sql=boosteroSQL()){
+ if(!/^\d{1,12}$/.test(String(serviceId)))throw Error("boostero_service_id_invalid");
+ const raw=await boosteroProduction("services");
+ const service=raw.find(s=>String(s?.service)===String(serviceId));
  if(!service)throw Error("boostero_live_service_not_found");
- return {quote:boosteroQuote({service,approved:enabled[0],quantity}),service};
+ return {quote:boosteroQuote({service,quantity}),service};
 }
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 async function resend({to,subject,text,key}){
@@ -127,7 +117,7 @@ export async function dispatchBoostero(orderId,{sql=boosteroSQL(),operation=boos
  if(!boosteroProductionReady())throw Error("boostero_production_disabled");
  const attemptId=randomUUID();
  const claimed=await sql.query(
-  "update public.litix_boostero_fulfillment f set state='DISPATCHING',purchase_attempt_id=$2,attempted_at=now(),updated_at=now() where f.litix_order_id=$1 and f.state='QUEUED' and f.supplier_order_id is null and exists(select 1 from public.litix_v2_orders o where o.id=$1 and ((f.payment_mode='card' and o.payment_state='paid' and o.payment_transaction_id is not null) or (f.payment_mode='admin' and f.approved_admin_id is not null))) and exists(select 1 from public.litix_boostero_services s where s.supplier_service_id=f.supplier_service_id and s.enabled=true) returning f.supplier_service_id",
+  "update public.litix_boostero_fulfillment f set state='DISPATCHING',purchase_attempt_id=$2,attempted_at=now(),updated_at=now() where f.litix_order_id=$1 and f.state='QUEUED' and f.supplier_order_id is null and exists(select 1 from public.litix_v2_orders o where o.id=$1 and ((f.payment_mode='card' and o.payment_state='paid' and o.payment_transaction_id is not null) or (f.payment_mode='admin' and f.approved_admin_id is not null))) and exists(select 1 from public.litix_v2_orders e where e.id=$1 and e.metadata->>'supplier'='boostero') returning f.supplier_service_id",
   [orderId,attemptId]);
  if(!claimed.length)return {submitted:false,state:"not_eligible_or_already_claimed"};
  try{await sql.query("insert into public.litix_boostero_attempts(id,litix_order_id,kind,state) values($1,$2,'add','STARTED')",[attemptId,orderId]);}
@@ -136,7 +126,7 @@ export async function dispatchBoostero(orderId,{sql=boosteroSQL(),operation=boos
   console.error("Litix Boostero audit lock failed",{orderId});
   return {submitted:false,state:"MANUAL_REVIEW",requiresReview:true};
  }
- const orders=await sql.query("select o.destination,o.quantity,f.supplier_service_id from public.litix_v2_orders o join public.litix_boostero_fulfillment f on f.litix_order_id=o.id where o.id=$1",[orderId]);
+ const orders=await sql.query("select o.destination,o.quantity,o.amount_cents,f.supplier_service_id from public.litix_v2_orders o join public.litix_boostero_fulfillment f on f.litix_order_id=o.id where o.id=$1",[orderId]);
  if(orders.length!==1){
   await sql.query("update public.litix_boostero_fulfillment set state='MANUAL_REVIEW',error_code='paid_order_lookup_failed',updated_at=now() where litix_order_id=$1 and purchase_attempt_id=$2 and state='DISPATCHING'",[orderId,attemptId]).catch(()=>{});
   console.error("Litix Boostero paid order lookup missing",{orderId});
@@ -146,11 +136,12 @@ export async function dispatchBoostero(orderId,{sql=boosteroSQL(),operation=boos
  try{
   // Refresh current wholesale and remaining account balance just before spend.
   const {quote}=await verifyBoosteroQuote(String(orders[0].supplier_service_id),Number(orders[0].quantity),sql);
+  if(Number(orders[0].amount_cents)<quote.amountCents)throw Error("boostero_wholesale_changed_after_payment");
   const balance=await operation("balance");
   if(!Number.isFinite(Number(balance.balance))||Number(balance.balance)<quote.costUSD)throw Error("boostero_insufficient_balance");
   result=await operation("add",{service:quote.serviceId,link:orders[0].destination,quantity:quote.quantity},{claimed:true});
  }catch(err){
-  const certain=["boostero_provider_rejected","boostero_insufficient_balance","boostero_wholesale_changed",
+  const certain=["boostero_provider_rejected","boostero_insufficient_balance","boostero_wholesale_changed","boostero_wholesale_changed_after_payment",
    "boostero_retail_not_approved_for_current_cost","boostero_service_breaks_litix_retail_ladder"].includes(err.message);
   const state=certain?"REJECTED":"UNKNOWN_OUTCOME";
   await Promise.allSettled([
