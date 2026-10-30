@@ -27,6 +27,7 @@ export function litixCustomerServiceName(value) {
     .replace(/\b(?:\d+\s*(?:days?|months?|years?)\s*)?Manual\s+Refills?(?:\s+Button)?\s*\|\s*/gi, "")
     .replace(/\b(?:\d+\s*(?:days?|months?|years?)\s*)?Manual\s+Refills?(?:\s+Button)?\b/gi, "")
     .replace(/\s*(?:[-–—]\s*)?\bBoostero(?:['’]s)?\b/gi, "")
+    .replace(/\breal\b/gi, word => word === "REAL" ? "ACTIVE" : word === "real" ? "active" : "Active")
     .replace(/\[\s*\]/g, "")
     .replace(/\s+\]/g, " ]")
     .replace(/[ \t]{2,}/g, " ")
@@ -43,6 +44,6 @@ export function publicServiceCardName(service){
   name = name.split("|").map(cleanPiece).filter(Boolean).join(" / ");
   name = name.replace(/\bIG\b/gi,"Instagram").replace(/\bTik[\s-]*Tok\b/gi,"TikTok");
   name = compact(name.replace(/\s*\/\s*\/\s*/g," / "));
-  if(!name)name=cleanPiece(service?.category).replace(/\bIG\b/gi,"Instagram");
+  if(!name)name=cleanPiece(litixCustomerServiceName(service?.category)).replace(/\bIG\b/gi,"Instagram");
   return name||"Social media service";
 }
