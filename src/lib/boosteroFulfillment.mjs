@@ -96,18 +96,46 @@ export async function boosteroNotice(orderId,secret){
  const sql=boosteroSQL();
  const orders=await sql.query("select o.id,o.email,o.service_name,o.quantity,o.amount_cents,o.payment_state,o.destination,f.state,f.supplier_order_id from public.litix_v2_orders o join public.litix_boostero_fulfillment f on o.id=f.litix_order_id where o.id=$1",[orderId]);
  if(orders.length!==1)return false;
- const o=orders[0],link=secret?"https://www.litix.net/api/internal/boostero/track?order="+encodeURIComponent(orderId)+"&token="+encodeURIComponent(secret):null;
- const body=["Litix Boostero order","Litix Order: "+orderId,"Service: "+o.service_name,"Quantity: "+o.quantity,
-  "Amount: USD $"+(Number(o.amount_cents)/100).toFixed(2),"Payment: "+o.payment_state,
-  "Supplier: Boostero","Boostero Order ID: "+(o.supplier_order_id||"Awaiting confirmation"),
-  "Fulfillment: "+o.state,link?"Private tracking URL: "+link:null].filter(Boolean).join("\n");
+ const o=orders[0];
+ const publicLink=secret?"https://www.litix.net/track?track="+encodeURIComponent(orderId)+"&token="+encodeURIComponent(secret):null;
+ // Customer communication stays Litix-branded. The private owner notification
+ // retains supplier references needed for fulfillment and support.
+ const amount="USD $"+(Number(o.amount_cents)/100).toFixed(2);
+ const customerBody=[
+  "Litix — Your payment and order confirmation",
+  "Litix Order: "+orderId,
+  "Service: "+o.service_name,
+  "Quantity: "+o.quantity,
+  "Total paid: "+amount,
+  "Payment status: "+o.payment_state,
+  "Litix order status: "+(o.state==="COMPLETED"?"Completed":o.state==="FAILED"?"Needs support":"Processing"),
+  "We will update your private tracking page as delivery progresses.",
+  publicLink?"Track your order: "+publicLink:null,
+  "Questions? Contact Litix at litixsocial@gmail.com.",
+  "Please do not place a duplicate order while your delivery is processing."
+ ].filter(Boolean).join("\n");
+ const ownerLink=publicLink;
+ const ownerBody=[
+  "Litix — Order and fulfillment details",
+  "Litix Order: "+orderId,
+  "Service: "+o.service_name,
+  "Quantity: "+o.quantity,
+  "Amount: "+amount,
+  "Payment: "+o.payment_state,
+  "Supplier: Boostero",
+  "Boostero Order ID: "+(o.supplier_order_id||"Awaiting confirmation"),
+  "Fulfillment: "+o.state,
+  ownerLink?"Private tracking URL: "+ownerLink:null
+ ].filter(Boolean).join("\n");
  if(secret&&o.payment_state==="paid"){
   await Promise.allSettled([
-   resend({to:o.email,subject:"Litix — Your payment and Boostero order",text:body,key:"litix-boostero-customer/"+orderId}),
-   resend({to:["litixsocial@gmail.com","litgnosisllc@gmail.com"],subject:"Litix Boostero approved purchase — "+orderId,text:body,key:"litix-boostero-owner/"+orderId})
+   resend({to:o.email,subject:"Litix — Payment confirmed and order tracking",text:customerBody,key:"litix-boostero-customer/"+orderId}),
+   resend({to:["litixsocial@gmail.com","litgnosisllc@gmail.com"],
+    subject:"Litix — New paid order "+orderId,text:ownerBody,key:"litix-boostero-owner/"+orderId})
   ]);
  }else{
-  await resend({to:["litixsocial@gmail.com","litgnosisllc@gmail.com"],subject:"Litix Boostero fulfillment requires review — "+orderId,text:body,
+  await resend({to:["litixsocial@gmail.com","litgnosisllc@gmail.com"],
+   subject:"Litix — Fulfillment needs review "+orderId,text:ownerBody,
    key:"litix-boostero-review/"+orderId+"/"+o.state});
  }
  return true;
