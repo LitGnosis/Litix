@@ -13,7 +13,7 @@ export function buildActiveStorefrontCatalog(all,params){
   x?.purchasable===true &&
   CANONICAL_IDS.has(String(x?.category||"")) &&
   Number.isFinite(Number(x?.per1000))&&Number(x.per1000)>0 &&
-  Number.isSafeInteger(Number(x?.startingAmountCents))&&Number(x.startingAmountCents)>=500
+  Number.isSafeInteger(Number(x?.startingAmountCents))&&Number(x.startingAmountCents)>=100
  );
  const unique=[...new Map(list.map(x=>[String(x.id),x])).values()];
  const available=sortServicesPer1000(unique,null,s=>s.per1000);
