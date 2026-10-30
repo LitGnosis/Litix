@@ -1,0 +1,79 @@
+/* Litix marketplace: original blue/platinum styling over Boostero-backed inventory. */
+.litix-directory{margin:24px 0 28px;padding:clamp(17px,3.8vw,30px);border-color:#3c89b77a;background:radial-gradient(ellipse at 96% -10%,#12558770,transparent 45%),linear-gradient(160deg,#081d2d 0%,#05101e 60%,#07172a 100%);color:#e8f5ff}
+.litix-directory-heading{display:flex;justify-content:space-between;align-items:end;gap:22px;margin-bottom:23px}
+.litix-directory-heading h2{font-size:clamp(32px,5vw,46px);line-height:1.1;letter-spacing:-.05em;margin:9px 0 9px;color:#e6f4ff}
+.litix-directory-heading p{max-width:720px;color:#a9c5df;font-size:15px;line-height:1.7;margin:0}
+.litix-directory-feature-link{flex:none;display:inline-flex;padding:11px 17px;border:1px solid #70c6f2;border-radius:12px;background:#103551;color:#dff5ff;text-decoration:none;font-weight:750;font-size:13px}
+.litix-directory-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:20px 0}
+.litix-directory-stats>div{background:#04111d99;border:1px solid #3d86af70;border-radius:16px;padding:17px 20px;display:grid;gap:3px}
+.litix-directory-stats strong{font-size:27px;color:#9fe0ff;line-height:1.1;font-weight:900}
+.litix-directory-stats span{font-size:12px;color:#a9c5df}
+.litix-directory-highlight{display:flex;flex-wrap:wrap;gap:9px;padding:12px 0 19px}
+.litix-directory-fast{width:auto;min-height:42px;padding:10px 14px;border-radius:12px;border:1px solid #398cba;background:#102b40;color:#d6efff;font-size:13px;font-weight:760}
+.litix-directory-fast:hover,.litix-directory-fast.is-active{background:#096da7;border-color:#7cdbff;color:white}
+.litix-directory-layout{display:grid;grid-template-columns:minmax(205px,.235fr) minmax(0,1fr);align-items:start;gap:18px}
+.litix-directory-rail{padding:13px 10px;border:1px solid #2c6c946b;border-radius:18px;background:#061726;display:flex;flex-direction:column;max-height:650px;overflow:auto}
+.litix-directory-rail-title{color:#86c9ee;font-size:11px;letter-spacing:.16em;font-weight:850;padding:9px 10px 13px}
+.litix-directory-rail button{border:0;background:transparent;color:#a8c8e0;text-align:left;min-height:43px;padding:9px 11px;font-size:13px;border-radius:9px;font-weight:650;display:flex;gap:8px;justify-content:space-between;align-items:center}
+.litix-directory-rail button span{font-size:11px;color:#85a9c1}
+.litix-directory-rail button:hover,.litix-directory-rail button.is-active{background:#123d5b;color:#fff}
+.litix-directory-results{min-width:0}
+.litix-directory-toolbar{display:grid;grid-template-columns:minmax(140px,2fr) repeat(2,minmax(115px,1fr));gap:10px;align-items:end}
+.litix-directory-toolbar label{display:grid;gap:6px;font-size:12px;font-weight:760;color:#9fd1ec}
+.litix-directory-toolbar input,.litix-directory-toolbar select{width:100%;height:48px;max-width:100%;min-width:0;background:#071929;color:#eef8ff;border:1px solid #3987b570;border-radius:11px;padding:9px 11px;font-size:14px}
+.litix-directory-ready-filter{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:14px;color:#bed6e7;font-size:12px}
+.litix-directory-ready-filter label{display:inline-flex;align-items:center;gap:7px}
+.litix-directory-ready-filter input{width:17px;height:17px;accent-color:#22a9ec}
+.litix-directory-ready-filter button{border:0;background:none;color:#83cffa;text-decoration:underline;font-size:12px}
+.litix-directory-result-header{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:19px 0 11px;padding-bottom:10px;border-bottom:1px solid #34648260;font-size:14px}
+.litix-directory-result-header strong{font-weight:830}
+.litix-directory-result-header span{color:#99b8ce;font-size:12px}
+.litix-directory-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.litix-directory-service{padding:16px;border:1px solid #396b8d88;border-radius:15px;background:linear-gradient(140deg,#0b2940,#071522);display:flex;flex-direction:column;min-width:0}
+.litix-directory-service:hover{border-color:#65b6e8}
+.litix-directory-service-top{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:5px}
+.litix-directory-network{font-size:11px;font-weight:850;letter-spacing:.03em;color:#99dbff}
+.litix-directory-state{font-size:10px;color:#b4c9da;border:1px solid #4a708b;border-radius:99px;padding:5px 8px;white-space:nowrap}
+.litix-directory-state.is-ready{color:#9bf0d1;border-color:#289d7b}
+.litix-directory-service h3{font-size:15px;line-height:1.4;color:#f3f9ff;min-height:40px;margin:13px 0 5px;overflow-wrap:anywhere}
+.litix-directory-service-category{margin:0 0 15px;color:#8eb5cb;font-size:11px;overflow-wrap:anywhere;min-height:16px}
+.litix-directory-service-price{font-size:25px;font-weight:900;letter-spacing:-.03em;color:#c8eeff;margin-top:auto}
+.litix-directory-service-price small{font-size:11px;color:#96b3c7;letter-spacing:0;font-weight:500;display:block;margin-top:1px}
+.litix-directory-service-range{font-size:11px;color:#9abbd0;display:flex;align-items:start;justify-content:space-between;gap:10px;margin:13px 0}
+.litix-directory-service-range span{white-space:nowrap}
+.litix-directory-buy,.litix-directory-manual{display:flex;align-items:center;justify-content:center;text-align:center;min-height:46px;border-radius:10px;text-decoration:none;font-weight:800;font-size:12px;padding:10px;margin-top:auto}
+.litix-directory-buy{background:linear-gradient(100deg,#aee7ff,#39a9e6);color:#04263d}
+.litix-directory-manual{border:1px solid #4289b0;background:#113753;color:#d8f2ff}
+.litix-directory-pagination{display:flex;justify-content:center;align-items:center;gap:14px;margin:22px auto 10px}
+.litix-directory-pagination button,.litix-directory-error button{background:#113a57;border:1px solid #488ab2;color:#e5f6ff;border-radius:9px;padding:10px 14px;font-weight:750}
+.litix-directory-pagination button:disabled{opacity:.4;cursor:not-allowed}
+.litix-directory-error,.litix-directory-empty{padding:22px;border:1px solid #5c8bb5;border-radius:12px;color:#c7ddec}
+.litix-directory-error button{display:block;margin-top:12px}
+.litix-directory-footnote{margin-top:20px;background:#07192c;padding:15px;border:1px solid #35729c66;border-radius:13px;font-size:12px;line-height:1.65;color:#aacbe1}
+.litix-directory-footnote strong{color:#ebf8ff}
+.litix-directory-footnote>div{display:flex;gap:15px;flex-wrap:wrap;margin-top:10px}
+.litix-directory-footnote a{color:#8fd7ff;text-decoration:underline}
+@media(max-width:970px){
+ .litix-directory-layout{grid-template-columns:1fr}
+ .litix-directory-rail{flex-direction:row;max-height:none;overflow-x:auto;overflow-y:hidden;white-space:nowrap;padding:9px}
+ .litix-directory-rail-title{display:none}
+ .litix-directory-rail button{flex:none;gap:9px;min-height:42px;border:1px solid #335d7c;margin-right:5px}
+}
+@media(max-width:600px){
+ .litix-directory{padding:15px;margin:16px 0 24px}
+ .litix-directory-heading{display:block}
+ .litix-directory-heading h2{font-size:34px}
+ .litix-directory-heading p{font-size:13px}
+ .litix-directory-feature-link{margin-top:13px}
+ .litix-directory-stats{gap:6px}
+ .litix-directory-stats>div{padding:12px 8px;border-radius:12px}
+ .litix-directory-stats strong{font-size:20px}
+ .litix-directory-stats span{font-size:10px;line-height:1.3}
+ .litix-directory-fast{flex:1 1 44%;font-size:11px;padding:9px 5px}
+ .litix-directory-toolbar{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .litix-directory-search{grid-column:span 2}
+ .litix-directory-cards{grid-template-columns:1fr}
+ .litix-directory-service h3{min-height:0}
+ .litix-directory-result-header{align-items:start;flex-direction:column}
+ .litix-directory-ready-filter{margin-bottom:16px}
+}
