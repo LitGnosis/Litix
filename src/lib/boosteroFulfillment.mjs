@@ -3,7 +3,7 @@ import {neon} from "@neondatabase/serverless";
 import {createHash,randomUUID,timingSafeEqual} from "node:crypto";
 import {boosteroProduction,boosteroCompatibleServices} from "./boosteroReadOnly.mjs";
 import {litixRetailPer1000Cents,litixOrderCents,litixPurchasableDefault,litixSupplierSafeLink} from "./litixRetail60.mjs";
-import {litixPlatform,litixKind} from "./boosteroCatalog.mjs";
+import {litixPlatform,litixKind} from "./litixServiceClassify.mjs";
 
 export const boosteroDatabaseURL=()=>process.env.LITIX_BOOSTERO_DATABASE_URL||process.env.LITIX_V2_DATABASE_URL||
  process.env.DATABASE_URL||process.env.POSTGRES_URL||"";
