@@ -3,7 +3,7 @@ import {randomUUID} from "node:crypto";
 import {resolveTikTokVideoLink} from "./tiktokVideoLinks.mjs";
 import {boosteroProduction,boosteroCompatibleServices} from "./boosteroReadOnly.mjs";
 import {boosteroAdminAuthorized,boosteroProductionReady,boosteroSQL,boosteroDestination,verifyBoosteroQuote,
- boosteroOrderId,boosteroToken,hashBoostero,dispatchBoostero,boosteroNotice} from "./boosteroFulfillment.mjs";
+ boosteroOrderId,boosteroToken,hashBoostero,dispatchBoostero,boosteroNotice,boosteroQuote} from "./boosteroFulfillment.mjs";
 const send=(body,status=200)=>Response.json(body,{status,headers:{"cache-control":"no-store","referrer-policy":"no-referrer","x-content-type-options":"nosniff"}});
 const validId=s=>/^ltx2_[a-f0-9-]{36}$/.test(String(s||""));
 export async function handleBoosteroOrder(request,{adminOnly=true}={}){
@@ -43,10 +43,37 @@ export async function handleBoosteroOrder(request,{adminOnly=true}={}){
  const id=String(data?.serviceId||""),email=String(data?.email||"").trim().toLowerCase(),quantity=Number(data?.quantity);
  if(!/^\d{1,12}$/.test(id)||!Number.isSafeInteger(quantity)||quantity<1||quantity>1000000||
     !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||email.length>254)return send({error:"Invalid service/quantity/contact"},422);
- let quote;
- try{({quote}=await verifyBoosteroQuote(id,quantity,sql))}
+ let quote,supplierService;
+ try{({quote,service:supplierService}=await verifyBoosteroQuote(id,quantity,sql))}
  catch(e){return send({error:String(e.message||"Unable to verify live quote").slice(0,100)},409)}
- let destinationInput=data?.destination;
+ const multiple=Array.isArray(data?.postAllocations)&&data.postAllocations.length>1;
+ let verifiedPosts=[];
+ if(multiple){
+  if(action!=="card_purchase"||String(quote.platform).toLowerCase()!=="tiktok"||
+     quote.kind!=="likes"||data.postAllocations.length>5)
+   return send({error:"Multi-post checkout supports 2–5 TikTok Likes videos only"},422);
+  const seen=new Set();
+  let totalQty=0,totalCents=0,totalWholesale=0,totalCost=0;
+  for(const item of data.postAllocations){
+   const count=Number(item?.quantity);
+   if(!Number.isSafeInteger(count))
+    return send({error:"Each video's like quantity must be a whole number"},422);
+   let one;
+   try{one=boosteroQuote({service:supplierService,quantity:count})}
+   catch{return send({error:"Each video must meet the minimum and maximum quantity; no charge attempted"},422)}
+   let canonical;
+   try{canonical=await resolveTikTokVideoLink(item?.link)}
+   catch(e){return send({error:String(e.message||"TikTok link not supported").slice(0,160)},422)}
+   if(seen.has(canonical))return send({error:"Each TikTok video must be selected only once"},422);
+   seen.add(canonical);
+   totalQty+=count;totalCents+=one.amountCents;totalWholesale+=one.wholesaleCents;totalCost+=one.costUSD;
+   verifiedPosts.push({link:canonical,quantity:count,amountCents:one.amountCents});
+  }
+  if(totalQty!==quantity||totalQty>Number(supplierService.max)||totalCents>100000000)
+   return send({error:"Invalid multi-post quantities; no charge attempted"},422);
+  quote={...quote,amountCents:totalCents,wholesaleCents:totalWholesale,costUSD:totalCost};
+ }
+ let destinationInput=multiple?verifiedPosts[0].link:data?.destination;
  if(String(quote.platform).toLowerCase()==="tiktok"&&quote.kind==="likes"){
   try{destinationInput=await resolveTikTokVideoLink(destinationInput);}
   catch(e){return send({error:String(e.message||"TikTok video link could not be verified").slice(0,160)},422)}
@@ -76,7 +103,7 @@ export async function handleBoosteroOrder(request,{adminOnly=true}={}){
   const rows=await sql.query(
    "with new_order as (insert into public.litix_v2_orders(id,email,service_id,service_name,category,destination,quantity,amount_cents,supplier_cost_cents,idempotency_key,tracking_token_hash,metadata,payment_state,fulfillment_state) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12::jsonb,$13,'pending') on conflict(idempotency_key) do nothing returning id), selected as (insert into public.litix_boostero_fulfillment(litix_order_id,supplier_service_id,payment_mode,state,approved_admin_id) select id,$3,$14,$15,$16 from new_order returning litix_order_id) select litix_order_id from selected",
    [orderId,email,id,quote.serviceName,"Boostero "+quote.platform+" "+quote.kind,destination,quantity,quote.amountCents,
-    quote.wholesaleCents,idem,hashBoostero(secret),JSON.stringify({supplier:"boostero",adminOnly:true}),paymentMode==="admin"?"admin_authorized":"processing",
+    quote.wholesaleCents,idem,hashBoostero(secret),JSON.stringify({supplier:"boostero",adminOnly:true,...(multiple?{postAllocations:verifiedPosts,fulfillmentMode:"litix_assisted_multi_post"}:{})}),paymentMode==="admin"?"admin_authorized":"processing",
     paymentMode,paymentMode==="admin"?"QUEUED":"PENDING_PAYMENT",paymentMode==="admin"?"owner":null]);
   inserted=rows.length===1;
  }catch{return send({error:"Cannot create safe order ledger; no charge attempted"},503)}
@@ -105,20 +132,21 @@ export async function handleBoosteroOrder(request,{adminOnly=true}={}){
   }
   try{
    const marked=await sql.query(
-    "with verified as (update public.litix_v2_orders set payment_state='paid',payment_transaction_id=$2,updated_at=now() where id=$1 and payment_state='processing' returning id) update public.litix_boostero_fulfillment set state='QUEUED',updated_at=now() where litix_order_id in(select id from verified) and state='PENDING_PAYMENT' returning litix_order_id",
-    [orderId,transaction]);
+    "with verified as (update public.litix_v2_orders set payment_state='paid',payment_transaction_id=$2,fulfillment_state=$3,updated_at=now() where id=$1 and payment_state='processing' returning id) update public.litix_boostero_fulfillment set state=$4,updated_at=now() where litix_order_id in(select id from verified) and state='PENDING_PAYMENT' returning litix_order_id",
+    [orderId,transaction,multiple?"manual_review":"pending",multiple?"MANUAL_REVIEW":"QUEUED"]);
    if(marked.length!==1)throw Error("payment_persist_mismatch");
   }catch{
    after(()=>boosteroNotice(orderId,null).catch(()=>{}));
    return send({orderId,payment:"paid",fulfillment:"manual_review",message:"Approved payment needs ledger reconciliation; supplier NOT submitted"},202);
   }
  }
- const attempt=await dispatchBoostero(orderId).catch(()=>({submitted:false,state:"UNKNOWN_OUTCOME",requiresReview:true}));
+ const attempt=multiple?{submitted:false,state:"MANUAL_REVIEW",requiresReview:false}:
+  await dispatchBoostero(orderId).catch(()=>({submitted:false,state:"UNKNOWN_OUTCOME",requiresReview:true}));
  after(async()=>{await Promise.allSettled([
   boosteroNotice(orderId,paymentMode==="card"?secret:null),
   ...(attempt.requiresReview?[boosteroNotice(orderId,null)]:[])
  ]);});
  return send({orderId,secret:paymentMode==="card"?secret:undefined,payment:paymentMode==="card"?"paid":"admin_authorized",
   fulfillment:attempt.state,supplierOrderId:attempt.supplierOrderId||null,supplierSubmitted:attempt.submitted===true,
-  message:attempt.submitted?"Supplier order accepted and stored":"Order requires owner review; do NOT repeat payment or supplier add"},attempt.submitted?200:202);
+  message:multiple?"Payment confirmed. Litix will fulfill each selected video separately; do not place a duplicate order.":attempt.submitted?"Supplier order accepted and stored":"Order requires owner review; do NOT repeat payment or supplier add"},attempt.submitted?200:202);
 }
