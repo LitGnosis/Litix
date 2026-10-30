@@ -4,6 +4,7 @@ import {createHash,randomUUID,timingSafeEqual} from "node:crypto";
 import {boosteroProduction,boosteroCompatibleServices} from "./boosteroReadOnly.mjs";
 import {litixRetailPer1000Cents,litixOrderCents,litixPurchasableDefault,litixSupplierSafeLink} from "./litixRetail60.mjs";
 import {litixPlatform,litixKind} from "./litixServiceClassify.mjs";
+import {litixCustomerServiceName} from "./serviceCardDisplay.mjs";
 import {queueCustomerDeliveryChange,sendCustomerDeliveryUpdates} from "./litixCustomerUpdates.mjs";
 
 export const boosteroDatabaseURL=()=>process.env.LITIX_BOOSTERO_DATABASE_URL||process.env.LITIX_V2_DATABASE_URL||
@@ -95,9 +96,13 @@ async function resend({to,subject,text,key}){
 }
 export async function boosteroNotice(orderId,secret){
  const sql=boosteroSQL();
- const orders=await sql.query("select o.id,o.email,o.service_name,o.quantity,o.amount_cents,o.payment_state,o.destination,f.state,f.supplier_order_id from public.litix_v2_orders o join public.litix_boostero_fulfillment f on o.id=f.litix_order_id where o.id=$1",[orderId]);
+ const orders=await sql.query("select o.id,o.email,o.service_name,o.quantity,o.amount_cents,o.payment_state,o.destination,o.metadata,f.state,f.supplier_order_id from public.litix_v2_orders o join public.litix_boostero_fulfillment f on o.id=f.litix_order_id where o.id=$1",[orderId]);
  if(orders.length!==1)return false;
  const o=orders[0];
+ const allocations=Array.isArray(o.metadata?.postAllocations)?o.metadata.postAllocations.slice(0,5):[];
+ const allocationLines=allocations.map((p,i)=>
+  "Video "+(i+1)+": "+String(p.link||"")+" — "+Number(p.quantity||0).toLocaleString()+" likes");
+ const publicService=litixCustomerServiceName(o.service_name);
  const publicLink=secret?"https://www.litix.net/track?track="+encodeURIComponent(orderId)+"&token="+encodeURIComponent(secret):null;
  // Customer communication stays Litix-branded. The private owner notification
  // retains supplier references needed for fulfillment and support.
@@ -105,8 +110,10 @@ export async function boosteroNotice(orderId,secret){
  const customerBody=[
   "Litix — Your payment and order confirmation",
   "Litix Order: "+orderId,
-  "Service: "+o.service_name,
+  "Service: "+publicService,
   "Quantity: "+o.quantity,
+  ...(allocations.length?["Your selected TikTok videos:",...allocationLines,
+   "Litix will coordinate separate delivery for each video."]:[]),
   "Total paid: "+amount,
   "Payment status: "+o.payment_state,
   "Litix order status: "+(o.state==="COMPLETED"?"Completed":o.state==="FAILED"?"Needs support":"Processing"),
@@ -119,8 +126,11 @@ export async function boosteroNotice(orderId,secret){
  const ownerBody=[
   "Litix — Order and fulfillment details",
   "Litix Order: "+orderId,
-  "Service: "+o.service_name,
+  "Service: "+publicService,
   "Quantity: "+o.quantity,
+  ...(allocations.length?["ACTION REQUIRED: Manual TikTok multi-post fulfillment.",
+    "Submit each video separately to the existing supplier. Never submit the parent destination as a single order.",
+    ...allocationLines]:[]),
   "Amount: "+amount,
   "Payment: "+o.payment_state,
   "Supplier: Boostero",
