@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
-import {publicServiceCardName} from "../lib/serviceCardDisplay.mjs";
+import {publicServiceCardName,litixCustomerServiceName} from "../lib/serviceCardDisplay.mjs";
 
 test("approved cards retain meaningful service type, never display hidden quality, rate caps, refill, IDs or supplier brands",()=>{
   const rows=[
@@ -40,4 +40,20 @@ test("customer card markup uses only clean title, current actual price and curre
   assert.match(style,/\.service-option \.service-card-price/);
   assert.match(source,/serviceId:selected\.id/,"Checkout still uses the actual original supplier-mapped service ID");
   assert.match(source,/setSelected\(s\);setQty\(s\.min\)/,"Original service & quantity handling must remain intact");
+});
+
+test("all Litix directory product labels remove supplier promotions and manual-refill terms only",async()=>{
+  const cases=[
+    ["🇺🇸 Instagram USA Followers ➡️ [ Super Real Accounts | 5K/Day | 30 Days Manual Refill ] - Boostero’s Top Pick 🔥","🇺🇸 Instagram USA Followers ➡️ [ Super Real Accounts | 5K/Day ]"],
+    ["🇺🇸 Instagram USA Followers ➡️ [ Real Accounts | 1K/Day | 365 Days Manual Refill ]","🇺🇸 Instagram USA Followers ➡️ [ Real Accounts | 1K/Day ]"],
+    ["👱 Instagram Latin Followers ➡️ [ High Quality | 5K/Day | 30 Days Manual Refill ]","👱 Instagram Latin Followers ➡️ [ High Quality | 5K/Day ]"],
+    ["Instagram Followers [ Premium Quality | 20K/Day | 30 Days Refill Button ]","Instagram Followers [ Premium Quality | 20K/Day | 30 Days Refill Button ]"],
+    ["Boostero Instagram Likes","Instagram Likes"]
+  ];
+  for(const [raw,expected] of cases)assert.equal(litixCustomerServiceName(raw),expected);
+  assert.doesNotMatch(publicServiceCardName({name:cases[0][0]}),/boostero|top pick|manual refill/i);
+  const directory=await readFile(new URL("../components/LitixDirectory.jsx",import.meta.url),"utf8");
+  assert.match(directory,/<h3>\{litixCustomerServiceName\(s\.name\)\}<\/h3>/);
+  assert.match(directory,/litixCustomerServiceName\(s\.category\)/);
+  assert.doesNotMatch(directory,/current Boostero rate/);
 });
