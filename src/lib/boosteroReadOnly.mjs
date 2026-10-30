@@ -3,6 +3,7 @@
  * BOOSTERO_API_KEY is never accepted from callers or logged.
  * This module is NOT imported by the storefront, checkout, or supplier dispatch.
  */
+import {litixSupplierSafeLink} from "./litixRetail60.mjs";
 const actions=new Set(["balance","services"]);
 const host="boostero.com";
 function endpoint(){
@@ -93,10 +94,8 @@ export async function boosteroProduction(action,parameters={},options={}){
  let params={};
  if(action==="add"){
   const id=String(parameters.service||""),quantity=Number(parameters.quantity),link=String(parameters.link||"");
-  if(options.claimed!==true||!/^\d{1,12}$/.test(id)||!Number.isSafeInteger(quantity)||quantity<1||quantity>1000000||
-     !(/^https:\/\/www\.(instagram\.com\/[a-zA-Z0-9._]{1,30}\/|tiktok\.com\/@[A-Za-z0-9._]{2,24}\/)$/.test(link)||
-     /^https:\/\/www\.instagram\.com\/(?:p|reel)\/[a-zA-Z0-9_-]{5,32}\/$/.test(link)||
-     /^https:\/\/www\.tiktok\.com\/@[A-Za-z0-9._]{2,24}\/video\/[0-9]{10,30}$/.test(link)))
+  if(options.claimed!==true||!/^\d{1,12}$/.test(id)||!Number.isSafeInteger(quantity)||
+     quantity<1||quantity>1000000||litixSupplierSafeLink(link)!==link)
    throw Error("boostero_add_not_authorized");
   params={service:id,quantity:String(quantity),link};
  }else if(action==="status"||action==="refill"){
