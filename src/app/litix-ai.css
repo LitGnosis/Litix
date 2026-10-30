@@ -86,3 +86,25 @@
  .whatsapp-float{padding:11px;font-size:12px;gap:7px}
  .whatsapp-icon{width:22px;height:22px}
 }
+
+/* Keep the checkout fully tappable on narrow phones without disabling support. */
+@media(max-width:575px){
+ body:has(#checkout) .lxai-launcher{
+  width:54px;max-width:54px;min-width:54px;height:54px;min-height:54px;
+  padding:10px;justify-content:center;gap:0;overflow:hidden;
+ }
+ body:has(#checkout) .lxai-launcher > span:not(.lxai-orb){display:none}
+ body:has(#checkout) .whatsapp-float{
+  width:54px;max-width:54px;min-width:54px;height:54px;min-height:54px;
+  padding:8px;justify-content:center;gap:0;overflow:hidden;
+ }
+ body:has(#checkout) .whatsapp-float > span:not(.whatsapp-icon){display:none}
+ body:has(#checkout) .whatsapp-float .whatsapp-icon{width:28px;height:28px}
+ body:has(#checkout) .lxai-launcher .lxai-orb{width:30px;height:30px;flex:0 0 30px}
+ #checkout{scroll-margin-top:16px;scroll-margin-bottom:100px}
+ #checkout .checkout-quantity-warning{
+  border:1px solid #f7bc6480;border-radius:12px;padding:14px;
+  background:#3b291528;color:#ffdca3;font-size:14px;line-height:1.5;
+ }
+ #checkout .checkout-quantity-warning p{margin:8px 0 12px}
+}
