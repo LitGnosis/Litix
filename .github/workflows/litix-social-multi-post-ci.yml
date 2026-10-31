@@ -11,6 +11,7 @@ on:
       - 'src/lib/boosteroFulfillment.mjs'
       - 'src/app/api/post-picker/**'
       - 'src/tests/social-multi-post-live-checkout.test.mjs'
+      - 'src/tests/boostero-multi-post-ledger.test.mjs'
   workflow_dispatch:
 permissions:
   contents: read
@@ -29,6 +30,6 @@ jobs:
           cache-dependency-path: src/package-lock.json
       - run: npm ci --ignore-scripts
       - name: No-charge multi-post regression tests
-        run: node --test tests/social-multi-post-live-checkout.test.mjs tests/post-picker.test.mjs tests/tiktok-multi-post-checkout.test.mjs tests/tiktok-short-links-checkout.test.mjs
+        run: node --test tests/boostero-multi-post-ledger.test.mjs tests/social-multi-post-live-checkout.test.mjs tests/post-picker.test.mjs tests/tiktok-multi-post-checkout.test.mjs tests/tiktok-short-links-checkout.test.mjs
       - name: Production Next.js build
         run: npm run build
