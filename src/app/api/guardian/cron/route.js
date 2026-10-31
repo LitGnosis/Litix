@@ -1,4 +1,4 @@
-import {runGuardianCycle,bearerAuthorized} from "../../../../lib/guardianRuntime.mjs";
+import {runGuardianCycle,bearerAuthorized,guardianDb} from "../../../../lib/guardianRuntime.mjs";
 import {syncBoosteroMultiStatuses} from "../../../../lib/boosteroMultiPostFulfillment.mjs";
 import {boosteroProductionReady} from "../../../../lib/boosteroFulfillment.mjs";
 
@@ -21,6 +21,23 @@ export async function GET(req){
   Promise.resolve({checked:0,failed:0,skipped:"multi_post_disabled"});
  const [guardian,delivery]=await Promise.allSettled([runGuardianCycle(),poll]);
  const posts=delivery.status==="fulfilled"?delivery.value:{checked:0,failed:1};
+ // Preserve bounded, non-sensitive supplier poll diagnostics in the existing
+ // Guardian run ledger, so owner checks can distinguish a disabled worker,
+ // failed supplier API, and successful status reconciliation.
+ if(guardian.status==="fulfilled"){
+  const diagnostic={
+   enabled,checked:Number(posts.checked||0),failed:Number(posts.failed||0),
+   skipped:String(posts.skipped||"").slice(0,48),
+   transport:delivery.status==="fulfilled"?"completed":"failed"
+  };
+  try{
+   await guardianDb().query(
+    "update public.litix_guardian_runs set diag=coalesce(diag,'{}'::jsonb) || jsonb_build_object('boosteroMultiPoll',$2::jsonb) where id=$1",
+    [guardian.value.runId,JSON.stringify(diagnostic)]);
+  }catch{
+   console.warn("Litix status check diagnostics unavailable",{code:"GUARDIAN_POLL_AUDIT_WRITE"});
+  }
+ }
  // No customer data, credentials, supplier IDs or post URLs in cron logs.
  if(Number(posts.failed||0)>0){
   console.warn("Litix multi-post status polling failed",{checked:Number(posts.checked||0),failed:Number(posts.failed||0)});

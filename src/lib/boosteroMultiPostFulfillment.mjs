@@ -110,7 +110,7 @@ export async function syncBoosteroMultiStatuses({sql=boosteroSQL(),operation=boo
    const state=status==="completed"?"COMPLETED":
     ["canceled","cancelled","failed","error"].includes(status)?"MANUAL_REVIEW":"SUBMITTED";
    const saved=await sql.query(
-    "update public.litix_boostero_multi_posts set state=$4,supplier_status=$5::jsonb,checked_at=now(),updated_at=now() where parent_order_id=$1 and ordinal=$2 and supplier_order_id=$3 and state='SUBMITTED' returning parent_order_id",
+    "update public.litix_boostero_multi_posts set state=$4,supplier_status=$5::jsonb,error_code=NULL,checked_at=now(),updated_at=now() where parent_order_id=$1 and ordinal=$2 and supplier_order_id=$3 and state='SUBMITTED' returning parent_order_id",
     [item.parent_order_id,item.ordinal,item.supplier_order_id,state,JSON.stringify({status:result?.status||"Unknown",remains:result?.remains??null})]);
    if(!saved.length)continue;
    const summary=await sql.query(
@@ -123,7 +123,19 @@ export async function syncBoosteroMultiStatuses({sql=boosteroSQL(),operation=boo
     await sql.query("update public.litix_boostero_fulfillment set state='MANUAL_REVIEW',updated_at=now() where litix_order_id=$1",[item.parent_order_id]);
    }
    checked++;
-  }catch{failed++}
+  }catch(error){
+   failed++;
+   // Supplier response failures never make the order eligible for another add.
+   // Keep the existing supplier ID and SUBMITTED state for reconciliation.
+   const reason=String(error?.message||"");
+   const code=/unauthorized|auth|key_unconfigured|provider_rejected/.test(reason)?
+    "status_auth_or_provider_rejected":/timeout|network|http_/.test(reason)?
+    "status_transport_unavailable":/invalid_json/.test(reason)?
+    "status_invalid_supplier_response":"status_poll_unavailable";
+   await sql.query(
+    "update public.litix_boostero_multi_posts set error_code=$4 where parent_order_id=$1 and ordinal=$2 and supplier_order_id=$3 and state='SUBMITTED'",
+    [item.parent_order_id,item.ordinal,item.supplier_order_id,code]).catch(()=>{});
+  }
  }
  return {checked,failed};
 }
