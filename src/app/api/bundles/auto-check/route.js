@@ -24,7 +24,15 @@ export async function GET(req){
  try{
   const [services,balance]=await Promise.all([boosteroProduction("services"),boosteroProduction("balance")]);
   if(String(balance?.currency||"").toUpperCase()!=="USD")throw Error("currency_unverified");
-  quoteFixedBundle(pkg,account,posts,services,{balanceUSD:Number(balance.balance)});
+  const quote=quoteFixedBundle(pkg,account,posts,services,{requireWallet:false});
+  const wallet=Number(balance.balance);
+  if(!Number.isFinite(wallet)||wallet<quote.wholesaleCents/100){
+   console.warn("Litix bundle private funding shortfall",{
+    packageId:pkg.id,posts:postCount,requiredWholesaleCents:quote.wholesaleCents,
+    shortfallCents:Math.max(0,quote.wholesaleCents-Math.floor(Math.max(0,wallet)*100))
+   });
+   throw Error("supplier_wallet_insufficient");
+  }
   ready=true;reason="";
  }catch(e){reason=String(e?.message||"supplier_unavailable").slice(0,65);console.warn("Litix bundle read-only preflight blocked",{packageId:pkg.id,posts:postCount,reason});}
  const result={brand:"Litix",packageId:pkg.id,postCount,autoEligible:ready,
