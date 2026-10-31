@@ -25,8 +25,10 @@ done
 export AWS_ACCESS_KEY_ID="$R2_ACCESS_KEY_ID" AWS_SECRET_ACCESS_KEY="$R2_SECRET_ACCESS_KEY"
 export AWS_DEFAULT_REGION=auto AWS_EC2_METADATA_DISABLED=true AWS_PAGER="" AWS_CLI_AUTO_PROMPT=off
 export AWS_MAX_ATTEMPTS=2
-# R2 compatibility: explicitly request CRC32 for every upload; newer AWS CLI defaults may use CRC64NVME.
-# Independently verify encrypted round-trip bytes with SHA256 after GET.
+# R2 compatibility: avoid optional AWS SDK checksum negotiation on PutObject.
+# Cloudflare R2 may reject the x-amz-sdk-checksum-algorithm header for single-object writes.
+# AWS CLI v2 otherwise tries CRC64NVME by default; when_required disables optional checksums.
+# Integrity remains verified independently by PUT/HEAD/GET byte comparison and encrypted SHA256.
 # Existing explicit encrypted-object roundtrip SHA256 verification is preserved.
 export AWS_REQUEST_CHECKSUM_CALCULATION=when_required
 export AWS_RESPONSE_CHECKSUM_VALIDATION=when_required
@@ -49,7 +51,7 @@ import secrets,sys
 with open(sys.argv[1],"xb") as f:f.write(secrets.token_bytes(128))
 PY
 aws --debug --endpoint-url "$R2_ENDPOINT" s3api put-object --bucket "$R2_BUCKET" \
- --checksum-algorithm CRC32 --key "$probe_key" --body "$work/probe" --output json >"$work/put.status" 2>"$work/put.debug" ||
+ --key "$probe_key" --body "$work/probe" --output json >"$work/put.status" 2>"$work/put.debug" ||
  {
   # Print only a validated S3 error identifier, never the raw AWS response.
   error_code="$(python3 - "$work/put.status" "$work/put.debug" <<'PY'
@@ -166,7 +168,7 @@ for db in neondb litixapi;do
  local_sha="$(sha256sum "$encrypted" | awk '{print $1}')"
  local_size="$(wc -c < "$encrypted" | tr -d '[:space:]')"
  aws --endpoint-url "$R2_ENDPOINT" s3 cp "$encrypted" "s3://$R2_BUCKET/$object" \
-  --checksum-algorithm CRC32 --only-show-errors >"$work/upload-$db.status" 2>&1 ||
+  --only-show-errors >"$work/upload-$db.status" 2>&1 ||
   fail "$db encrypted R2 upload failed."
  remote_size="$(aws --endpoint-url "$R2_ENDPOINT" s3api head-object \
   --bucket "$R2_BUCKET" --key "$object" --query ContentLength --output text 2>"$work/size-$db.err")" ||

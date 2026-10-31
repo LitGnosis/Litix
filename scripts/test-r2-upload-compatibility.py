@@ -2,7 +2,9 @@
 """Static, secrets-free regression checks. Does not contact Cloudflare or Neon."""
 from pathlib import Path
 script = Path(__file__).with_name("litix-r2-github-manual-verify.sh").read_text()
-assert script.count("--checksum-algorithm CRC32") == 2, "Both uploads must explicitly use R2-compatible checksums"
+assert "--checksum-algorithm" not in script, "Optional S3 checksum headers must not be sent to R2 uploads"
+assert "AWS_REQUEST_CHECKSUM_CALCULATION=when_required" in script
+assert "AWS_RESPONSE_CHECKSUM_VALIDATION=when_required" in script
 assert 's3api put-object' in script and 's3 cp "$encrypted"' in script
 for part in (
     "ACTUAL_R2_CONNECTIVITY_PASS",
