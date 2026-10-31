@@ -46,7 +46,7 @@ test("all public catalog routes contain no retired supplier HTTP fallback",()=>{
  const catalog=source("app/api/catalog/v1/route.js");
  const other=source("app/api/litix-multi-catalog/route.js");
  const cron=source("app/api/v2/cron/sync-catalog/route.js");
- assert.match(catalog,/enabledBoosteroCards/);
+ assert.match(catalog,/allBoosteroCardsSnapshot|enabledBoosteroCards/);
  assert.match(catalog,/buildActiveStorefrontCatalog/);
  assert.doesNotMatch(catalog,/smmservices|original\.json\(|getServices\(/i);
  assert.match(other,/catalog\/v1\/route\.js/);

@@ -11,7 +11,7 @@ async function fetchFreshBoosteroCards(){
  try{raw=await boosteroProduction("services")}
  catch(error){
   // A single bounded retry is safe only for this READ operation.
-  if(!/boostero_(network|http_5\\d\\d|invalid_json)/.test(String(error?.message||"")))throw error;
+  if(!/boostero_(network|http_5[0-9][0-9]|invalid_json)/.test(String(error?.message||"")))throw error;
   await new Promise(resolve=>setTimeout(resolve,250));
   raw=await boosteroProduction("services");
  }
