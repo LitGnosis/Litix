@@ -126,7 +126,7 @@ export default function OrderTracker(){
     {Array.isArray(order.posts)&&order.posts.length>0&&<section aria-label="Individual post delivery status" style={{padding:"14px 0"}}>
       <h3 style={{fontSize:17,margin:"0 0 12px"}}>Your selected posts</h3>
       {order.posts.some(p=>Number.isSafeInteger(p.delivered))&&<p className="ltx-track-meta">
-        Boostero-reported progress: {order.posts.reduce((sum,p)=>sum+(Number.isSafeInteger(p.delivered)?p.delivered:0),0).toLocaleString()} of {order.posts.reduce((sum,p)=>sum+Number(p.quantity||0),0).toLocaleString()} likes ordered.
+        Litix delivery progress: {order.posts.reduce((sum,p)=>sum+(Number.isSafeInteger(p.delivered)?p.delivered:0),0).toLocaleString()} of {order.posts.reduce((sum,p)=>sum+Number(p.quantity||0),0).toLocaleString()} likes ordered.
         {order.posts.some(p=>!Number.isSafeInteger(p.delivered))?" Some posts have not reported quantities yet.":""}
        </p>}
       <div style={{display:"grid",gap:10}}>{order.posts.map(post=><article key={post.index} style={{padding:12,border:"1px solid #4c99cc80",borderRadius:12,background:"#091f35"}}>
