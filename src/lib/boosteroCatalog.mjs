@@ -3,13 +3,19 @@ import {boosteroProductionReady} from "./boosteroFulfillment.mjs";
 import {publicServiceCardName} from "./serviceCardDisplay.mjs";
 import {matchesServiceQuickKind} from "./catalogSort.mjs";
 import {litixRetailPer1000Cents,litixOrderCents,litixPurchasableDefault} from "./litixRetail60.mjs";
-let cache=null,expires=0,flight=null;
+import {createResilientCatalogCache} from "./litixCatalogResilience.mjs";
 export {litixPlatform,litixKind} from "./litixServiceClassify.mjs";
 import {litixPlatform,litixKind} from "./litixServiceClassify.mjs";
-export async function allBoosteroCards(){
- if(!boosteroProductionReady())return [];
- if(cache&&Date.now()<expires)return cache;
- if(!flight)flight=boosteroProduction("services").then(items=>{
+async function fetchFreshBoosteroCards(){
+ let raw;
+ try{raw=await boosteroProduction("services")}
+ catch(error){
+  // A single bounded retry is safe only for this READ operation.
+  if(!/boostero_(network|http_5[0-9][0-9]|invalid_json)/.test(String(error?.message||"")))throw error;
+  await new Promise(resolve=>setTimeout(resolve,250));
+  raw=await boosteroProduction("services");
+ }
+ const items=raw;
   const unique=new Map();
   for(const item of items){
    const supplierId=String(item?.service??"");
@@ -29,11 +35,17 @@ export async function allBoosteroCards(){
     pricingPolicy:"Boostero live cost + 60% markup",supplier:"Boostero"
    });
   }
-  const rows=[...unique.values()];
-  cache=rows;expires=Date.now()+90000;
-  return rows;
- }).finally(()=>{flight=null});
- return flight;
+ const rows=[...unique.values()];
+ if(!rows.length)throw Error("catalog_empty_or_invalid");
+ return rows;
+}
+const cache=createResilientCatalogCache({fetchFresh:fetchFreshBoosteroCards});
+export async function allBoosteroCardsSnapshot(){
+ if(!boosteroProductionReady())return {items:[],status:"unavailable"};
+ return cache.read();
+}
+export async function allBoosteroCards(){
+ return (await allBoosteroCardsSnapshot()).items;
 }
 export const enabledBoosteroCards=allBoosteroCards;
 export function filterBoosteroCards(items,params){
