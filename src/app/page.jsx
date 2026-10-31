@@ -66,6 +66,7 @@ export default function Home(){
    p.verifiedUrl&&p.verifiedInput===String(p.link||"").trim()&&p.status==="verified"&&
    Number.isSafeInteger(Number(p.quantity))&&Number(p.quantity)>=Number(selected?.min)&&
    Number(p.quantity)<=Number(selected?.max)&&
+   (Number(p.quantity)-Number(selected?.supplierMin??selected?.min))%Number(selected?.unitStep||1)===0&&
    Math.ceil(Number(selected?.per1000||0)*Number(p.quantity)/10-1e-8)>=100
  )&&new Set(multiPosts.map(p=>p.verifiedUrl)).size===multiPosts.length;
  useEffect(()=>{setMultiPostEnabled(false);setMultiPosts([])},[selected?.id]);
@@ -110,7 +111,7 @@ export default function Home(){
  const profileInput=multiMode?{ok:true}:normalizeSocialProfileInput(link,selected?.kind==="likes"?"":socialPlatformForService(selected));
  const normalizedOrderLink=multiMode?(multiPosts[0]?.verifiedUrl||""):(verifiedTikTokVideo||(profileInput.url||link));
  const detailsReady=multiMode
-  ?verifiedMultiPosts&&validOrderDetails(selected,normalizedOrderLink,email,orderQuantity)
+  ?verifiedMultiPosts&&validOrderDetails(selected,normalizedOrderLink,email,Number(multiPosts[0]?.quantity||0))&&Number.isSafeInteger(orderQuantity)&&orderQuantity<=1000000
   :profileInput.ok&&(!tiktokLikes||!!verifiedTikTokVideo)&&validOrderDetails(selected,normalizedOrderLink,email,qty);
  // Preserve deep links from the complete Litix directory, including services not on page one.
  useEffect(()=>{
@@ -337,7 +338,7 @@ export default function Home(){
   finally{setBusy(false)}
  }
  done.current=purchase;
- const submit=e=>{e.preventDefault();if(!detailsReady||!cardReady||!selected||busy)return;if(!Number.isSafeInteger(orderQuantity)||orderQuantity<selected.min||orderQuantity>selected.max){setNotice("Enter a whole-number quantity within this service’s limits.");return}if(!selected.purchasable){setNotice("This service requires additional supplier fields and cannot be checked out here.");return}setBusy(true);setNotice("");try{getCollectJS().startPaymentRequest()}catch{setBusy(false);setNotice("Complete your secure card fields before paying")}};
+ const submit=e=>{e.preventDefault();if(!detailsReady||!cardReady||!selected||busy)return;if(!Number.isSafeInteger(orderQuantity)||orderQuantity<selected.min||(multiMode?orderQuantity>1000000:orderQuantity>selected.max)){setNotice("Enter a whole-number quantity within this service’s limits.");return}if(!selected.purchasable){setNotice("This service requires additional supplier fields and cannot be checked out here.");return}setBusy(true);setNotice("");try{getCollectJS().startPaymentRequest()}catch{setBusy(false);setNotice("Complete your secure card fields before paying")}};
  const track=async value=>{try{const u=new URL(value,location.origin),id=u.searchParams.get("track"),token=u.searchParams.get("token");if(!id||!token)throw Error("Paste the full private tracking URL");const r=await fetch("/api/track?id="+encodeURIComponent(id)+"&token="+encodeURIComponent(token)),v=await r.json();if(!r.ok)throw Error(v.error||"Tracking failed");setTracked(v.order)}catch(e){setNotice(e.message)}};
  useEffect(()=>{if(location.search.includes("track=")){setPrivateUrl(location.href);track(location.href)}},[]);
  return <main className="wrap"><nav className="nav"><a className="brand" href="/" aria-label="Litix home"><img src="/assets/brand/litix-logo.webp" alt="Litix — Innovation, Ignited." className="litix-new-logo" /></a><div><a href="/services">All Litix Services</a><a href="/custom-orders/preview">Custom Orders Preview</a><a href="#checkout">Checkout</a><a href="/autolikes">AutoLikes</a><a href="/track">Track Order</a><a href="#growth-studio">Growth OS</a></div></nav>
