@@ -41,8 +41,11 @@ export async function GET(request){
     if(!response.ok)throw new Error("provider status "+response.status);
     const rows=await response.json();
     const posts=normalizePosts(platform,handle,rows).slice(0,12);
-    const value={platform,username:handle,posts,message:posts.length?"Select one or more public posts.":"No public post thumbnails were returned for this account."};
-    cached.set(cacheKey,{time:Date.now(),value});
+    const value={platform,username:handle,posts,message:posts.length?"Select one or more public posts.":"Instagram or TikTok returned no thumbnails. You can retry the lookup or enter post links below."};
+    // Apify occasionally returns a successful but empty dataset for a public
+    // profile. Never memoize that transient miss for ten minutes; allow a
+    // deliberate user retry or the manual-post-link fallback.
+    if(posts.length>0)cached.set(cacheKey,{time:Date.now(),value});
     if(cached.size>100)cached.delete(cached.keys().next().value);
     return json(value);
   }catch(error){
