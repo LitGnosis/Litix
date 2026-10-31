@@ -74,6 +74,13 @@ test("TikTok Likes deep links open Choose Your Posts without checkout form redir
  assert.match(picker,/<div className="litix-picker-search">/);
  assert.match(picker,/<button type="button" onClick=\{lookup\}/);
  assert.doesNotMatch(picker,/<form\b/);
+ assert.match(picker,/normalizeProfile\(platform,username\)/);
+ assert.match(picker,/setTimeout\(\(\)=>\{void lookup\(null,\{automatic:true\}\)\},1200\)/);
+ assert.match(picker,/activeLookup\.current\?\.abort\(\)/);
+ assert.match(picker,/signal:controller\.signal/);
+ assert.match(picker,/username or profile link/);
+ assert.match(picker,/Retry \/ load posts/);
+ assert.match(picker,/Your public posts loaded automatically/);
  assert.match(page,/const verifiedMultiPosts=multiMode&&multiPosts\.length>=1&&multiPosts\.length<=5/);
  assert.match(picker,/Choose 1–5 posts/);
  assert.match(picker,/posts\.length>1&&<button type="button"/);
