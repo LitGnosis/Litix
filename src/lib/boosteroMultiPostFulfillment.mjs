@@ -125,3 +125,19 @@ export async function syncBoosteroMultiStatuses({sql=boosteroSQL(),operation=boo
  }
  return {checked,failed};
 }
+
+
+// Scheduled continuation for paid children left QUEUED after a process crash.
+// Never touches claimed DISPATCHING, SUBMITTED or unknown-outcome rows.
+export async function resumeBoosteroMultiQueue({sql=boosteroSQL(),limitParents=1}={}){
+ if(!boosteroProductionReady())return {resumed:0,skipped:"boostero_disabled"};
+ const parents=await sql.query(
+  "select distinct p.parent_order_id from public.litix_boostero_multi_posts p join public.litix_v2_orders o on o.id=p.parent_order_id where p.state='QUEUED' and o.payment_state='paid' and o.payment_transaction_id is not null and o.metadata->>'supplier'='boostero' order by p.parent_order_id limit $1",
+  [Math.min(2,Math.max(1,Number(limitParents)||1))]);
+ let resumed=0,failed=0;
+ for(const {parent_order_id} of parents){
+  try{await dispatchBoosteroMultiPosts(parent_order_id,{sql});resumed++}
+  catch{failed++}
+ }
+ return {resumed,failed};
+}
