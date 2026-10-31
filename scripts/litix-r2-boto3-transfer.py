@@ -60,10 +60,22 @@ def presigned_put(client, bucket, key, path):
                     break
                 conn.send(chunk)
         response = conn.getresponse()
-        # Do not expose response body, signed URLs, request headers or keys.
-        response.read(512)
+        # Classify the S3 XML code safely; NEVER print the response body,
+        # error message, signed URL, request headers or credentials.
+        body = response.read(2048)
         if not 200 <= response.status < 300:
-            raise RuntimeError("PRESIGNED_HTTP_" + str(response.status))
+            match = re.search(rb"<Code>([A-Za-z][A-Za-z0-9_-]{0,40})</Code>", body)
+            safe_code = match.group(1).decode("ascii") if match else "NON_S3_RESPONSE"
+            lower = body.lower()
+            # Fixed categories only: no user-provided text is copied to logs.
+            reason = ("UNSUPPORTED_CHECKSUM" if b"x-amz-sdk-checksum" in lower
+                      or b"x-amz-checksum" in lower else
+                      "TEMP_SESSION_TOKEN" if b"x-amz-security-token" in lower else
+                      "INVALID_REGION" if b"region" in lower else
+                      "BUCKET_OR_PERMISSION" if b"bucket" in lower else
+                      "UNCLASSIFIED")
+            raise RuntimeError("PRESIGNED_HTTP_" + str(response.status) + "_"
+                               + safe_code + "_" + reason)
     finally:
         conn.close()
 
@@ -156,7 +168,7 @@ def main() -> int:
         print("R2_TRANSFER_ERROR_CODE_SAFE=" + code, file=sys.stderr)
     except Exception as exc:
         safe_status = str(exc)
-        if re.fullmatch(r"PRESIGNED_HTTP_[45][0-9]{2}", safe_status):
+        if re.fullmatch(r"PRESIGNED_HTTP_[45][0-9]{2}_[A-Za-z][A-Za-z0-9_-]{0,40}_[A-Z_]{4,32}", safe_status):
             print("R2_TRANSFER_ERROR_CODE_SAFE=" + safe_status, file=sys.stderr)
         else:
             print("R2_TRANSFER_ERROR_CLASS=" + type(exc).__name__, file=sys.stderr)
