@@ -27,7 +27,7 @@ export default function SocialMultiPostChooser({service,platform,posts,onChange}
    const eligible=(body.posts||[]).filter(p=>
     isTikTok?/\/video\/[0-9]{10,25}$/.test(p.url):/^https:\/\/www\.instagram\.com\/(?:p|reel)\//.test(p.url)
    );
-   setGallery(eligible);setMessage(eligible.length?"Tap two to five posts below.":"No eligible public posts found. You can still add direct post links below.");
+   setGallery(eligible);setMessage(eligible.length?"Tap one to five posts below.":"No eligible public posts found. You can still add direct post links below.");
   }catch(err){setMessage(String(err.message||"Posts unavailable")+". You can still enter individual post links below.")}
   finally{setLoading(false)}
  }
@@ -84,7 +84,7 @@ export default function SocialMultiPostChooser({service,platform,posts,onChange}
    </div>
    <div className="litix-picker-manual">
     <h3>Your selected posts</h3>
-    <p className="small">Choose 2–5 posts. If the gallery can't load, you can still enter direct post links as a fallback. Likes can be adjusted separately for each post.</p>
+    <p className="small">Choose 1–5 posts. If the gallery can't load, you can still enter direct post links as a fallback. Likes can be adjusted separately for each post.</p>
     {posts.map((p,i)=>{
       const quantity=Number(p.quantity);
       const valid=Boolean(p.verifiedUrl&&p.verifiedInput===String(p.link||"").trim()&&p.status==="verified");
@@ -107,7 +107,7 @@ export default function SocialMultiPostChooser({service,platform,posts,onChange}
          <input type="number" value={p.quantity} min={minimum} max={maximum} step={unitStep} onChange={e=>mutate(p.id,{quantity:e.target.value===""?0:Number(e.target.value)})}/>
         </label>
         <p className="small">{quantityValid?usd(eachCents(service,quantity)):"Minimum "+minimum.toLocaleString()+" likes per post"} · {valid?"Post verified":"Post needs verification"}</p>
-        {posts.length>2&&<button type="button" className="alt" onClick={()=>onChange(old=>old.filter(item=>item.id!==p.id))}>Remove</button>}
+        {posts.length>1&&<button type="button" className="alt" onClick={()=>onChange(old=>old.filter(item=>item.id!==p.id))}>Remove</button>}
       </fieldset>
     })}
     {posts.length<5&&<button type="button" className="alt" onClick={()=>onChange(old=>[...old,newTikTokPost({quantity:minimum})])}>Add another post</button>}
