@@ -26,7 +26,7 @@ export async function GET(req){
   if(String(balance?.currency||"").toUpperCase()!=="USD")throw Error("currency_unverified");
   quoteFixedBundle(pkg,account,posts,services,{balanceUSD:Number(balance.balance)});
   ready=true;reason="";
- }catch(e){reason=String(e?.message||"supplier_unavailable").slice(0,65);}
+ }catch(e){reason=String(e?.message||"supplier_unavailable").slice(0,65);console.warn("Litix bundle read-only preflight blocked",{packageId:pkg.id,posts:postCount,reason});}
  const result={brand:"Litix",packageId:pkg.id,postCount,autoEligible:ready,
   autoCheckoutEnabled:ready&&isBundleAutoEnabled(),reason:ready?undefined:"Automatic delivery is temporarily unavailable for this package. Manual checkout remains available."};
  memo.set(key,{time:Date.now(),result});
