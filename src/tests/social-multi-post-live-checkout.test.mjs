@@ -37,6 +37,9 @@ test("One PayKings payment per parent order; supplier purchases are manually rev
  assert.match(handler,/seen\.has\(canonical\)/);
  assert.match(fulfillment,/Manual Instagram multi-post fulfillment/);
  assert.match(fulfillment,/Manual TikTok multi-post fulfillment/);
+ assert.match(fulfillment,/AUTOMATED PER-POST FULFILLMENT/);
+ assert.match(fulfillment,/Do NOT submit any selected post manually/);
+ assert.match(fulfillment,/automatedMulti=allocations.length>1/);
  assert.match(fulfillment,/litix-boostero-customer\//);
  assert.match(fulfillment,/litix-boostero-owner\//);
 });
