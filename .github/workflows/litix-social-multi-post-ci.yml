@@ -1,0 +1,35 @@
+name: Litix Instagram and TikTok multi-post purchase integration
+on:
+  push:
+    branches: [feature/litix-live-instagram-tiktok-multipost-20261030]
+  pull_request:
+    paths:
+      - 'src/components/SocialMultiPostChooser*'
+      - 'src/app/page.jsx'
+      - 'src/lib/postPicker.mjs'
+      - 'src/lib/boosteroOrderHandler.mjs'
+      - 'src/lib/boosteroFulfillment.mjs'
+      - 'src/app/api/post-picker/**'
+      - 'src/tests/social-multi-post-live-checkout.test.mjs'
+      - 'src/tests/boostero-multi-post-ledger.test.mjs'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: src/package-lock.json
+      - run: npm ci --ignore-scripts
+      - name: No-charge multi-post regression tests
+        run: node --test tests/boostero-multi-post-ledger.test.mjs tests/social-multi-post-live-checkout.test.mjs tests/post-picker.test.mjs tests/tiktok-multi-post-checkout.test.mjs tests/tiktok-short-links-checkout.test.mjs tests/litix-service-navigation.test.mjs tests/litix-retail-floor-policy.test.mjs tests/growth-bundles-boostero-auto.test.mjs
+      - name: Production Next.js build
+        run: npm run build

@@ -1,7 +1,9 @@
 import {boosteroProduction} from "../../../../lib/boosteroReadOnly.mjs";
 import {enabledBoosteroCards} from "../../../../lib/boosteroCatalog.mjs";
-import {sortServicesPer1000} from "../../../../lib/catalogSort.mjs";
+import {sortServicesPer1000,matchesServiceQuickKind} from "../../../../lib/catalogSort.mjs";
 import {litixRetailPer1000Cents} from "../../../../lib/litixRetail60.mjs";
+import {litixPublicCard} from "../../../../lib/publicLitixCatalog.mjs";
+import {publicServiceCardName} from "../../../../lib/serviceCardDisplay.mjs";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 export const maxDuration=60;
@@ -27,6 +29,7 @@ const platformOf=service=>{
 };
 const kindOf=s=>{
  const label=[s.name,s.category].map(v=>String(v??"")).join(" ").toLowerCase();
+ if(platformOf(s)==="Twitter (X)"&&/\b(?:retweets?|reposts?)\b/.test(String(s.name||"").toLowerCase()))return "retweets";
  for(const [type,regex] of [
  ["followers",/\bfollowers?\b/],["likes",/\blikes?\b/],
  ["views",/\bviews?\b/],["comments",/\bcomments?\b/],
@@ -60,7 +63,7 @@ async function directory(){
    const purchasable=allowed.get(id);
    // 60% retail markup for discovery; actual payment still requires a live quote.
    // supplier terms and the $1 order floor must be checked before checkout.
-   const indicative=validRate?litixRetailPer1000Cents(rate)/100:null;
+   const indicative=validRate?litixRetailPer1000Cents(rate,raw)/100:null;
    unique.set(supplierId,purchasable?{
     ...purchasable,platform,kind,category:purchasable.category||category,
     supplierCategory:category,provider:"Litix",quoteStatus:"approved"
@@ -76,7 +79,7 @@ async function directory(){
   const counts={};const categories={};
   for(const s of items){
    counts[s.platform]=(counts[s.platform]||0)+1;
-   categories[s.category]=(categories[s.category]||0)+1;
+   {const label=publicServiceCardName({name:s.category});categories[label]=(categories[label]||0)+1;}
   }
   const platformOptions=Object.entries(counts).sort((a,b)=>{
    const ai=PLATFORMS.indexOf(a[0]),bi=PLATFORMS.indexOf(b[0]);
@@ -92,22 +95,22 @@ async function directory(){
 export async function GET(request){
  try{
   const p=new URL(request.url).searchParams;
-  const q=clean(p.get("q"),120).toLowerCase(),platform=clean(p.get("platform"),80),
+  const q=clean(p.get("q"),120).toLowerCase().replace(/^litix_(\d+)$/,"boostero_$1"),platform=clean(p.get("platform"),80),
    category=clean(p.get("category"),120),kind=clean(p.get("kind"),45),
    onlyReady=p.get("ready")==="true";
   const numericPage=Number(p.get("page"));
   const page=Number.isSafeInteger(numericPage)&&numericPage>0?Math.min(numericPage,10000):1;
   const data=await directory();
   const filtered=data.items.filter(s=>(!q||[s.id,s.name,s.category,s.platform].some(x=>String(x||"").toLowerCase().includes(q)))&&
-   (!platform||platform==="All platforms"||platform===s.platform)&&(!category||s.category===category)&&
-   (!kind||s.kind===kind)&&(!onlyReady||s.purchasable===true));
+   (!platform||platform==="All platforms"||platform===s.platform)&&(!category||publicServiceCardName({name:s.category})===category)&&
+   (!kind||(s.kind===kind&&matchesServiceQuickKind(s,kind)))&&(!onlyReady||s.purchasable===true));
   const pageSize=24;
   return Response.json({
-   brand:"Litix",source:"live_supplier_api",items:filtered.slice((page-1)*pageSize,page*pageSize),
+   brand:"Litix",items:filtered.slice((page-1)*pageSize,page*pageSize).map(litixPublicCard).filter(Boolean),
    total:filtered.length,allCount:data.liveCount,page,pageSize,
    platforms:data.platformOptions,categories:data.categoryOptions,
    verifiedPurchasableCount:data.approvedCount,checkoutPath:"/#checkout",currency:"USD",
-   notice:"All displayed rates use supplier cost + 60%. Default services use live PayKings checkout; other API types require a manual quote.",markupPercent:60
+   notice:"Browse Litix services and review the final price before secure checkout."
   },{headers:{"cache-control":"no-store","x-content-type-options":"nosniff"}});
  }catch(err){
   console.error("Litix supplier directory error",String(err?.message||"unknown").slice(0,85));

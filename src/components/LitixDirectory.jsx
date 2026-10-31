@@ -1,22 +1,16 @@
 "use client";
 import {litixCustomerServiceName} from "../lib/serviceCardDisplay.mjs";
+import {SERVICE_NAV_GROUPS,allowedServiceFilter} from "../lib/serviceNavigation.mjs";
 import {useEffect,useRef,useState} from "react";
 
 const currency=n=>typeof n==="number"&&Number.isFinite(n)
   ?new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(n):null;
 const contactNumber=(process.env.NEXT_PUBLIC_WHATSAPP_NUMBER||"").replace(/\D/g,"")||"19452106315";
 const topFilters=["Instagram","TikTok","YouTube","Facebook","Twitter (X)","Spotify","Telegram","LinkedIn"];
-const focusFilters=[
- {label:"Instagram Followers",platform:"Instagram",kind:"followers"},
- {label:"Instagram Likes",platform:"Instagram",kind:"likes"},
- {label:"TikTok Followers",platform:"TikTok",kind:"followers"},
- {label:"TikTok Likes",platform:"TikTok",kind:"likes"}
-];
-
 export default function LitixDirectory({standalone=false}){
  const [search,setSearch]=useState("");
  useEffect(()=>{const q=new URLSearchParams(location.search).get("q")||new URLSearchParams(location.search).get("service")||"";
-  if(q)setSearch(q.replace(/^boostero_/,""));},[]);
+  if(q)setSearch(q.replace(/^(?:boostero|litix)_/,""));},[]);
  const [debounced,setDebounced]=useState("");
  const [platform,setPlatform]=useState("");
  const [kind,setKind]=useState("");
@@ -62,9 +56,34 @@ export default function LitixDirectory({standalone=false}){
    .finally(()=>{});
   return()=>abort.abort();
  },[debounced,platform,kind,category,page,retry]);
- const changePlatform=name=>{setPlatform(name);setKind("");setCategory("");setPage(1)};
- const selectFocus=filter=>{setPlatform(filter.platform);setKind(filter.kind);setCategory("");setPage(1)};
- const selectedFocus=focusFilters.find(f=>f.platform===platform&&f.kind===kind);
+ const syncDirectoryFilterUrl=(name,nextKind)=>{
+  const url=new URL(window.location.href);
+  url.searchParams.delete("service");url.searchParams.delete("q");
+  if(name)url.searchParams.set("platform",name);
+  else url.searchParams.delete("platform");
+  if(nextKind)url.searchParams.set("kind",nextKind);
+  else url.searchParams.delete("kind");
+  window.history.replaceState(window.history.state,"",url.pathname+url.search+"#all-litix-services");
+ };
+ const changePlatform=name=>{
+  setPlatform(name);setKind("");setCategory("");setSearch("");setPage(1);
+  syncDirectoryFilterUrl(name,"");
+  requestAnimationFrame(()=>filterRef.current?.scrollIntoView({behavior:"smooth",block:"start"}));
+ };
+ const selectFocus=(nextPlatform,nextKind)=>{
+  if(!allowedServiceFilter(nextPlatform,nextKind))return;
+  const selectedPlatform=nextPlatform==="All platforms"?"":nextPlatform;
+  setPlatform(selectedPlatform);setKind(nextKind);setCategory("");setSearch("");setPage(1);
+  syncDirectoryFilterUrl(selectedPlatform,nextKind);
+  requestAnimationFrame(()=>filterRef.current?.scrollIntoView({behavior:"smooth",block:"start"}));
+ };
+ useEffect(()=>{
+  const params=new URLSearchParams(window.location.search);
+  const fromUrl=params.get("platform"),kindFromUrl=params.get("kind")||"";
+  if(fromUrl&&allowedServiceFilter(fromUrl,kindFromUrl)){
+   setPlatform(fromUrl);setKind(kindFromUrl);
+  }
+ },[]);
  const filteredPlatformOptions=[
   ...topFilters.filter(name=>platforms.some(p=>p.name===name)),
   ...platforms.filter(p=>!topFilters.includes(p.name)).map(p=>p.name)
@@ -84,10 +103,22 @@ export default function LitixDirectory({standalone=false}){
    <div><strong>{platforms.length||"—"}</strong><span>Platforms</span></div>
    <div><strong>{readyCount==null?"—":readyCount.toLocaleString()}</strong><span>Instant PayKings services</span></div>
   </div>
-  <div className="litix-directory-highlight" role="group" aria-label="Popular custom orders">
-   {focusFilters.map(f=><button type="button" key={f.label}
-    className={"litix-directory-fast"+(selectedFocus?.label===f.label?" is-active":"")}
-    aria-pressed={selectedFocus?.label===f.label} onClick={()=>selectFocus(f)}>{f.label}</button>)}
+  <div className="litix-directory-highlight" role="navigation" aria-label="Browse Litix by social platform and service type">
+   <button type="button" className={"litix-directory-fast litix-directory-all"+(!platform&&!kind?" is-active":"")}
+    aria-pressed={!platform&&!kind} onClick={()=>selectFocus("All platforms","")}>All Litix Services</button>
+   {SERVICE_NAV_GROUPS.map(group=><div className="litix-directory-filter-group" role="group"
+    key={group.platform} aria-label={group.label+" categories"}>
+    <strong className="litix-directory-group-heading">{group.label}</strong>
+    <div className="litix-directory-filter-buttons">
+     <button type="button" className={"litix-directory-fast"+(platform===group.platform&&!kind?" is-active":"")}
+      aria-pressed={platform===group.platform&&!kind}
+      onClick={()=>selectFocus(group.platform,"")}>{group.label} services</button>
+     {group.kinds.map(item=><button type="button" key={item.kind}
+      className={"litix-directory-fast"+(platform===group.platform&&kind===item.kind?" is-active":"")}
+      aria-pressed={platform===group.platform&&kind===item.kind}
+      onClick={()=>selectFocus(group.platform,item.kind)}>{group.label} {item.label}</button>)}
+    </div>
+   </div>)}
   </div>
   <div className="litix-directory-layout">
    <nav aria-label="Litix platform categories" className="litix-directory-rail">
@@ -108,7 +139,7 @@ export default function LitixDirectory({standalone=false}){
      <label>Service type
       <select value={kind} onChange={e=>{setKind(e.target.value);setPage(1)}}>
        <option value="">All types</option>
-       {["followers","likes","views","comments","subscribers","shares","members","plays","traffic","other"].map(x=><option key={x} value={x}>{x[0].toUpperCase()+x.slice(1)}</option>)}
+       {["followers","likes","views","subscribers","retweets","comments","shares","members","plays","traffic","other"].map(x=><option key={x} value={x}>{x[0].toUpperCase()+x.slice(1)}</option>)}
       </select>
      </label>
      <label>Category
@@ -119,7 +150,7 @@ export default function LitixDirectory({standalone=false}){
      </label>
     </div>
     <div className="litix-directory-ready-filter">
-     <button type="button" onClick={()=>{setSearch("");setPlatform("");setKind("");setCategory("");setPage(1);setRetry(x=>x+1)}}>Reset filters</button>
+     <button type="button" onClick={()=>{setSearch("");setPlatform("");setKind("");setCategory("");setPage(1);syncDirectoryFilterUrl("","");setRetry(x=>x+1)}}>Reset filters</button>
     </div>
     <div className="litix-directory-result-header" aria-live="polite">
      <strong>{status==="loading"?"Loading your services…":status==="error"?"Catalog connection needs attention":count.toLocaleString()+" matching Litix services"}</strong>
@@ -130,17 +161,17 @@ export default function LitixDirectory({standalone=false}){
     <div className="litix-directory-cards">
      {entries.filter(s=>s.purchasable===true).map(s=>{
       const approved=s.purchasable===true;
-      const wholesaleEstimate=currency(s.per1000);
+      const displayPrice=currency(s.per1000);
       return <article className="litix-directory-service" key={s.id}>
        <div className="litix-directory-service-top"><span className="litix-directory-network">{s.platform}</span><span className={approved?"litix-directory-state is-ready":"litix-directory-state"}>Instant checkout</span></div>
        <h3>{litixCustomerServiceName(s.name)}</h3>
        <p className="litix-directory-service-category">{litixCustomerServiceName(s.category)}</p>
-       <div className="litix-directory-service-price">{wholesaleEstimate||"Ask for price"} <small>/ 1,000 {approved?"":"· indicative"}</small></div>
+       <div className="litix-directory-service-price">{displayPrice||"Ask for price"} <small>/ 1,000 {approved?"":"· indicative"}</small></div>
        <div className="litix-directory-service-range">
         {Number.isInteger(s.min)&&Number.isInteger(s.max)?s.min.toLocaleString()+"–"+s.max.toLocaleString()+" units":"Quantity confirmed on request"}
-        <span>Service {s.id.replace(/^boostero_/,"")}</span>
+        <span>Litix verified service</span>
        </div>
-       <a className="litix-directory-buy" href={"/?service="+encodeURIComponent(s.id)+"#checkout"}>Review & pay with PayKings</a>
+       <a className="litix-directory-buy" href={"/?service="+encodeURIComponent(s.id)+"#checkout"}>{["litix_4751","litix_5251"].includes(String(s.id))?"Choose Your Posts & Pay":"Review & pay with PayKings"}</a>
       </article>
      })}
     </div>
@@ -150,7 +181,7 @@ export default function LitixDirectory({standalone=false}){
      <button type="button" disabled={page*24>=count} onClick={()=>{setPage(n=>n+1);filterRef.current?.scrollIntoView({behavior:"smooth"})}}>Next page</button>
     </div>}
     <div className="litix-directory-footnote">
-     <strong>Litix orders made simple.</strong> All displayed services are ready for PayKings checkout. Prices use the current wholesale rate plus a 60% markup.
+     <strong>Litix orders made simple.</strong> All displayed services are available through Litix secure checkout. Review the total before paying.
      <div><a href={"https://wa.me/"+contactNumber} target="_blank" rel="noopener noreferrer">WhatsApp</a><a href="https://www.instagram.com/litixsocial/" target="_blank" rel="noopener noreferrer">Instagram DM @Litixsocial</a><a href="mailto:Litixsocial@gmail.com">Email Litix</a></div>
     </div>
    </div>

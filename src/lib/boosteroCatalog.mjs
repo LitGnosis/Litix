@@ -1,5 +1,7 @@
 import {boosteroProduction} from "./boosteroReadOnly.mjs";
 import {boosteroProductionReady} from "./boosteroFulfillment.mjs";
+import {publicServiceCardName} from "./serviceCardDisplay.mjs";
+import {matchesServiceQuickKind} from "./catalogSort.mjs";
 import {litixRetailPer1000Cents,litixOrderCents,litixPurchasableDefault} from "./litixRetail60.mjs";
 let cache=null,expires=0,flight=null;
 export {litixPlatform,litixKind} from "./litixServiceClassify.mjs";
@@ -12,7 +14,7 @@ export async function allBoosteroCards(){
   for(const item of items){
    const supplierId=String(item?.service??"");
    if(!/^\d{1,12}$/.test(supplierId)||unique.has(supplierId))continue;
-   const retailCents=litixRetailPer1000Cents(item.rate);
+   const retailCents=litixRetailPer1000Cents(item.rate,item);
    const minimum=litixPurchasableDefault(item);
    if(!minimum||!retailCents)continue;
    const platform=litixPlatform(item.name,item.category),kind=litixKind(item.name,item.category);
@@ -35,9 +37,9 @@ export async function allBoosteroCards(){
 }
 export const enabledBoosteroCards=allBoosteroCards;
 export function filterBoosteroCards(items,params){
- const q=String(params.get("q")||"").toLowerCase(),kind=String(params.get("kind")||"").toLowerCase(),
+ const q=String(params.get("q")||"").toLowerCase().replace(/^litix_(\d+)$/,"boostero_$1"),kind=String(params.get("kind")||"").toLowerCase(),
   cat=String(params.get("category")||""),platform=String(params.get("platform")||"");
  return items.filter(s=>(!q||[s.id,s.name,s.category,s.platform].some(x=>String(x).toLowerCase().includes(q)))&&
-  (!cat||cat===s.category)&&(!platform||platform==="All platforms"||platform===s.platform)&&
-  (!kind||kind===s.kind));
+  (!cat||cat===publicServiceCardName({name:s.category}))&&(!platform||platform==="All platforms"||platform===s.platform)&&
+  (!kind||(kind===s.kind&&matchesServiceQuickKind(s,kind))));
 }

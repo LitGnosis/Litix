@@ -21,18 +21,18 @@ const current=[
 ];
 test("only approved purchasable Boostero cards, no $5 unavailable legacy cards",()=>{
  const v=buildActiveStorefrontCatalog(current,new URLSearchParams());
- assert.deepEqual(v.items.map(x=>x.id),["boostero_5461","boostero_4751","boostero_5101","boostero_5251"]);
+ assert.deepEqual(v.items.map(x=>x.id),["litix_5461","litix_4751","litix_5101","litix_5251"]);
  assert.equal(v.total,4);assert.equal(v.allCount,4);
- assert.equal(v.catalogStatus,"live");assert.equal(v.boosteroOnly,true);
- assert.ok(v.items.every(x=>x.purchasable===true&&x.id.startsWith("boostero_")));
+ assert.equal(v.catalogStatus,"live");assert.equal(Object.hasOwn(v,"boosteroOnly"),false);
+ assert.ok(v.items.every(x=>x.purchasable===true&&x.id.startsWith("litix_")));
  assert.equal(v.items.some(x=>/Saves|Shares|Impressions/.test(x.name)),false);
 });
 test("filters, recommendations and pagination can never fall back to legacy supplier",()=>{
  const filters=[
- ["platform=TikTok&kind=likes",["boostero_5251"]],
- ["category=Instagram%20Followers",["boostero_5461"]],
+ ["platform=TikTok&kind=likes",["litix_5251"]],
+ ["category=Instagram%20Followers",["litix_5461"]],
  ["q=impressions",[]],["page=999",[]],
- ["goal=Grow+audience",["boostero_5461","boostero_4751","boostero_5101","boostero_5251"]]
+ ["goal=Grow+audience",["litix_5461","litix_4751","litix_5101","litix_5251"]]
  ];
  for(const [query,ids] of filters){
   const v=buildActiveStorefrontCatalog(current,new URLSearchParams(query));
@@ -60,12 +60,12 @@ test("legacy checkout and supplier calls are rejected before payment or supplier
  assert.match(legacy,/return send\(\{error:"Retired supplier checkout is disabled\./);
  assert.doesNotMatch(legacy,/https:\/\/smmglob\.com\/api\/v2/);
  assert.doesNotMatch(legacy,/await smm\("status"/);
- assert.match(checkout,/if\(!\/\^boostero_\[0-9\]/);
+ assert.match(checkout,/litix\|boostero/);
  assert.doesNotMatch(checkout,/return checkout\(/);
 });
 test("frontend removes retired supplier favorites and never advertises old full catalog",()=>{
  const page=source("app/page.jsx");
- assert.match(page,/VERIFIED AVAILABLE SERVICES/);
- assert.match(page,/const isCurrentCard=s=>String\(s\?\.id\|\|""\)\.startsWith\("boostero_"\)/);
+ assert.match(page,/Verified Litix Services/);
+ assert.match(page,/const isCurrentCard=s=>String\(s\?\.id\|\|""\)\.startsWith\("litix_"\)/);
  assert.doesNotMatch(page,/FULL SUPPLIER CATALOG/);
 });
