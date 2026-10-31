@@ -99,17 +99,27 @@ export async function handleBoosteroOrder(request,{adminOnly=true}={}){
  if(paymentMode==="card"&&!process.env.NMI_SECURITY_KEY)return send({error:"Production gateway unavailable"},503);
  if(paymentMode==="admin"&&String(data?.approvedCostCents)!==String(quote.wholesaleCents))
   return send({error:"Admin must explicitly approve live supplier cost"},409);
- // Some live Default TikTok Likes options are not yet in the legacy FK catalog.
- // A fresh server-only Boostero quote can register a compatible ID before any charge.
- // Never override a disabled record or relax the existing approval constraints.
+ // Existing approved Boostero Likes services must be reused rather than
+ // re-inserted. The legacy table still enforces a $6/1K stored rate while the
+ // live 60%-markup retail quote can be lower. Duplicate INSERT would fail
+ // CHECK validation before PayKings and prevent any real multi-post purchase.
  if(paymentMode==="card"&&["instagram","tiktok"].includes(String(quote.platform).toLowerCase())&&quote.kind==="likes"){
-  // Price limits come from the live 60% retail quote and $1 per-post minimum.
-  // The additive multi-post migration must relax any old $6/1k DB constraint.
+  const platform=String(quote.platform).toLowerCase();
   try{
-   const registered=await sql.query(
-    "with added as (insert into public.litix_boostero_services(supplier_service_id,platform,service_kind,retail_per_1000_cents,wholesale_ceiling_per_1000,enabled,approved_by,approved_at) values($1,$4,'likes',$2,$3,true,'verified_live_checkout',now()) on conflict(supplier_service_id) do nothing returning supplier_service_id) select supplier_service_id from added union all select supplier_service_id from public.litix_boostero_services where supplier_service_id=$1 and enabled=true",
-    [id,quote.retailPer1000Cents,Number(supplierService?.rate),String(quote.platform).toLowerCase()]);
-   if(!registered.length)return send({error:"This Likes option is not enabled for checkout; no charge attempted"},409);
+   const approved=await sql.query(
+    "select supplier_service_id from public.litix_boostero_services where supplier_service_id=$1 and platform=$2 and service_kind='likes' and enabled=true limit 1",
+    [id,platform]);
+   if(approved.length!==1){
+    // Until the separately reviewed production schema migration, only
+    // previously owner-approved IDs can support a paid MULTI-post order.
+    if(multiple)return send({error:"Multi-post checkout is available only for approved Litix Likes services; no charge attempted"},409);
+    // Preserve existing single-post checkout registration for eligible rates;
+    // never reactivate a disabled service or override old approvals.
+    const registered=await sql.query(
+     "with added as (insert into public.litix_boostero_services(supplier_service_id,platform,service_kind,retail_per_1000_cents,wholesale_ceiling_per_1000,enabled,approved_by,approved_at) values($1,$4,'likes',$2,$3,true,'verified_live_checkout',now()) on conflict(supplier_service_id) do nothing returning supplier_service_id) select supplier_service_id from added union all select supplier_service_id from public.litix_boostero_services where supplier_service_id=$1 and enabled=true",
+     [id,quote.retailPer1000Cents,Number(supplierService?.rate),platform]);
+    if(!registered.length)return send({error:"This Likes option is not enabled for checkout; no charge attempted"},409);
+   }
   }catch{
    return send({error:"Likes checkout registration unavailable; no payment attempted"},503);
   }
