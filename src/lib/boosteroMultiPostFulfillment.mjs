@@ -42,7 +42,9 @@ export async function dispatchBoosteroPost(orderId,ordinal,{sql=boosteroSQL(),op
   // before each individual supplier purchase.
   const {quote:verified,service}=await quote(String(item.supplier_service_id),Number(item.quantity),sql);
   const live=boosteroQuote({service,quantity:Number(item.quantity)});
-  if(Number(item.retail_cents)<live.amountCents||verified.serviceId!==String(item.supplier_service_id))
+  // A paid child keeps its charged historical price when catalog floors rise.
+  // No supplier add occurs unless its charged amount still covers 160% of live wholesale.
+  if(Number(item.retail_cents)<Math.ceil(live.costUSD*160-1e-8)||verified.serviceId!==String(item.supplier_service_id))
    throw Error("supplier_retail_not_covered");
   const balance=await operation("balance");
   if(!Number.isFinite(Number(balance.balance))||Number(balance.balance)<live.costUSD)
