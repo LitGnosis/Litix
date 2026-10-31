@@ -6,7 +6,7 @@ import {boosteroQuote} from "./boosteroFulfillment.mjs";
 // Only invoked after a parent order was inserted and before the one PayKings charge.
 // One SQL command stages all selected canonical URLs. An absent schema fails closed.
 export async function stageBoosteroPostChildren(orderId,serviceId,posts,{sql=boosteroSQL()}={}){
- if(!/^ltx2_[a-f0-9-]{36}$/.test(String(orderId))||!/^\\d{1,12}$/.test(String(serviceId))||
+ if(!/^ltx2_[a-f0-9-]{36}$/.test(String(orderId))||!/^\d{1,12}$/.test(String(serviceId))||
     !Array.isArray(posts)||posts.length<2||posts.length>5)throw Error("invalid_post_ledger_input");
  const payload=posts.map((p,i)=>({ordinal:i+1,destination:p.link,quantity:p.quantity,retail_cents:p.amountCents}));
  const rows=await sql.query(
