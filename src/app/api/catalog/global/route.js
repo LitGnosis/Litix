@@ -2,6 +2,7 @@ import {boosteroProduction} from "../../../../lib/boosteroReadOnly.mjs";
 import {enabledBoosteroCards} from "../../../../lib/boosteroCatalog.mjs";
 import {sortServicesPer1000} from "../../../../lib/catalogSort.mjs";
 import {litixRetailPer1000Cents} from "../../../../lib/litixRetail60.mjs";
+import {litixPublicCard} from "../../../../lib/publicLitixCatalog.mjs";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 export const maxDuration=60;
@@ -92,7 +93,7 @@ async function directory(){
 export async function GET(request){
  try{
   const p=new URL(request.url).searchParams;
-  const q=clean(p.get("q"),120).toLowerCase(),platform=clean(p.get("platform"),80),
+  const q=clean(p.get("q"),120).toLowerCase().replace(/^litix_(\d+)$/,"boostero_$1"),platform=clean(p.get("platform"),80),
    category=clean(p.get("category"),120),kind=clean(p.get("kind"),45),
    onlyReady=p.get("ready")==="true";
   const numericPage=Number(p.get("page"));
@@ -103,11 +104,11 @@ export async function GET(request){
    (!kind||s.kind===kind)&&(!onlyReady||s.purchasable===true));
   const pageSize=24;
   return Response.json({
-   brand:"Litix",source:"live_supplier_api",items:filtered.slice((page-1)*pageSize,page*pageSize),
+   brand:"Litix",items:filtered.slice((page-1)*pageSize,page*pageSize).map(litixPublicCard).filter(Boolean),
    total:filtered.length,allCount:data.liveCount,page,pageSize,
    platforms:data.platformOptions,categories:data.categoryOptions,
    verifiedPurchasableCount:data.approvedCount,checkoutPath:"/#checkout",currency:"USD",
-   notice:"All displayed rates use supplier cost + 60%. Default services use live PayKings checkout; other API types require a manual quote.",markupPercent:60
+   notice:"Browse Litix services and review the final price before secure checkout."
   },{headers:{"cache-control":"no-store","x-content-type-options":"nosniff"}});
  }catch(err){
   console.error("Litix supplier directory error",String(err?.message||"unknown").slice(0,85));
