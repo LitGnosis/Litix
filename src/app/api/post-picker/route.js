@@ -3,7 +3,7 @@ import {normalizeProfile,normalizePosts} from "../../../lib/postPicker.mjs";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 export const maxDuration=60;
-const actors={instagram:"coregent~instagram-posts-scraper",tiktok:"vtrdev~tiktok-scraper"};
+const actors={instagram:"coregent~instagram-posts-scraper",tiktok:"transparent_meteorite~tiktok-public-profile-scraper"};
 // Secondary public TikTok profile scraper has an independent public post source.
 // Both are media-discovery tools only; neither processes checkout or fulfillment.
 const tiktokFallbackActor="tokfluence~tiktok-profile-scraper";
@@ -44,10 +44,10 @@ export async function GET(request){
   // Server-only validated inputs prevent cross-site requests and API-key leaks.
   const input=platform==="instagram"
     ?{profiles:[handle],resultsLimit:12,includeOwnerDetails:false,includeMediaUrls:true}
-    :{startUrls:["https://www.tiktok.com/@"+handle],limit:12};
+    :{profiles:[handle],resultsType:"posts",resultsPerPage:12,includeVideoDetails:false,maxItems:12};
   let posts=[],primaryFailed=false,fallbackFailed=false;
   try{
-    const primary=await actorRows(actors[platform],input,platform==="tiktok"?18000:44000);
+    const primary=await actorRows(actors[platform],input,platform==="tiktok"?25000:44000);
     posts=normalizePosts(platform,handle,primary).slice(0,12);
   }catch(error){
     primaryFailed=true;
