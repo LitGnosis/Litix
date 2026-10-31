@@ -4,7 +4,7 @@ import {createHash,randomUUID,timingSafeEqual} from "node:crypto";
 import {boosteroProduction,boosteroCompatibleServices} from "./boosteroReadOnly.mjs";
 import {litixRetailPer1000Cents,litixOrderCents,litixPurchasableDefault,litixSupplierSafeLink} from "./litixRetail60.mjs";
 import {litixPlatform,litixKind} from "./litixServiceClassify.mjs";
-import {litixCustomerServiceName} from "./serviceCardDisplay.mjs";
+import {publicServiceCardName} from "./serviceCardDisplay.mjs";
 import {queueCustomerDeliveryChange,sendCustomerDeliveryUpdates} from "./litixCustomerUpdates.mjs";
 
 export const boosteroDatabaseURL=()=>process.env.LITIX_BOOSTERO_DATABASE_URL||process.env.LITIX_V2_DATABASE_URL||
@@ -104,7 +104,7 @@ export async function boosteroNotice(orderId,secret){
  const automatedMulti=allocations.length>1&&o.metadata?.fulfillmentMode==="boostero_child_order_dispatch";
  const allocationLines=allocations.map((p,i)=>
   (postPlatform==="Instagram"?"Post ":"Video ")+(i+1)+": "+String(p.link||"")+" — "+Number(p.quantity||0).toLocaleString()+" likes");
- const publicService=litixCustomerServiceName(o.service_name);
+ const publicService=publicServiceCardName({name:o.service_name});
  const publicLink=secret?"https://www.litix.net/track?track="+encodeURIComponent(orderId)+"&token="+encodeURIComponent(secret):null;
  // Customer communication stays Litix-branded. The private owner notification
  // retains supplier references needed for fulfillment and support.
