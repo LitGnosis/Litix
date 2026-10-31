@@ -2,6 +2,7 @@ name: Litix R2 — Daily encrypted dual-Neon backup and isolated restore
 run-name: Litix R2 backup / ${{ github.run_id }}
 on:
   # One harmless R2 probe on an explicitly reviewed kickoff commit; scheduled dual backups remain separate.
+  # The scoped probe now records a safe XML error category if R2 rejects both PUT transports.
   # Restrict the push event to a change to this workflow file only.
   push:
     branches: [main]

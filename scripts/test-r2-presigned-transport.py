@@ -20,7 +20,10 @@ SIGNED = "https://" + HOST + "/" + BUCKET + "/" + KEY + "?X-Amz-Algorithm=AWS4-H
 
 class FakeResponse:
     def __init__(self, status): self.status = status
-    def read(self, _): return b""
+    def read(self, _):
+        if self.status == 400:
+            return b"<Error><Code>InvalidArgument</Code><Message>Unsupported header x-amz-sdk-checksum-algorithm</Message></Error>"
+        return b""
 
 class FakeConnection:
     status = 200
@@ -67,6 +70,11 @@ class PresignedTests(unittest.TestCase):
     def test_http_error_rejected_without_logging_signed_url(self):
         FakeConnection.status=403
         with self.assertRaisesRegex(RuntimeError,"PRESIGNED_HTTP_403"):
+            mod.presigned_put(FakeClient(),BUCKET,KEY,self.path)
+
+    def test_safe_xml_classification_never_uses_response_body_as_log(self):
+        FakeConnection.status=400
+        with self.assertRaisesRegex(RuntimeError,"PRESIGNED_HTTP_400_InvalidArgument_UNSUPPORTED_CHECKSUM"):
             mod.presigned_put(FakeClient(),BUCKET,KEY,self.path)
 
 if __name__ == "__main__": unittest.main()
