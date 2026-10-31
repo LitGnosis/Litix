@@ -28,7 +28,8 @@ test("Gallery stores selected public canonical URLs and validates links without 
 });
 test("One PayKings payment per parent order; supplier purchases are manually reviewed",()=>{
  assert.equal((handler.match(/https:\/\/paykings\.transactiongateway\.com\/api\/transact\.php/g)||[]).length,1);
- assert.match(handler,/const attempt=multiple\?\{submitted:false,state:"MANUAL_REVIEW"/);
+ assert.match(handler,/const attempt=autoMulti/);
+ assert.match(handler,/:multiple\?\{submitted:false,state:"MANUAL_REVIEW"/);
  assert.match(handler,/payment_state='paid'/);
  assert.match(handler,/Checkout already submitted; no repeat charge/);
  assert.match(handler,/postPlatform:String\(quote\.platform\)\.toLowerCase\(\)/);
