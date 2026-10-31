@@ -1,7 +1,7 @@
 import {randomUUID} from "node:crypto";
 import {db} from "./db.js";
 import {balanceCents,notifyAlert} from "./provider.js";
-import {dispatchQueue,syncOpen,quarantineLostReceipts} from "./engine.js";
+import {dispatchQueue,syncOpen,quarantineLostReceipts,reconcileMissingCredits} from "./engine.js";
 
 export async function runWarriorCycle() {
   const owner=randomUUID();
@@ -30,15 +30,16 @@ export async function runWarriorCycle() {
         return {supplier:s.id,ok:false};
       }
     }));
-    const [quarantined,synced,dispatched]=await Promise.allSettled([
-      quarantineLostReceipts(),syncOpen(),dispatchQueue()
+    const [quarantined,synced,dispatched,credits]=await Promise.allSettled([
+      quarantineLostReceipts(),syncOpen(12),dispatchQueue(4),reconcileMissingCredits()
     ]);
     return {acquired:true,
       balances:balances.map(x=>x.status==="fulfilled"?x.value:{ok:false}),
       quarantined:quarantined.status==="fulfilled"?quarantined.value:null,
       synced:synced.status==="fulfilled"?synced.value:null,
       dispatched:dispatched.status==="fulfilled"?dispatched.value:null,
-      failedTasks:[quarantined,synced,dispatched].filter(x=>x.status==="rejected").length};
+      credits:credits.status==="fulfilled"?credits.value:null,
+      failedTasks:[quarantined,synced,dispatched,credits].filter(x=>x.status==="rejected").length};
   } finally {
     await db.cronLease.deleteMany({where:{key:"warrior",holder:owner}}).catch(()=>{});
   }

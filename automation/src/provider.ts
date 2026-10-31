@@ -78,7 +78,7 @@ export async function notifyAlert(code: string, data: Record<string,string|numbe
   await fetch(url, {
     method: "POST",
     headers: {"content-type":"application/json"},
-    body: JSON.stringify({text: "Litix Warrior " + code + ": " + JSON.stringify(data)}),
+    body: JSON.stringify({text: "Litix Warrior " + code + ": " + JSON.stringify(data), content: "Litix Warrior " + code + ": " + JSON.stringify(data)}),
     signal: AbortSignal.timeout(5000),
   });
 }

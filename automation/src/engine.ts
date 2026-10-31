@@ -138,8 +138,13 @@ export async function poll(id:string) {
   if(result.remains===null&&label!=="COMPLETED"){
     await review(attempt.subOrder,"UNRELIABLE_REMAINS");return;
   }
-  const rem=label==="COMPLETED"?0:bound(result.remains!,attempt.requested);
-  const delivered=attempt.requested-rem;
+  const reported=label==="COMPLETED"?0:bound(result.remains!,attempt.requested);
+  if(reported>attempt.remaining&&["PARTIAL","CANCELED"].includes(label)){
+    await review(attempt.subOrder,"SUPPLIER_PROGRESS_REGRESSION");return;
+  }
+  // Preserve the highest independently observed delivery count.
+  const delivered=Math.max(attempt.delivered,attempt.requested-reported);
+  const rem=attempt.requested-delivered;
   if(["COMPLETED","PARTIAL","CANCELED"].includes(label)){
     await terminal(attempt,attempt.subOrder,label,delivered,rem);return;
   }
@@ -196,4 +201,32 @@ export async function quarantineLostReceipts() {
     await aggregate(s.masterId);
   }
   return rows.length;
+}
+
+export async function reconcileMissingCredits(limit=40) {
+  const rows=await db.subOrder.findMany({
+    where:{state:"NEEDS_REVIEW",remaining:{gt:0},
+      attempts:{some:{state:{in:["PARTIAL","CANCELED"]}}}},
+    take:Math.max(1,Math.min(40,limit))
+  });
+  let credited=0,requeued=0;
+  for(const sub of rows){
+    const attempts=await db.dispatchAttempt.findMany({
+      where:{subOrderId:sub.id},orderBy:{createdAt:"desc"}
+    });
+    if(!attempts.length||attempts.some(a=>!done.includes(a.state)))continue;
+    const latest=attempts[0];
+    if(latest.state==="PARTIAL" ||
+       (latest.state==="CANCELED"&&!(await routeFor(sub)))){
+      await credit(sub);
+      credited++;
+    }else if(latest.state==="CANCELED"&&await routeFor(sub)){
+      const row=await db.subOrder.updateMany({
+        where:{id:sub.id,state:"NEEDS_REVIEW"},
+        data:{state:"QUEUED",supplierId:null,apiOrderId:null,cancelRequestedAt:null}
+      });
+      requeued+=row.count;
+    }
+  }
+  return {credited,requeued};
 }
