@@ -1,18 +1,12 @@
 "use client";
 import {litixCustomerServiceName} from "../lib/serviceCardDisplay.mjs";
+import {SERVICE_NAV_GROUPS,allowedServiceFilter} from "../lib/serviceNavigation.mjs";
 import {useEffect,useRef,useState} from "react";
 
 const currency=n=>typeof n==="number"&&Number.isFinite(n)
   ?new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(n):null;
 const contactNumber=(process.env.NEXT_PUBLIC_WHATSAPP_NUMBER||"").replace(/\D/g,"")||"19452106315";
 const topFilters=["Instagram","TikTok","YouTube","Facebook","Twitter (X)","Spotify","Telegram","LinkedIn"];
-const focusFilters=[
- {label:"Instagram Followers",platform:"Instagram",kind:"followers"},
- {label:"Instagram Likes",platform:"Instagram",kind:"likes"},
- {label:"TikTok Followers",platform:"TikTok",kind:"followers"},
- {label:"TikTok Likes",platform:"TikTok",kind:"likes"}
-];
-
 export default function LitixDirectory({standalone=false}){
  const [search,setSearch]=useState("");
  useEffect(()=>{const q=new URLSearchParams(location.search).get("q")||new URLSearchParams(location.search).get("service")||"";
@@ -62,9 +56,33 @@ export default function LitixDirectory({standalone=false}){
    .finally(()=>{});
   return()=>abort.abort();
  },[debounced,platform,kind,category,page,retry]);
- const changePlatform=name=>{setPlatform(name);setKind("");setCategory("");setPage(1)};
- const selectFocus=filter=>{setPlatform(filter.platform);setKind(filter.kind);setCategory("");setPage(1)};
- const selectedFocus=focusFilters.find(f=>f.platform===platform&&f.kind===kind);
+ const syncDirectoryFilterUrl=(name,nextKind)=>{
+  const url=new URL(window.location.href);
+  url.searchParams.delete("service");url.searchParams.delete("q");
+  if(name)url.searchParams.set("platform",name);
+  else url.searchParams.delete("platform");
+  if(nextKind)url.searchParams.set("kind",nextKind);
+  else url.searchParams.delete("kind");
+  window.history.replaceState(window.history.state,"",url.pathname+url.search+"#all-litix-services");
+ };
+ const changePlatform=name=>{
+  setPlatform(name);setKind("");setCategory("");setSearch("");setPage(1);
+  syncDirectoryFilterUrl(name,"");
+  requestAnimationFrame(()=>filterRef.current?.scrollIntoView({behavior:"smooth",block:"start"}));
+ };
+ const selectFocus=(nextPlatform,nextKind)=>{
+  if(!allowedServiceFilter(nextPlatform,nextKind))return;
+  setPlatform(nextPlatform);setKind(nextKind);setCategory("");setSearch("");setPage(1);
+  syncDirectoryFilterUrl(nextPlatform,nextKind);
+  requestAnimationFrame(()=>filterRef.current?.scrollIntoView({behavior:"smooth",block:"start"}));
+ };
+ useEffect(()=>{
+  const params=new URLSearchParams(window.location.search);
+  const fromUrl=params.get("platform"),kindFromUrl=params.get("kind")||"";
+  if(fromUrl&&allowedServiceFilter(fromUrl,kindFromUrl)){
+   setPlatform(fromUrl);setKind(kindFromUrl);
+  }
+ },[]);
  const filteredPlatformOptions=[
   ...topFilters.filter(name=>platforms.some(p=>p.name===name)),
   ...platforms.filter(p=>!topFilters.includes(p.name)).map(p=>p.name)
@@ -84,10 +102,22 @@ export default function LitixDirectory({standalone=false}){
    <div><strong>{platforms.length||"—"}</strong><span>Platforms</span></div>
    <div><strong>{readyCount==null?"—":readyCount.toLocaleString()}</strong><span>Instant PayKings services</span></div>
   </div>
-  <div className="litix-directory-highlight" role="group" aria-label="Popular custom orders">
-   {focusFilters.map(f=><button type="button" key={f.label}
-    className={"litix-directory-fast"+(selectedFocus?.label===f.label?" is-active":"")}
-    aria-pressed={selectedFocus?.label===f.label} onClick={()=>selectFocus(f)}>{f.label}</button>)}
+  <div className="litix-directory-highlight" role="navigation" aria-label="Browse Litix by social platform and service type">
+   <button type="button" className={"litix-directory-fast litix-directory-all"+(!platform&&!kind?" is-active":"")}
+    aria-pressed={!platform&&!kind} onClick={()=>selectFocus("All platforms","")}>All Litix Services</button>
+   {SERVICE_NAV_GROUPS.map(group=><div className="litix-directory-filter-group" role="group"
+    key={group.platform} aria-label={group.label+" categories"}>
+    <strong className="litix-directory-group-heading">{group.label}</strong>
+    <div className="litix-directory-filter-buttons">
+     <button type="button" className={"litix-directory-fast"+(platform===group.platform&&!kind?" is-active":"")}
+      aria-pressed={platform===group.platform&&!kind}
+      onClick={()=>selectFocus(group.platform,"")}>{group.label} services</button>
+     {group.kinds.map(item=><button type="button" key={item.kind}
+      className={"litix-directory-fast"+(platform===group.platform&&kind===item.kind?" is-active":"")}
+      aria-pressed={platform===group.platform&&kind===item.kind}
+      onClick={()=>selectFocus(group.platform,item.kind)}>{group.label} {item.label}</button>)}
+    </div>
+   </div>)}
   </div>
   <div className="litix-directory-layout">
    <nav aria-label="Litix platform categories" className="litix-directory-rail">
@@ -119,7 +149,7 @@ export default function LitixDirectory({standalone=false}){
      </label>
     </div>
     <div className="litix-directory-ready-filter">
-     <button type="button" onClick={()=>{setSearch("");setPlatform("");setKind("");setCategory("");setPage(1);setRetry(x=>x+1)}}>Reset filters</button>
+     <button type="button" onClick={()=>{setSearch("");setPlatform("");setKind("");setCategory("");setPage(1);syncDirectoryFilterUrl("","");setRetry(x=>x+1)}}>Reset filters</button>
     </div>
     <div className="litix-directory-result-header" aria-live="polite">
      <strong>{status==="loading"?"Loading your services…":status==="error"?"Catalog connection needs attention":count.toLocaleString()+" matching Litix services"}</strong>
