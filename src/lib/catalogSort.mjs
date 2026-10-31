@@ -2,17 +2,17 @@
 export function matchesServiceQuickKind(service,kind){
  if(!kind)return true;
  const patterns=[
-  ["retweets",/\\b(?:retweets?|reposts?)\\b/i],
-  ["followers",/\\bfollowers?\\b/i],
-  ["likes",/\\blikes?\\b/i],
-  ["views",/\\bviews?\\b/i],
-  ["subscribers",/\\bsubscribers?\\b/i],
-  ["comments",/\\bcomments?\\b/i],
-  ["shares",/\\bshares?\\b/i],
-  ["saves",/\\bsaves?\\b/i],
-  ["listeners",/\\blisteners?\\b/i],
-  ["plays",/\\bplays?\\b/i],
-  ["members",/\\bmembers?\\b/i]
+  ["retweets",/\b(?:retweets?|reposts?)\b/i],
+  ["followers",/\bfollowers?\b/i],
+  ["likes",/\blikes?\b/i],
+  ["views",/\bviews?\b/i],
+  ["subscribers",/\bsubscribers?\b/i],
+  ["comments",/\bcomments?\b/i],
+  ["shares",/\bshares?\b/i],
+  ["saves",/\bsaves?\b/i],
+  ["listeners",/\blisteners?\b/i],
+  ["plays",/\bplays?\b/i],
+  ["members",/\bmembers?\b/i]
  ];
  if(!["retweets","followers","likes","views","subscribers"].includes(kind))return false;
  const title=String(service?.name||"");
