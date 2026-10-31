@@ -53,11 +53,23 @@ export function normalizePosts(platform,handle,rows){
   for(const row of rows){
     if(!row||typeof row!=="object")continue;
     if(row.status&&["ERROR","PRIVATE_PROFILE","NOT_FOUND","BLOCKED"].includes(String(row.status).toUpperCase()))continue;
-    const owner=platform==="instagram"?row.owner?.username:row.channel?.username;
-    if(owner&&String(owner).toLowerCase()!==handle)continue;
-    const url=canonicalPost(platform,platform==="instagram"?row.url:row.postPage);
+    // Both vetted TikTok actors have different output schemas. Verify the
+    // canonical post belongs to the requested handle, even if metadata is absent.
+    const rawUrl=platform==="instagram"?row.url:
+      (row.postPage||row.webVideoUrl||row.url);
+    const url=canonicalPost(platform,rawUrl);
     if(!url||seen.has(url))continue;
-    const thumbnail=validThumbnail(platform==="instagram"?(row.media?.thumbnailUrl||row.media?.displayUrl):(row.video?.thumbnail||row.video?.cover||row.images?.[0]));
+    const owner=platform==="instagram"?row.owner?.username:
+      (row.channel?.username||row.authorMeta?.name||row.author?.username);
+    if(owner&&String(owner).replace(/^@/,"").toLowerCase()!==handle)continue;
+    if(platform==="tiktok"){
+      const urlOwner=/^https:\/\/www\.tiktok\.com\/@([^/]+)\//.exec(url)?.[1];
+      if(!urlOwner||urlOwner.toLowerCase()!==handle)continue;
+      if(!/\/video\/[0-9]{10,25}$/.test(url))continue;
+    }
+    const thumbnail=validThumbnail(platform==="instagram"?(row.media?.thumbnailUrl||row.media?.displayUrl):
+      (row.video?.thumbnail||row.video?.cover||row.videoMeta?.coverUrl||
+       row.videoMeta?.originalCoverUrl||row.images?.[0]||row.cover));
     if(!thumbnail)continue;
     seen.add(url);
     out.push({id:url,url,thumbnail,kind:platform==="instagram"?String(row.mediaType||"post"):String(row.images?.length?"photo":"video"),caption:String(row.caption||row.title||"").slice(0,180)});
