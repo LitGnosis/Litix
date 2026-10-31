@@ -69,7 +69,17 @@ export default function Home(){
    (Number(p.quantity)-Number(selected?.supplierMin??selected?.min))%Number(selected?.unitStep||1)===0&&
    Math.ceil(Number(selected?.per1000||0)*Number(p.quantity)/10-1e-8)>=100
  )&&new Set(multiPosts.map(p=>p.verifiedUrl)).size===multiPosts.length;
- useEffect(()=>{setMultiPostEnabled(false);setMultiPosts([])},[selected?.id]);
+ // Approved Likes open Choose Your Posts by default, including service deep links.
+ // A buyer can still intentionally choose the one-post mode with its toggle.
+ useEffect(()=>{
+  const choose=["boostero_4751","boostero_5251"].includes(String(selected?.id||""))&&
+   selected?.kind==="likes"&&selected?.purchasable===true;
+  setMultiPostEnabled(choose);
+  setMultiPosts(choose?[
+   newTikTokPost({quantity:Number(selected.min)}),
+   newTikTokPost({quantity:Number(selected.min)})
+  ]:[]);
+ },[selected?.id]);
  const [tiktokLinkVerification,setTikTokLinkVerification]=useState({input:"",serviceId:"",status:"idle",url:"",error:""});
  useEffect(()=>{
   if(!tiktokLikes||!link.trim()){
@@ -127,10 +137,16 @@ export default function Home(){
    }).catch(()=>{});
   return()=>controller.abort();
  },[]);
- // The preview links to this exact service ID; never pre-select unapproved listings.
- useEffect(()=>{if(!services.length)return;const id=new URLSearchParams(location.search).get("service");
-  if(!id)return;const match=services.find(x=>x.id===id&&x.purchasable===true);
-  if(match){setSelected(match);setQty(match.min)}},[services]);
+ // Never re-select the URL's old TikTok service when a catalog refresh occurs.
+ // The initial deep-link fetch above handles the desired service once.
+ useEffect(()=>{
+  const requested=new URLSearchParams(location.search).get("service");
+  if(!requested||String(selected?.id)!==requested)return;
+  const frame=requestAnimationFrame(()=>{
+   document.getElementById("checkout")?.scrollIntoView({behavior:"auto",block:"start"});
+  });
+  return()=>cancelAnimationFrame(frame);
+ },[selected?.id]);
  useEffect(()=>{setKey(crypto.randomUUID());try{setFavorites(JSON.parse(localStorage.getItem("litix:favorites")||"[]"));setRecentServices(JSON.parse(localStorage.getItem("litix:recent-services")||"[]"));setSavedOrders(JSON.parse(localStorage.getItem("litix:saved-orders")||"[]"));setCampaigns(JSON.parse(localStorage.getItem("litix:campaigns")||"[]"))}catch{}setWorkspaceReady(true);fetch("/api/config",{cache:"no-store"}).then(r=>r.json()).then(v=>setConfig({...v,publicKey:v.publicKey||publicCollectKey,ready:!!(v.ready&& (v.publicKey||publicCollectKey))})).catch(()=>setConfig({ready:false,publicKey:publicCollectKey||""}))},[]);
  useEffect(()=>{const abort=new AbortController(),p=new URLSearchParams({category:cat,q:query,page:String(pg),platform,kind:quickKind});setCatalogState("loading");const deadline=setTimeout(()=>abort.abort("timeout"),42000);fetch("/api/catalog/v1?"+p,{signal:abort.signal}).then(async r=>{const v=await r.json();if(!r.ok)throw Error(v.error||"Supplier catalog temporarily unavailable");return v}).then(v=>{setServices(v.items||[]);setCategories(v.categories||[]);setCount(v.allCount||0);setTotal(v.total||0);setCatalogSource(v.catalogStatus==="live"?"live":"cached");setCatalogState("ready");if(v.error)setNotice(v.error)}).catch(e=>{if(!abort.signal.aborted||abort.signal.reason==="timeout"){setCatalogSource("unavailable");setCatalogState("error");setNotice("The supplier catalog is temporarily unavailable. Please retry in a moment; no order has been placed.")}}).finally(()=>clearTimeout(deadline));return()=>{clearTimeout(deadline);abort.abort()}},[cat,query,pg,platform,quickKind,catalogRetry]);
  useEffect(()=>{if(!workspaceReady)return;try{localStorage.setItem("litix:favorites",JSON.stringify(favorites));localStorage.setItem("litix:recent-services",JSON.stringify(recentServices.slice(0,8)));localStorage.setItem("litix:saved-orders",JSON.stringify(savedOrders.slice(0,12)));localStorage.setItem("litix:campaigns",JSON.stringify(campaigns.slice(0,20)))}catch{}},[workspaceReady,favorites,recentServices,savedOrders,campaigns]);
