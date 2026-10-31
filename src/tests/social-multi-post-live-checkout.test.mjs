@@ -74,4 +74,10 @@ test("TikTok Likes deep links open Choose Your Posts without checkout form redir
  assert.match(picker,/<div className="litix-picker-search">/);
  assert.match(picker,/<button type="button" onClick=\{lookup\}/);
  assert.doesNotMatch(picker,/<form\b/);
+ assert.match(page,/const verifiedMultiPosts=multiMode&&multiPosts\.length>=1&&multiPosts\.length<=5/);
+ assert.match(picker,/Choose 1–5 posts/);
+ assert.match(picker,/posts\.length>1&&<button type="button"/);
+ // A single selected gallery post uses the already verified single-order path;
+ // multiple selected posts retain the two-to-five parent-order fulfillment.
+ assert.match(handler,/const multiple=Array\.isArray\(data\?\.postAllocations\)&&data\.postAllocations\.length>1/);
 });
