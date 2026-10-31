@@ -5,7 +5,7 @@ import {filterBoosteroCards} from "./boosteroCatalog.mjs";
 import {litixPublicCard} from "./publicLitixCatalog.mjs";
 import {publicServiceCardName} from "./serviceCardDisplay.mjs";
 
-export function buildActiveStorefrontCatalog(rows,params){
+export function buildActiveStorefrontCatalog(rows,params,{sourceStatus="live"}={}){
  const unique=new Map();
  for(const x of Array.isArray(rows)?rows:[]){
   if(!/^boostero_\d+$/.test(String(x?.id||""))||x?.purchasable!==true||
@@ -24,8 +24,8 @@ export function buildActiveStorefrontCatalog(rows,params){
   goal==="Increase engagement"?filtered.filter(x=>x.kind==="likes").slice(0,3):[];
  return {
   items:filtered.slice((page-1)*size,page*size).map(litixPublicCard).filter(Boolean),total:filtered.length,allCount:all.length,page,
-  categories,recommendations:recommendations.map(litixPublicCard).filter(Boolean),catalogStatus:all.length?"live":"unavailable",
-  message:all.length?undefined:"Litix services are temporarily unavailable",
+  categories,recommendations:recommendations.map(litixPublicCard).filter(Boolean),catalogStatus:all.length?(sourceStatus==="cached"?"cached":"live"):"unavailable",
+  message:!all.length?"Litix services are temporarily unavailable":sourceStatus==="cached"?"Displaying recently verified services. Every purchase still receives a fresh price and availability check.":undefined,
   minimumOrderCents:100
  };
 }
