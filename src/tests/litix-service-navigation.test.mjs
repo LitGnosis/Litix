@@ -86,6 +86,8 @@ test("homepage and full directory buttons are interactive and linked to real fil
  assert.match(directory,/SERVICE_NAV_GROUPS\.map\(group=>/);
  assert.match(directory,/onClick=\{\(\)=>selectFocus\(group\.platform,item\.kind\)\}/);
  assert.match(directory,/syncDirectoryFilterUrl/);
+ assert.match(directory,/\["followers","likes","views","subscribers","retweets"/);
+ assert.match(home,/onChange=\{e=>applyServiceQuickFilter\(e\.target\.value\)\}/);
  assert.match(directory,/href=\{"\/\?service="\+encodeURIComponent\(s\.id\)\+"#checkout"\}/);
  assert.match(global,/matchesServiceQuickKind\(s,kind\)/);
  assert.match(global,/return "retweets"/);
