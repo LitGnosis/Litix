@@ -4,6 +4,7 @@
  * This module is NOT imported by the storefront, checkout, or supplier dispatch.
  */
 import {litixSupplierSafeLink} from "./litixRetail60.mjs";
+import {boosteroBatchIds} from "./boosteroStatusBatch.mjs";
 const actions=new Set(["balance","services"]);
 const host="boostero.com";
 function endpoint(){
@@ -98,6 +99,9 @@ export async function boosteroProduction(action,parameters={},options={}){
      quantity<1||quantity>1000000||litixSupplierSafeLink(link)!==link)
    throw Error("boostero_add_not_authorized");
   params={service:id,quantity:String(quantity),link};
+ }else if(action==="status"&&parameters.orders!==undefined){
+  // Read-only batch status for up to 100 existing supplier order IDs.
+  params={orders:boosteroBatchIds(parameters.orders).join(",")};
  }else if(action==="status"||action==="refill"){
   const order=String(parameters.order||"");
   if(!/^\d{1,24}$/.test(order))throw Error("boostero_supplier_id_invalid");
@@ -122,5 +126,8 @@ export async function boosteroProduction(action,parameters={},options={}){
   throw Error("boostero_balance_invalid_shape");
  if(action==="add"&&(!data||!/^\d{1,24}$/.test(String(data.order||""))))
   throw Error("boostero_add_unconfirmed_outcome");
+ if(action==="status"&&parameters.orders!==undefined&&
+   (!data||typeof data!=="object"||Array.isArray(data)))
+  throw Error("boostero_batch_invalid_response");
  return data;
 }

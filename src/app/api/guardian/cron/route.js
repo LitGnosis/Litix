@@ -17,7 +17,7 @@ export async function GET(req){
  // refill, cancel, checkout or supplier wallet debit. Existing supplier IDs
  // remain authoritative, preventing duplicate likes purchases.
  const enabled=process.env.LITIX_MULTIPOST_AUTO_FULFILL_ENABLED==="true"&&boosteroProductionReady();
- const poll=enabled?syncBoosteroMultiStatuses({limit:2}):
+ const poll=enabled?syncBoosteroMultiStatuses({limit:24}):
   Promise.resolve({checked:0,failed:0,skipped:"multi_post_disabled"});
  const [guardian,delivery]=await Promise.allSettled([runGuardianCycle(),poll]);
  const posts=delivery.status==="fulfilled"?delivery.value:{checked:0,failed:1};
