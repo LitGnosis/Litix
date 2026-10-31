@@ -13,7 +13,7 @@ export async function allBoosteroCards(){
   for(const item of items){
    const supplierId=String(item?.service??"");
    if(!/^\d{1,12}$/.test(supplierId)||unique.has(supplierId))continue;
-   const retailCents=litixRetailPer1000Cents(item.rate);
+   const retailCents=litixRetailPer1000Cents(item.rate,item);
    const minimum=litixPurchasableDefault(item);
    if(!minimum||!retailCents)continue;
    const platform=litixPlatform(item.name,item.category),kind=litixKind(item.name,item.category);
