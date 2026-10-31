@@ -3,6 +3,7 @@ import {enabledBoosteroCards} from "../../../../lib/boosteroCatalog.mjs";
 import {sortServicesPer1000} from "../../../../lib/catalogSort.mjs";
 import {litixRetailPer1000Cents} from "../../../../lib/litixRetail60.mjs";
 import {litixPublicCard} from "../../../../lib/publicLitixCatalog.mjs";
+import {publicServiceCardName} from "../../../../lib/serviceCardDisplay.mjs";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 export const maxDuration=60;
@@ -77,7 +78,7 @@ async function directory(){
   const counts={};const categories={};
   for(const s of items){
    counts[s.platform]=(counts[s.platform]||0)+1;
-   categories[s.category]=(categories[s.category]||0)+1;
+   {const label=publicServiceCardName({name:s.category});categories[label]=(categories[label]||0)+1;}
   }
   const platformOptions=Object.entries(counts).sort((a,b)=>{
    const ai=PLATFORMS.indexOf(a[0]),bi=PLATFORMS.indexOf(b[0]);
@@ -100,7 +101,7 @@ export async function GET(request){
   const page=Number.isSafeInteger(numericPage)&&numericPage>0?Math.min(numericPage,10000):1;
   const data=await directory();
   const filtered=data.items.filter(s=>(!q||[s.id,s.name,s.category,s.platform].some(x=>String(x||"").toLowerCase().includes(q)))&&
-   (!platform||platform==="All platforms"||platform===s.platform)&&(!category||s.category===category)&&
+   (!platform||platform==="All platforms"||platform===s.platform)&&(!category||publicServiceCardName({name:s.category})===category)&&
    (!kind||s.kind===kind)&&(!onlyReady||s.purchasable===true));
   const pageSize=24;
   return Response.json({
