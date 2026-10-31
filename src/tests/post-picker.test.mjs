@@ -45,5 +45,28 @@ test("empty Apify results are retryable, successful lookups remain cached",async
  const {readFileSync}=await import("node:fs");
  const source=readFileSync(new URL("../app/api/post-picker/route.js",import.meta.url),"utf8");
  assert.match(source,/if\(posts\.length>0\)cached\.set\(cacheKey,\{time:Date\.now\(\),value\}\)/);
- assert.match(source,/You can retry the lookup or enter post links below/);
+ assert.match(source,/Try again or enter direct post links below/);
+});
+
+test("independent TikTok actor output converts into selectable creator-verified thumbnails",()=>{
+ const row={
+  webVideoUrl:"https://www.tiktok.com/@joeygotmelit/video/7702448953609948429",
+  authorMeta:{name:"joeygotmelit"},
+  videoMeta:{coverUrl:"https://p16-sign.tiktokcdn.com/cover.webp"},
+  text:"Example public video"
+ };
+ const post=normalizePosts("tiktok","joeygotmelit",[row]);
+ assert.equal(post.length,1);
+ assert.equal(post[0].url,"https://www.tiktok.com/@joeygotmelit/video/7702448953609948429");
+ assert.match(post[0].thumbnail,/https:\/\/p16-sign\.tiktokcdn\.com/);
+ assert.equal(normalizePosts("tiktok","othercreator",[row]).length,0);
+ assert.equal(normalizePosts("tiktok","joeygotmelit",[{...row,authorMeta:{name:"othercreator"}}]).length,0);
+});
+test("TikTok scraper fallbacks use fixed actors and safe bounded lookup",async()=>{
+ const {readFileSync}=await import("node:fs");
+ const src=readFileSync(new URL("../app/api/post-picker/route.js",import.meta.url),"utf8");
+ assert.match(src,/tokfluence~tiktok-profile-scraper/);
+ assert.match(src,/profiles:\[handle\],resultsPerPage:12,maxResults:12/);
+ assert.match(src,/normalizePosts\("tiktok",handle,rows\)/);
+ assert.match(src,/if\(posts.length>0\)cached\.set\(cacheKey,\{time:Date\.now\(\),value\}\)/);
 });
