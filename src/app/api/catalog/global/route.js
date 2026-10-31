@@ -29,7 +29,7 @@ const platformOf=service=>{
 };
 const kindOf=s=>{
  const label=[s.name,s.category].map(v=>String(v??"")).join(" ").toLowerCase();
- if(platformOf(s)==="Twitter (X)"&&/\\b(?:retweets?|reposts?)\\b/.test(String(s.name||"").toLowerCase()))return "retweets";
+ if(platformOf(s)==="Twitter (X)"&&/\b(?:retweets?|reposts?)\b/.test(String(s.name||"").toLowerCase()))return "retweets";
  for(const [type,regex] of [
  ["followers",/\bfollowers?\b/],["likes",/\blikes?\b/],
  ["views",/\bviews?\b/],["comments",/\bcomments?\b/],
