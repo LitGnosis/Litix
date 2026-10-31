@@ -10,7 +10,7 @@ const validId=s=>/^ltx2_[a-f0-9-]{36}$/.test(String(s||""));
 export async function handleBoosteroOrder(request,{adminOnly=true}={}){
  // Existing internal route remains owner-authenticated; storefront paths are restricted to card purchase.
  if(adminOnly&&!boosteroAdminAuthorized(request.headers.get("authorization")))return send({error:"Unauthorized"},401);
- if(!boosteroProductionReady())return send({error:"Boostero live purchases are disabled"},503);
+ if(!boosteroProductionReady())return send({error:"Litix purchasing is temporarily unavailable"},503);
  const origin=request.headers.get("origin");
  if(origin&&origin!==new URL(request.url).origin)return send({error:"Invalid origin"},403);
  let data;
@@ -49,7 +49,7 @@ export async function handleBoosteroOrder(request,{adminOnly=true}={}){
  const quoteQuantity=multiple?Number(data.postAllocations[0]?.quantity):quantity;
  let quote,supplierService;
  try{({quote,service:supplierService}=await verifyBoosteroQuote(id,quoteQuantity,sql))}
- catch(e){return send({error:String(e.message||"Unable to verify live quote").slice(0,100)},409)}
+ catch(e){return send({error:"Unable to verify this Litix service. No charge attempted."},409)}
  const autoMulti=multiple&&process.env.LITIX_MULTIPOST_AUTO_FULFILL_ENABLED==="true";
  let verifiedPosts=[];
  if(multiple){
@@ -164,7 +164,7 @@ export async function handleBoosteroOrder(request,{adminOnly=true}={}){
   }
   if(String(response.response)!=="1"){
    await sql.query("update public.litix_v2_orders set payment_state='declined' where id=$1",[orderId]).catch(()=>{});
-   return send({orderId,payment:"declined",message:"Card declined; no Boostero purchase"},402);
+   return send({orderId,payment:"declined",message:"Card declined; no order was placed"},402);
   }
   const transaction=String(response.transactionid||"");
   if(!/^[A-Za-z0-9-]{3,100}$/.test(transaction)){
@@ -194,6 +194,6 @@ export async function handleBoosteroOrder(request,{adminOnly=true}={}){
   ...(attempt.requiresReview?[boosteroNotice(orderId,null)]:[])
  ]);});
  return send({orderId,secret:paymentMode==="card"?secret:undefined,payment:paymentMode==="card"?"paid":"admin_authorized",
-  fulfillment:attempt.state,supplierOrderId:attempt.supplierOrderId||null,supplierSubmitted:attempt.submitted===true,
-  message:multiple?"Payment confirmed. Litix will fulfill each selected post separately; do not place a duplicate order.":attempt.submitted?"Supplier order accepted and stored":"Order requires owner review; do NOT repeat payment or supplier add"},attempt.submitted?200:202);
+  fulfillment:attempt.state,...(adminOnly?{supplierOrderId:attempt.supplierOrderId||null,supplierSubmitted:attempt.submitted===true}:{}),
+  message:multiple?"Payment confirmed. Litix is processing each selected post separately; do not place a duplicate order.":attempt.submitted?"Your Litix order has been accepted.":"Your order needs additional processing; do not repeat payment."},attempt.submitted?200:202);
 }
