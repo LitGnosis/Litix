@@ -44,10 +44,12 @@ export async function handleBoosteroOrder(request,{adminOnly=true}={}){
  const id=String(data?.serviceId||""),email=String(data?.email||"").trim().toLowerCase(),quantity=Number(data?.quantity);
  if(!/^\d{1,12}$/.test(id)||!Number.isSafeInteger(quantity)||quantity<1||quantity>1000000||
     !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||email.length>254)return send({error:"Invalid service/quantity/contact"},422);
- let quote,supplierService;
- try{({quote,service:supplierService}=await verifyBoosteroQuote(id,quantity,sql))}
- catch(e){return send({error:String(e.message||"Unable to verify live quote").slice(0,100)},409)}
  const multiple=Array.isArray(data?.postAllocations)&&data.postAllocations.length>1;
+ // The supplier maximum applies to each post, not to the sum across posts.
+ const quoteQuantity=multiple?Number(data.postAllocations[0]?.quantity):quantity;
+ let quote,supplierService;
+ try{({quote,service:supplierService}=await verifyBoosteroQuote(id,quoteQuantity,sql))}
+ catch(e){return send({error:String(e.message||"Unable to verify live quote").slice(0,100)},409)}
  const autoMulti=multiple&&process.env.LITIX_MULTIPOST_AUTO_FULFILL_ENABLED==="true";
  let verifiedPosts=[];
  if(multiple){
@@ -59,10 +61,10 @@ export async function handleBoosteroOrder(request,{adminOnly=true}={}){
   for(const item of data.postAllocations){
    const count=Number(item?.quantity);
    if(!Number.isSafeInteger(count))
-    return send({error:"Each video's like quantity must be a whole number"},422);
+    return send({error:"Each post's likes quantity must be a whole number"},422);
    let one;
    try{one=boosteroQuote({service:supplierService,quantity:count})}
-   catch{return send({error:"Each video must meet the minimum and maximum quantity; no charge attempted"},422)}
+   catch{return send({error:"Each post must meet the minimum and maximum quantity; no charge attempted"},422)}
    let canonical;
    try{
     canonical=String(quote.platform).toLowerCase()==="tiktok"
@@ -70,12 +72,12 @@ export async function handleBoosteroOrder(request,{adminOnly=true}={}){
      :boosteroDestination(item?.link,"instagram","likes");
     if(!canonical)throw Error("Instagram post or reel link not supported");
    }catch(e){return send({error:String(e.message||"Post link not supported").slice(0,160)},422)}
-   if(seen.has(canonical))return send({error:"Each TikTok video must be selected only once"},422);
+   if(seen.has(canonical))return send({error:"Each selected post must be unique"},422);
    seen.add(canonical);
    totalQty+=count;totalCents+=one.amountCents;totalWholesale+=one.wholesaleCents;totalCost+=one.costUSD;
    verifiedPosts.push({link:canonical,quantity:count,amountCents:one.amountCents});
   }
-  if(totalQty!==quantity||totalQty>Number(supplierService.max)||totalCents>100000000)
+  if(totalQty!==quantity||totalQty>1000000||totalCents>100000000)
    return send({error:"Invalid multi-post quantities; no charge attempted"},422);
   quote={...quote,amountCents:totalCents,wholesaleCents:totalWholesale,costUSD:totalCost};
  }
@@ -107,7 +109,7 @@ export async function handleBoosteroOrder(request,{adminOnly=true}={}){
    const registered=await sql.query(
     "with added as (insert into public.litix_boostero_services(supplier_service_id,platform,service_kind,retail_per_1000_cents,wholesale_ceiling_per_1000,enabled,approved_by,approved_at) values($1,$4,'likes',$2,$3,true,'verified_live_checkout',now()) on conflict(supplier_service_id) do nothing returning supplier_service_id) select supplier_service_id from added union all select supplier_service_id from public.litix_boostero_services where supplier_service_id=$1 and enabled=true",
     [id,quote.retailPer1000Cents,Number(supplierService?.rate),String(quote.platform).toLowerCase()]);
-   if(!registered.length)return send({error:"This TikTok Likes option is not enabled for checkout; no charge attempted"},409);
+   if(!registered.length)return send({error:"This Likes option is not enabled for checkout; no charge attempted"},409);
   }catch{
    return send({error:"Likes checkout registration unavailable; no payment attempted"},503);
   }
