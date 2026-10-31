@@ -4,7 +4,7 @@ import {multiPostMilestone} from "../lib/litixMultiPostMilestones.mjs";
 import {queueMultiPostDeliveryMilestone} from "../lib/litixCustomerUpdates.mjs";
 const id="ltx2_12345678-1234-4234-8234-123456789abc";
 const children=(remains,state="SUBMITTED")=>remains.map(x=>({
- quantity:100,state,supplier_status:{status:state==="COMPLETED"?"Completed":"In progress",remains:x}
+ quantity:100,state,supplier_status:{status:state==="COMPLETED"?"Completed":state==="PENDING"?"Pending":"In progress",remains:x}
 }));
 test("five-post delivery email sends only start, 25/50/75% and completion milestones",()=>{
  const a=children([98,98,99,99,99]);
@@ -17,7 +17,7 @@ test("five-post delivery email sends only start, 25/50/75% and completion milest
 test("unknown supplier count is never presented as confirmed zero",()=>{
  const a=children([null,70,90,90,90]);
  assert.equal(multiPostMilestone(a).remaining,null);
- assert.equal(multiPostMilestone(children([100,100,100,100,100],"PENDING")).phase===null,true);
+ assert.equal(multiPostMilestone(children([100,100,100,100,100],"PENDING")),null);
  assert.equal(multiPostMilestone(children([70,70],"MANUAL_REVIEW")).phase,"needs_support");
 });
 test("durable milestone queue deduplicates and authenticates paid parent in SQL",async()=>{

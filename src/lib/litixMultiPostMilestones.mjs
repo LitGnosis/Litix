@@ -18,6 +18,7 @@ export function multiPostMilestone(children){
   total+=qty;
  }
  if(review)return {phase:"needs_support",label:"Delivery needs support",remaining:allKnown?remaining:null,total};
+ if(complete&&allKnown&&remaining>0)return {phase:"needs_support",label:"Delivery needs support",remaining,total};
  if(complete)return {phase:"complete",label:"Delivery completed",remaining:allKnown?remaining:null,total};
  if(!active)return null;
  // Email at most on start and each 25% milestone. Supplier updates between
