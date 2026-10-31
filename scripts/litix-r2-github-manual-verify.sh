@@ -19,26 +19,22 @@ assert not (u.username or u.password or u.port or u.query or u.fragment) and u.p
 PY
 [[ "$LITIX_RECOVERY_MODE" == "probe_only" || "$LITIX_RECOVERY_MODE" == "backup_and_restore" ]] ||
  fail "Unknown mode; use probe_only or backup_and_restore."
-for command in aws python3 age age-keygen docker sha256sum cmp mktemp;do
+for command in python3 age age-keygen docker sha256sum cmp mktemp;do
  command -v "$command" >/dev/null || fail "Missing protected-runner utility: $command"
 done
 export AWS_ACCESS_KEY_ID="$R2_ACCESS_KEY_ID" AWS_SECRET_ACCESS_KEY="$R2_SECRET_ACCESS_KEY"
 export AWS_DEFAULT_REGION=auto AWS_EC2_METADATA_DISABLED=true AWS_PAGER="" AWS_CLI_AUTO_PROMPT=off
 export AWS_MAX_ATTEMPTS=2
-# R2 compatibility: avoid optional AWS SDK checksum negotiation on PutObject.
-# Cloudflare R2 may reject the x-amz-sdk-checksum-algorithm header for single-object writes.
-# AWS CLI v2 otherwise tries CRC64NVME by default; when_required disables optional checksums.
-# Integrity remains verified independently by PUT/HEAD/GET byte comparison and encrypted SHA256.
-# Existing explicit encrypted-object roundtrip SHA256 verification is preserved.
-export AWS_REQUEST_CHECKSUM_CALCULATION=when_required
-export AWS_RESPONSE_CHECKSUM_VALIDATION=when_required
+# R2 uses the scoped boto3 adapter: fixed-length probe bytes and S3-compatible
+# multipart ciphertext uploads, without unsupported AWS CLI streaming trailers.
+# Independent encrypted file roundtrip and SHA256 validation are preserved.
 work="$(mktemp -d -t litix-r2-recovery.XXXXXXXX)"
 probe_key="" probe_uploaded=false current_container=""
 cleanup(){
  set +e
  if [[ -n "$current_container" ]];then docker rm -f -v "$current_container" >/dev/null 2>&1;fi
  if [[ "$probe_uploaded" == true && -n "$probe_key" ]];then
-  aws --endpoint-url "$R2_ENDPOINT" s3api delete-object --bucket "$R2_BUCKET" --key "$probe_key" >/dev/null 2>&1
+  python3 scripts/litix-r2-boto3-transfer.py delete "$probe_key" >/dev/null 2>&1
  fi
  rm -rf -- "$work"
 }
@@ -50,65 +46,20 @@ python3 - "$work/probe" <<'PY'
 import secrets,sys
 with open(sys.argv[1],"xb") as f:f.write(secrets.token_bytes(128))
 PY
-aws --debug --endpoint-url "$R2_ENDPOINT" s3api put-object --bucket "$R2_BUCKET" \
- --key "$probe_key" --body "$work/probe" --output json >"$work/put.status" 2>"$work/put.debug" ||
- {
-  # Print only a validated S3 error identifier, never the raw AWS response.
-  error_code="$(python3 - "$work/put.status" "$work/put.debug" <<'PY'
-import re, sys
-from pathlib import Path
-status = Path(sys.argv[1]).read_text(errors="replace")
-debug = Path(sys.argv[2]).read_text(errors="replace")
-m = re.search(r"[(]([A-Za-z][A-Za-z0-9]{0,63})[)] when calling the PutObject operation", status)
-print(m.group(1) if m else "UNCLASSIFIED")
-# No raw HTTP/XML body, headers, signed requests or secrets leave the runner.
-h = re.findall(r"status_code['\x22:]\\s*(\\d{3})", debug)
-if h: print("HTTP_STATUS=" + h[-1])
-ids = re.findall(r"(?:cf-ray|x-amz-request-id|x-amz-id-2)['\x22:]?\\s*[:=]\\s*['\x22]?([A-Za-z0-9-]{8,80})", debug, re.I)
-if ids: print("REQUEST_ID=" + ids[-1])
-# Extract only response metadata from botocore debug; do not print debug payload.
-codes = re.findall(r"['\\\"]status_code['\\\"]\\s*:\\s*(\\d{3})", debug)
-if codes: print("HTTP_STATUS_SAFE=" + codes[-1])
-xml_codes = re.findall(r"<Code>([A-Za-z][A-Za-z0-9]{0,63})</Code>", debug)
-if xml_codes: print("R2_RESPONSE_CODE_SAFE=" + xml_codes[-1])
-# Response message uses an explicit, non-secret allowlist.
-for phrase, label in (("unsupported", "UNSUPPORTED_PARAMETER"), ("invalid argument", "INVALID_ARGUMENT"), ("unknown parameter", "UNKNOWN_PARAMETER"), ("invalid digest", "INVALID_DIGEST"), ("checksum", "CHECKSUM_MENTION"), ("signature", "SIGNATURE_MENTION"), ("access denied", "ACCESS_DENIED")):
- if phrase in debug.lower():
-  print("R2_RESPONSE_MESSAGE_HINT=" + label)
-  break
-low = debug.lower()
-for phrase, tag in (
- ("unsupported header", "UNSUPPORTED_HEADER"),
- ("invalid checksum", "CHECKSUM"),
- ("checksum", "CHECKSUM"),
- ("server side encryption", "ENCRYPTION_HEADER"),
- ("x-amz-server-side-encryption", "ENCRYPTION_HEADER"),
- ("invalid access key", "ACCESS_KEY"),
- ("signaturedoesnotmatch", "SIGNATURE"),
- ("invalid argument", "INVALID_ARGUMENT"),
-):
- if phrase in low:
-  print("R2_MESSAGE_CLASS=" + tag)
-  break
-else: print("R2_MESSAGE_CLASS=UNCLASSIFIED")
-for header in ("x-amz-checksum-crc64nvme", "x-amz-checksum-crc32", "x-amz-server-side-encryption", "x-amz-acl"):
- print("REQUEST_HEADER_" + header.upper().replace("-", "_") + "=" + ("PRESENT" if header in low else "NOT_OBSERVED"))
-PY
-)"
-  fail "Real R2 PutObject failed; S3_ERROR_CODE=$error_code. Verify endpoint, token pairing, and bucket scope."
- }
+if ! python3 scripts/litix-r2-boto3-transfer.py put "$probe_key" "$work/probe" \
+  >"$work/put.status" 2>"$work/put.err";then
+  grep -E '^R2_TRANSFER_ERROR_(CODE_SAFE|CLASS)=' "$work/put.err" | tail -1 || true
+  fail "Real R2 PutObject failed; inspect safe transport error code."
+fi
 probe_uploaded=true
-probe_size="$(aws --endpoint-url "$R2_ENDPOINT" s3api head-object \
- --bucket "$R2_BUCKET" --key "$probe_key" --query ContentLength --output text 2>"$work/head.err")" ||
- fail "Real R2 HeadObject failed."
-[[ "$probe_size" == 128 ]] || fail "R2 object size mismatch."
-aws --endpoint-url "$R2_ENDPOINT" s3api get-object --bucket "$R2_BUCKET" \
- --key "$probe_key" "$work/probe-read" --output json >"$work/get.status" 2>&1 ||
- fail "Real R2 GetObject failed."
+probe_size="$(python3 scripts/litix-r2-boto3-transfer.py head "$probe_key" \
+  2>"$work/head.err")" || fail "Real R2 HeadObject failed."
+[[ "$probe_size" == 128 ]] || fail "R2 probe object size mismatch."
+python3 scripts/litix-r2-boto3-transfer.py get "$probe_key" "$work/probe-read" \
+  >"$work/get.status" 2>"$work/get.err" || fail "Real R2 GetObject failed."
 cmp -s "$work/probe" "$work/probe-read" || fail "R2 probe integrity failed."
-aws --endpoint-url "$R2_ENDPOINT" s3api delete-object --bucket "$R2_BUCKET" \
- --key "$probe_key" --output json >"$work/delete.status" 2>&1 ||
- fail "R2 probe DeleteObject failed."
+python3 scripts/litix-r2-boto3-transfer.py delete "$probe_key" \
+  >"$work/delete.status" 2>"$work/delete.err" || fail "R2 probe DeleteObject failed."
 probe_uploaded=false
 echo "ACTUAL_R2_CONNECTIVITY_PASS"
 echo "R2_BUCKET=litix-private-backups"
@@ -167,15 +118,14 @@ for db in neondb litixapi;do
  [[ -s "$encrypted" ]] || fail "$db ciphertext is empty."
  local_sha="$(sha256sum "$encrypted" | awk '{print $1}')"
  local_size="$(wc -c < "$encrypted" | tr -d '[:space:]')"
- aws --endpoint-url "$R2_ENDPOINT" s3 cp "$encrypted" "s3://$R2_BUCKET/$object" \
-  --only-show-errors >"$work/upload-$db.status" 2>&1 ||
+ python3 scripts/litix-r2-boto3-transfer.py upload "$object" "$encrypted" \
+  >"$work/upload-$db.status" 2>"$work/upload-$db.err" ||
   fail "$db encrypted R2 upload failed."
- remote_size="$(aws --endpoint-url "$R2_ENDPOINT" s3api head-object \
-  --bucket "$R2_BUCKET" --key "$object" --query ContentLength --output text 2>"$work/size-$db.err")" ||
+ remote_size="$(python3 scripts/litix-r2-boto3-transfer.py head "$object" 2>"$work/size-$db.err")" ||
   fail "$db remote R2 object metadata not retrievable."
  [[ "$remote_size" == "$local_size" ]] || fail "$db remote R2 object size mismatch."
- aws --endpoint-url "$R2_ENDPOINT" s3 cp "s3://$R2_BUCKET/$object" "$work/$db.download.age" \
-  --only-show-errors >"$work/download-$db.status" 2>&1 ||
+ python3 scripts/litix-r2-boto3-transfer.py get "$object" "$work/$db.download.age" \
+  >"$work/download-$db.status" 2>"$work/download-$db.err" ||
   fail "$db cannot download encrypted R2 object."
  cmp -s "$encrypted" "$work/$db.download.age" || fail "$db remote ciphertext byte comparison failed."
  [[ "$local_sha" == "$(sha256sum "$work/$db.download.age" | awk '{print $1}')" ]] ||
