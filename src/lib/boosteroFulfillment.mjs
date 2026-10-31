@@ -181,7 +181,9 @@ export async function dispatchBoostero(orderId,{sql=boosteroSQL(),operation=boos
  try{
   // Refresh current wholesale and remaining account balance just before spend.
   const {quote}=await verifyBoosteroQuote(String(orders[0].supplier_service_id),Number(orders[0].quantity),sql);
-  if(Number(orders[0].amount_cents)<quote.amountCents)throw Error("boostero_wholesale_changed_after_payment");
+  // Paid orders keep their locked historical retail totals after a future pricing-floor increase.
+  // Still enforce the original 60% wholesale protection before any supplier spend.
+  if(Number(orders[0].amount_cents)<Math.ceil(quote.costUSD*160-1e-8))throw Error("boostero_wholesale_changed_after_payment");
   const balance=await operation("balance");
   if(!Number.isFinite(Number(balance.balance))||Number(balance.balance)<quote.costUSD)throw Error("boostero_insufficient_balance");
   result=await operation("add",{service:quote.serviceId,link:orders[0].destination,quantity:quote.quantity},{claimed:true});
