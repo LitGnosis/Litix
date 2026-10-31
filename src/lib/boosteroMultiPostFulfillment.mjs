@@ -2,6 +2,7 @@ import {randomUUID} from "node:crypto";
 import {boosteroSQL,boosteroProductionReady,verifyBoosteroQuote} from "./boosteroFulfillment.mjs";
 import {boosteroProduction} from "./boosteroReadOnly.mjs";
 import {boosteroQuote} from "./boosteroFulfillment.mjs";
+import {boosteroBatchIds,normalizeBoosteroStatus,boosteroChildState} from "./boosteroStatusBatch.mjs";
 
 // Only invoked after a parent order was inserted and before the one PayKings charge.
 // One SQL command stages all selected canonical URLs. An absent schema fails closed.
@@ -97,47 +98,62 @@ export async function dispatchBoosteroMultiPosts(orderId,{sql=boosteroSQL(),oper
 
 // Existing owner-authenticated Litix cron can call this as bounded, read-only
 // status polling. Never creates supplier orders or card charges.
-export async function syncBoosteroMultiStatuses({sql=boosteroSQL(),operation=boosteroProduction,limit=8}={}){
+export async function syncBoosteroMultiStatuses({sql=boosteroSQL(),operation=boosteroProduction,limit=24}={}){
  if(!boosteroProductionReady())return {checked:0,failed:0,skipped:"boostero_disabled"};
+ const cap=Math.min(24,Math.max(1,Math.trunc(Number(limit)||24)));
  const batch=await sql.query(
-  "select parent_order_id,ordinal,supplier_order_id from public.litix_boostero_multi_posts where state='SUBMITTED' and supplier_order_id is not null and (checked_at is null or checked_at<now()-interval '15 minutes') order by checked_at nulls first limit $1",
-  [Math.min(8,Math.max(1,Number(limit)||8))]);
- let checked=0,failed=0;
- for(const item of batch){
-  try{
-   const result=await operation("status",{order:String(item.supplier_order_id)});
-   const status=String(result?.status||"").toLowerCase();
-   const state=status==="completed"?"COMPLETED":
-    ["canceled","cancelled","failed","error"].includes(status)?"MANUAL_REVIEW":"SUBMITTED";
-   const saved=await sql.query(
-    "update public.litix_boostero_multi_posts set state=$4,supplier_status=$5::jsonb,error_code=NULL,checked_at=now(),updated_at=now() where parent_order_id=$1 and ordinal=$2 and supplier_order_id=$3 and state='SUBMITTED' returning parent_order_id",
-    [item.parent_order_id,item.ordinal,item.supplier_order_id,state,JSON.stringify({status:result?.status||"Unknown",remains:result?.remains??null})]);
-   if(!saved.length)continue;
-   const summary=await sql.query(
-    "select state from public.litix_boostero_multi_posts where parent_order_id=$1",[item.parent_order_id]);
-   if(summary.length>=2&&summary.every(p=>p.state==="COMPLETED")){
-    await sql.query("update public.litix_v2_orders set fulfillment_state='completed',updated_at=now() where id=$1 and payment_state='paid'",[item.parent_order_id]);
-    await sql.query("update public.litix_boostero_fulfillment set state='COMPLETED',updated_at=now() where litix_order_id=$1 and state in('SUBMITTED','MANUAL_REVIEW')",[item.parent_order_id]);
-   }else if(state==="MANUAL_REVIEW"){
-    await sql.query("update public.litix_v2_orders set fulfillment_state='manual_review',updated_at=now() where id=$1 and payment_state='paid'",[item.parent_order_id]);
-    await sql.query("update public.litix_boostero_fulfillment set state='MANUAL_REVIEW',updated_at=now() where litix_order_id=$1",[item.parent_order_id]);
-   }
-   checked++;
-  }catch(error){
-   failed++;
-   // Supplier response failures never make the order eligible for another add.
-   // Keep the existing supplier ID and SUBMITTED state for reconciliation.
-   const reason=String(error?.message||"");
-   const code=/unauthorized|auth|key_unconfigured|provider_rejected/.test(reason)?
-    "status_auth_or_provider_rejected":/timeout|network|http_/.test(reason)?
-    "status_transport_unavailable":/invalid_json/.test(reason)?
-    "status_invalid_supplier_response":"status_poll_unavailable";
-   await sql.query(
-    "update public.litix_boostero_multi_posts set error_code=$4 where parent_order_id=$1 and ordinal=$2 and supplier_order_id=$3 and state='SUBMITTED'",
-    [item.parent_order_id,item.ordinal,item.supplier_order_id,code]).catch(()=>{});
+  "select parent_order_id,ordinal,supplier_order_id from public.litix_boostero_multi_posts where state='SUBMITTED' and supplier_order_id is not null and (checked_at is null or checked_at<now()-interval '15 minutes' or (checked_at<now()-interval '5 minutes' and lower(coalesce(supplier_status->>'status','')) in ('in progress','in_progress','processing'))) order by checked_at nulls first limit $1",
+  [cap]);
+ if(!batch.length)return {checked:0,failed:0,batched:0};
+ let checked=0,failed=0,batched=0;
+ const ids=batch.map(item=>String(item.supplier_order_id));
+ const rawById=new Map();
+ try{
+  const response=await operation("status",{orders:boosteroBatchIds(ids)});
+  if(!response||typeof response!=="object"||Array.isArray(response))throw Error("boostero_batch_invalid_response");
+  for(const id of ids)rawById.set(id,response[id]);
+  batched=1;
+ }catch{
+  // Provider batch incompatibility: fall back to status-only lookups.
+  // Never call add or restart an accepted supplier order.
+  for(const id of ids){
+   try{rawById.set(id,await operation("status",{order:id}))}
+   catch{rawById.set(id,null)}
   }
  }
- return {checked,failed};
+ const affectedParents=new Set();
+ for(const item of batch){
+  const orderId=String(item.supplier_order_id);
+  const snapshot=normalizeBoosteroStatus(rawById.get(orderId));
+  if(!snapshot){
+   failed++;
+   await sql.query(
+    "update public.litix_boostero_multi_posts set error_code='status_poll_invalid_or_unavailable' where parent_order_id=$1 and ordinal=$2 and supplier_order_id=$3 and state='SUBMITTED'",
+    [item.parent_order_id,item.ordinal,orderId]).catch(()=>{});
+   continue;
+  }
+  const state=boosteroChildState(snapshot.status);
+  try{
+   const saved=await sql.query(
+    "update public.litix_boostero_multi_posts set state=$4,supplier_status=$5::jsonb,error_code=NULL,checked_at=now(),updated_at=now() where parent_order_id=$1 and ordinal=$2 and supplier_order_id=$3 and state='SUBMITTED' returning parent_order_id",
+    [item.parent_order_id,item.ordinal,orderId,state,JSON.stringify(snapshot)]);
+   if(saved.length){checked++;affectedParents.add(item.parent_order_id)}
+  }catch{failed++}
+ }
+ for(const parent of affectedParents){
+  try{
+   const states=await sql.query(
+    "select state from public.litix_boostero_multi_posts where parent_order_id=$1",[parent]);
+   if(states.length>=2&&states.every(p=>p.state==="COMPLETED")){
+    await sql.query("update public.litix_v2_orders set fulfillment_state='completed',updated_at=now() where id=$1 and payment_state='paid'",[parent]);
+    await sql.query("update public.litix_boostero_fulfillment set state='COMPLETED',updated_at=now() where litix_order_id=$1 and state in ('SUBMITTED','MANUAL_REVIEW')",[parent]);
+   }else if(states.some(p=>p.state==="MANUAL_REVIEW")){
+    await sql.query("update public.litix_v2_orders set fulfillment_state='manual_review',updated_at=now() where id=$1 and payment_state='paid'",[parent]);
+    await sql.query("update public.litix_boostero_fulfillment set state='MANUAL_REVIEW',updated_at=now() where litix_order_id=$1",[parent]);
+   }
+  }catch{failed++}
+ }
+ return {checked,failed,batched};
 }
 
 
