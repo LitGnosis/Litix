@@ -46,19 +46,21 @@ export default function BundleConfirmation(){
      <p><strong>Order status:</strong> {order.status}</p>
     </div>
     {!paid&&<p className="lg-bundle-warning"><strong>Payment is NOT marked paid yet.</strong> {order.paymentProvider==="bluevine"?"Bluevine is hosted separately. Returning to LITIX, uploading a receipt, or opening this page does not verify payment. LITIX will confirm the real transaction directly in Bluevine before any fulfillment.":"LITIX will verify the PayKings transaction using the existing secure payment reconciliation process."} If you already paid, do not pay again while verification is pending.</p>}
-    <h3>Submit your receipt and up to 10 posts</h3>
-    <p className="small">Choose WhatsApp, email, or Instagram. Include your order number, payment receipt, Instagram/TikTok profile, and up to 10 post links or screenshots. Attach receipt and screenshots manually in the app you choose. LITIX reviews posts and fulfillment manually.</p>
-    <div className="lg-bundle-actions" style={{display:"grid",gap:12,margin:"18px 0"}}>
+    {order.automatic?<h3>Automatic delivery across your selected posts</h3>:<h3>Submit your receipt and up to 10 posts</h3>}
+    <p className="small">{order.automatic
+     ?"Your post selections were recorded before checkout. Litix processes each included Likes, Views and Shares delivery separately; profile Followers are processed once. Your payment must be settled before supplier orders are submitted. Do not place a duplicate order."
+     :"Choose WhatsApp, email, or Instagram. Include your order number, payment receipt, Instagram/TikTok profile, and up to 10 post links or screenshots. Attach receipt and screenshots manually in the app you choose. LITIX reviews posts and fulfillment manually."}</p>
+    {!order.automatic&&<div className="lg-bundle-actions" style={{display:"grid",gap:12,margin:"18px 0"}}>
      {data.whatsappUrl?<a className="lg-bundle-buy" href={data.whatsappUrl} target="_blank" rel="noopener noreferrer">Send Order Details via WhatsApp</a>:<p role="status">WhatsApp contact is unavailable. Email or Instagram are available below.</p>}
      <a className="lg-bundle-buy" href={emailLink}>Email My Order Details</a>
      <a className="lg-bundle-buy" href="https://www.instagram.com/litixsocial/" target="_blank" rel="noopener noreferrer">Message LITIX on Instagram</a>
     </div>
-    <p className="small">WhatsApp opens the LITIX business chat with a prefilled order message. Email opens your email app with a prefilled subject and message; attach payment receipts and screenshots before sending. Instagram opens the @Litixsocial profile; send a DM with the same information. <strong>Opening an app does not send your message automatically.</strong></p>
-    <p className="small">All package quantities are totals for this purchase, not repeated for every post. Followers apply to your account. {data.instructions}</p>
-    <h3>Post review</h3>
-    {data.posts.length?data.posts.map((p,i)=><p key={i}>{p.status} · {p.url}</p>):<p className="small">No posts recorded for review yet.</p>}
+    {!order.automatic&&<p className="small">WhatsApp opens the LITIX business chat with a prefilled order message. Email opens your email app with a prefilled subject and message; attach payment receipts and screenshots before sending. Instagram opens the @Litixsocial profile; send a DM with the same information. <strong>Opening an app does not send your message automatically.</strong></p>}
+    <p className="small">All package quantities are totals for this purchase, not repeated for every post. Followers apply to your account. {!order.automatic&&data.instructions}</p>
+    {!order.automatic&&<><h3>Post review</h3>
+    {data.posts.length?data.posts.map((p,i)=><p key={i}>{p.status} · {p.url}</p>):<p className="small">No posts recorded for review yet.</p>}</>}
     <h3>Delivery records</h3>
-    {data.deliveries.length?data.deliveries.map((p,i)=><p key={i}>{p.kind}: {p.quantity} · {p.status}{p.supplierOrderId?" · supplier #"+p.supplierOrderId:""}</p>):<p className="small">No deliveries approved or submitted.</p>}
+    {data.deliveries.length?data.deliveries.map((p,i)=><p key={i}>{p.kind}: {p.quantity} · {p.status}{p.deliveryId||p.supplierOrderId?" · Litix delivery #"+(p.deliveryId||p.supplierOrderId):""}{p.progress?" · "+p.progress:""}</p>):<p className="small">No deliveries approved or submitted.</p>}
    </div>:error?<p role="status">{error}</p>:<p>Loading order details…</p>}
    <a className="alt" style={{display:"inline-flex",padding:"12px 18px",textDecoration:"none",borderRadius:10,marginTop:18}} href="/">Return to LITIX</a>
    <p className="small">Keep the private link from your confirmation email. We never need your credit-card number or account password.</p>
