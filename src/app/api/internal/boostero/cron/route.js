@@ -1,5 +1,5 @@
 import {timingSafeEqual} from "node:crypto";
-import {syncBoosteroMultiStatuses} from "../../../../../lib/boosteroMultiPostFulfillment.mjs";
+import {syncBoosteroMultiStatuses,resumeBoosteroMultiQueue} from "../../../../../lib/boosteroMultiPostFulfillment.mjs";
 import {syncBoosteroStatuses,boosteroProductionReady,deliverLitixCustomerUpdates} from "../../../../../lib/boosteroFulfillment.mjs";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
@@ -12,8 +12,10 @@ export async function GET(req){
  if(!boosteroProductionReady())return Response.json({ok:true,skipped:"boostero_disabled"});
  try{
   const results=await syncBoosteroStatuses();
-  const posts=process.env.LITIX_MULTIPOST_AUTO_FULFILL_ENABLED==="true"?await syncBoosteroMultiStatuses({limit:8}):{skipped:"multi_post_disabled"};
+  const ready=process.env.LITIX_MULTIPOST_AUTO_FULFILL_ENABLED==="true";
+  const continuation=ready?await resumeBoosteroMultiQueue({limitParents:1}):{skipped:"multi_post_disabled"};
+  const posts=ready?await syncBoosteroMultiStatuses({limit:8}):{skipped:"multi_post_disabled"};
   const notifications=await deliverLitixCustomerUpdates({limit:5});
-  return Response.json({ok:true,...results,multiPostStatuses:posts,customerNotifications:notifications},{headers:{"cache-control":"no-store"}});
+  return Response.json({ok:true,...results,multiPostContinuation:continuation,multiPostStatuses:posts,customerNotifications:notifications},{headers:{"cache-control":"no-store"}});
  }catch{return Response.json({ok:false,error:"Private supplier polling unavailable"},{status:503,headers:{"cache-control":"no-store"}})}
 }
