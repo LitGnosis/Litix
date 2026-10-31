@@ -66,10 +66,10 @@ export default function SocialMultiPostChooser({service,platform,posts,onChange}
    <div className="litix-picker-lookup">
     <h3>Choose Your Posts</h3>
     <p>Enter a public {isTikTok?"TikTok":"Instagram"} username and choose posts from a gallery — no copying links individually.</p>
-    <form onSubmit={lookup} className="litix-picker-search">
-      <input value={username} placeholder={isTikTok?"@yourtiktok":"@yourinstagram"} aria-label={isTikTok?"Public TikTok username":"Public Instagram username"} autoCapitalize="none" autoCorrect="off" spellCheck={false} onChange={e=>setUsername(e.target.value)} required/>
-      <button type="submit" className="alt" disabled={loading}>{loading?"Finding posts…":"Find my posts"}</button>
-    </form>
+    <div className="litix-picker-search">
+      <input value={username} placeholder={isTikTok?"@yourtiktok":"@yourinstagram"} aria-label={isTikTok?"Public TikTok username":"Public Instagram username"} autoCapitalize="none" autoCorrect="off" spellCheck={false} onChange={e=>setUsername(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();if(username.trim())lookup(e)}}} required/>
+      <button type="button" onClick={lookup} className="alt" disabled={loading||!username.trim()}>{loading?"Finding posts…":"Find my posts"}</button>
+    </div>
     {message&&<p className="small" role="status">{message}</p>}
     {gallery.length>0&&<>
       <div className="litix-picker-heading"><strong>Tap the posts to add likes</strong><span>{selected.size} selected</span></div>
