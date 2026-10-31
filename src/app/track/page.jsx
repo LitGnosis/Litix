@@ -119,6 +119,18 @@ export default function OrderTracker(){
      {order.status&&<div><small>Latest Litix status</small><strong>{order.status}</strong></div>}
     </div>
     <p className="ltx-track-service"><b>Service:</b> {litixCustomerServiceName(order.service)}</p>
+    {Array.isArray(order.posts)&&order.posts.length>0&&<section aria-label="Individual post delivery status" style={{padding:"14px 0"}}>
+      <h3 style={{fontSize:17,margin:"0 0 12px"}}>Your selected posts</h3>
+      <div style={{display:"grid",gap:10}}>{order.posts.map(post=><article key={post.index} style={{padding:12,border:"1px solid #4c99cc80",borderRadius:12,background:"#091f35"}}>
+       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:9,flexWrap:"wrap"}}>
+         <strong>Post {post.index} · {Number(post.quantity||0).toLocaleString()} likes</strong>
+         <span className="small">{post.status||"Processing"}</span>
+       </div>
+       <p style={{margin:"8px 0 0",wordBreak:"break-word",fontSize:12}}><a href={post.url} target="_blank" rel="noopener noreferrer">View selected post</a></p>
+       {post.remains!==null&&post.remains!==undefined&&<p className="small" style={{margin:"6px 0 0"}}>{Number(post.remains).toLocaleString()} likes remaining</p>}
+      </article>)}</div>
+     </section>}
+
     {order.checkedAt&&<p className="ltx-track-meta">Status updated: {new Date(order.checkedAt).toLocaleString()} {order.liveSupplierStatus?"(live update)":"(last recorded update)"}</p>}
     <div className="ltx-track-actions"><button type="button" className="ltx-track-btn" disabled={busy} onClick={()=>runStatus(method)}>{busy?"Checking status…":"Refresh status"}</button><a className="ltx-track-btn ltx-track-btn-secondary" href={helpUrl} target="_blank" rel="noreferrer noopener">Get order help</a></div>
     <p className="ltx-track-footnote">Payment confirmation and actual follower delivery are separate steps. Litix displays the latest recorded delivery update; followers will be confirmed when delivery is reported complete.</p>
