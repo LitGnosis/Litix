@@ -53,6 +53,8 @@ test("not-yet-launched AutoLikes is tracked honestly, never as an outage",()=>{
  const p=nextGuardianState(null,{component:"autolikes",kind:"not_launched",ok:true,code:"AUTOLIKES_COMING_SOON"},new Date("2026-10-27"));
  assert.equal(p.next.status,"not_launched");assert.equal(p.events.length,0);
  assert.ok(componentKeys.includes("resend")&&componentKeys.includes("fulfillment")&&componentKeys.includes("tiktok"));
+ assert.ok(componentKeys.includes("boostero")&&componentKeys.includes("multi_post")&&componentKeys.includes("email_delivery"));
+ assert.ok(!componentKeys.includes("smmglob"));
 });
 test("preview-simulated outage and recovery alert via mocked Resend, with no customer data",async()=>{
  const sent=[];
@@ -96,7 +98,8 @@ test("scheduled monitoring is additive and independent of existing Vercel crons"
  assert.equal(crons.filter(x=>x.path==="/api/bundles/cron").length,1);
  assert.equal(crons.filter(x=>x.path==="/api/v2/cron/sync-catalog").length,1);
  const runtime=file("lib/guardianRuntime.mjs");
- assert.match(runtime,/action:"services"/);
+ assert.match(runtime,/boosteroProduction\("balance"\)/);
+ assert.doesNotMatch(runtime,/SMMGLOB_API_KEY|smmglob\.com/);
  assert.match(runtime,/select count\(\*\)/);
  assert.match(runtime,/idempotency-key/);
  assert.doesNotMatch(runtime,/action:"add"|type:"sale"|security_key/);
