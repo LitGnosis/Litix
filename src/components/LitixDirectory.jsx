@@ -138,7 +138,7 @@ export default function LitixDirectory({standalone=false}){
        <div className="litix-directory-service-price">{displayPrice||"Ask for price"} <small>/ 1,000 {approved?"":"· indicative"}</small></div>
        <div className="litix-directory-service-range">
         {Number.isInteger(s.min)&&Number.isInteger(s.max)?s.min.toLocaleString()+"–"+s.max.toLocaleString()+" units":"Quantity confirmed on request"}
-        <span>Service {s.id.replace(/^(?:boostero|litix)_/,"")}</span>
+        <span>Litix verified service</span>
        </div>
        <a className="litix-directory-buy" href={"/?service="+encodeURIComponent(s.id)+"#checkout"}>{["litix_4751","litix_5251"].includes(String(s.id))?"Choose Your Posts & Pay":"Review & pay with PayKings"}</a>
       </article>
