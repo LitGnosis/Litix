@@ -16,6 +16,7 @@ export default function GuardianAdmin(){
  }
  const parts=result?.components||[],incidents=result?.incidents||[],alerts=result?.alerts||[],runs=result?.runs||[];
  const active=incidents.filter(x=>!x.resolved_at).length;
+ const triage=result?.triage?.items||[];
  return <main className="wrap" style={{maxWidth:1040,margin:"0 auto",padding:"26px 15px 80px"}}>
   <nav className="nav"><a className="brand" href="/">LITIX</a><a href="/">Return to LITIX</a></nav>
   <section className="panel" style={{marginTop:28}}>
@@ -43,6 +44,22 @@ export default function GuardianAdmin(){
       {c.status==="down"&&<p className="small">Consecutive failures: {c.consecutive_failures}</p>}
      </article>)}
     </div>
+   </section>
+   <section className="panel" style={{marginTop:18}}>
+    <h2>Owner action queue</h2>
+    <p className="small">Private, read-only reconciliation guide. No supplier purchases, refunds, wallet transfers or card charges are triggered here.</p>
+    {result.triage?.unavailableChecks>0&&<p role="alert" className="small">{result.triage.unavailableChecks} diagnostic sources are temporarily unavailable; absence of a listed issue is not proof of health.</p>}
+    {triage.length?<div style={{overflowX:"auto"}}>
+      <table style={{width:"100%",textAlign:"left",borderCollapse:"collapse"}}>
+       <thead><tr><th>Priority</th><th>Litix order</th><th>Supplier ID / Post</th><th>Safe next action</th></tr></thead>
+       <tbody>{triage.map((x,i)=><tr key={x.code+x.orderId+x.postIndex+i} style={{borderTop:"1px solid #426078"}}>
+        <td style={{padding:"10px 12px 10px 0",color:"#ffd178"}}>{x.code.replaceAll("_"," ")}</td>
+        <td style={{fontSize:12,overflowWrap:"anywhere"}}>{x.orderId}</td>
+        <td>{x.supplierOrderId||"Not confirmed"}{x.postIndex?" · Post "+x.postIndex:""}</td>
+        <td style={{fontSize:13}}>{x.action}</td>
+       </tr>)}</tbody>
+      </table>
+     </div>:<p className="small">No current paid-order reconciliation exceptions found in the available diagnostic sources.</p>}
    </section>
    <section className="panel" style={{marginTop:18}}>
     <h2>Recent incidents</h2>
