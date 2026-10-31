@@ -11,7 +11,7 @@ export default function BundleCheckout(){
  const [phone,setPhone]=useState(""),[smsConsent,setSmsConsent]=useState(false),[bluevineBusy,setBluevineBusy]=useState(false),[pendingBluevine,setPendingBluevine]=useState(null),[method,setMethod]=useState("paykings");
  const [autoMode,setAutoMode]=useState(false),[postLinks,setPostLinks]=useState(""),[gallery,setGallery]=useState([]),
  [galleryState,setGalleryState]=useState("idle");
- const selectedPostLinks=postLinks.split(/\\r?\\n/).map(x=>x.trim()).filter(Boolean);
+ const selectedPostLinks=postLinks.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
  const autoSelected=method==="paykings"&&catalog?.autoFulfillmentEnabled===true&&autoMode;
  const bluevineIdem=useRef(null);
  const idem=useRef(""),submitted=useRef(false),onToken=useRef(null);
@@ -44,9 +44,9 @@ export default function BundleCheckout(){
  },[autoSelected,profile,pkg?.platform]);
  const togglePost=url=>{
   setPostLinks(current=>{
-   const urls=current.split(/\\r?\\n/).map(x=>x.trim()).filter(Boolean);
+   const urls=current.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
    const next=urls.includes(url)?urls.filter(x=>x!==url):urls.length<10?[...urls,url]:urls;
-   return next.join("\\n");
+   return next.join("\n");
   });
  };
  useEffect(()=>{
@@ -163,7 +163,7 @@ export default function BundleCheckout(){
        <p role="status" className="small">{selectedPostLinks.length} of 10 posts selected</p>
       </>}
      </section>}
-    <label style={{display:"flex",alignItems:"start",gap:10,fontSize:14,lineHeight:1.5}}><input style={{width:20,marginTop:3}} type="checkbox" required checked={consent} onChange={e=>setConsent(e.target.checked)}/><span>{autoSelected?"I authorize Litix to process this fixed-price bundle as separate Boostero supplier deliveries after verified payment, with no repeated orders on uncertain outcomes.":"I understand that I must submit my order information via WhatsApp, email, or Instagram. I may submit up to 10 posts, and all fulfillment requires manual LITIX approval."}</span></label>
+    <label style={{display:"flex",alignItems:"start",gap:10,fontSize:14,lineHeight:1.5}}><input style={{width:20,marginTop:3}} type="checkbox" required checked={consent} onChange={e=>setConsent(e.target.checked)}/><span>{autoSelected?"I authorize Litix to process this fixed-price bundle as separate deliveries after verified payment, with no duplicate orders on uncertain outcomes.":"I understand that I must submit my order information via WhatsApp, email, or Instagram. I may submit up to 10 posts, and all fulfillment requires manual LITIX approval."}</span></label>
     {method==="paykings"&&catalog?.checkoutEnabled?<><div><label>Card number<div id="bundle-ccnumber" className="field"/></label><div className="premium-card-row"><label>Expiration<div id="bundle-ccexp" className="field"/></label><label>CVV<div id="bundle-cvv" className="field"/></label></div></div><button className="pay" disabled={!cardReady||!consent||busy||bluevineBusy||submitted.current||pendingBluevine?.packageId===pkg?.id}>{busy?"Processing securely...":"Pay with PayKings — "+money(pkg.priceCents)}</button></>:
       method==="paykings"?<div role="status" className="lg-bundle-warning"><strong>PayKings bundle checkout is unavailable until merchant activation.</strong> Live payment fields are unavailable. Check your connection and try again; no payment can be submitted until the secure gateway and official WhatsApp contact are available.</div>:null}
    </form>
