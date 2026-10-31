@@ -1,11 +1,28 @@
 // Presentation only. Numeric retail USD per 1,000, never minimum-order subtotals.
-export function matchesServiceQuickKind(x,kind){
- if(!["likes","followers"].includes(kind))return true;
- const name=String(x?.name||"").toLowerCase();
- const category=String(x?.category||"").toLowerCase();
- const text=name+" "+category;
- if(kind==="likes")return /\blikes?\b/.test(text)&&!/\bfollowers?\b/.test(text)&&!/\b(?:views?|shares?|comments?|saves?|reposts?)\b/.test(name);
- return /\bfollowers?\b/.test(text)&&!/\blikes?\b/.test(name);
+export function matchesServiceQuickKind(service,kind){
+ if(!kind)return true;
+ const patterns=[
+  ["retweets",/\\b(?:retweets?|reposts?)\\b/i],
+  ["followers",/\\bfollowers?\\b/i],
+  ["likes",/\\blikes?\\b/i],
+  ["views",/\\bviews?\\b/i],
+  ["subscribers",/\\bsubscribers?\\b/i],
+  ["comments",/\\bcomments?\\b/i],
+  ["shares",/\\bshares?\\b/i],
+  ["saves",/\\bsaves?\\b/i],
+  ["listeners",/\\blisteners?\\b/i],
+  ["plays",/\\bplays?\\b/i],
+  ["members",/\\bmembers?\\b/i]
+ ];
+ if(!["retweets","followers","likes","views","subscribers"].includes(kind))return false;
+ const title=String(service?.name||"");
+ const titleMatches=patterns.filter(([,regex])=>regex.test(title)).map(([k])=>k);
+ // Explicit titles take priority over broad category labels. A service like
+ // "Twitter Space Listeners" must not appear in X Views just because of its category.
+ if(titleMatches.length>0)return titleMatches.length===1&&titleMatches[0]===kind;
+ const category=String(service?.category||"");
+ const categoryMatches=patterns.filter(([,regex])=>regex.test(category)).map(([k])=>k);
+ return categoryMatches.length===1&&categoryMatches[0]===kind;
 }
 // Display ordering only: the four currently approved social categories first,
 // followed by all other products. Keep server-side supplier and purchase
