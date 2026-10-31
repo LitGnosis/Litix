@@ -45,7 +45,11 @@ test("Server enforces known platform, default supplier kind, signed pricing and 
  assert.match(handler,/quote\.kind!=="likes"/);
  assert.match(handler,/boosteroQuote\(\{service:supplierService,quantity:count\}\)/);
  assert.match(handler,/Number\(data\?\.expectedAmountCents\)!==quote\.amountCents/);
- assert.match(handler,/verifyBoosteroQuote\(id,quantity,sql\)/);
+ assert.match(handler,/verifyBoosteroQuote\(id,quoteQuantity,sql\)/);
+ assert.match(handler,/const quoteQuantity=multiple\?Number\(data\.postAllocations\[0\]\?\.quantity\):quantity/);
+ assert.match(handler,/if\(totalQty!==quantity\|\|totalQty>1000000/);
+ assert.doesNotMatch(handler,/totalQty>Number\(supplierService\.max\)/);
+ assert.match(page,/validOrderDetails\(selected,normalizedOrderLink,email,Number\(multiPosts\[0\]\?\.quantity\|\|0\)\)/);
  assert.match(handler,/Number\(balance\.balance\)<quote\.costUSD/);
  assert.match(handler,/idempotency_key\) do nothing/);
 });
