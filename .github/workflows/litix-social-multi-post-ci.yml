@@ -30,6 +30,6 @@ jobs:
           cache-dependency-path: src/package-lock.json
       - run: npm ci --ignore-scripts
       - name: No-charge multi-post regression tests
-        run: node --test tests/boostero-multi-post-ledger.test.mjs tests/social-multi-post-live-checkout.test.mjs tests/post-picker.test.mjs tests/tiktok-multi-post-checkout.test.mjs tests/tiktok-short-links-checkout.test.mjs tests/litix-service-navigation.test.mjs tests/litix-retail-floor-policy.test.mjs
+        run: node --test tests/boostero-multi-post-ledger.test.mjs tests/social-multi-post-live-checkout.test.mjs tests/post-picker.test.mjs tests/tiktok-multi-post-checkout.test.mjs tests/tiktok-short-links-checkout.test.mjs tests/litix-service-navigation.test.mjs tests/litix-retail-floor-policy.test.mjs tests/growth-bundles-boostero-auto.test.mjs
       - name: Production Next.js build
         run: npm run build
