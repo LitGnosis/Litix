@@ -49,9 +49,9 @@ export async function handleBoosteroOrder(request,{adminOnly=true}={}){
  const multiple=Array.isArray(data?.postAllocations)&&data.postAllocations.length>1;
  let verifiedPosts=[];
  if(multiple){
-  if(action!=="card_purchase"||String(quote.platform).toLowerCase()!=="tiktok"||
+  if(action!=="card_purchase"||!["instagram","tiktok"].includes(String(quote.platform).toLowerCase())||
      quote.kind!=="likes"||data.postAllocations.length>5)
-   return send({error:"Multi-post checkout supports 2–5 TikTok Likes videos only"},422);
+   return send({error:"Multi-post checkout supports 2–5 Instagram or TikTok Likes posts only"},422);
   const seen=new Set();
   let totalQty=0,totalCents=0,totalWholesale=0,totalCost=0;
   for(const item of data.postAllocations){
@@ -62,8 +62,12 @@ export async function handleBoosteroOrder(request,{adminOnly=true}={}){
    try{one=boosteroQuote({service:supplierService,quantity:count})}
    catch{return send({error:"Each video must meet the minimum and maximum quantity; no charge attempted"},422)}
    let canonical;
-   try{canonical=await resolveTikTokVideoLink(item?.link)}
-   catch(e){return send({error:String(e.message||"TikTok link not supported").slice(0,160)},422)}
+   try{
+    canonical=String(quote.platform).toLowerCase()==="tiktok"
+     ?await resolveTikTokVideoLink(item?.link)
+     :boosteroDestination(item?.link,"instagram","likes");
+    if(!canonical)throw Error("Instagram post or reel link not supported");
+   }catch(e){return send({error:String(e.message||"Post link not supported").slice(0,160)},422)}
    if(seen.has(canonical))return send({error:"Each TikTok video must be selected only once"},422);
    seen.add(canonical);
    totalQty+=count;totalCents+=one.amountCents;totalWholesale+=one.wholesaleCents;totalCost+=one.costUSD;
@@ -94,16 +98,16 @@ export async function handleBoosteroOrder(request,{adminOnly=true}={}){
  // Some live Default TikTok Likes options are not yet in the legacy FK catalog.
  // A fresh server-only Boostero quote can register a compatible ID before any charge.
  // Never override a disabled record or relax the existing approval constraints.
- if(paymentMode==="card"&&String(quote.platform).toLowerCase()==="tiktok"&&quote.kind==="likes"){
-  if(quote.retailPer1000Cents<600)
+ if(paymentMode==="card"&&["instagram","tiktok"].includes(String(quote.platform).toLowerCase())&&quote.kind==="likes"){
+  if(String(quote.platform).toLowerCase()==="tiktok"&&quote.retailPer1000Cents<600)
    return send({error:"This TikTok Likes option is not yet configured for secure checkout; no payment attempted"},409);
   try{
    const registered=await sql.query(
-    "with added as (insert into public.litix_boostero_services(supplier_service_id,platform,service_kind,retail_per_1000_cents,wholesale_ceiling_per_1000,enabled,approved_by,approved_at) values($1,'tiktok','likes',$2,$3,true,'verified_live_checkout',now()) on conflict(supplier_service_id) do nothing returning supplier_service_id) select supplier_service_id from added union all select supplier_service_id from public.litix_boostero_services where supplier_service_id=$1 and enabled=true",
-    [id,quote.retailPer1000Cents,Number(supplierService?.rate)]);
+    "with added as (insert into public.litix_boostero_services(supplier_service_id,platform,service_kind,retail_per_1000_cents,wholesale_ceiling_per_1000,enabled,approved_by,approved_at) values($1,$4,'likes',$2,$3,true,'verified_live_checkout',now()) on conflict(supplier_service_id) do nothing returning supplier_service_id) select supplier_service_id from added union all select supplier_service_id from public.litix_boostero_services where supplier_service_id=$1 and enabled=true",
+    [id,quote.retailPer1000Cents,Number(supplierService?.rate),String(quote.platform).toLowerCase()]);
    if(!registered.length)return send({error:"This TikTok Likes option is not enabled for checkout; no charge attempted"},409);
   }catch{
-   return send({error:"TikTok Likes checkout registration unavailable; no payment attempted"},503);
+   return send({error:"Likes checkout registration unavailable; no payment attempted"},503);
   }
  }
 
@@ -119,7 +123,7 @@ export async function handleBoosteroOrder(request,{adminOnly=true}={}){
   const rows=await sql.query(
    "with new_order as (insert into public.litix_v2_orders(id,email,service_id,service_name,category,destination,quantity,amount_cents,supplier_cost_cents,idempotency_key,tracking_token_hash,metadata,payment_state,fulfillment_state) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12::jsonb,$13,'pending') on conflict(idempotency_key) do nothing returning id), selected as (insert into public.litix_boostero_fulfillment(litix_order_id,supplier_service_id,payment_mode,state,approved_admin_id) select id,$3,$14,$15,$16 from new_order returning litix_order_id) select litix_order_id from selected",
    [orderId,email,id,quote.serviceName,"Boostero "+quote.platform+" "+quote.kind,destination,quantity,quote.amountCents,
-    quote.wholesaleCents,idem,hashBoostero(secret),JSON.stringify({supplier:"boostero",adminOnly:true,...(multiple?{postAllocations:verifiedPosts,fulfillmentMode:"litix_assisted_multi_post"}:{})}),paymentMode==="admin"?"admin_authorized":"processing",
+    quote.wholesaleCents,idem,hashBoostero(secret),JSON.stringify({supplier:"boostero",adminOnly:true,...(multiple?{postAllocations:verifiedPosts,postPlatform:String(quote.platform).toLowerCase(),fulfillmentMode:"litix_assisted_multi_post"}:{})}),paymentMode==="admin"?"admin_authorized":"processing",
     paymentMode,paymentMode==="admin"?"QUEUED":"PENDING_PAYMENT",paymentMode==="admin"?"owner":null]);
   inserted=rows.length===1;
  }catch{return send({error:"Cannot create safe order ledger; no charge attempted"},503)}
@@ -164,5 +168,5 @@ export async function handleBoosteroOrder(request,{adminOnly=true}={}){
  ]);});
  return send({orderId,secret:paymentMode==="card"?secret:undefined,payment:paymentMode==="card"?"paid":"admin_authorized",
   fulfillment:attempt.state,supplierOrderId:attempt.supplierOrderId||null,supplierSubmitted:attempt.submitted===true,
-  message:multiple?"Payment confirmed. Litix will fulfill each selected video separately; do not place a duplicate order.":attempt.submitted?"Supplier order accepted and stored":"Order requires owner review; do NOT repeat payment or supplier add"},attempt.submitted?200:202);
+  message:multiple?"Payment confirmed. Litix will fulfill each selected post separately; do not place a duplicate order.":attempt.submitted?"Supplier order accepted and stored":"Order requires owner review; do NOT repeat payment or supplier add"},attempt.submitted?200:202);
 }
