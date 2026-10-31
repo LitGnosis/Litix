@@ -57,7 +57,7 @@ export default function Home(){
  const [planServices,setPlanServices]=useState([]),[planStatus,setPlanStatus]=useState("");
  const isCurrentCard=s=>String(s?.id||"").startsWith("boostero_")&&s?.purchasable===true&&services.some(a=>a.id===s.id&&a.purchasable===true);
  const tiktokLikes=String(selected?.platform||"").toLowerCase()==="tiktok"&&selected?.kind==="likes";
- const likesWithPostPicker=["instagram","tiktok"].includes(String(selected?.platform||"").toLowerCase())&&selected?.kind==="likes";
+ const likesWithPostPicker=["instagram","tiktok"].includes(String(selected?.platform||"").toLowerCase())&&selected?.kind==="likes"&&["boostero_4751","boostero_5251"].includes(String(selected?.id||""));
  const [multiPostEnabled,setMultiPostEnabled]=useState(false);
  const [multiPosts,setMultiPosts]=useState([]);
  const multiMode=likesWithPostPicker&&multiPostEnabled;
