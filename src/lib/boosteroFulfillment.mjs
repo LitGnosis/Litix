@@ -100,8 +100,9 @@ export async function boosteroNotice(orderId,secret){
  if(orders.length!==1)return false;
  const o=orders[0];
  const allocations=Array.isArray(o.metadata?.postAllocations)?o.metadata.postAllocations.slice(0,5):[];
+ const postPlatform=o.metadata?.postPlatform==="instagram"?"Instagram":"TikTok";
  const allocationLines=allocations.map((p,i)=>
-  "Video "+(i+1)+": "+String(p.link||"")+" — "+Number(p.quantity||0).toLocaleString()+" likes");
+  (postPlatform==="Instagram"?"Post ":"Video ")+(i+1)+": "+String(p.link||"")+" — "+Number(p.quantity||0).toLocaleString()+" likes");
  const publicService=litixCustomerServiceName(o.service_name);
  const publicLink=secret?"https://www.litix.net/track?track="+encodeURIComponent(orderId)+"&token="+encodeURIComponent(secret):null;
  // Customer communication stays Litix-branded. The private owner notification
@@ -112,8 +113,8 @@ export async function boosteroNotice(orderId,secret){
   "Litix Order: "+orderId,
   "Service: "+publicService,
   "Quantity: "+o.quantity,
-  ...(allocations.length?["Your selected TikTok videos:",...allocationLines,
-   "Litix will coordinate separate delivery for each video."]:[]),
+  ...(allocations.length?["Your selected "+postPlatform+" posts:",...allocationLines,
+   "Litix will coordinate separate delivery for each post."]:[]),
   "Total paid: "+amount,
   "Payment status: "+o.payment_state,
   "Litix order status: "+(o.state==="COMPLETED"?"Completed":o.state==="FAILED"?"Needs support":"Processing"),
@@ -128,8 +129,8 @@ export async function boosteroNotice(orderId,secret){
   "Litix Order: "+orderId,
   "Service: "+publicService,
   "Quantity: "+o.quantity,
-  ...(allocations.length?["ACTION REQUIRED: Manual TikTok multi-post fulfillment.",
-    "Submit each video separately to the existing supplier. Never submit the parent destination as a single order.",
+  ...(allocations.length?[postPlatform==="Instagram"?"ACTION REQUIRED: Manual Instagram multi-post fulfillment.":"ACTION REQUIRED: Manual TikTok multi-post fulfillment.",
+    postPlatform==="Instagram"?"Submit each post separately to the existing supplier. Never submit the parent destination as a single order.":"Submit each video separately to the existing supplier. Never submit the parent destination as a single order.",
     ...allocationLines]:[]),
   "Amount: "+amount,
   "Payment: "+o.payment_state,
