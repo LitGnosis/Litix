@@ -3,6 +3,7 @@ import {boosteroSQL,boosteroProductionReady,verifyBoosteroQuote} from "./booster
 import {boosteroProduction} from "./boosteroReadOnly.mjs";
 import {boosteroQuote} from "./boosteroFulfillment.mjs";
 import {boosteroBatchIds,normalizeBoosteroStatus,boosteroChildState} from "./boosteroStatusBatch.mjs";
+import {reconciledMultiPostState} from "./boosteroPartialRecovery.mjs";
 import {queueMultiPostDeliveryMilestone} from "./litixCustomerUpdates.mjs";
 
 // Only invoked after a parent order was inserted and before the one PayKings charge.
@@ -103,10 +104,10 @@ export async function syncBoosteroMultiStatuses({sql=boosteroSQL(),operation=boo
  if(!boosteroProductionReady())return {checked:0,failed:0,skipped:"boostero_disabled"};
  const cap=Math.min(24,Math.max(1,Math.trunc(Number(limit)||24)));
  const batch=await sql.query(
-  "select parent_order_id,ordinal,supplier_order_id from public.litix_boostero_multi_posts where state='SUBMITTED' and supplier_order_id is not null and (checked_at is null or checked_at<now()-interval '15 minutes' or (checked_at<now()-interval '5 minutes' and lower(coalesce(supplier_status->>'status','')) in ('in progress','in_progress','processing'))) order by checked_at nulls first limit $1",
+  "select parent_order_id,ordinal,supplier_order_id,state from public.litix_boostero_multi_posts where state in ('SUBMITTED','MANUAL_REVIEW') and supplier_order_id is not null and (checked_at is null or checked_at<now()-interval '15 minutes' or (state='SUBMITTED' and checked_at<now()-interval '5 minutes' and lower(coalesce(supplier_status->>'status','')) in ('in progress','in_progress','processing'))) order by checked_at nulls first limit $1",
   [cap]);
  if(!batch.length)return {checked:0,failed:0,batched:0};
- let checked=0,failed=0,batched=0;
+ let checked=0,failed=0,batched=0,recovered=0;
  const ids=batch.map(item=>String(item.supplier_order_id));
  const rawById=new Map();
  try{
@@ -122,23 +123,31 @@ export async function syncBoosteroMultiStatuses({sql=boosteroSQL(),operation=boo
    catch{rawById.set(id,null)}
   }
  }
- const affectedParents=new Set();
+ const affectedParents=new Set(),recoveredParents=new Set();
  for(const item of batch){
   const orderId=String(item.supplier_order_id);
   const snapshot=normalizeBoosteroStatus(rawById.get(orderId));
   if(!snapshot){
    failed++;
    await sql.query(
-    "update public.litix_boostero_multi_posts set error_code='status_poll_invalid_or_unavailable' where parent_order_id=$1 and ordinal=$2 and supplier_order_id=$3 and state='SUBMITTED'",
+    "update public.litix_boostero_multi_posts set error_code='status_poll_invalid_or_unavailable' where parent_order_id=$1 and ordinal=$2 and supplier_order_id=$3 and state in ('SUBMITTED','MANUAL_REVIEW')",
     [item.parent_order_id,item.ordinal,orderId]).catch(()=>{});
    continue;
   }
-  const state=boosteroChildState(snapshot.status);
+  // An earlier Partial is not allowed to become a second active supplier
+  // order. A reviewed child clears only after an explicit supplier-confirmed
+  // Completed status with zero remaining.
+  const state=reconciledMultiPostState(item.state,snapshot);
   try{
    const saved=await sql.query(
-    "update public.litix_boostero_multi_posts set state=$4,supplier_status=$5::jsonb,error_code=NULL,checked_at=now(),updated_at=now() where parent_order_id=$1 and ordinal=$2 and supplier_order_id=$3 and state='SUBMITTED' returning parent_order_id",
+    "update public.litix_boostero_multi_posts set state=$4,supplier_status=$5::jsonb,error_code=NULL,checked_at=now(),updated_at=now() where parent_order_id=$1 and ordinal=$2 and supplier_order_id=$3 and state in ('SUBMITTED','MANUAL_REVIEW') returning parent_order_id",
     [item.parent_order_id,item.ordinal,orderId,state,JSON.stringify(snapshot)]);
-   if(saved.length){checked++;affectedParents.add(item.parent_order_id)}
+   if(saved.length){
+    checked++;affectedParents.add(item.parent_order_id);
+    if(item.state==="MANUAL_REVIEW"&&state==="COMPLETED"){
+     recovered++;recoveredParents.add(item.parent_order_id);
+    }
+   }
   }catch{failed++}
  }
  for(const parent of affectedParents){
@@ -151,6 +160,12 @@ export async function syncBoosteroMultiStatuses({sql=boosteroSQL(),operation=boo
    }else if(states.some(p=>p.state==="MANUAL_REVIEW")){
     await sql.query("update public.litix_v2_orders set fulfillment_state='manual_review',updated_at=now() where id=$1 and payment_state='paid'",[parent]);
     await sql.query("update public.litix_boostero_fulfillment set state='MANUAL_REVIEW',updated_at=now() where litix_order_id=$1",[parent]);
+   }else if(recoveredParents.has(parent)&&states.some(p=>p.state==="SUBMITTED")){
+    // The formerly partial supplier order is NOW independently confirmed
+    // complete, but its siblings still require delivery. Restore parent
+    // tracking to processing without reissuing any supplier order.
+    await sql.query("update public.litix_v2_orders set fulfillment_state='processing',updated_at=now() where id=$1 and payment_state='paid' and fulfillment_state='manual_review'",[parent]);
+    await sql.query("update public.litix_boostero_fulfillment set state='SUBMITTED',updated_at=now() where litix_order_id=$1 and state='MANUAL_REVIEW'",[parent]);
    }
    // A customer gets one email when delivery starts and only at meaningful
    // aggregate 25/50/75/100% transitions. The private page still refreshes
@@ -158,7 +173,7 @@ export async function syncBoosteroMultiStatuses({sql=boosteroSQL(),operation=boo
    await queueMultiPostDeliveryMilestone({sql,orderId:parent,children:states});
   }catch{failed++}
  }
- return {checked,failed,batched};
+ return {checked,failed,batched,recovered};
 }
 
 
