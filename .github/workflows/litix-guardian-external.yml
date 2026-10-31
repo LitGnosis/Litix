@@ -1,6 +1,11 @@
 name: Litix Guardian — Independent uptime and encrypted-backup watchdog
 # This workflow must be on DEFAULT main for GitHub's scheduler to run.
 on:
+  # Single kick-off on installation, then independent default-branch schedule.
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/litix-guardian-external.yml"
   schedule:
     - cron: "*/15 * * * *"
   workflow_dispatch:
