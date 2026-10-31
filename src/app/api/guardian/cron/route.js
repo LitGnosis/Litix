@@ -1,16 +1,36 @@
 import {runGuardianCycle,bearerAuthorized} from "../../../../lib/guardianRuntime.mjs";
+import {syncBoosteroMultiStatuses} from "../../../../lib/boosteroMultiPostFulfillment.mjs";
+import {boosteroProductionReady} from "../../../../lib/boosteroFulfillment.mjs";
+
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 export const maxDuration=60;
+
 export async function GET(req){
  const secret=process.env.CRON_SECRET||process.env.LITIX_CRON_SECRET;
  if(!bearerAuthorized(req,secret))return Response.json({error:"Unauthorized"},{status:401});
  if(process.env.VERCEL_ENV!=="production")return Response.json({ok:true,skipped:"preview_not_scheduled"});
- try{
-  const result=await runGuardianCycle();
-  return Response.json({ok:true,...result},{headers:{"cache-control":"no-store"}});
- }catch(e){
-  console.error("Guardian cycle unable to complete",{code:"GUARDIAN_CHECK_FAILURE"});
-  return Response.json({ok:false,error:"Guardian diagnostic storage or probe failed"},{status:503});
+ 
+ // This trusted, already-operating five-minute Guardian schedule supplies an
+ // independent read-only status-reconciliation path for paid Boostero multi-post
+ // children. The polling helper only uses supplier action=status, never add,
+ // refill, cancel, checkout or supplier wallet debit. Existing supplier IDs
+ // remain authoritative, preventing duplicate likes purchases.
+ const enabled=process.env.LITIX_MULTIPOST_AUTO_FULFILL_ENABLED==="true"&&boosteroProductionReady();
+ const poll=enabled?syncBoosteroMultiStatuses({limit:2}):
+  Promise.resolve({checked:0,failed:0,skipped:"multi_post_disabled"});
+ const [guardian,delivery]=await Promise.allSettled([runGuardianCycle(),poll]);
+ const posts=delivery.status==="fulfilled"?delivery.value:{checked:0,failed:1};
+ // No customer data, credentials, supplier IDs or post URLs in cron logs.
+ if(Number(posts.failed||0)>0){
+  console.warn("Litix multi-post status polling failed",{checked:Number(posts.checked||0),failed:Number(posts.failed||0)});
+ }else if(Number(posts.checked||0)>0){
+  console.info("Litix multi-post statuses refreshed",{checked:Number(posts.checked||0)});
  }
+ if(guardian.status==="rejected"){
+  console.error("Guardian cycle unable to complete",{code:"GUARDIAN_CHECK_FAILURE"});
+  return Response.json({ok:false,error:"Guardian diagnostic storage or probe failed",
+   multiPostStatuses:posts},{status:503,headers:{"cache-control":"no-store"}});
+ }
+ return Response.json({ok:true,...guardian.value,multiPostStatuses:posts},{headers:{"cache-control":"no-store"}});
 }
