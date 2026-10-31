@@ -72,8 +72,9 @@ export default function LitixDirectory({standalone=false}){
  };
  const selectFocus=(nextPlatform,nextKind)=>{
   if(!allowedServiceFilter(nextPlatform,nextKind))return;
-  setPlatform(nextPlatform);setKind(nextKind);setCategory("");setSearch("");setPage(1);
-  syncDirectoryFilterUrl(nextPlatform,nextKind);
+  const selectedPlatform=nextPlatform==="All platforms"?"":nextPlatform;
+  setPlatform(selectedPlatform);setKind(nextKind);setCategory("");setSearch("");setPage(1);
+  syncDirectoryFilterUrl(selectedPlatform,nextKind);
   requestAnimationFrame(()=>filterRef.current?.scrollIntoView({behavior:"smooth",block:"start"}));
  };
  useEffect(()=>{
