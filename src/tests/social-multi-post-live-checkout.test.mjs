@@ -12,6 +12,12 @@ test("Instagram and TikTok custom Likes both offer multi-post checkout",()=>{
  assert.match(page,/SocialMultiPostChooser/);
  assert.match(page,/postAllocations:multiPosts\.map/);
  assert.match(handler,/Multi-post checkout supports 2–5 Instagram or TikTok Likes posts only/);
+ assert.match(page,/\["boostero_4751","boostero_5251"\]\.includes\(String\(selected\?\.id\|\|""\)\)/);
+ assert.match(handler,/const approved=await sql\.query\(/);
+ assert.match(handler,/and service_kind='likes' and enabled=true limit 1/);
+ assert.match(handler,/if\(multiple\)return send\(\{error:"Multi-post checkout is available only for approved Litix Likes services; no charge attempted"/);
+ assert.ok(handler.indexOf("const approved=await sql.query")<handler.indexOf("https://paykings.transactiongateway.com/api/transact.php"));
+
  assert.match(handler,/boosteroDestination\(item\?\.link,"instagram","likes"\)/);
  assert.match(handler,/resolveTikTokVideoLink\(item\?\.link\)/);
 });
