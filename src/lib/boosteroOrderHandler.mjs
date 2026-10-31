@@ -1,6 +1,7 @@
 import {after} from "next/server";
 import {randomUUID} from "node:crypto";
 import {resolveTikTokVideoLink} from "./tiktokVideoLinks.mjs";
+import {stageBoosteroPostChildren,releasePaidBoosteroPosts,dispatchBoosteroMultiPosts} from "./boosteroMultiPostFulfillment.mjs";
 import {boosteroProduction,boosteroCompatibleServices} from "./boosteroReadOnly.mjs";
 import {boosteroAdminAuthorized,boosteroProductionReady,boosteroSQL,boosteroDestination,verifyBoosteroQuote,
  boosteroOrderId,boosteroToken,hashBoostero,dispatchBoostero,boosteroNotice,boosteroQuote} from "./boosteroFulfillment.mjs";
@@ -47,6 +48,7 @@ export async function handleBoosteroOrder(request,{adminOnly=true}={}){
  try{({quote,service:supplierService}=await verifyBoosteroQuote(id,quantity,sql))}
  catch(e){return send({error:String(e.message||"Unable to verify live quote").slice(0,100)},409)}
  const multiple=Array.isArray(data?.postAllocations)&&data.postAllocations.length>1;
+ const autoMulti=multiple&&process.env.LITIX_MULTIPOST_AUTO_FULFILL_ENABLED==="true";
  let verifiedPosts=[];
  if(multiple){
   if(action!=="card_purchase"||!["instagram","tiktok"].includes(String(quote.platform).toLowerCase())||
@@ -99,8 +101,8 @@ export async function handleBoosteroOrder(request,{adminOnly=true}={}){
  // A fresh server-only Boostero quote can register a compatible ID before any charge.
  // Never override a disabled record or relax the existing approval constraints.
  if(paymentMode==="card"&&["instagram","tiktok"].includes(String(quote.platform).toLowerCase())&&quote.kind==="likes"){
-  if(String(quote.platform).toLowerCase()==="tiktok"&&quote.retailPer1000Cents<600)
-   return send({error:"This TikTok Likes option is not yet configured for secure checkout; no payment attempted"},409);
+  // Price limits come from the live 60% retail quote and $1 per-post minimum.
+  // The additive multi-post migration must relax any old $6/1k DB constraint.
   try{
    const registered=await sql.query(
     "with added as (insert into public.litix_boostero_services(supplier_service_id,platform,service_kind,retail_per_1000_cents,wholesale_ceiling_per_1000,enabled,approved_by,approved_at) values($1,$4,'likes',$2,$3,true,'verified_live_checkout',now()) on conflict(supplier_service_id) do nothing returning supplier_service_id) select supplier_service_id from added union all select supplier_service_id from public.litix_boostero_services where supplier_service_id=$1 and enabled=true",
@@ -123,11 +125,18 @@ export async function handleBoosteroOrder(request,{adminOnly=true}={}){
   const rows=await sql.query(
    "with new_order as (insert into public.litix_v2_orders(id,email,service_id,service_name,category,destination,quantity,amount_cents,supplier_cost_cents,idempotency_key,tracking_token_hash,metadata,payment_state,fulfillment_state) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12::jsonb,$13,'pending') on conflict(idempotency_key) do nothing returning id), selected as (insert into public.litix_boostero_fulfillment(litix_order_id,supplier_service_id,payment_mode,state,approved_admin_id) select id,$3,$14,$15,$16 from new_order returning litix_order_id) select litix_order_id from selected",
    [orderId,email,id,quote.serviceName,"Boostero "+quote.platform+" "+quote.kind,destination,quantity,quote.amountCents,
-    quote.wholesaleCents,idem,hashBoostero(secret),JSON.stringify({supplier:"boostero",adminOnly:true,...(multiple?{postAllocations:verifiedPosts,postPlatform:String(quote.platform).toLowerCase(),fulfillmentMode:"litix_assisted_multi_post"}:{})}),paymentMode==="admin"?"admin_authorized":"processing",
+    quote.wholesaleCents,idem,hashBoostero(secret),JSON.stringify({supplier:"boostero",adminOnly:true,...(multiple?{postAllocations:verifiedPosts,postPlatform:String(quote.platform).toLowerCase(),fulfillmentMode:autoMulti?"boostero_child_order_dispatch":"litix_assisted_multi_post"}:{})}),paymentMode==="admin"?"admin_authorized":"processing",
     paymentMode,paymentMode==="admin"?"QUEUED":"PENDING_PAYMENT",paymentMode==="admin"?"owner":null]);
   inserted=rows.length===1;
  }catch{return send({error:"Cannot create safe order ledger; no charge attempted"},503)}
  if(!inserted)return send({error:"Checkout already submitted; no repeat charge or purchase"},409);
+ if(autoMulti){
+  try{await stageBoosteroPostChildren(orderId,id,verifiedPosts,{sql})}
+  catch{
+   await sql.query("update public.litix_v2_orders set payment_state='review',fulfillment_state='manual_review' where id=$1 and payment_state='processing'",[orderId]).catch(()=>{});
+   return send({error:"Per-post order ledger unavailable; no payment attempted"},503);
+  }
+ }
  if(paymentMode==="card"){
   let response;
   try{
@@ -155,12 +164,18 @@ export async function handleBoosteroOrder(request,{adminOnly=true}={}){
     "with verified as (update public.litix_v2_orders set payment_state='paid',payment_transaction_id=$2,fulfillment_state=$3,updated_at=now() where id=$1 and payment_state='processing' returning id) update public.litix_boostero_fulfillment set state=$4,updated_at=now() where litix_order_id in(select id from verified) and state='PENDING_PAYMENT' returning litix_order_id",
     [orderId,transaction,multiple?"manual_review":"pending",multiple?"MANUAL_REVIEW":"QUEUED"]);
    if(marked.length!==1)throw Error("payment_persist_mismatch");
+   if(autoMulti){
+    const released=await releasePaidBoosteroPosts(orderId,{sql});
+    if(released!==verifiedPosts.length)throw Error("child_payment_release_incomplete");
+   }
   }catch{
    after(()=>boosteroNotice(orderId,null).catch(()=>{}));
    return send({orderId,payment:"paid",fulfillment:"manual_review",message:"Approved payment needs ledger reconciliation; supplier NOT submitted"},202);
   }
  }
- const attempt=multiple?{submitted:false,state:"MANUAL_REVIEW",requiresReview:false}:
+ const attempt=autoMulti
+  ?await dispatchBoosteroMultiPosts(orderId,{sql}).catch(()=>({submitted:false,state:"MANUAL_REVIEW",requiresReview:true}))
+  :multiple?{submitted:false,state:"MANUAL_REVIEW",requiresReview:false}:
   await dispatchBoostero(orderId).catch(()=>({submitted:false,state:"UNKNOWN_OUTCOME",requiresReview:true}));
  after(async()=>{await Promise.allSettled([
   boosteroNotice(orderId,paymentMode==="card"?secret:null),
