@@ -62,3 +62,16 @@ test("Server enforces known platform, default supplier kind, signed pricing and 
  assert.match(handler,/Number\(balance\.balance\)<quote\.costUSD/);
  assert.match(handler,/idempotency_key\) do nothing/);
 });
+
+test("TikTok Likes deep links open Choose Your Posts without checkout form redirects",()=>{
+ const directory=read("components/LitixDirectory.jsx");
+ assert.match(page,/setMultiPostEnabled\(choose\)/);
+ assert.match(page,/newTikTokPost\(\{quantity:Number\(selected\.min\)\}\)/);
+ assert.match(page,/document\.getElementById\("checkout"\)\?\.scrollIntoView/);
+ assert.doesNotMatch(page,/if\(!services\.length\)return;const id=new URLSearchParams\(location\.search\)/);
+ assert.match(directory,/Choose Your Posts & Pay/);
+ assert.match(directory,/href=\{"\/\?service="\+encodeURIComponent\(s\.id\)\+"#checkout"\}/);
+ assert.match(picker,/<div className="litix-picker-search">/);
+ assert.match(picker,/<button type="button" onClick=\{lookup\}/);
+ assert.doesNotMatch(picker,/<form\b/);
+});
