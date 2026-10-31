@@ -39,3 +39,11 @@ test("Three-post split preserves exact total and rejects invalid quantities",()=
   assert.equal(divideLikes(300.5,3),null);
   assert.equal(divideLikes(300,9),null);
 });
+
+// A transient empty scraper response must not lock a public profile out for 10 minutes.
+test("empty Apify results are retryable, successful lookups remain cached",async()=>{
+ const {readFileSync}=await import("node:fs");
+ const source=readFileSync(new URL("../app/api/post-picker/route.js",import.meta.url),"utf8");
+ assert.match(source,/if\(posts\.length>0\)cached\.set\(cacheKey,\{time:Date\.now\(\),value\}\)/);
+ assert.match(source,/You can retry the lookup or enter post links below/);
+});
