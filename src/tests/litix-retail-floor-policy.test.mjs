@@ -86,3 +86,12 @@ test("same service-aware floor is applied in both catalog surfaces and charged s
  assert.match(orderHandler,/Number\(data\?\.expectedAmountCents\)!==quote\.amountCents/);
  assert.match(orderHandler,/totalCents\+=one\.amountCents/);
 });
+
+test("price changes cannot retrospectively block valid already-paid supplier orders",()=>{
+ const single=readFileSync(new URL("../lib/boosteroFulfillment.mjs",import.meta.url),"utf8");
+ const multi=readFileSync(new URL("../lib/boosteroMultiPostFulfillment.mjs",import.meta.url),"utf8");
+ assert.match(single,/amount_cents\)<Math\.ceil\(quote\.costUSD\*160-1e-8\)/);
+ assert.match(multi,/retail_cents\)<Math\.ceil\(live\.costUSD\*160-1e-8\)/);
+ assert.doesNotMatch(multi,/retail_cents\)<live\.amountCents/);
+ assert.doesNotMatch(single,/amount_cents\)<quote\.amountCents/);
+});
