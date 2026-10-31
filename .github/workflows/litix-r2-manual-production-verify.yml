@@ -48,10 +48,15 @@ jobs:
           sudo apt-get install -y -qq age
           command -v age
           command -v age-keygen
-          command -v aws
+          # Use an isolated, pinned Python AWS SDK; no credentials are present
+          # in this install step or logged by the transport.
+          python3 -m venv "$RUNNER_TEMP/litix-r2-boto3"
+          "$RUNNER_TEMP/litix-r2-boto3/bin/python" -m pip install --quiet --disable-pip-version-check "boto3==1.40.60"
+          echo "$RUNNER_TEMP/litix-r2-boto3/bin" >> "$GITHUB_PATH"
           command -v docker
           docker info >/dev/null
           bash -n scripts/litix-r2-github-manual-verify.sh
+          python3 -m py_compile scripts/litix-r2-boto3-transfer.py
       - name: Real private R2 probe and optionally two encrypted production backups/restores
         env:
           LITIX_RECOVERY_MODE: ${{ (github.event_name == 'schedule' || github.event_name == 'push') && 'backup_and_restore' || inputs.operation }}
