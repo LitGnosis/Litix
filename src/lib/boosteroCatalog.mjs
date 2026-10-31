@@ -35,7 +35,7 @@ export async function allBoosteroCards(){
 }
 export const enabledBoosteroCards=allBoosteroCards;
 export function filterBoosteroCards(items,params){
- const q=String(params.get("q")||"").toLowerCase(),kind=String(params.get("kind")||"").toLowerCase(),
+ const q=String(params.get("q")||"").toLowerCase().replace(/^litix_(\d+)$/,"boostero_$1"),kind=String(params.get("kind")||"").toLowerCase(),
   cat=String(params.get("category")||""),platform=String(params.get("platform")||"");
  return items.filter(s=>(!q||[s.id,s.name,s.category,s.platform].some(x=>String(x).toLowerCase().includes(q)))&&
   (!cat||cat===s.category)&&(!platform||platform==="All platforms"||platform===s.platform)&&
