@@ -9,12 +9,46 @@ export default function BundleCheckout(){
  const [pkgId,setPkgId]=useState("ig_launch"),[catalog,setCatalog]=useState(null),[email,setEmail]=useState(""),[profile,setProfile]=useState(""),
  [consent,setConsent]=useState(false),[cardReady,setCardReady]=useState(false),[busy,setBusy]=useState(false),[notice,setNotice]=useState("");
  const [phone,setPhone]=useState(""),[smsConsent,setSmsConsent]=useState(false),[bluevineBusy,setBluevineBusy]=useState(false),[pendingBluevine,setPendingBluevine]=useState(null),[method,setMethod]=useState("paykings");
+ const [autoMode,setAutoMode]=useState(false),[postLinks,setPostLinks]=useState(""),[gallery,setGallery]=useState([]),
+ [galleryState,setGalleryState]=useState("idle");
+ const selectedPostLinks=postLinks.split(/\\r?\\n/).map(x=>x.trim()).filter(Boolean);
+ const autoSelected=method==="paykings"&&catalog?.autoFulfillmentEnabled===true&&autoMode;
  const bluevineIdem=useRef(null);
  const idem=useRef(""),submitted=useRef(false),onToken=useRef(null);
  const pkg=growthBundle(pkgId);
- useEffect(()=>{const params=new URLSearchParams(location.search),id=params.get("package");if(growthBundle(id))setPkgId(id);if(params.get("method")==="bluevine")setMethod("bluevine");idem.current=crypto.randomUUID();fetch("/api/bundles",{cache:"no-store"}).then(r=>r.json()).then(setCatalog).catch(()=>setNotice("Bundle checkout availability could not be checked."));
+ useEffect(()=>{const params=new URLSearchParams(location.search),id=params.get("package");if(growthBundle(id))setPkgId(id);if(params.get("method")==="bluevine")setMethod("bluevine");idem.current=crypto.randomUUID();fetch("/api/bundles",{cache:"no-store"}).then(r=>r.json()).then(d=>{
+   setCatalog(d);setAutoMode(d.autoFulfillmentEnabled===true);
+  }).catch(()=>setNotice("Bundle checkout availability could not be checked."));
   try{const prev=JSON.parse(sessionStorage.getItem("litix:bundle-bluevine-pending")||"null");if(prev?.id&&prev?.packageId)setPendingBluevine(prev);}catch{}
  },[]);
+ useEffect(()=>{
+  if(!autoSelected||!profile.trim()){setGallery([]);setGalleryState("idle");return;}
+  const controller=new AbortController();
+  const timer=setTimeout(async()=>{
+   setGalleryState("loading");
+   try{
+    const platform=pkg?.platform?.toLowerCase();
+    let input=profile.trim().replace(/^@/,"");
+    if(input.startsWith("https://")){
+     const u=new URL(input);input=platform==="instagram"?u.pathname.split("/")[1]:u.pathname.split("/")[1]?.replace(/^@/,"");
+    }
+    if(!/^[A-Za-z0-9._]{2,30}$/.test(input))throw Error("Enter your public username.");
+    const r=await fetch("/api/post-picker?platform="+platform+"&username="+encodeURIComponent(input),{signal:controller.signal,cache:"no-store"});
+    const data=await r.json();
+    if(!r.ok)throw Error("Unable to retrieve public posts.");
+    const items=Array.isArray(data.posts)?data.posts:[];
+    setGallery(items);setGalleryState(items.length?"ready":"empty");
+   }catch{if(!controller.signal.aborted){setGallery([]);setGalleryState("unavailable")}}
+  },1200);
+  return()=>{controller.abort();clearTimeout(timer)};
+ },[autoSelected,profile,pkg?.platform]);
+ const togglePost=url=>{
+  setPostLinks(current=>{
+   const urls=current.split(/\\r?\\n/).map(x=>x.trim()).filter(Boolean);
+   const next=urls.includes(url)?urls.filter(x=>x!==url):urls.length<10?[...urls,url]:urls;
+   return next.join("\\n");
+  });
+ };
  useEffect(()=>{
   if(method!=="paykings"||!catalog?.checkoutEnabled||!catalog.publicKey)return;
   let active=true,timeout;
@@ -47,7 +81,7 @@ export default function BundleCheckout(){
   try{
    const r=await fetch("/api/bundles/checkout",{method:"POST",
     headers:{"content-type":"application/json"},
-    body:JSON.stringify({packageId:pkg.id,expectedAmountCents:pkg.priceCents,email,profile,whatsappConsent:consent,paymentToken:token,idempotencyKey:idem.current})});
+    body:JSON.stringify({packageId:pkg.id,expectedAmountCents:pkg.priceCents,email,profile,whatsappConsent:consent,paymentToken:token,idempotencyKey:idem.current,autoFulfill:autoSelected,postUrls:autoSelected?selectedPostLinks:[]})});
    const data=await r.json();
    if(data.orderId&&data.trackingToken){
     sessionStorage.setItem("litix:bundle-confirmation",JSON.stringify({id:data.orderId,token:data.trackingToken}));
@@ -60,6 +94,7 @@ export default function BundleCheckout(){
  function submit(e){
   e.preventDefault();
   if(method!=="paykings"||!catalog?.checkoutEnabled||!cardReady||!pkg||!consent||busy||bluevineBusy||submitted.current||pendingBluevine?.packageId===pkg.id)return;
+  if(autoSelected&&(selectedPostLinks.length<1||selectedPostLinks.length>10)){setNotice("Select 1–10 public post links for automatic bundle delivery, or choose manual coordination.");return;}
   setBusy(true);setNotice("");
   try{collect().startPaymentRequest()}catch{setBusy(false);setNotice("Check your secure card fields.")}
  }
@@ -95,17 +130,40 @@ export default function BundleCheckout(){
    <h2>{pkg?.name} · {pkg&&money(pkg.priceCents)}</h2>
    <p className="small">Fixed-price package totals. Likes, Views and Shares can be allocated across up to 10 posts. Followers are delivered once to your selected account.</p>
    <div className="lg-bundle-items">{pkg&&Object.entries(pkg.items).map(([kind,n])=><div key={kind}><span>{kind}</span><strong>{n.toLocaleString()}</strong></div>)}</div>
-   <p className="lg-bundle-warning">{BUNDLE_INSTRUCTIONS}</p>
+   <p className="lg-bundle-warning">{autoSelected
+     ?"Choose up to 10 public posts. Likes, Views and Shares are split across your chosen posts; Followers go once to your profile. Litix verifies all supplier delivery parts and your fixed package price before processing one PayKings payment."
+     :BUNDLE_INSTRUCTIONS}</p>
    <div className="lg-bundle-methods" role="group" aria-label="Choose bundle payment method">
      <button type="button" className={"lg-bundle-method"+(method==="paykings"?" active":"")} aria-pressed={method==="paykings"} disabled={!catalog?.checkoutEnabled||busy||bluevineBusy||submitted.current||pendingBluevine?.packageId===pkg?.id} onClick={()=>{setMethod("paykings");setNotice("")}}>Pay with PayKings</button>
      <button type="button" className={"lg-bundle-method"+(method==="bluevine"?" active":"")} aria-pressed={method==="bluevine"} disabled={!catalog?.bluevineEnabled||busy||bluevineBusy||submitted.current} onClick={()=>{setMethod("bluevine");setNotice("")}}>Pay with Bluevine</button>
     </div>
-    {method==="paykings"&&<p className="small">PayKings processes a single one-time payment using its secure card fields. After verified payment, submit your order number and up to 10 posts using the three options on the confirmation page. Bundles are fulfilled manually.</p>}
+    {method==="paykings"&&<p className="small">PayKings processes a single one-time payment with secure card fields. {autoSelected?"After verified settlement, Litix submits separate delivery orders for each included service and post.":"After payment, submit your post links through the confirmation page for manual coordination."}</p>}
     {pendingBluevine?.packageId===pkg?.id?<p className="lg-bundle-warning" role="status">A Bluevine checkout has already been started for this bundle. To prevent duplicate payment, review that order before attempting PayKings. <a href={"/bundles/confirmation?id="+encodeURIComponent(pendingBluevine.id)}>Track existing order</a>.</p>:null}
    <form onSubmit={submit} className="form">
     <label>Email<input type="email" required value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com"/></label>
     <label>{pkg?.platform} username or public profile URL<input required value={profile} onChange={e=>setProfile(e.target.value)} placeholder="@yourprofile" autoCapitalize="none" autoCorrect="off"/></label>
-    <label style={{display:"flex",alignItems:"start",gap:10,fontSize:14,lineHeight:1.5}}><input style={{width:20,marginTop:3}} type="checkbox" required checked={consent} onChange={e=>setConsent(e.target.checked)}/><span>I understand that I must submit my order information via WhatsApp, email, or Instagram. I may submit up to 10 posts, and all fulfillment requires manual LITIX approval.</span></label>
+    {method==="paykings"&&catalog?.autoFulfillmentEnabled&&<section aria-label="Automated bundle post selection" className="lg-bundle-auto-posts">
+      <label style={{display:"flex",gap:10,alignItems:"center"}}>
+       <input type="checkbox" style={{width:20}} checked={autoMode} onChange={e=>setAutoMode(e.target.checked)}/>
+       <span><strong>Automatic post delivery</strong> (one payment; separate Litix tracking per service)</span>
+      </label>
+      {autoMode&&<>
+       <p className="small">Enter your public profile above. Pick 1–10 posts below, or paste each direct post link on its own line. The fixed bundle totals are split across selected posts, not repeated on every post.</p>
+       <p className="small" role="status">{galleryState==="loading"?"Loading public posts…":galleryState==="unavailable"?"Post thumbnails temporarily unavailable. Direct links still work.":galleryState==="empty"?"No public thumbnails found. Paste direct post links.":gallery.length?gallery.length+" posts ready to select":""}</p>
+       {gallery.length>0&&<div className="lg-auto-gallery" role="group" aria-label="Select public posts">
+        {gallery.map(p=><button key={p.url} type="button" aria-pressed={selectedPostLinks.includes(p.url)}
+         onClick={()=>togglePost(p.url)} className={"lg-auto-thumb"+(selectedPostLinks.includes(p.url)?" selected":"")}>
+         {p.thumbnail?<img src={p.thumbnail} alt="Public post thumbnail" loading="lazy"/>:<span>Post</span>}
+         <span>{selectedPostLinks.includes(p.url)?"Selected":"Select post"}</span>
+        </button>)}
+       </div>}
+       <label>Selected post links (one per line; maximum 10)
+        <textarea rows={4} value={postLinks} onChange={e=>setPostLinks(e.target.value)} placeholder={pkg?.platform==="Instagram"?"https://www.instagram.com/p/...":"https://www.tiktok.com/@user/video/..."} autoCapitalize="none" spellCheck={false}/>
+       </label>
+       <p role="status" className="small">{selectedPostLinks.length} of 10 posts selected</p>
+      </>}
+     </section>}
+    <label style={{display:"flex",alignItems:"start",gap:10,fontSize:14,lineHeight:1.5}}><input style={{width:20,marginTop:3}} type="checkbox" required checked={consent} onChange={e=>setConsent(e.target.checked)}/><span>{autoSelected?"I authorize Litix to process this fixed-price bundle as separate Boostero supplier deliveries after verified payment, with no repeated orders on uncertain outcomes.":"I understand that I must submit my order information via WhatsApp, email, or Instagram. I may submit up to 10 posts, and all fulfillment requires manual LITIX approval."}</span></label>
     {method==="paykings"&&catalog?.checkoutEnabled?<><div><label>Card number<div id="bundle-ccnumber" className="field"/></label><div className="premium-card-row"><label>Expiration<div id="bundle-ccexp" className="field"/></label><label>CVV<div id="bundle-cvv" className="field"/></label></div></div><button className="pay" disabled={!cardReady||!consent||busy||bluevineBusy||submitted.current||pendingBluevine?.packageId===pkg?.id}>{busy?"Processing securely...":"Pay with PayKings — "+money(pkg.priceCents)}</button></>:
       method==="paykings"?<div role="status" className="lg-bundle-warning"><strong>PayKings bundle checkout is unavailable until merchant activation.</strong> Live payment fields are unavailable. Check your connection and try again; no payment can be submitted until the secure gateway and official WhatsApp contact are available.</div>:null}
    </form>
