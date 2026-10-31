@@ -17,6 +17,10 @@ function friendlyStatus(order){
  if(order.payment!=="paid")return {title:"Payment "+(order.payment||"pending"),description:"Payment approval is not confirmed. Do not submit another charge until support checks your order.",kind:"warning",step:0};
  const s=String(order.fulfillment||"").toLowerCase();
  const latest=String(order.status||"").toLowerCase();
+ const children=Array.isArray(order.posts)?order.posts:[];
+ if(children.some(p=>/^(in progress|in_progress|processing)$/i.test(String(p.status||"")))&&
+   !["completed","failed","canceled"].includes(s))
+  return {title:"Litix delivery in progress",description:"Your selected posts are receiving delivery. View the latest supplier-reported progress below.",kind:"progress",step:2};
  if(["in progress","in_progress","processing"].includes(latest)&&!["completed","failed","canceled"].includes(s))
   return {title:"Litix delivery in progress",description:"Your order is still processing. The latest update may show a remaining quantity; final delivery has not been confirmed.",kind:"progress",step:2};
  if(s==="completed")return {title:"Delivery reported complete",description:"Litix has received a completed delivery status. If anything is missing, contact support with your Litix order number.",kind:"success",step:3};
@@ -121,13 +125,26 @@ export default function OrderTracker(){
     <p className="ltx-track-service"><b>Service:</b> {litixCustomerServiceName(order.service)}</p>
     {Array.isArray(order.posts)&&order.posts.length>0&&<section aria-label="Individual post delivery status" style={{padding:"14px 0"}}>
       <h3 style={{fontSize:17,margin:"0 0 12px"}}>Your selected posts</h3>
+      {order.posts.some(p=>Number.isSafeInteger(p.delivered))&&<p className="ltx-track-meta">
+        Boostero-reported progress: {order.posts.reduce((sum,p)=>sum+(Number.isSafeInteger(p.delivered)?p.delivered:0),0).toLocaleString()} of {order.posts.reduce((sum,p)=>sum+Number(p.quantity||0),0).toLocaleString()} likes ordered.
+        {order.posts.some(p=>!Number.isSafeInteger(p.delivered))?" Some posts have not reported quantities yet.":""}
+       </p>}
       <div style={{display:"grid",gap:10}}>{order.posts.map(post=><article key={post.index} style={{padding:12,border:"1px solid #4c99cc80",borderRadius:12,background:"#091f35"}}>
        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:9,flexWrap:"wrap"}}>
          <strong>Post {post.index} · {Number(post.quantity||0).toLocaleString()} likes</strong>
          <span className="small">{post.status||"Processing"}</span>
        </div>
        <p style={{margin:"8px 0 0",wordBreak:"break-word",fontSize:12}}><a href={post.url} target="_blank" rel="noopener noreferrer">View selected post</a></p>
-       {post.remains!==null&&post.remains!==undefined&&<p className="small" style={{margin:"6px 0 0"}}>{Number(post.remains).toLocaleString()} likes remaining</p>}
+       {Number.isSafeInteger(post.delivered)&&<div style={{margin:"8px 0 0"}}>
+          <div role="progressbar" aria-valuemin={0} aria-valuemax={Number(post.quantity||0)} aria-valuenow={post.delivered}
+           aria-label={"Supplier-reported likes delivered for post "+post.index}
+           style={{height:7,borderRadius:6,background:"#163550",overflow:"hidden"}}>
+            <div style={{height:"100%",width:Math.min(100,100*post.delivered/Math.max(1,Number(post.quantity||1)))+"%",background:"#81c7fb"}}/>
+          </div>
+          <p className="small" style={{margin:"6px 0 0"}}>{post.delivered.toLocaleString()} supplier-reported delivered · {(Number(post.quantity||0)-post.delivered).toLocaleString()} remaining</p>
+         </div>}
+         {!Number.isSafeInteger(post.delivered)&&post.remains!==null&&post.remains!==undefined&&<p className="small" style={{margin:"6px 0 0"}}>{Number(post.remains).toLocaleString()} likes remaining</p>}
+         {post.checkedAt&&<p className="small" style={{margin:"5px 0 0"}}>Status checked {new Date(post.checkedAt).toLocaleString()}</p>}
       </article>)}</div>
      </section>}
 

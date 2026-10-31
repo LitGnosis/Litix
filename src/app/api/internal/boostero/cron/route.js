@@ -14,7 +14,7 @@ export async function GET(req){
   const results=await syncBoosteroStatuses();
   const ready=process.env.LITIX_MULTIPOST_AUTO_FULFILL_ENABLED==="true";
   const continuation=ready?await resumeBoosteroMultiQueue({limitParents:1}):{skipped:"multi_post_disabled"};
-  const posts=ready?await syncBoosteroMultiStatuses({limit:8}):{skipped:"multi_post_disabled"};
+  const posts=ready?await syncBoosteroMultiStatuses({limit:24}):{skipped:"multi_post_disabled"};
   const notifications=await deliverLitixCustomerUpdates({limit:5});
   return Response.json({ok:true,...results,multiPostContinuation:continuation,multiPostStatuses:posts,customerNotifications:notifications},{headers:{"cache-control":"no-store"}});
  }catch{return Response.json({ok:false,error:"Private supplier polling unavailable"},{status:503,headers:{"cache-control":"no-store"}})}

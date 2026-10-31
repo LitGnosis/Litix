@@ -1,5 +1,6 @@
 import {boosteroSQL,hashBoostero} from "../../../../../lib/boosteroFulfillment.mjs";
 import {publicServiceCardName} from "../../../../../lib/serviceCardDisplay.mjs";
+import {boosteroSupplierDelivered} from "../../../../../lib/boosteroStatusBatch.mjs";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 export async function GET(request){
@@ -31,7 +32,8 @@ export async function GET(request){
    const children=await boosteroSQL().query(
     "select ordinal,destination,quantity,state,supplier_status,checked_at from public.litix_boostero_multi_posts where parent_order_id=$1 order by ordinal limit 5",[id]);
    if(children.length)posts=children.map(p=>({index:Number(p.ordinal),url:p.destination,quantity:Number(p.quantity),
-    status:p.supplier_status?.status||p.state,remains:p.supplier_status?.remains??null,checkedAt:p.checked_at||null}));
+    status:p.supplier_status?.status||p.state,remains:p.supplier_status?.remains??null,
+    delivered:boosteroSupplierDelivered(p.quantity,p.supplier_status?.remains),checkedAt:p.checked_at||null}));
   }catch{}
  }
  return Response.json({order:{id:x.id,service:publicServiceCardName({name:x.service_name}),quantity:x.quantity,amountCents:x.amount_cents,
