@@ -1,6 +1,6 @@
 "use client";
-import {useState} from "react";
-import {canonicalPost} from "../lib/postPicker.mjs";
+import {useEffect,useRef,useState} from "react";
+import {canonicalPost,normalizeProfile} from "../lib/postPicker.mjs";
 import {newTikTokPost} from "./TikTokMultiPostChooser";
 import "./SocialMultiPostChooser.css";
 
@@ -13,23 +13,52 @@ export default function SocialMultiPostChooser({service,platform,posts,onChange}
  const [loading,setLoading]=useState(false);
  const [running,setRunning]=useState("");
  const [message,setMessage]=useState("");
+ const activeLookup=useRef(null), lastAutomaticLookup=useRef("");
  const isTikTok=platform==="tiktok";
+ const profileHandle=normalizeProfile(platform,username);
+ // Typing and pasting a public username/profile URL loads the gallery automatically.
+ // Debounce protects Apify rate limits and costs; the manual button remains a retry.
+ useEffect(()=>{
+  if(!profileHandle){
+   activeLookup.current?.abort();
+   setLoading(false);setGallery([]);setMessage("");
+   return;
+  }
+  const key=platform+":"+profileHandle;
+  if(lastAutomaticLookup.current===key)return;
+  const timer=setTimeout(()=>{void lookup(null,{automatic:true})},1200);
+  return()=>clearTimeout(timer);
+ },[profileHandle,platform]);
  const minimum=Number(service?.min||1),maximum=Number(service?.max||1000000),unitStep=Number(service?.unitStep||1);
  const selected=new Set(posts.filter(p=>p.status==="verified"&&p.verifiedInput===p.link.trim()).map(p=>p.verifiedUrl));
  function mutate(id,fields){onChange(old=>old.map(p=>p.id===id?{...p,...fields}:p))}
- async function lookup(e){
-  e.preventDefault();if(loading)return;
+ async function lookup(e,{automatic=false}={}){
+  e?.preventDefault?.();
+  const handle=normalizeProfile(platform,username);
+  if(!handle){if(!automatic)setMessage("Enter a valid public username or profile link.");return;}
+  const key=platform+":"+handle;
+  if(automatic&&lastAutomaticLookup.current===key)return;
+  if(loading&&!automatic)return;
+  lastAutomaticLookup.current=key;
+  activeLookup.current?.abort();
+  const controller=new AbortController();
+  activeLookup.current=controller;
   setLoading(true);setMessage("");setGallery([]);
   try{
-   const q=new URLSearchParams({platform,username:username.trim()});
-   const r=await fetch("/api/post-picker?"+q,{cache:"no-store"});
+   const q=new URLSearchParams({platform,username:handle});
+   const r=await fetch("/api/post-picker?"+q,{cache:"no-store",signal:controller.signal});
    const body=await r.json();if(!r.ok)throw Error(body.error||"Public gallery unavailable");
+   if(controller.signal.aborted)return;
    const eligible=(body.posts||[]).filter(p=>
     isTikTok?/\/video\/[0-9]{10,25}$/.test(p.url):/^https:\/\/www\.instagram\.com\/(?:p|reel)\//.test(p.url)
    );
-   setGallery(eligible);setMessage(eligible.length?"Tap one to five posts below.":"No eligible public posts found. You can still add direct post links below.");
-  }catch(err){setMessage(String(err.message||"Posts unavailable")+". You can still enter individual post links below.")}
-  finally{setLoading(false)}
+   setGallery(eligible);
+   setMessage(eligible.length?"Your public posts loaded automatically. Tap 1–5 posts to add likes.":"No eligible public posts found. Try again or paste a direct post link below.");
+  }catch(err){
+   if(!controller.signal.aborted)setMessage("Gallery temporarily unavailable. Tap Retry or add direct post links below.");
+  }finally{
+   if(!controller.signal.aborted)setLoading(false);
+  }
  }
  function toggle(post){
   onChange(current=>{
@@ -65,10 +94,10 @@ export default function SocialMultiPostChooser({service,platform,posts,onChange}
  return <div className="litix-social-picker">
    <div className="litix-picker-lookup">
     <h3>Choose Your Posts</h3>
-    <p>Enter a public {isTikTok?"TikTok":"Instagram"} username and choose posts from a gallery — no copying links individually.</p>
+    <p>Enter your public {isTikTok?"TikTok":"Instagram"} username or profile URL. Your posts load automatically — tap the ones you want.</p>
     <div className="litix-picker-search">
-      <input value={username} placeholder={isTikTok?"@yourtiktok":"@yourinstagram"} aria-label={isTikTok?"Public TikTok username":"Public Instagram username"} autoCapitalize="none" autoCorrect="off" spellCheck={false} onChange={e=>setUsername(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();if(username.trim())lookup(e)}}} required/>
-      <button type="button" onClick={lookup} className="alt" disabled={loading||!username.trim()}>{loading?"Finding posts…":"Find my posts"}</button>
+      <input value={username} placeholder={isTikTok?"@yourtiktok or TikTok profile link":"@yourinstagram or Instagram profile link"} aria-label={isTikTok?"Public TikTok username or profile link":"Public Instagram username or profile link"} autoCapitalize="none" autoCorrect="off" spellCheck={false} onChange={e=>{setUsername(e.target.value);setGallery([]);setMessage("");activeLookup.current?.abort();setLoading(false)}} onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();if(profileHandle)lookup(e)}}} required/>
+      <button type="button" onClick={lookup} className="alt" disabled={loading||!profileHandle}>{loading?"Loading your posts…":gallery.length?"Refresh posts":"Retry / load posts"}</button>
     </div>
     {message&&<p className="small" role="status">{message}</p>}
     {gallery.length>0&&<>
