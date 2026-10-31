@@ -140,7 +140,7 @@ export default function LitixDirectory({standalone=false}){
         {Number.isInteger(s.min)&&Number.isInteger(s.max)?s.min.toLocaleString()+"–"+s.max.toLocaleString()+" units":"Quantity confirmed on request"}
         <span>Service {s.id.replace(/^boostero_/,"")}</span>
        </div>
-       <a className="litix-directory-buy" href={"/?service="+encodeURIComponent(s.id)+"#checkout"}>Review & pay with PayKings</a>
+       <a className="litix-directory-buy" href={"/?service="+encodeURIComponent(s.id)+"#checkout"}>{["boostero_4751","boostero_5251"].includes(String(s.id))?"Choose Your Posts & Pay":"Review & pay with PayKings"}</a>
       </article>
      })}
     </div>
