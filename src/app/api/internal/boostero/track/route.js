@@ -1,4 +1,5 @@
 import {boosteroSQL,hashBoostero} from "../../../../../lib/boosteroFulfillment.mjs";
+import {publicServiceCardName} from "../../../../../lib/serviceCardDisplay.mjs";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 export async function GET(request){
@@ -33,7 +34,7 @@ export async function GET(request){
     status:p.supplier_status?.status||p.state,remains:p.supplier_status?.remains??null,checkedAt:p.checked_at||null}));
   }catch{}
  }
- return Response.json({order:{id:x.id,service:x.service_name,quantity:x.quantity,amountCents:x.amount_cents,
+ return Response.json({order:{id:x.id,service:publicServiceCardName({name:x.service_name}),quantity:x.quantity,amountCents:x.amount_cents,
   payment:x.payment_state,fulfillment:x.state,
   supplierStatus:x.supplier_status?.status||null,remains:x.supplier_status?.remains??null,lastChecked:x.checked_at||null,posts}},
   {headers:{"cache-control":"no-store","referrer-policy":"no-referrer","x-robots-tag":"noindex"}});
