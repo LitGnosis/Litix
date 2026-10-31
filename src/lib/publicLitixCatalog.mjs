@@ -1,6 +1,6 @@
 // Customer catalog DTO. Supplier routing, wholesale economics, approval sources,
  // and internal supplier SKU prefixes must never be serialized to public pages.
-import {publicServiceCardName,litixCustomerServiceName} from "./serviceCardDisplay.mjs";
+import {publicServiceCardName} from "./serviceCardDisplay.mjs";
 const valid=/^(?:boostero|litix)_([0-9]{1,12})$/;
 export const litixPublicId=value=>{
  const match=valid.exec(String(value||""));
@@ -16,7 +16,7 @@ export const litixPublicCard=item=>{
  return {
   id,
   name:publicServiceCardName(item),
-  category:litixCustomerServiceName(item.category||"Litix services"),
+  category:publicServiceCardName({name:item.category||"Litix services"}),
   platform:item.platform,
   kind:item.kind,
   min:item.min,
