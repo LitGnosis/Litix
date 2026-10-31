@@ -65,6 +65,9 @@ test("independent TikTok actor output converts into selectable creator-verified 
 test("TikTok scraper fallbacks use fixed actors and safe bounded lookup",async()=>{
  const {readFileSync}=await import("node:fs");
  const src=readFileSync(new URL("../app/api/post-picker/route.js",import.meta.url),"utf8");
+ assert.match(src,/transparent_meteorite~tiktok-public-profile-scraper/);
+ assert.match(src,/resultsType:"posts",resultsPerPage:12,includeVideoDetails:false,maxItems:12/);
+ assert.ok(src.indexOf("transparent_meteorite~tiktok-public-profile-scraper")<src.indexOf("tokfluence~tiktok-profile-scraper"));
  assert.match(src,/tokfluence~tiktok-profile-scraper/);
  assert.match(src,/profiles:\[handle\],resultsPerPage:12,maxResults:12/);
  assert.match(src,/normalizePosts\("tiktok",handle,rows\)/);
