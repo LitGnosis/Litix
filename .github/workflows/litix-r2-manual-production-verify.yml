@@ -1,7 +1,7 @@
 name: Litix R2 — Daily encrypted dual-Neon backup and isolated restore
 run-name: Litix R2 backup / ${{ github.run_id }}
 on:
-  # Exactly one production-backup verification on the reviewed kickoff commit.
+  # One harmless R2 probe on an explicitly reviewed kickoff commit; scheduled dual backups remain separate.
   # Restrict the push event to a change to this workflow file only.
   push:
     branches: [main]
@@ -59,8 +59,8 @@ jobs:
           python3 -m py_compile scripts/litix-r2-boto3-transfer.py
       - name: Real private R2 probe and optionally two encrypted production backups/restores
         env:
-          LITIX_RECOVERY_MODE: ${{ (github.event_name == 'schedule' || github.event_name == 'push') && 'backup_and_restore' || inputs.operation }}
-          LITIX_CONFIRM_BACKUP: ${{ github.event_name == 'schedule' && 'SCHEDULED_BOTH_DBS_READ_ONLY' || github.event_name == 'push' && 'BACKUP_BOTH_DBS_READ_ONLY' || inputs.confirm_backup }}
+          LITIX_RECOVERY_MODE: ${{ github.event_name == 'schedule' && 'backup_and_restore' || github.event_name == 'push' && 'probe_only' || inputs.operation }}
+          LITIX_CONFIRM_BACKUP: ${{ github.event_name == 'schedule' && 'SCHEDULED_BOTH_DBS_READ_ONLY' || github.event_name == 'push' && '' || inputs.confirm_backup }}
           R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}

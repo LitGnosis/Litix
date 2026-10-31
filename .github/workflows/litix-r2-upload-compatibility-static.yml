@@ -4,6 +4,8 @@ on:
     paths:
       - 'scripts/litix-r2-github-manual-verify.sh'
       - 'scripts/test-r2-upload-compatibility.py'
+      - 'scripts/litix-r2-boto3-transfer.py'
+      - 'scripts/test-r2-presigned-transport.py'
 permissions:
   contents: read
 jobs:
@@ -14,4 +16,6 @@ jobs:
         with:
           persist-credentials: false
       - run: bash -n scripts/litix-r2-github-manual-verify.sh
+      - run: python3 -m pip install --quiet --disable-pip-version-check boto3==1.40.60
       - run: python3 scripts/test-r2-upload-compatibility.py
+      - run: python3 scripts/test-r2-presigned-transport.py
