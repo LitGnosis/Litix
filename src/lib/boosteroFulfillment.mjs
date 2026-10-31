@@ -101,6 +101,7 @@ export async function boosteroNotice(orderId,secret){
  const o=orders[0];
  const allocations=Array.isArray(o.metadata?.postAllocations)?o.metadata.postAllocations.slice(0,5):[];
  const postPlatform=o.metadata?.postPlatform==="instagram"?"Instagram":"TikTok";
+ const automatedMulti=allocations.length>1&&o.metadata?.fulfillmentMode==="boostero_child_order_dispatch";
  const allocationLines=allocations.map((p,i)=>
   (postPlatform==="Instagram"?"Post ":"Video ")+(i+1)+": "+String(p.link||"")+" — "+Number(p.quantity||0).toLocaleString()+" likes");
  const publicService=litixCustomerServiceName(o.service_name);
@@ -129,13 +130,17 @@ export async function boosteroNotice(orderId,secret){
   "Litix Order: "+orderId,
   "Service: "+publicService,
   "Quantity: "+o.quantity,
-  ...(allocations.length?[postPlatform==="Instagram"?"ACTION REQUIRED: Manual Instagram multi-post fulfillment.":"ACTION REQUIRED: Manual TikTok multi-post fulfillment.",
+  ...(allocations.length?(automatedMulti?[
+    "AUTOMATED PER-POST FULFILLMENT: Review the individual Boostero child statuses in Litix tracking.",
+    "Do NOT submit any selected post manually unless its prior supplier outcome is independently confirmed not accepted. Unknown outcomes require reconciliation.",
+    ...allocationLines
+   ]:[postPlatform==="Instagram"?"ACTION REQUIRED: Manual Instagram multi-post fulfillment.":"ACTION REQUIRED: Manual TikTok multi-post fulfillment.",
     postPlatform==="Instagram"?"Submit each post separately to the existing supplier. Never submit the parent destination as a single order.":"Submit each video separately to the existing supplier. Never submit the parent destination as a single order.",
-    ...allocationLines]:[]),
+    ...allocationLines]):[]),
   "Amount: "+amount,
   "Payment: "+o.payment_state,
   "Supplier: Boostero",
-  "Boostero Order ID: "+(o.supplier_order_id||"Awaiting confirmation"),
+  automatedMulti?"Boostero order IDs are recorded separately for each selected post.": "Boostero Order ID: "+(o.supplier_order_id||"Awaiting confirmation"),
   "Fulfillment: "+o.state,
   ownerLink?"Private tracking URL: "+ownerLink:null
  ].filter(Boolean).join("\n");
