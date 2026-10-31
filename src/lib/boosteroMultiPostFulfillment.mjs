@@ -3,6 +3,7 @@ import {boosteroSQL,boosteroProductionReady,verifyBoosteroQuote} from "./booster
 import {boosteroProduction} from "./boosteroReadOnly.mjs";
 import {boosteroQuote} from "./boosteroFulfillment.mjs";
 import {boosteroBatchIds,normalizeBoosteroStatus,boosteroChildState} from "./boosteroStatusBatch.mjs";
+import {queueMultiPostDeliveryMilestone} from "./litixCustomerUpdates.mjs";
 
 // Only invoked after a parent order was inserted and before the one PayKings charge.
 // One SQL command stages all selected canonical URLs. An absent schema fails closed.
@@ -143,7 +144,7 @@ export async function syncBoosteroMultiStatuses({sql=boosteroSQL(),operation=boo
  for(const parent of affectedParents){
   try{
    const states=await sql.query(
-    "select state from public.litix_boostero_multi_posts where parent_order_id=$1",[parent]);
+    "select state,quantity,supplier_status from public.litix_boostero_multi_posts where parent_order_id=$1",[parent]);
    if(states.length>=2&&states.every(p=>p.state==="COMPLETED")){
     await sql.query("update public.litix_v2_orders set fulfillment_state='completed',updated_at=now() where id=$1 and payment_state='paid'",[parent]);
     await sql.query("update public.litix_boostero_fulfillment set state='COMPLETED',updated_at=now() where litix_order_id=$1 and state in ('SUBMITTED','MANUAL_REVIEW')",[parent]);
@@ -151,6 +152,10 @@ export async function syncBoosteroMultiStatuses({sql=boosteroSQL(),operation=boo
     await sql.query("update public.litix_v2_orders set fulfillment_state='manual_review',updated_at=now() where id=$1 and payment_state='paid'",[parent]);
     await sql.query("update public.litix_boostero_fulfillment set state='MANUAL_REVIEW',updated_at=now() where litix_order_id=$1",[parent]);
    }
+   // A customer gets one email when delivery starts and only at meaningful
+   // aggregate 25/50/75/100% transitions. The private page still refreshes
+   // per post independently. Existing outbox dedup prevents repeat emails.
+   await queueMultiPostDeliveryMilestone({sql,orderId:parent,children:states});
   }catch{failed++}
  }
  return {checked,failed,batched};
