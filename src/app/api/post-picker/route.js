@@ -64,8 +64,10 @@ export async function GET(request){
       console.warn("Litix TikTok secondary discovery unavailable",String(error?.name||"provider_error").slice(0,32));
     }
   }
+  if(platform==="tiktok"&&!posts.length)
+    return json({error:"TikTok videos are temporarily unavailable for this profile. Retry or paste your video links below; no charge was attempted."},503);
   if(!posts.length&&(primaryFailed||fallbackFailed))
-    return json({error:"TikTok or Instagram video lookup is busy. Your order has not been charged. Retry or use direct post links below."},503);
+    return json({error:"Instagram post lookup is temporarily unavailable. Retry or enter post links below; no charge was attempted."},503);
   const value={platform,username:handle,posts,
     message:posts.length?"Select one or more public posts.":
       "No publicly accessible posts were returned. Try again or enter direct post links below."};
