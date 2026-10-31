@@ -62,7 +62,7 @@ async function directory(){
    const purchasable=allowed.get(id);
    // 60% retail markup for discovery; actual payment still requires a live quote.
    // supplier terms and the $1 order floor must be checked before checkout.
-   const indicative=validRate?litixRetailPer1000Cents(rate)/100:null;
+   const indicative=validRate?litixRetailPer1000Cents(rate,raw)/100:null;
    unique.set(supplierId,purchasable?{
     ...purchasable,platform,kind,category:purchasable.category||category,
     supplierCategory:category,provider:"Litix",quoteStatus:"approved"
