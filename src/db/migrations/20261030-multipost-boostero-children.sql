@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS public.litix_boostero_multi_posts (
   supplier_order_id text UNIQUE,
   attempt_id text UNIQUE,
   attempted_at timestamptz,
+  checked_at timestamptz,
   supplier_status jsonb NOT NULL DEFAULT '{}'::jsonb,
   error_code text,
   created_at timestamptz NOT NULL DEFAULT now(),
