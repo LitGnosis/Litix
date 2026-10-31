@@ -1,0 +1,31 @@
+name: Litix visual post picker preview CI
+on:
+  pull_request:
+    paths:
+      - 'src/app/api/post-picker/**'
+      - 'src/app/post-picker-preview/**'
+      - 'src/lib/postPicker.mjs'
+      - 'src/tests/post-picker.test.mjs'
+      - 'docs/LITIX-IG-TIKTOK-POST-PICKER-2026-10-30.md'
+      - '.github/workflows/litix-post-picker-preview-ci.yml'
+  workflow_dispatch:
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: src
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: src/package-lock.json
+      - run: npm ci --ignore-scripts
+      - name: Offline post picker validation (no API, payment or supplier calls)
+        run: node --test tests/post-picker.test.mjs
+      - name: Next.js production build
+        run: npm run build
