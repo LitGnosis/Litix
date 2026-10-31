@@ -54,7 +54,7 @@ export default function BundleConfirmation(){
      {data.whatsappUrl?<a className="lg-bundle-buy" href={data.whatsappUrl} target="_blank" rel="noopener noreferrer">Send Order Details via WhatsApp</a>:<p role="status">WhatsApp contact is unavailable. Email or Instagram are available below.</p>}
      <a className="lg-bundle-buy" href={emailLink}>Email My Order Details</a>
      <a className="lg-bundle-buy" href="https://www.instagram.com/litixsocial/" target="_blank" rel="noopener noreferrer">Message LITIX on Instagram</a>
-    </div>
+    </div>}
     {!order.automatic&&<p className="small">WhatsApp opens the LITIX business chat with a prefilled order message. Email opens your email app with a prefilled subject and message; attach payment receipts and screenshots before sending. Instagram opens the @Litixsocial profile; send a DM with the same information. <strong>Opening an app does not send your message automatically.</strong></p>}
     <p className="small">All package quantities are totals for this purchase, not repeated for every post. Followers apply to your account. {!order.automatic&&data.instructions}</p>
     {!order.automatic&&<><h3>Post review</h3>
