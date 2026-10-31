@@ -64,7 +64,7 @@ export function boosteroQuote({service,quantity}){
  if(!lowest||!Number.isSafeInteger(qty)||qty<lowest||qty>max||qty>1000000)
   throw Error("boostero_quantity_or_type_not_supported");
  const rate=Number(service?.rate);
- const retailPer1000Cents=litixRetailPer1000Cents(rate);
+ const retailPer1000Cents=litixRetailPer1000Cents(rate,service);
  const amountCents=litixOrderCents(retailPer1000Cents,qty);
  const costUSD=rate*qty/1000;
  const wholesaleCents=Math.ceil(costUSD*100-1e-8);
