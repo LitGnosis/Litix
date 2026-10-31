@@ -1,6 +1,6 @@
 import {boosteroProduction} from "../../../../lib/boosteroReadOnly.mjs";
 import {enabledBoosteroCards} from "../../../../lib/boosteroCatalog.mjs";
-import {sortServicesPer1000} from "../../../../lib/catalogSort.mjs";
+import {sortServicesPer1000,matchesServiceQuickKind} from "../../../../lib/catalogSort.mjs";
 import {litixRetailPer1000Cents} from "../../../../lib/litixRetail60.mjs";
 import {litixPublicCard} from "../../../../lib/publicLitixCatalog.mjs";
 import {publicServiceCardName} from "../../../../lib/serviceCardDisplay.mjs";
@@ -29,6 +29,7 @@ const platformOf=service=>{
 };
 const kindOf=s=>{
  const label=[s.name,s.category].map(v=>String(v??"")).join(" ").toLowerCase();
+ if(platformOf(s)==="Twitter (X)"&&/\\b(?:retweets?|reposts?)\\b/.test(String(s.name||"").toLowerCase()))return "retweets";
  for(const [type,regex] of [
  ["followers",/\bfollowers?\b/],["likes",/\blikes?\b/],
  ["views",/\bviews?\b/],["comments",/\bcomments?\b/],
@@ -102,7 +103,7 @@ export async function GET(request){
   const data=await directory();
   const filtered=data.items.filter(s=>(!q||[s.id,s.name,s.category,s.platform].some(x=>String(x||"").toLowerCase().includes(q)))&&
    (!platform||platform==="All platforms"||platform===s.platform)&&(!category||publicServiceCardName({name:s.category})===category)&&
-   (!kind||s.kind===kind)&&(!onlyReady||s.purchasable===true));
+   (!kind||(s.kind===kind&&matchesServiceQuickKind(s,kind)))&&(!onlyReady||s.purchasable===true));
   const pageSize=24;
   return Response.json({
    brand:"Litix",items:filtered.slice((page-1)*pageSize,page*pageSize).map(litixPublicCard).filter(Boolean),
