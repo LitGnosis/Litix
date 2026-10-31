@@ -16,7 +16,7 @@ const focusFilters=[
 export default function LitixDirectory({standalone=false}){
  const [search,setSearch]=useState("");
  useEffect(()=>{const q=new URLSearchParams(location.search).get("q")||new URLSearchParams(location.search).get("service")||"";
-  if(q)setSearch(q.replace(/^boostero_/,""));},[]);
+  if(q)setSearch(q.replace(/^(?:boostero|litix)_/,""));},[]);
  const [debounced,setDebounced]=useState("");
  const [platform,setPlatform]=useState("");
  const [kind,setKind]=useState("");
@@ -130,17 +130,17 @@ export default function LitixDirectory({standalone=false}){
     <div className="litix-directory-cards">
      {entries.filter(s=>s.purchasable===true).map(s=>{
       const approved=s.purchasable===true;
-      const wholesaleEstimate=currency(s.per1000);
+      const displayPrice=currency(s.per1000);
       return <article className="litix-directory-service" key={s.id}>
        <div className="litix-directory-service-top"><span className="litix-directory-network">{s.platform}</span><span className={approved?"litix-directory-state is-ready":"litix-directory-state"}>Instant checkout</span></div>
        <h3>{litixCustomerServiceName(s.name)}</h3>
        <p className="litix-directory-service-category">{litixCustomerServiceName(s.category)}</p>
-       <div className="litix-directory-service-price">{wholesaleEstimate||"Ask for price"} <small>/ 1,000 {approved?"":"· indicative"}</small></div>
+       <div className="litix-directory-service-price">{displayPrice||"Ask for price"} <small>/ 1,000 {approved?"":"· indicative"}</small></div>
        <div className="litix-directory-service-range">
         {Number.isInteger(s.min)&&Number.isInteger(s.max)?s.min.toLocaleString()+"–"+s.max.toLocaleString()+" units":"Quantity confirmed on request"}
-        <span>Service {s.id.replace(/^boostero_/,"")}</span>
+        <span>Service {s.id.replace(/^(?:boostero|litix)_/,"")}</span>
        </div>
-       <a className="litix-directory-buy" href={"/?service="+encodeURIComponent(s.id)+"#checkout"}>{["boostero_4751","boostero_5251"].includes(String(s.id))?"Choose Your Posts & Pay":"Review & pay with PayKings"}</a>
+       <a className="litix-directory-buy" href={"/?service="+encodeURIComponent(s.id)+"#checkout"}>{["litix_4751","litix_5251"].includes(String(s.id))?"Choose Your Posts & Pay":"Review & pay with PayKings"}</a>
       </article>
      })}
     </div>
@@ -150,7 +150,7 @@ export default function LitixDirectory({standalone=false}){
      <button type="button" disabled={page*24>=count} onClick={()=>{setPage(n=>n+1);filterRef.current?.scrollIntoView({behavior:"smooth"})}}>Next page</button>
     </div>}
     <div className="litix-directory-footnote">
-     <strong>Litix orders made simple.</strong> All displayed services are ready for PayKings checkout. Prices use the current wholesale rate plus a 60% markup.
+     <strong>Litix orders made simple.</strong> All displayed services are available through Litix secure checkout. Review the total before paying.
      <div><a href={"https://wa.me/"+contactNumber} target="_blank" rel="noopener noreferrer">WhatsApp</a><a href="https://www.instagram.com/litixsocial/" target="_blank" rel="noopener noreferrer">Instagram DM @Litixsocial</a><a href="mailto:Litixsocial@gmail.com">Email Litix</a></div>
     </div>
    </div>
