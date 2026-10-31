@@ -12,6 +12,8 @@ Secret values come only from the protected GitHub Actions job environment.
 import os
 import re
 import sys
+import http.client
+from urllib.parse import urlsplit
 from pathlib import Path
 
 from boto3.session import Session
@@ -20,6 +22,50 @@ from botocore.config import Config
 from botocore.exceptions import ClientError
 
 SAFE_KEY = re.compile(r"^[A-Za-z0-9._/-]{1,350}$")
+
+
+def presigned_put(client, bucket, key, path):
+    """Fallback only after a CONFIRMED InvalidArgument: no checksum or chunked signing.
+
+    Cloudflare documents presigned HTTP PUT for R2. The credential-bearing URL
+    is never printed or returned. Use fixed Content-Length, HTTPS, and a pinned
+    hostname, streaming ciphertext without holding a DB backup in RAM.
+    """
+    length = path.stat().st_size
+    if length < 1 or length > 5 * 1024 * 1024 * 1024:
+        raise ValueError("PRESIGNED_PUT_SIZE_OUT_OF_RANGE")
+    url = client.generate_presigned_url(
+        "put_object",
+        Params={"Bucket": bucket, "Key": key},
+        ExpiresIn=300,
+        HttpMethod="PUT",
+    )
+    target = urlsplit(url)
+    approved = urlsplit(os.environ["R2_ENDPOINT"])
+    if (target.scheme != "https" or target.hostname != approved.hostname
+        or target.port is not None or target.username or target.password
+        or not target.path.endswith("/" + bucket + "/" + key)
+        or not target.query or "X-Amz-Signature=" not in target.query):
+        raise ValueError("PRESIGNED_PUT_TARGET_NOT_ALLOWLISTED")
+    conn = http.client.HTTPSConnection(target.hostname, timeout=180)
+    try:
+        conn.putrequest("PUT", target.path + "?" + target.query,
+                        skip_accept_encoding=True)
+        conn.putheader("Content-Length", str(length))
+        conn.endheaders()
+        with path.open("rb") as handle:
+            while True:
+                chunk = handle.read(1024 * 1024)
+                if not chunk:
+                    break
+                conn.send(chunk)
+        response = conn.getresponse()
+        # Do not expose response body, signed URLs, request headers or keys.
+        response.read(512)
+        if not 200 <= response.status < 300:
+            raise RuntimeError("PRESIGNED_HTTP_" + str(response.status))
+    finally:
+        conn.close()
 
 
 def main() -> int:
@@ -65,7 +111,14 @@ def main() -> int:
             # Bytes, not a streaming wrapper: no AWS chunked/trailer checksum.
             body = path.read_bytes()
             assert len(body) == 128 and key.startswith("litix-backup-probes/")
-            client.put_object(Bucket=bucket, Key=key, Body=body, ContentLength=len(body))
+            try:
+                client.put_object(Bucket=bucket, Key=key, Body=body, ContentLength=len(body))
+            except ClientError as exc:
+                code = str(((exc.response or {}).get("Error") or {}).get("Code") or "")
+                if code != "InvalidArgument":
+                    raise
+                presigned_put(client, bucket, key, path)
+                print("R2_PROBE_TRANSPORT=PRESIGNED_PUT_COMPAT")
         elif op == "upload":
             transfer = TransferConfig(
                 multipart_threshold=8 * 1024 * 1024,
@@ -73,7 +126,17 @@ def main() -> int:
                 max_concurrency=1,
                 use_threads=False,
             )
-            client.upload_file(str(path), bucket, key, Config=transfer)
+            try:
+                client.upload_file(str(path), bucket, key, Config=transfer)
+            except Exception as exc:
+                # Transfer manager may apply an unsupported checksum header.
+                # Retry ONLY this confirmed deterministic InvalidArgument, not
+                # an unknown network/time-out outcome.
+                if (type(exc).__name__ != "S3UploadFailedError"
+                    or "InvalidArgument" not in str(exc)):
+                    raise
+                presigned_put(client, bucket, key, path)
+                print("R2_ARCHIVE_TRANSPORT=PRESIGNED_PUT_COMPAT")
         elif op == "head":
             print(int(client.head_object(Bucket=bucket, Key=key)["ContentLength"]))
         elif op == "get":
@@ -92,7 +155,11 @@ def main() -> int:
         # No raw response, request, host, key, credentials or customer data.
         print("R2_TRANSFER_ERROR_CODE_SAFE=" + code, file=sys.stderr)
     except Exception as exc:
-        print("R2_TRANSFER_ERROR_CLASS=" + type(exc).__name__, file=sys.stderr)
+        safe_status = str(exc)
+        if re.fullmatch(r"PRESIGNED_HTTP_[45][0-9]{2}", safe_status):
+            print("R2_TRANSFER_ERROR_CODE_SAFE=" + safe_status, file=sys.stderr)
+        else:
+            print("R2_TRANSFER_ERROR_CLASS=" + type(exc).__name__, file=sys.stderr)
     return 2
 
 
