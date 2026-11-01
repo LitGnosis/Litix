@@ -46,3 +46,18 @@ export async function nmiAutoLikesCall(form,{fetcher=fetch}={}){
  try{raw=await res.text()}catch{throw Error("nmi_gateway_body_uncertain_outcome");}
  return nmiAutoLikesResult(raw);
 }
+
+export const autoLikesCancellationReady=()=>process.env.VERCEL_ENV==="production"&&
+ process.env.LITIX_NMI_RECURRING_MERCHANT_APPROVED==="true"&&
+ process.env.LITIX_AUTOLIKES_CANCEL_ENABLED==="true"&&secureKey().length>15;
+export async function nmiAutoLikesCancel(form,{fetcher=fetch}={}){
+ if(!autoLikesCancellationReady())throw Error("nmi_cancel_unavailable");
+ let res;
+ try{
+  res=await fetcher(NMI_AUTOLIKES_GATEWAY,{
+   method:"POST",headers:{"content-type":"application/x-www-form-urlencoded"},
+   body:form.toString(),cache:"no-store",redirect:"error",signal:AbortSignal.timeout(15000)});
+ }catch{throw Error("nmi_cancel_unknown_outcome");}
+ if(!res.ok)throw Error("nmi_cancel_http_unknown_outcome");
+ return nmiAutoLikesResult(await res.text());
+}
