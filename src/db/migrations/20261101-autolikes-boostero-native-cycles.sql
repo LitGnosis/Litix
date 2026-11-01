@@ -26,3 +26,12 @@ CREATE INDEX IF NOT EXISTS litix_autolikes_native_cycles_queue
  ON public.litix_autolikes_native_cycles(state,created_at)
  WHERE state IN ('QUEUED','SUBMITTED','UNKNOWN_OUTCOME','MANUAL_REVIEW');
 ALTER TABLE public.litix_autolikes_native_cycles ENABLE ROW LEVEL SECURITY;
+
+-- Separate bearer-secret portal. No public lookup by email or supplier order ID.
+CREATE TABLE IF NOT EXISTS public.litix_autolikes_native_portal (
+ subscription_id text PRIMARY KEY REFERENCES public.litix_autolikes_live_subscriptions(id) ON DELETE RESTRICT,
+ email text NOT NULL,
+ token_sha256 char(64) NOT NULL UNIQUE CHECK (token_sha256 ~ '^[a-f0-9]{64}$'),
+ created_at timestamptz NOT NULL DEFAULT now()
+);
+ALTER TABLE public.litix_autolikes_native_portal ENABLE ROW LEVEL SECURITY;
