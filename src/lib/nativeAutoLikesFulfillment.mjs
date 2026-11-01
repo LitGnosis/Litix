@@ -121,3 +121,27 @@ export async function dispatchNativeAutoLikes({sql=boosteroSQL(),operation=boost
  }
  return {enabled:true,checked:queued.length,submitted,requiresReview};
 }
+
+export async function syncNativeAutoLikesStatuses({sql=boosteroSQL(),operation=boosteroProduction,limit=8}={}){
+ if(!nativeAutoLikesDispatchReady())return {enabled:false,checked:0};
+ const rows=await sql.query(
+  "select id,supplier_order_id from public.litix_autolikes_native_cycles where state='SUBMITTED' and supplier_order_id ~ '^[0-9]+$' order by last_checked_at asc nulls first limit $1",
+  [Math.max(1,Math.min(20,limit))]);
+ let checked=0,updated=0,failed=0;
+ for(const item of rows){
+  try{
+   const result=await operation("status",{order:String(item.supplier_order_id)});
+   const status=String(result?.status||"").slice(0,80);
+   if(!/^(Pending|In progress|Processing|Completed|Partial|Canceled|Cancelled)$/i.test(status)){
+    failed++;continue;
+   }
+   const terminal=/^Completed$/i.test(status);
+   await sql.query(
+    "update public.litix_autolikes_native_cycles set supplier_status=$2,last_checked_at=now(),state=case when $3::boolean then 'COMPLETED' else state end,updated_at=now() where id=$1 and state='SUBMITTED'",
+    [item.id,status,terminal]);
+   updated++;
+  }catch{failed++;}
+  checked++;
+ }
+ return {enabled:true,checked,updated,failed};
+}
