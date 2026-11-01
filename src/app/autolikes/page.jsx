@@ -40,7 +40,7 @@ export default function AutoLikesPage(){
   try{
    const res=await fetch("/api/autolikes/quote",{
     method:"POST",headers:{"content-type":"application/json"},
-    body:JSON.stringify({platform,serviceId,profile,quantityPerPost:Number(quantity),posts:Number(posts),delay:Number(delay)})});
+    body:JSON.stringify({platform,serviceId,profile,expectedAmountCents:quote.monthlyAmountCents,quantityPerPost:Number(quantity),posts:Number(posts),delay:Number(delay)})});
    const body=await res.json();
    if(!res.ok)throw Error(body.error||"Unable to confirm the latest price");
    setQuote(body.quote);setRequestKey(crypto.randomUUID());
