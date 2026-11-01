@@ -8,6 +8,7 @@ export default function sitemap() {
   return [
     {url:base,changeFrequency:"daily",priority:1},
     {url:base+"/shop",changeFrequency:"weekly",priority:0.9},
+    {url:base+"/tools/tiktok-engagement",changeFrequency:"monthly",priority:0.7},
     {url:base+"/services",changeFrequency:"daily",priority:0.9},
     {url:base+"/track",changeFrequency:"monthly",priority:0.4},
     {url:base+"/bundles",changeFrequency:"weekly",priority:0.8},
