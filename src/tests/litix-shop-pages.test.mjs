@@ -9,7 +9,7 @@ const read=relative=>readFileSync(new URL(relative,import.meta.url),"utf8");
 
 test("competitor-style shop navigation has 23 unique valid live-catalog filters",()=>{
  assert.equal(SHOP_CATEGORIES.length,23);
- assert.equal(new Set(SHOP_CATEGORIES.map(x=>x.href)).size,12);
+ assert.equal(new Set(SHOP_CATEGORIES.map(x=>x.href)).size,23);
  assert.deepEqual([...new Set(SHOP_CATEGORIES.map(x=>x.slug))],["tiktok","instagram","youtube","x","facebook"]);
  for(const page of SHOP_CATEGORIES){
   assert.equal(shopCategory(page.slug,page.kind),page);
