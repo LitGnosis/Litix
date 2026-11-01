@@ -2,6 +2,8 @@
 "use client";
 import {useEffect,useRef,useState} from "react";
 import PremiumInlineCheckout from "../components/PremiumInlineCheckout";
+import LitixCheckoutSelector from "../components/LitixCheckoutSelector";
+import {profilePlatformForService,normalizeProfileDestination,checkoutProfileLabel,checkoutProfilePlaceholder} from "../lib/litixOrderTarget.mjs";
 import GrowthBundles from "../components/GrowthBundles";
 import {restrictedSocialKind} from "../lib/publicBoosteroOnly.mjs";
 import {sortServicesPer1000} from "../lib/catalogSort.mjs";
@@ -20,37 +22,6 @@ const validOrderDetails=(service,url,email,quantity)=>{
 };
 const whatsappNumber=(process.env.NEXT_PUBLIC_WHATSAPP_NUMBER||"").replace(/\D/g,"");
 const publicCollectKey=process.env.NEXT_PUBLIC_PAYKINGS_NMI_COLLECT_PUBLIC_KEY||"";
-const socialPlatformForService=service=>{
- // Supplier listings may describe Followers in the category rather than the service name.
- // Never infer a profile-level service from a Likes/Views/Post category alone.
- const label=[service?.name,service?.category].map(v=>String(v||"")).join(" ").toLowerCase();
- if(!/\bfollow(?:er)?s?\b/.test(label))return "";
- if(/instagram|(?:^|[^a-z])ig(?:[^a-z]|$)/.test(label))return "instagram";
- if(/tik[\s._-]*tok/.test(label))return "tiktok";
- return "";
-};
-const normalizeSocialProfileInput=(value,platform)=>{
- const raw=String(value||"").trim();
- if(!platform)return {ok:true,value:raw};
- if(!raw)return {ok:false,error:"Enter a public "+(platform==="instagram"?"Instagram":"TikTok")+" username or profile link."};
- let username=raw;
- const input=/^(?:www\.)?(?:instagram\.com|tiktok\.com)\//i.test(raw)?"https://"+raw:raw;
- if(/^https?:\/\//i.test(input)){
-  let url;try{url=new URL(input)}catch{return {ok:false,error:"Enter a valid public profile URL or @username."}}
-  if(url.protocol!=="https:"||url.username||url.password)return {ok:false,error:"Use a secure public profile link (https://)."};
-  const host=url.hostname.toLowerCase().replace(/^www\./,"");
-  if(platform==="instagram"&&host!=="instagram.com")return {ok:false,error:"Use an Instagram username or instagram.com profile URL."};
-  if(platform==="tiktok"&&host!=="tiktok.com")return {ok:false,error:"Use a TikTok username or tiktok.com profile URL."};
-  const match=platform==="instagram"?url.pathname.match(/^\/([A-Za-z0-9._]+)\/?$/):url.pathname.match(/^\/@([A-Za-z0-9._]+)\/?$/);
-  if(!match)return {ok:false,error:"Enter a direct public profile URL, not a post or video URL."};
-  username=match[1];
- }else{
-  username=raw.replace(/^@/,"");
- }
- const valid=platform==="instagram"?/^[A-Za-z0-9._]{1,30}$/.test(username):/^[A-Za-z0-9._]{2,24}$/.test(username);
- if(!valid)return {ok:false,error:"That username format is not valid for this platform."};
- return {ok:true,username,url:platform==="instagram"?"https://www.instagram.com/"+username+"/":"https://www.tiktok.com/@"+username};
-};
 export default function Home(){
  const GenUIcopy=text=>{if(navigator.clipboard?.writeText)navigator.clipboard.writeText(text)};
  const [services,setServices]=useState([]),[categories,setCategories]=useState([]),[favorites,setFavorites]=useState([]),[recentServices,setRecentServices]=useState([]),[savedOrders,setSavedOrders]=useState([]),[workspaceReady,setWorkspaceReady]=useState(false),[growthGoal,setGrowthGoal]=useState("Grow audience"),[industry,setIndustry]=useState("Creator"),[planDays,setPlanDays]=useState("30"),[planGenerated,setPlanGenerated]=useState(false),[campaignName,setCampaignName]=useState(""),[campaigns,setCampaigns]=useState([]),[cat,setCat]=useState(""),[query,setQuery]=useState(""),[platform,setPlatform]=useState("All platforms"),[quickKind,setQuickKind]=useState(""),[favoritesOnly,setFavoritesOnly]=useState(false),[compareIds,setCompareIds]=useState([]),[pg,setPg]=useState(1),[catalogRetry,setCatalogRetry]=useState(0),[catalogState,setCatalogState]=useState("loading"),[catalogSource,setCatalogSource]=useState("unavailable"),[count,setCount]=useState(0),[total,setTotal]=useState(0),[selected,setSelected]=useState(null),[qty,setQty]=useState(100),[email,setEmail]=useState(""),[link,setLink]=useState(""),[config,setConfig]=useState({ready:false}),[cardReady,setCardReady]=useState(false),[cardRetry,setCardRetry]=useState(0),[busy,setBusy]=useState(false),[notice,setNotice]=useState(""),[receipt,setReceipt]=useState(null),[privateUrl,setPrivateUrl]=useState(""),[tracked,setTracked]=useState(null),[key,setKey]=useState("");const done=useRef(null);
@@ -137,7 +108,7 @@ export default function Home(){
   ?tiktokLinkVerification.url:"";
 
  async function buildPlan(){setPlanGenerated(true);setPlanServices([]);setPlanStatus("Finding available services…");try{const q=new URLSearchParams({goal:growthGoal,horizon:planDays});const r=await fetch("/api/catalog/v1?"+q,{signal:AbortSignal.timeout(12000)});const v=await r.json();if(!r.ok)throw Error();setPlanServices(v.recommendations||[]);setPlanStatus(v.recommendations?.length?"Review a suggested service before ordering. The planning horizon does not schedule supplier delivery.":"No matching services are currently available.")}catch{setPlanStatus("Service recommendations are temporarily unavailable. You can retry Build my plan.")}}
- const profileInput=multiMode?{ok:true}:normalizeSocialProfileInput(link,selected?.kind==="likes"?"":socialPlatformForService(selected));
+ const profileInput=multiMode?{ok:true}:normalizeProfileDestination(link,selected?.kind==="likes"?"":profilePlatformForService(selected));
  const normalizedOrderLink=multiMode?(multiPosts[0]?.verifiedUrl||""):(verifiedTikTokVideo||(profileInput.url||link));
  const detailsReady=multiMode
   ?verifiedMultiPosts&&validOrderDetails(selected,normalizedOrderLink,email,Number(multiPosts[0]?.quantity||0))&&Number.isSafeInteger(orderQuantity)&&orderQuantity<=1000000
@@ -395,7 +366,7 @@ export default function Home(){
    </div>
    <p className="small muted" style={{marginTop:16}}>Packages and checkout are subject to live availability. Only future public posts qualify. No social-media password needed.</p>
   </section>
-  <section id="checkout" className="panel sticky"><div className="kicker">SECURE PAYKINGS CHECKOUT</div><h2>Your order</h2><ol className="checkout-steps" aria-label="Checkout steps"><li className={selected?"step-done":"step-current"}>1. Choose service</li><li className={selected&&link?"step-current":"step-pending"}>2. Order details</li><li className={cardReady?"step-done":"step-pending"}>3. Secure payment</li></ol><p className="checkout-hint">You’ll review the final USD total before paying. Card details are entered securely with PayKings.</p><form onSubmit={submit} className="form"><label>Service<input readOnly value={selected?.name?litixCustomerServiceName(selected.name):"Select a service"} /></label>{selected&&<div className="selected-service-meta"><span>{selected.min.toLocaleString()}–{selected.max.toLocaleString()} units</span><span>Litix service</span><span>{selected.refill?"Refill eligible":"Standard service"}</span><span>{money(Math.ceil(selected.per1000*100))} / 1,000</span></div>}{likesWithPostPicker&&<div role="group" aria-label="Choose Likes checkout mode" style={{display:"flex",gap:10,flexWrap:"wrap",padding:"8px 0 16px"}}>
+  <section id="checkout" className="panel sticky"><div className="kicker">SECURE PAYKINGS CHECKOUT</div><h2>Your order</h2><ol className="checkout-steps" aria-label="Checkout steps"><li className={selected?"step-done":"step-current"}>1. Choose service</li><li className={selected&&link?"step-current":"step-pending"}>2. Order details</li><li className={cardReady?"step-done":"step-pending"}>3. Secure payment</li></ol><p className="checkout-hint">You’ll review the final USD total before paying. Card details are entered securely with PayKings.</p><form onSubmit={submit} className="form"><LitixCheckoutSelector selected={selected} onChoose={service=>{setSelected(service);setQty(service?.min||100);setLink("");setReceipt(null);setNotice("");setKey(crypto.randomUUID())}}/>{selected&&<div className="selected-service-meta"><span>{selected.min.toLocaleString()}–{selected.max.toLocaleString()} units</span><span>Litix service</span><span>{selected.refill?"Refill eligible":"Standard service"}</span><span>{money(Math.ceil(selected.per1000*100))} / 1,000</span></div>}{likesWithPostPicker&&<div role="group" aria-label="Choose Likes checkout mode" style={{display:"flex",gap:10,flexWrap:"wrap",padding:"8px 0 16px"}}>
   <button type="button" className="alt" aria-pressed={!multiMode} onClick={()=>{
    if(multiPosts.length){setLink(multiPosts[0].link);setQty(Number(multiPosts[0].quantity)||selected.min);}
    setMultiPostEnabled(false);
@@ -407,8 +378,8 @@ export default function Home(){
    }
   }}>Choose multiple posts</button>
  </div>}
- {multiMode?<SocialMultiPostChooser service={selected} platform={String(selected?.platform||"").toLowerCase()} posts={multiPosts} onChange={setMultiPosts}/>:<>{(()=>{const socialPlatform=selected?.kind==="likes"?"":socialPlatformForService(selected);const normalized=normalizeSocialProfileInput(link,socialPlatform);return <label>{socialPlatform?(socialPlatform==="instagram"?"Instagram username or profile link":"TikTok username or profile link"):
- selected?.kind==="likes"?(selected.platform==="Instagram"?"Instagram post or reel URL":"TikTok video URL"):"Public post or profile URL"}<input type={socialPlatform?"text":"url"} inputMode={socialPlatform?"text":"url"} required value={link} placeholder={socialPlatform?"@username or "+(socialPlatform==="instagram"?"instagram.com/username":"tiktok.com/@username"):selected?.kind==="likes"?(selected.platform==="Instagram"?"https://www.instagram.com/p/POST_ID/":"https://www.tiktok.com/@user/video/1234567890123456789"):"https://..."} autoCapitalize="none" autoCorrect="off" spellCheck={false} aria-describedby={socialPlatform?"profile-check-help":undefined} onChange={e=>setLink(e.target.value)}/>{tiktokLikes&&<span role="status" className="small" aria-live="polite">
+ {multiMode?<SocialMultiPostChooser service={selected} platform={String(selected?.platform||"").toLowerCase()} posts={multiPosts} onChange={setMultiPosts}/>:<>{(()=>{const socialPlatform=selected?.kind==="likes"?"":profilePlatformForService(selected);const normalized=normalizeProfileDestination(link,socialPlatform);return <label>{socialPlatform?checkoutProfileLabel(socialPlatform):
+ ["followers","subscribers"].includes(selected?.kind)?"Public page, channel or profile URL":selected?.kind==="likes"?(selected.platform==="Instagram"?"Instagram post or reel URL":selected.platform==="TikTok"?"TikTok video URL":"Public post URL"):"Public post URL"}<input type={socialPlatform?"text":"url"} inputMode={socialPlatform?"text":"url"} required value={link} placeholder={socialPlatform?checkoutProfilePlaceholder(socialPlatform):["followers","subscribers"].includes(selected?.kind)?"https://... (public page or channel URL)":selected?.kind==="likes"?(selected.platform==="Instagram"?"https://www.instagram.com/p/POST_ID/":selected.platform==="TikTok"?"https://www.tiktok.com/@user/video/1234567890123456789":"https://..."):"https://..."} autoCapitalize="none" autoCorrect="off" spellCheck={false} aria-describedby={socialPlatform?"profile-check-help":undefined} onChange={e=>setLink(e.target.value)}/>{tiktokLikes&&<span role="status" className="small" aria-live="polite">
   Paste the video link from TikTok’s Share → Copy link. Full links and short share links are supported.
   {tiktokLinkVerification.input===link.trim()&&tiktokLinkVerification.serviceId===selected?.id&&
    (tiktokLinkVerification.status==="checking"?<span> Verifying TikTok share link…</span>:
