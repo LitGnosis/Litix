@@ -1,0 +1,31 @@
+name: Litix AutoLikes — Boostero native no-charge compatibility
+on:
+  pull_request:
+    paths:
+      - 'src/lib/boosteroNativeAutoLikes.mjs'
+      - 'src/app/api/autolikes/**'
+      - 'src/tests/boostero-native-autolikes.test.mjs'
+      - '.github/workflows/litix-autolikes-native-ci.yml'
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: src
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: src/package-lock.json
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Supplier native AutoLikes no-payment tests
+        run: node --test tests/boostero-native-autolikes.test.mjs
+      - name: Build existing Litix
+        run: npm run build
