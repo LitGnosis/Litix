@@ -1,7 +1,7 @@
 import {SHOP_CATEGORIES} from "../../lib/litixShopRoutes.mjs";
 export const metadata={
  title:"Shop Social Media Services by Platform | Litix",
- description:"Browse Litix Instagram, TikTok, YouTube and X services, then check live availability and prices before secure checkout.",
+ description:"Browse Litix Instagram, TikTok, YouTube, X and Facebook services, then check live availability and prices before secure checkout.",
  alternates:{canonical:"https://www.litix.net/shop"}
 };
 export default function ShopIndex(){
