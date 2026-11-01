@@ -32,6 +32,11 @@ export default function ShopIndex(){
    </section>;
   })}
   <section className="panel">
+   <h2>Free TikTok Creator Tools</h2>
+   <p>Compare video engagement using your own public counts. No account, API connection or payment.</p>
+   <a href="/tools/tiktok-engagement">Open free engagement calculator</a>
+  </section>
+  <section className="panel">
    <h2>Already purchased?</h2>
    <p>Check your existing order without purchasing again or sharing a social password.</p>
    <a href="/track">Track your Litix order</a>
