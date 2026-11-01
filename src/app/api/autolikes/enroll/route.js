@@ -51,6 +51,11 @@ export async function POST(request){
  const priceHash=sha(JSON.stringify([quote.serviceId,quote.platform,quote.username,quote.quantityPerPost,
   quote.posts,quote.delay,quote.totalCents]));
  try{
+  // Fail closed BEFORE the gateway call if private subscription/claim tables
+  // have not been provisioned. An approved payment must never create an
+  // unmanageable subscription with no portal or delivery ledger.
+  await db.query("select subscription_id from public.litix_autolikes_native_portal where false");
+  await db.query("select id from public.litix_autolikes_native_cycles where false");
   await db.query(
    "insert into public.litix_auto_boost_campaigns(id,customer_id,email,platform,account_ref,service_catalog_id,quantity_per_post,max_posts_per_month,status) values($1,$2,$3,$4,$5,$6,$7,$8,'paused') on conflict(id) do nothing",
    [campaignId,customerId,email,quote.platform,quote.profileUrl,quote.serviceId,quote.quantityPerPost,quote.posts]);
