@@ -3,19 +3,22 @@ import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 import {SHOP_CATEGORIES,shopCategory} from "../lib/litixShopRoutes.mjs";
 import {SERVICE_NAV_GROUPS,allowedServiceFilter} from "../lib/serviceNavigation.mjs";
+import {matchesServiceQuickKind} from "../lib/catalogSort.mjs";
+import {litixKind} from "../lib/litixServiceClassify.mjs";
 const read=relative=>readFileSync(new URL(relative,import.meta.url),"utf8");
 
-test("competitor-style shop navigation has 12 unique valid live-catalog filters",()=>{
- assert.equal(SHOP_CATEGORIES.length,12);
+test("competitor-style shop navigation has 23 unique valid live-catalog filters",()=>{
+ assert.equal(SHOP_CATEGORIES.length,23);
  assert.equal(new Set(SHOP_CATEGORIES.map(x=>x.href)).size,12);
- assert.deepEqual([...new Set(SHOP_CATEGORIES.map(x=>x.slug))],["tiktok","instagram","youtube","x"]);
+ assert.deepEqual([...new Set(SHOP_CATEGORIES.map(x=>x.slug))],["tiktok","instagram","youtube","x","facebook"]);
  for(const page of SHOP_CATEGORIES){
   assert.equal(shopCategory(page.slug,page.kind),page);
   assert.equal(allowedServiceFilter(page.platform,page.kind),true);
-  assert.match(page.href,/^\/shop\/(?:tiktok|instagram|youtube|x)\/[a-z]+$/);
+  assert.match(page.href,/^\/shop\/(?:tiktok|instagram|youtube|x|facebook)\/[a-z]+$/);
  }
- assert.equal(SERVICE_NAV_GROUPS.length,4);
- assert.equal(shopCategory("facebook","likes"),null);
+ assert.equal(SERVICE_NAV_GROUPS.length,5);
+ assert.ok(shopCategory("facebook","likes"));
+ assert.equal(shopCategory("facebook","saves"),null);
  assert.equal(shopCategory("tiktok","fake"),null);
 });
 
@@ -48,4 +51,18 @@ test("platform pages are discoverable and link to existing tracking without chan
  assert.doesNotMatch(home,/request a quote directly from Litix/);
  assert.match(index,/href="\/track"/);
  assert.match(sitemap,/SHOP_CATEGORIES\.map/);
+});
+
+test("existing approved comments, shares and saves can be discovered accurately",()=>{
+ for(const kind of ["comments","shares","saves"]){
+  assert.equal(allowedServiceFilter("Instagram",kind),true);
+  assert.equal(allowedServiceFilter("TikTok",kind),true);
+  const name="Instagram "+kind[0].toUpperCase()+kind.slice(1);
+  assert.equal(litixKind(name,"Instagram"),kind);
+  assert.equal(matchesServiceQuickKind({name,category:"Instagram"},kind),true);
+  assert.equal(matchesServiceQuickKind({name:"Instagram Likes and "+kind,category:"Instagram"},kind),false);
+ }
+ assert.equal(allowedServiceFilter("YouTube","comments"),true);
+ assert.equal(allowedServiceFilter("Facebook","followers"),true);
+ assert.equal(allowedServiceFilter("YouTube","saves"),false);
 });
