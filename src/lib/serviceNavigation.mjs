@@ -4,7 +4,7 @@ const groups=[
  ["TikTok","TikTok",["followers","likes","views","comments","shares","saves"]],
  ["Instagram","Instagram",["followers","likes","views","comments","shares","saves"]],
  ["YouTube","YouTube",["subscribers","likes","views","comments"]],
- ["Twitter (X)","X",["followers","likes","views","retweets"]],
+ ["Twitter (X)","X",["likes","views","retweets","followers"]],
  ["Facebook","Facebook",["followers","likes","views"]]
 ];
 export const SERVICE_NAV_GROUPS=Object.freeze(groups.map(([platform,label,kinds])=>Object.freeze({
