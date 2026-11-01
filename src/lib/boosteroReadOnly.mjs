@@ -87,7 +87,7 @@ export const boosteroFollowers=input=>boosteroCompatibleServices(input).filter(x
  * Supplier add requests are never retried on network/timeout uncertainty.
  */
 export async function boosteroProduction(action,parameters={},options={}){
- const allowed=new Set(["balance","services","add","subscription","status","refill"]);
+ const allowed=new Set(["balance","services","add","subscription","prepaid_subscription","status","refill"]);
  if(!allowed.has(action))throw Error("boostero_action_forbidden");
  if(process.env.VERCEL_ENV!=="production"||process.env.LITIX_BOOSTERO_ENABLED!=="true")
   throw Error("boostero_production_disabled");
@@ -99,10 +99,11 @@ export async function boosteroProduction(action,parameters={},options={}){
      quantity<1||quantity>1000000||litixSupplierSafeLink(link)!==link)
    throw Error("boostero_add_not_authorized");
   params={service:id,quantity:String(quantity),link};
- }else if(action==="subscription"){
+ }else if(action==="subscription"||action==="prepaid_subscription"){
   // Only the already-claimed, independently paid monthly cycle worker may
   // request Boostero's native future-post subscription. Never a public action.
-  if(options.claimed!==true||process.env.LITIX_AUTOLIKES_DISPATCH_ENABLED!=="true")
+  if(options.claimed!==true||
+   (action==="subscription"?process.env.LITIX_AUTOLIKES_DISPATCH_ENABLED!=="true":process.env.LITIX_AUTOLIKES_PREPAID_ENABLED!=="true"))
    throw Error("boostero_subscription_not_authorized");
   const id=String(parameters.service||"");
   const username=String(parameters.username||"");
@@ -130,11 +131,11 @@ export async function boosteroProduction(action,parameters={},options={}){
  try{
   response=await (options.fetcher||fetch)(endpoint(),{
    method:"POST",headers:{"content-type":"application/x-www-form-urlencoded"},
-   body:new URLSearchParams({key:process.env.BOOSTERO_API_KEY,action:action==="subscription"?"add":action,...params}).toString(),
+   body:new URLSearchParams({key:process.env.BOOSTERO_API_KEY,action:action==="subscription"||action==="prepaid_subscription"?"add":action,...params}).toString(),
    cache:"no-store",redirect:"error",signal:AbortSignal.timeout(action==="services"?20000:15000)
   });
  }catch{throw Error("boostero_network_unknown_outcome");}
- if(!response.ok)throw Error("boostero_http_"+response.status+(["add","subscription"].includes(action)?"_unknown_outcome":""));
+ if(!response.ok)throw Error("boostero_http_"+response.status+(["add","subscription","prepaid_subscription"].includes(action)?"_unknown_outcome":""));
  let data;
  try{data=await response.json()}catch{throw Error("boostero_invalid_json"+(action==="add"?"_unknown_outcome":""))}
  if(data&&typeof data==="object"&&!Array.isArray(data)&&data.error)
@@ -142,7 +143,7 @@ export async function boosteroProduction(action,parameters={},options={}){
  if(action==="services"&&!Array.isArray(data))throw Error("boostero_services_invalid_shape");
  if(action==="balance"&&(!data||Array.isArray(data)||!Object.hasOwn(data,"balance")))
   throw Error("boostero_balance_invalid_shape");
- if((action==="add"||action==="subscription")&&(!data||!/^\d{1,24}$/.test(String(data.order||""))))
+ if((action==="add"||action==="subscription"||action==="prepaid_subscription")&&(!data||!/^\d{1,24}$/.test(String(data.order||""))))
   throw Error("boostero_add_unconfirmed_outcome");
  if(action==="status"&&parameters.orders!==undefined&&
    (!data||typeof data!=="object"||Array.isArray(data)))
