@@ -2,20 +2,19 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 const page=readFileSync(new URL("../app/autolikes/page.jsx",import.meta.url),"utf8");
+const checkout=readFileSync(new URL("../app/api/autolikes/prepaid/checkout/route.js",import.meta.url),"utf8");
 const storefront=readFileSync(new URL("../app/page.jsx",import.meta.url),"utf8");
-const catalog=readFileSync(new URL("../app/api/autolikes/catalog/route.js",import.meta.url),"utf8");
-const enroll=readFileSync(new URL("../app/api/autolikes/enroll/route.js",import.meta.url),"utf8");
-test("AutoLikes shows real native supplier choices, but no charge without recurring authorization",()=>{
- assert.match(page,/AutoLikes subscriptions/);
- assert.match(page,/\/api\/autolikes\/catalog/);
- assert.match(page,/\/api\/autolikes\/quote/);
- assert.match(page,/catalog\.checkoutEnabled&&publicKey/);
- assert.match(page,/Monthly enrollment is not accepting payments yet/);
- assert.match(catalog,/autoLikesRecurringCheckoutReady/);
- assert.match(enroll,/if\(!autoLikesRecurringCheckoutReady\(\)\|\|!boosteroProductionReady\(\)\)/);
- assert.match(enroll,/GATEWAY_APPROVED_PENDING_VERIFICATION/);
+test("AutoLikes supports one-time prepaid future posts, not a recurring subscription",()=>{
+ assert.match(page,/AutoLikes/);
+ assert.match(page,/ONE-TIME PAYMENT/);
+ assert.match(page,/\/api\/autolikes\/prepaid\/catalog/);
+ assert.match(page,/\/api\/autolikes\/prepaid\/checkout/);
+ assert.match(page,/posts.{0,12}10|up to 10 posts/i);
+ assert.doesNotMatch(page,/recurringConsent|subscription checkout/i);
+ assert.match(checkout,/type:"sale"/);
+ assert.doesNotMatch(checkout,/add_subscription/);
 });
-test("existing one-time checkout and AutoLikes navigation remain intact",()=>{
+test("AutoLikes is discoverable while existing production checkout stays intact",()=>{
  assert.match(storefront,/<a href="\/autolikes">AutoLikes<\/a>/);
  assert.match(storefront,/id="checkout"/);
  assert.match(storefront,/\/api\/checkout\/v1/);
