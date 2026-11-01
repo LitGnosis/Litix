@@ -139,7 +139,7 @@ export default function LitixDirectory({standalone=false,initialPlatform="",init
      <label>Service type
       <select value={kind} onChange={e=>{setKind(e.target.value);setPage(1)}}>
        <option value="">All types</option>
-       {["followers","likes","views","subscribers","retweets","comments","shares","members","plays","traffic","other"].map(x=><option key={x} value={x}>{x[0].toUpperCase()+x.slice(1)}</option>)}
+       {["followers","likes","views","subscribers","retweets","comments","shares","saves","members","plays","traffic","other"].map(x=><option key={x} value={x}>{x[0].toUpperCase()+x.slice(1)}</option>)}
       </select>
      </label>
      <label>Category
