@@ -1,3 +1,4 @@
+import {SHOP_CATEGORIES} from "../lib/litixShopRoutes.mjs";
 import {GLOBAL_CODES,GLOBAL_LANG_ALTERNATES} from "../lib/globalLocales.mjs";
 export default function sitemap() {
   const base = "https://litix.net";
@@ -6,6 +7,11 @@ export default function sitemap() {
   )};
   return [
     {url:base,changeFrequency:"daily",priority:1},
+    {url:base+"/shop",changeFrequency:"weekly",priority:0.9},
+    {url:base+"/services",changeFrequency:"daily",priority:0.9},
+    {url:base+"/track",changeFrequency:"monthly",priority:0.4},
+    {url:base+"/bundles",changeFrequency:"weekly",priority:0.8},
+    ...SHOP_CATEGORIES.map(item=>({url:base+item.href,changeFrequency:"weekly",priority:0.8})),
     ...GLOBAL_CODES.map(locale=>({
       url:base+"/global/"+locale,
       changeFrequency:"monthly",
