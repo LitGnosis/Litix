@@ -1,7 +1,5 @@
-import {boosteroProduction} from "../../../../lib/boosteroReadOnly.mjs";
-import {enabledBoosteroCards} from "../../../../lib/boosteroCatalog.mjs";
+import {allBoosteroCardsSnapshot} from "../../../../lib/boosteroCatalog.mjs";
 import {sortServicesPer1000,matchesServiceQuickKind} from "../../../../lib/catalogSort.mjs";
-import {litixRetailPer1000Cents} from "../../../../lib/litixRetail60.mjs";
 import {litixPublicCard} from "../../../../lib/publicLitixCatalog.mjs";
 import {publicServiceCardName} from "../../../../lib/serviceCardDisplay.mjs";
 export const runtime="nodejs";
@@ -43,39 +41,16 @@ let memo=null,expireAt=0,inFlight=null;
 async function directory(){
  if(memo&&Date.now()<expireAt)return memo;
  if(!inFlight)inFlight=(async()=>{
-  const provider=await boosteroProduction("services");
-  if(!Array.isArray(provider))throw Error("catalog_unavailable");
-  // This allowlist is intentionally independent of the complete public directory.
-  // No new service gains payment or supplier-dispatch permission from being listed.
-  const approved=await enabledBoosteroCards().catch(()=>[]);
-  const allowed=new Map(approved.map(x=>[x.id,x]));
-  const unique=new Map();
-  for(const raw of provider){
-   const supplierId=String(raw?.service??raw?.id??"");
-   if(!/^\d{1,12}$/.test(supplierId)||unique.has(supplierId))continue;
-   const name=clean(raw?.name),category=clean(raw?.category,120);
-   if(!name)continue;
-   const platform=platformOf({name,category}),kind=kindOf({name,category});
-   const min=Number(raw?.min),max=Number(raw?.max),rate=Number(raw?.rate);
-   const validRange=Number.isSafeInteger(min)&&min>=1&&Number.isSafeInteger(max)&&max>=min;
-   const validRate=Number.isFinite(rate)&&rate>0;
-   const id="boostero_"+supplierId;
-   const purchasable=allowed.get(id);
-   // 60% retail markup for discovery; actual payment still requires a live quote.
-   // supplier terms and the $1 order floor must be checked before checkout.
-   const indicative=validRate?litixRetailPer1000Cents(rate,raw)/100:null;
-   unique.set(supplierId,purchasable?{
-    ...purchasable,platform,kind,category:purchasable.category||category,
-    supplierCategory:category,provider:"Litix",quoteStatus:"approved"
-   }:{
-    id,name,category:category||"Other",supplierCategory:category,
-    platform,kind,type:clean(raw?.type,45)||"Standard",min:validRange?min:null,
-    max:validRange?max:null,per1000:indicative,
-    startingAmountCents:null,purchasable:false,pricingReview:true,
-    provider:"Litix",quoteStatus:validRange&&validRate?"manual":"unavailable"
-   });
-  }
-  const items=sortServicesPer1000([...unique.values()].filter(s=>s.purchasable===true),null,x=>x.per1000==null?Number.POSITIVE_INFINITY:Number(x.per1000));
+  // Reuse the same bounded, validated Boostero snapshot as the checkout
+  // catalog. The previous directory fetched the complete supplier inventory
+  // and then fetched the approved cards a second time on every cold start.
+  // Only live-validated, purchasable cards are ever exposed.
+  const snapshot=await allBoosteroCardsSnapshot();
+  if(!Array.isArray(snapshot.items)||!snapshot.items.length)throw Error("catalog_unavailable");
+  const items=sortServicesPer1000(
+   snapshot.items.filter(s=>s.purchasable===true).map(s=>({...s,provider:"Litix",quoteStatus:"approved"})),
+   null,s=>s.per1000==null?Number.POSITIVE_INFINITY:Number(s.per1000)
+  );
   const counts={};const categories={};
   for(const s of items){
    counts[s.platform]=(counts[s.platform]||0)+1;
