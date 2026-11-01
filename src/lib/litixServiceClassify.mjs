@@ -12,7 +12,8 @@ export function litixPlatform(name,category){
 }
 export function litixKind(name,category){
  const label=(String(name||"")+" "+String(category||"")).toLowerCase();
- for(const type of ["followers","likes","views","comments","subscribers","shares","members","plays","traffic"]){
+ if(litixPlatform(name,category)==="Twitter (X)"&&/\b(?:retweets?|reposts?)\b/.test(String(name||"").toLowerCase()))return "retweets";
+ for(const type of ["followers","likes","views","comments","subscribers","shares","saves","members","plays","traffic"]){
   const re=new RegExp("\\b"+type.replace(/s$/,"")+"s?\\b");
   if(re.test(label))return type;
  }

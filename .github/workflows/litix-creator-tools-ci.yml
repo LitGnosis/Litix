@@ -1,0 +1,33 @@
+name: Litix Creator Tools — free analytics (no payment)
+on:
+  pull_request:
+    paths:
+      - 'src/lib/tiktokEngagement.mjs'
+      - 'src/app/tools/tiktok-engagement/**'
+      - 'src/tests/tiktok-engagement.test.mjs'
+      - 'src/app/shop/page.jsx'
+      - 'src/app/sitemap.js'
+      - '.github/workflows/litix-creator-tools-ci.yml'
+permissions:
+  contents: read
+jobs:
+  creator-tool-checks:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: src/package-lock.json
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: No-payment creator analytics tests
+        run: node --test tests/tiktok-engagement.test.mjs
+      - name: Production Next.js build
+        run: npm run build
