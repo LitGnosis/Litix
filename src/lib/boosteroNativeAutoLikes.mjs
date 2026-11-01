@@ -51,7 +51,7 @@ export function nativeAutoLikesQuote({service,platform,profile,quantityPerPost,p
   throw Error("native_autolikes_price_invalid");
  return {serviceId:String(service.service??service.id),platform,username:m[1],
   profileUrl:canonical,quantityPerPost:qty,posts:limit,delay:delayMinutes,
-  retailPer1000Cents,perPostCents,totalCents,wholesaleCents,currency:"USD"};
+  retailPer1000Cents:retailCentsPer1000,perPostCents,totalCents,wholesaleCents,currency:"USD"};
 }
 export function nativeAutoLikesExpiry(periodEnd,now=new Date()){
  const d=new Date(periodEnd),current=new Date(now);
