@@ -75,3 +75,30 @@
 @media(prefers-reduced-motion:reduce){
  .litix-quick-selector *{transition:none!important}
 }
+
+/* Two-row mobile header. The full menu remains keyboard/touch accessible via
+ * horizontal scrolling instead of occupying half the phone screen. */
+@media(max-width:660px){
+ .nav.litix-home-nav{
+  display:flex;flex-direction:column;align-items:stretch;gap:6px;
+  padding:8px 12px 9px;border-radius:0 0 16px 16px;
+ }
+ .nav.litix-home-nav .brand{display:flex;align-self:flex-start;min-height:50px;align-items:center}
+ .nav.litix-home-nav .litix-new-logo{width:88px;max-height:55px;object-fit:contain}
+ .nav.litix-home-nav>div{
+  display:flex;flex-wrap:nowrap;gap:8px;overflow-x:auto;overflow-y:hidden;
+  scroll-snap-type:x proximity;scrollbar-width:none;-webkit-overflow-scrolling:touch;
+  padding:3px 2px 4px;
+ }
+ .nav.litix-home-nav>div::-webkit-scrollbar{display:none}
+ .nav.litix-home-nav>div a{
+  display:inline-flex;align-items:center;justify-content:center;
+  flex:0 0 auto;white-space:nowrap;scroll-snap-align:start;
+  margin:0!important;padding:8px 12px;
+  border:1px solid #66b9ee54;border-radius:10px;
+  color:#d8f2ff;font-size:13px!important;font-weight:750;
+  background:linear-gradient(140deg,#123049dd,#071d30dd);
+  text-decoration:none;
+ }
+ .nav.litix-home-nav>div a:focus-visible{outline:2px solid #8edbff}
+}
