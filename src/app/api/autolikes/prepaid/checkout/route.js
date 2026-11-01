@@ -82,7 +82,12 @@ export async function POST(request){
   await sql.query("update public.litix_autolikes_prepaid_orders set payment_status='REVIEW',error_code='PAYMENT_UNKNOWN',updated_at=now() where id=$1 and payment_status='PROCESSING'",[id]).catch(()=>{});
   return reply({orderId:id,payment:"review",message:"Payment status cannot be confirmed. Do not retry checkout; contact Litix support."},202);
  }
- if(String(gateway.response)!=="1"||String(gateway.response_code||"")!=="100"){
+ if(String(gateway.response)==="1"&&String(gateway.response_code||"")!=="100"){
+  // An approval-like response with incomplete fields is ambiguous, NOT a decline.
+  await sql.query("update public.litix_autolikes_prepaid_orders set payment_status='REVIEW',error_code='PAYMENT_RESPONSE_REVIEW',updated_at=now() where id=$1 and payment_status='PROCESSING'",[id]).catch(()=>{});
+  return reply({orderId:id,payment:"review",message:"Gateway approval needs verification. Do not submit another purchase."},202);
+ }
+ if(String(gateway.response)!=="1"){
   await sql.query("update public.litix_autolikes_prepaid_orders set payment_status='DECLINED',error_code='PAYMENT_DECLINED',updated_at=now() where id=$1 and payment_status='PROCESSING'",[id]).catch(()=>{});
   return reply({orderId:id,payment:"declined",message:"Payment not approved. No AutoLikes order submitted."},402);
  }
