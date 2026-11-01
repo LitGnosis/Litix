@@ -40,6 +40,6 @@ test("native subscription has strict expiry and no historic posts",()=>{
 test("read-only public catalog cannot charge or submit supplier add",()=>{
  const s=readFileSync(new URL("../app/api/autolikes/catalog/route.js",import.meta.url),"utf8");
  assert.match(s,/boosteroProduction\("services"\)/);
- assert.match(s,/checkoutEnabled=false/);
+ assert.match(s,/checkoutEnabled=autoLikesRecurringCheckoutReady\(\)/);
  assert.doesNotMatch(s,/boosteroProduction\("add"\)|startPaymentRequest|add_subscription/);
 });
