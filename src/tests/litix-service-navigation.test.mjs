@@ -8,10 +8,13 @@ import {filterBoosteroCards} from "../lib/boosteroCatalog.mjs";
 const source=path=>readFileSync(new URL("../"+path,import.meta.url),"utf8");
 
 test("navigation groups and service kinds are in owner-specified order",()=>{
- assert.deepEqual(SERVICE_NAV_GROUPS.map(x=>x.label),["TikTok","Instagram","YouTube","X"]);
+ assert.deepEqual(SERVICE_NAV_GROUPS.map(x=>x.label),["TikTok","Instagram","YouTube","X","Facebook"]);
  assert.deepEqual(SERVICE_NAV_GROUPS.map(x=>x.kinds.map(y=>y.label)),[
-  ["Followers","Likes","Views"],["Followers","Likes","Views"],
-  ["Subscribers","Likes","Views"],["Likes","Views","Retweets"]
+  ["Followers","Likes","Views","Comments","Shares","Saves"],
+  ["Followers","Likes","Views","Comments","Shares","Saves"],
+  ["Subscribers","Likes","Views","Comments"],
+  ["Likes","Views","Retweets","Followers"],
+  ["Followers","Likes","Views"]
  ]);
  for(const group of SERVICE_NAV_GROUPS){
   assert.equal(allowedServiceFilter(group.platform,""),true);

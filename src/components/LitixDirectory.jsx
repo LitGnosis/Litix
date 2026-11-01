@@ -7,13 +7,13 @@ const currency=n=>typeof n==="number"&&Number.isFinite(n)
   ?new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(n):null;
 const contactNumber=(process.env.NEXT_PUBLIC_WHATSAPP_NUMBER||"").replace(/\D/g,"")||"19452106315";
 const topFilters=["Instagram","TikTok","YouTube","Facebook","Twitter (X)","Spotify","Telegram","LinkedIn"];
-export default function LitixDirectory({standalone=false}){
+export default function LitixDirectory({standalone=false,initialPlatform="",initialKind=""}){
  const [search,setSearch]=useState("");
  useEffect(()=>{const q=new URLSearchParams(location.search).get("q")||new URLSearchParams(location.search).get("service")||"";
   if(q)setSearch(q.replace(/^(?:boostero|litix)_/,""));},[]);
  const [debounced,setDebounced]=useState("");
- const [platform,setPlatform]=useState("");
- const [kind,setKind]=useState("");
+ const [platform,setPlatform]=useState(allowedServiceFilter(initialPlatform,initialKind)?initialPlatform:"");
+ const [kind,setKind]=useState(allowedServiceFilter(initialPlatform,initialKind)?initialKind:"");
  const [category,setCategory]=useState("");
  const [page,setPage]=useState(1);
  const [entries,setEntries]=useState([]);
@@ -139,7 +139,7 @@ export default function LitixDirectory({standalone=false}){
      <label>Service type
       <select value={kind} onChange={e=>{setKind(e.target.value);setPage(1)}}>
        <option value="">All types</option>
-       {["followers","likes","views","subscribers","retweets","comments","shares","members","plays","traffic","other"].map(x=><option key={x} value={x}>{x[0].toUpperCase()+x.slice(1)}</option>)}
+       {["followers","likes","views","subscribers","retweets","comments","shares","saves","members","plays","traffic","other"].map(x=><option key={x} value={x}>{x[0].toUpperCase()+x.slice(1)}</option>)}
       </select>
      </label>
      <label>Category
