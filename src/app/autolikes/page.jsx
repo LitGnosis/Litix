@@ -1,170 +1,164 @@
 "use client";
 import {useEffect,useMemo,useRef,useState} from "react";
 import PremiumInlineCheckout from "../../components/PremiumInlineCheckout";
-const money=cents=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(Number(cents||0)/100);
-const delayChoices=[0,5,10,15,20,30,40,50,60];
-const getCollectJS=()=>{try{if(typeof CollectJS!=="undefined")return CollectJS}catch{}return typeof window!=="undefined"?window.CollectJS:null};
-export default function AutoLikesPage(){
- const [catalog,setCatalog]=useState({loading:true,items:[],checkoutEnabled:false});
- const [platform,setPlatform]=useState("instagram"),[serviceId,setServiceId]=useState("");
- const [profile,setProfile]=useState(""),[quantity,setQuantity]=useState("1000"),[posts,setPosts]=useState("10");
- const [delay,setDelay]=useState("0"),[email,setEmail]=useState(""),[day,setDay]=useState("1");
- const [consent,setConsent]=useState(false),[monitorConsent,setMonitorConsent]=useState(false);
+const dollars=c=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(Number(c||0)/100);
+const collect=()=>{try{if(typeof CollectJS!=="undefined")return CollectJS}catch{};return typeof window!=="undefined"?window.CollectJS:null};
+export default function LitixAutoLikesPrepaid(){
+ const [catalog,setCatalog]=useState({loading:true,platforms:[],checkoutEnabled:false});
+ const [platform,setPlatform]=useState("instagram"),[tierId,setTierId]=useState("lite");
+ const [profile,setProfile]=useState(""),[posts,setPosts]=useState("10");
  const [quote,setQuote]=useState(null),[requestKey,setRequestKey]=useState("");
- const [loading,setLoading]=useState(false),[busy,setBusy]=useState(false),[cardReady,setCardReady]=useState(false);
- const [publicKey,setPublicKey]=useState(""),[message,setMessage]=useState(""),[portal,setPortal]=useState("");
- const [locked,setLocked]=useState(false);
- const callback=useRef(null);
+ const [email,setEmail]=useState(""),[consent,setConsent]=useState(false),[busy,setBusy]=useState(false);
+ const [key,setKey]=useState(""),[cardReady,setCardReady]=useState(false);
+ const [message,setMessage]=useState(""),[privateLink,setPrivateLink]=useState(""),[receipt,setReceipt]=useState(null);
+ const [locked,setLocked]=useState(false);const paymentCallback=useRef(null);
  useEffect(()=>{
-  const a=new AbortController();
-  fetch("/api/autolikes/catalog",{cache:"no-store",signal:a.signal}).then(r=>r.json()).then(v=>{
-   if(a.signal.aborted)return;
-   setCatalog({loading:false,items:Array.isArray(v.items)?v.items:[],
-    checkoutEnabled:v.checkoutEnabled===true,note:v.note||""});
-  }).catch(()=>{if(!a.signal.aborted)setCatalog({loading:false,items:[],checkoutEnabled:false,note:"AutoLikes verification temporarily unavailable"})});
-  fetch("/api/config",{cache:"no-store",signal:a.signal}).then(r=>r.json()).then(v=>{
-   if(!a.signal.aborted&&v.ready&&v.publicKey)setPublicKey(v.publicKey);
+  const controller=new AbortController();
+  fetch("/api/autolikes/prepaid/catalog",{cache:"no-store",signal:controller.signal})
+   .then(r=>r.json()).then(data=>{if(!controller.signal.aborted)setCatalog({
+    loading:false,platforms:Array.isArray(data.platforms)?data.platforms:[],
+    checkoutEnabled:data.checkoutEnabled===true,message:data.message||""})})
+   .catch(()=>{if(!controller.signal.aborted)setCatalog({loading:false,platforms:[],checkoutEnabled:false,message:"Litix AutoLikes unavailable"})});
+  fetch("/api/config",{cache:"no-store",signal:controller.signal}).then(r=>r.json()).then(data=>{
+   if(!controller.signal.aborted&&data.ready&&data.publicKey)setKey(data.publicKey);
   }).catch(()=>{});
-  setDay(String(Math.min(28,new Date().getDate())));
-  return()=>a.abort();
+  return()=>controller.abort();
  },[]);
- const available=useMemo(()=>catalog.items.filter(x=>x.platform===platform),[catalog.items,platform]);
- const chosen=available.find(x=>x.id===serviceId)||null;
- const edit=setter=>value=>{setter(value);setQuote(null);setMessage("");setCardReady(false)};
- useEffect(()=>{
-  if(chosen)return;
-  setServiceId(available[0]?.id||"");
- },[platform,catalog.items,serviceId]);
- async function requestQuote(event){
-  event.preventDefault();setLoading(true);setMessage("");setQuote(null);
+ const selectedPlatform=catalog.platforms.find(x=>x.platform===platform);
+ const plans=selectedPlatform?.plans||[],chosen=plans.find(x=>x.id===tierId)||plans[0]||null;
+ const edit=()=>{setQuote(null);setCardReady(false);setMessage("");setPrivateLink("");setReceipt(null)};
+ useEffect(()=>{if(!plans.length)return;if(!plans.find(x=>x.id===tierId)){setTierId(plans[0].id);edit()}},[platform,catalog.platforms]);
+ async function calculate(e){
+  e.preventDefault();if(!chosen||busy)return;setBusy(true);setMessage("");setQuote(null);
   try{
-   const res=await fetch("/api/autolikes/quote",{
+   const res=await fetch("/api/autolikes/prepaid/quote",{
     method:"POST",headers:{"content-type":"application/json"},
-    body:JSON.stringify({platform,serviceId,profile,expectedAmountCents:quote.monthlyAmountCents,quantityPerPost:Number(quantity),posts:Number(posts),delay:Number(delay)})});
+    body:JSON.stringify({platform,profile,tierId:chosen.id,posts:Number(posts)})});
    const body=await res.json();
-   if(!res.ok)throw Error(body.error||"Unable to confirm the latest price");
+   if(!res.ok)throw Error(body.error||"Unable to verify price");
    setQuote(body.quote);setRequestKey(crypto.randomUUID());
-  }catch(e){setMessage(e.message||"Unable to prepare a subscription quote");}
-  finally{setLoading(false)}
+  }catch(e){setMessage(e.message||"Please verify your profile and plan.")}finally{setBusy(false)}
  }
- async function enroll(paymentToken){
-  if(!quote||!requestKey||!catalog.checkoutEnabled)return;
+ async function pay(paymentToken){
+  if(!quote||!requestKey||!catalog.checkoutEnabled||busy||locked)return;
   setBusy(true);setMessage("");
   try{
-   const res=await fetch("/api/autolikes/enroll",{
+   const res=await fetch("/api/autolikes/prepaid/checkout",{
     method:"POST",headers:{"content-type":"application/json"},
-    body:JSON.stringify({platform,serviceId,profile,quantityPerPost:Number(quantity),posts:Number(posts),
-     delay:Number(delay),email,requestKey,dayOfMonth:Number(day),paymentToken,
-     recurringConsent:consent,monitoringConsent:monitorConsent})});
+    body:JSON.stringify({platform,profile,tierId:quote.plan,posts:quote.posts,
+     expectedAmountCents:quote.amountCents,email,requestKey,paymentToken,
+     singlePaymentConsent:true,monitoringConsent:consent})});
    const body=await res.json();
-   if(body.portalUrl)setPortal(body.portalUrl);
-   setMessage(body.message||body.error||"Review your subscription status.");
-   if(res.status===202||res.ok)setLocked(true);
+   setMessage(body.message||body.error||"Please review your order status.");
+   if(body.privateTrackingUrl)setPrivateLink(body.privateTrackingUrl);
+   if(body.orderId)setReceipt({id:body.orderId,payment:body.payment||"review",amount:body.amountCents});
+   // A 202 status includes paid or uncertain gateway outcome; never retry automatically.
+   if(res.ok||res.status===202||res.status===402)setLocked(true);
   }catch{
-   setMessage("Gateway response cannot be confirmed. Do not retry a charge; contact Litix support.");
+   setMessage("The payment response could not be confirmed. Do not retry; contact Litix support.");
    setLocked(true);
   }finally{setBusy(false)}
  }
- callback.current=enroll;
+ paymentCallback.current=pay;
  useEffect(()=>{
-  if(!quote||!catalog.checkoutEnabled||!publicKey||locked)return;
-  let active=true;
+  if(!quote||!catalog.checkoutEnabled||!key||locked)return;
+  let active=true,configured=false;let poll=null,timeout=null;
   setCardReady(false);
   const script=document.createElement("script");
-  script.id="litix-autolikes-collect";
-  script.src="https://secure.nmi.com/token/Collect.js";
+  script.src="https://secure.nmi.com/token/Collect.js";script.id="litix-prepaid-collect";
   script.async=true;
-  script.setAttribute("data-tokenization-key",publicKey);
+  script.setAttribute("data-tokenization-key",key);
   script.setAttribute("data-variant","inline");
   script.setAttribute("data-style-sniffer","false");
-  const configure=()=>{
-   const api=getCollectJS();
-   if(!active||!api?.configure)return;
-   try{api.configure({variant:"inline",styleSniffer:false,
-    fields:{ccnumber:{selector:"#ccnumber",title:"Card Number",placeholder:"Card number"},
-      ccexp:{selector:"#ccexp",title:"Expiration",placeholder:"MM / YY"},
+  const setup=()=>{
+   if(!active||configured)return;
+   const api=collect();
+   const present=["ccnumber","ccexp","cvv"].every(id=>document.getElementById(id));
+   if(!api?.configure||!present)return;
+   try{
+    configured=true;
+    api.configure({variant:"inline",styleSniffer:false,
+     customCss:{"font-size":"16px","background-color":"transparent",color:"#ffffff"},
+     fields:{ccnumber:{selector:"#ccnumber",title:"Card Number",placeholder:"Card number"},
+      ccexp:{selector:"#ccexp",title:"Expiry",placeholder:"MM/YY"},
       cvv:{selector:"#cvv",title:"Security Code",placeholder:"CVV"}},
-    callback:result=>{
-     if(!active)return;
-     if(result?.token)void callback.current?.(result.token);
-     else{setMessage("Card tokenization could not be completed.");setBusy(false);}
-    },
-    fieldsAvailableCallback:()=>{if(active)setCardReady(true)}
-   })}catch{if(active)setMessage("PayKings secure card fields could not initialize. No charge attempted.")}
+     callback:data=>{if(!active)return;if(data?.token)void paymentCallback.current?.(data.token);
+      else{setBusy(false);setMessage("Secure card authorization failed. No purchase submitted.")}},
+     fieldsAvailableCallback:()=>{if(active)setCardReady(true)}
+    });
+   }catch{if(active){setCardReady(false);setMessage("PayKings secure fields are unavailable. No payment attempted.")}}
   };
-  script.onload=configure;
-  script.onerror=()=>{if(active)setMessage("PayKings secure fields are unavailable. No charge attempted.")};
+  script.onload=()=>{setup();poll=setInterval(setup,200)};
+  script.onerror=()=>{if(active)setMessage("Secure payment fields failed to load.")};
   document.head.appendChild(script);
-  return()=>{active=false;script.remove();setCardReady(false)};
- },[quote,publicKey,catalog.checkoutEnabled,locked]);
+  timeout=setTimeout(()=>{if(active&&!configured)setMessage("Secure payment fields are not ready. Refresh to retry.")},15000);
+  return()=>{active=false;script.remove();if(poll)clearInterval(poll);if(timeout)clearTimeout(timeout);setCardReady(false)};
+ },[quote,locked,catalog.checkoutEnabled,key]);
  function submitCard(e){
   e.preventDefault();
-  if(!quote||!cardReady||busy||locked||!consent||!monitorConsent||
-   !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return;
+  if(!cardReady||busy||locked||!consent||!email||!quote)return;
   setBusy(true);
-  try{getCollectJS()?.startPaymentRequest()}catch{
-   setBusy(false);setMessage("Could not start secure payment. No charge submitted.");
-  }
+  try{collect()?.startPaymentRequest()}catch{setBusy(false);setMessage("Secure payment could not start; no charge attempted.")}
  }
  return <main className="wrap">
-  <nav className="nav"><a className="brand" href="/" aria-label="Litix home"><img src="/assets/brand/litix-logo.webp" alt="Litix" className="litix-new-logo"/></a>
-   <div><a href="/shop">Shop</a><a href="/services">All Litix Services</a><a href="/track">Track Order</a></div></nav>
-  <section className="panel" style={{maxWidth:940,margin:"32px auto"}}>
-   <div className="kicker">LITIX · AUTOMATIC NEW-POST LIKES</div>
-   <h1>AutoLikes subscriptions</h1>
-   <p>Choose a public Instagram or TikTok profile, quantity per new post, and a fixed monthly post allowance.
-    Litix verifies the live supplier service and monthly price before checkout. No account password required.</p>
-   <p role="status">{catalog.loading?"Checking live AutoLikes availability...":catalog.note}</p>
-   {!catalog.loading&&catalog.items.length>0&&<form onSubmit={requestQuote} style={{display:"grid",gap:16,marginTop:20}}>
+  <nav className="nav"><a className="brand" href="/" aria-label="Litix home">
+   <img src="/assets/brand/litix-logo.webp" alt="Litix" className="litix-new-logo"/></a>
+   <div><a href="/shop">Shop</a><a href="/services">All Litix Services</a><a href="/track">Track Order</a></div>
+  </nav>
+  <section className="panel" style={{maxWidth:920,margin:"32px auto"}}>
+   <div className="kicker">LITIX AUTO LIKES · ONE-TIME PAYMENT</div>
+   <h1>Automatic Likes for Your Next Posts</h1>
+   <p>Pick Instagram or TikTok, choose likes per new post, and prepay for up to 10 posts within 30 days.
+    No monthly subscription, no automatic renewal, no social-account password.</p>
+   <p role="status">{catalog.loading?"Checking live Litix services…":catalog.message}</p>
+   {!catalog.loading&&catalog.platforms.length>0&&
+   <form onSubmit={calculate} style={{display:"grid",gap:16,marginTop:22}}>
     <label>Platform
-     <select value={platform} disabled={busy||locked} onChange={e=>{setPlatform(e.target.value);setServiceId("");setQuote(null)}}>
-      <option value="instagram">Instagram</option><option value="tiktok">TikTok</option>
-     </select></label>
-    <label>Verified AutoLikes service
-     <select required value={serviceId} disabled={busy||locked} onChange={e=>{setServiceId(e.target.value);setQuote(null)}}>
-      {available.length===0&&<option value="">No compatible active services</option>}
-      {available.map(x=><option key={x.id} value={x.id}>{x.name} · {money(x.retailPer1000Cents)} / 1,000</option>)}
-     </select></label>
-    <label>Public profile username or direct profile link
-     <input required value={profile} disabled={busy||locked} placeholder={platform==="instagram"?"@yourinstagram":"@yourtiktok"}
-      onChange={e=>{setProfile(e.target.value);setQuote(null)}}/></label>
-    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(165px,1fr))",gap:15}}>
-     <label>Likes per new post
-      <input type="number" min={chosen?.minimum||1} max={chosen?.maximum||1000000} step="1"
-       value={quantity} disabled={busy||locked} onChange={e=>{setQuantity(e.target.value);setQuote(null)}}/>
-     </label>
-     <label>New posts per month (1–30)
-      <input type="number" min="1" max="30" step="1" value={posts} disabled={busy||locked}
-       onChange={e=>{setPosts(e.target.value);setQuote(null)}}/>
-     </label>
-     <label>Start delay
-      <select value={delay} disabled={busy||locked} onChange={e=>{setDelay(e.target.value);setQuote(null)}}>
-       {delayChoices.map(x=><option key={x} value={x}>{x===0?"No delay":x+" minutes"}</option>)}
-      </select></label>
-    </div>
-    <button type="submit" disabled={loading||!chosen||busy||locked}>{loading?"Verifying live price...":"Calculate verified monthly price"}</button>
+     <select value={platform} disabled={busy||locked} onChange={e=>{setPlatform(e.target.value);setTierId("lite");edit()}}>
+      {catalog.platforms.map(p=><option value={p.platform} key={p.platform}>{p.label}</option>)}
+     </select>
+    </label>
+    <label>Likes per new post
+     <select value={chosen?.id||""} disabled={busy||locked} onChange={e=>{setTierId(e.target.value);edit()}}>
+      {plans.map(p=><option key={p.id} value={p.id}>{p.likesPerPost.toLocaleString()} likes/post — up to 10 posts: {dollars(p.priceForTenPostsCents)}</option>)}
+     </select>
+    </label>
+    <label>Public profile username or profile link
+     <input required value={profile} disabled={busy||locked} onChange={e=>{setProfile(e.target.value);edit()}}
+      placeholder={platform==="instagram"?"@yourinstagram":"@yourtiktok"} autoComplete="off"/>
+    </label>
+    <label>How many new posts to cover (1–10)
+     <input required type="number" inputMode="numeric" min="1" max="10" step="1" value={posts}
+      disabled={busy||locked} onChange={e=>{setPosts(e.target.value);edit()}}/>
+    </label>
+    <button type="submit" disabled={!chosen||busy||locked}>{busy?"Verifying price…":"Review secure one-time price"}</button>
    </form>}
-   {!catalog.loading&&!catalog.items.length&&<p>No compatible supplier AutoLikes service is currently available. One-time services remain available in <a href="/shop">Litix Shop</a>.</p>}
-   {quote&&<section className="panel" style={{marginTop:20}} aria-label="AutoLikes monthly quote">
-    <h2>Verified monthly plan</h2>
-    <p><strong>{money(quote.monthlyAmountCents)} per month</strong> · {Number(quote.likesPerPost).toLocaleString()} likes per new post · up to {quote.postsPerMonth} new posts each paid period.</p>
-    <p>Automatically renews monthly until canceled. Charges are authorized by PayKings/NMI. Supplier delivery begins only after independently verified payment.
-     A limited number of future posts are covered; unused monthly post allowances do not roll over. Actual delivery speed depends on service availability.</p>
-    {catalog.checkoutEnabled&&publicKey&&!locked&&<form onSubmit={submitCard} style={{display:"grid",gap:14}}>
-     <label>Checkout email <input type="email" required value={email} onChange={e=>setEmail(e.target.value)} disabled={busy}/></label>
-     <label>Monthly renewal day (1–28) <input type="number" min="1" max="28" required value={day} onChange={e=>setDay(e.target.value)} disabled={busy}/></label>
-     <label><input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)} disabled={busy}/> I authorize recurring monthly payments of {money(quote.monthlyAmountCents)} until I cancel. I understand the new-post limit and billing terms.</label>
-     <label><input type="checkbox" checked={monitorConsent} onChange={e=>setMonitorConsent(e.target.checked)} disabled={busy}/> I authorize this service to monitor newly published public posts for the selected profile during paid terms.</label>
-     <PremiumInlineCheckout cardReady={cardReady} busy={busy} canPay={consent&&monitorConsent&&Boolean(email)}
-      buttonLabel={busy?"Submitting securely...":"Start "+money(quote.monthlyAmountCents)+" monthly AutoLikes"}/>
+   {!catalog.loading&&catalog.platforms.length===0&&<p>AutoLikes is currently unavailable. Existing one-time services remain accessible at <a href="/shop">Litix Shop</a>.</p>}
+   {quote&&<section className="panel" style={{marginTop:24}}>
+    <h2>One-time package</h2>
+    <p><strong>{dollars(quote.amountCents)} total</strong> — {quote.likesPerPost.toLocaleString()} likes per new post,
+     up to {quote.posts} new posts over 30 days.</p>
+    <p className="small">One payment only; nothing renews automatically. Only future public posts count.
+     The package expires after 30 days or after the selected post allowance is used. Delivery speed and availability vary.
+     Artificial engagement may violate social platforms' policies.</p>
+    {catalog.checkoutEnabled&&key&&!locked&&<form onSubmit={submitCard} style={{display:"grid",gap:12}}>
+     <label>Confirmation email
+      <input type="email" required value={email} onChange={e=>setEmail(e.target.value)} disabled={busy}/>
+     </label>
+     <label><input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)} disabled={busy}/>
+      I authorize one payment of {dollars(quote.amountCents)} and monitoring of new public posts on the selected profile for up to {quote.posts} posts/30 days.</label>
+     <PremiumInlineCheckout cardReady={cardReady} busy={busy} canPay={Boolean(email)&&consent}
+      buttonLabel={busy?"Processing…":"Pay "+dollars(quote.amountCents)+" once with PayKings"}/>
     </form>}
-    {!catalog.checkoutEnabled&&<p role="status"><strong>Monthly enrollment is not accepting payments yet.</strong> The supplier service and its pricing are verified, but recurring gateway approval and settlement safeguards must be enabled before customers can subscribe. No charge is attempted.</p>}
-    {catalog.checkoutEnabled&&!publicKey&&<p>Secure PayKings card fields are unavailable. No charge attempted.</p>}
-    {portal&&<p><a href={portal} rel="noreferrer">Manage your subscription request</a> · Save the link securely.</p>}
+    {!catalog.checkoutEnabled&&<p role="status"><strong>Prepaid checkout is not enabled on this deployment.</strong> Pricing and profile selection are available without charging a card.</p>}
+    {catalog.checkoutEnabled&&!key&&<p>PayKings secure checkout is temporarily unavailable. No charge attempted.</p>}
    </section>}
    {message&&<div className="msg" role="status">{message}</div>}
-   <p className="small">Litix never asks for a social media password. Recurring billing and delivery are subject to confirmed payment and service eligibility.
-    <a href="mailto:litixsocial@gmail.com"> Contact Litix support</a> for billing or delivery questions.</p>
+   {receipt&&<div className="panel"><h2>Litix order: {receipt.id}</h2>
+    <p>Payment status: {receipt.payment}</p>
+    {privateLink&&<p><a href={privateLink}>Track your private AutoLikes order</a> · Save your secure link.</p>}
+   </div>}
+   <p className="small">No password is needed. Need help with an order? <a href="mailto:litixsocial@gmail.com">Contact Litix support</a>.</p>
   </section>
  </main>;
 }
