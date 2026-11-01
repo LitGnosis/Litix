@@ -2,7 +2,7 @@ import {SERVICE_NAV_GROUPS} from "./serviceNavigation.mjs";
 
 // Navigation is discovery only; it never approves a supplier service or price.
 export const SHOP_PLATFORM_SLUGS=Object.freeze({
- "Instagram":"instagram","TikTok":"tiktok","YouTube":"youtube","Twitter (X)":"x"
+ "Instagram":"instagram","TikTok":"tiktok","YouTube":"youtube","Twitter (X)":"x","Facebook":"facebook"
 });
 export const SHOP_CATEGORIES=Object.freeze(SERVICE_NAV_GROUPS.flatMap(group=>{
  const slug=SHOP_PLATFORM_SLUGS[group.platform];
