@@ -46,6 +46,8 @@ export async function POST(request){
   quote=nativeAutoLikesQuote({service,platform:input.platform,profile:input.profile,
    quantityPerPost:input.quantityPerPost,posts:input.posts,delay:input.delay??0});
  }catch{return send({error:"Live subscription service or price not verified; no charge attempted"},409)}
+ if(Number(input?.expectedAmountCents)!==quote.totalCents)
+  return send({error:"Subscription price changed. Review a fresh quote before authorizing payment. No charge attempted."},409);
  const db=boosteroSQL(),customerId="alusr_"+sha(email).slice(0,40),campaignId="al_"+sha(email+":"+requestKey).slice(0,40);
  const attemptId="alat_"+sha(email+":"+requestKey).slice(0,40);
  const priceHash=sha(JSON.stringify([quote.serviceId,quote.platform,quote.username,quote.quantityPerPost,
