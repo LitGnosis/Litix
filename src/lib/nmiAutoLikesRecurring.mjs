@@ -4,6 +4,9 @@ export const NMI_AUTOLIKES_GATEWAY="https://paykings.transactiongateway.com/api/
 const secureKey=()=>String(process.env.NMI_SECURITY_KEY||"");
 export const autoLikesRecurringCheckoutReady=()=>process.env.VERCEL_ENV==="production"&&
  process.env.LITIX_AUTOLIKES_CHECKOUT_ENABLED==="true"&&
+ process.env.LITIX_AUTOLIKES_DISPATCH_ENABLED==="true"&&
+ process.env.LITIX_AUTOLIKES_NMI_RECONCILE_ENABLED==="true"&&
+ process.env.LITIX_AUTOLIKES_CANCEL_ENABLED==="true"&&
  process.env.LITIX_NMI_RECURRING_MERCHANT_APPROVED==="true"&&secureKey().length>15&&
  process.env.LITIX_BOOSTERO_ENABLED==="true"&&!!process.env.BOOSTERO_API_KEY;
 const validToken=token=>typeof token==="string"&&/^[A-Za-z0-9_.-]{12,300}$/.test(token)&&
