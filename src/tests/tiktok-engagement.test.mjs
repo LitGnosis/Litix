@@ -27,6 +27,6 @@ test("site connects the tool without data collection, supplier API or checkout",
  const shop=readFileSync(new URL("../app/shop/page.jsx",import.meta.url),"utf8");
  assert.match(page,/engagementSnapshot/);
  assert.match(page,/Export CSV/);
- assert.doesNotMatch(page,/fetch\(|BOOSTERO_API|payment|Checkout/i);
+ assert.doesNotMatch(page,/fetch\(|BOOSTERO_API|startPaymentRequest|operation\("add"/i);
  assert.match(shop,/href="\/tools\/tiktok-engagement"/);
 });
