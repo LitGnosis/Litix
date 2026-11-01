@@ -8,12 +8,12 @@ export const prepaidAutoLikesEnabled=()=>process.env.VERCEL_ENV==="production"&&
  process.env.LITIX_AUTOLIKES_PREPAID_ENABLED==="true"&&
  !!process.env.NMI_SECURITY_KEY&&boosteroProductionReady();
 export async function dispatchPrepaidAutoLikes({
- sql=boosteroSQL(),supplier=boosteroProduction,limit=2
+ sql=boosteroSQL(),supplier=boosteroProduction,limit=2,orderId=null
 }={}){
  if(!prepaidAutoLikesEnabled())return {enabled:false,attempts:0};
  const pending=await sql.query(
-  "select id,service_id,platform,target_profile_url,likes_per_post,posts_limit,tier_id,amount_cents,wholesale_reserved_cents,period_end from public.litix_autolikes_prepaid_orders where payment_status='PAID' and fulfillment_state='QUEUED' and period_end>now() order by created_at asc limit $1",
-  [Math.max(1,Math.min(4,limit))]);
+  "select id,service_id,platform,target_profile_url,likes_per_post,posts_limit,tier_id,amount_cents,wholesale_reserved_cents,period_end from public.litix_autolikes_prepaid_orders where payment_status='PAID' and fulfillment_state='QUEUED' and period_end>now() and ($2::text is null or id=$2) order by created_at asc limit $1",
+  [Math.max(1,Math.min(4,limit)),orderId]);
  let submitted=0,review=0,unknown=0;
  for(const order of pending){
   let params;
