@@ -73,24 +73,29 @@ test("server catalog applies correct platform and type, not unrelated supplier c
  assert.deepEqual(ids("platform=YouTube&kind=retweets"),[]);
 });
 
-test("homepage and full directory buttons are interactive and linked to real filtered results",()=>{
+test("homepage shows compact AutoLikes instead of duplicating the service directory",()=>{
  const home=source("app/page.jsx");
+ const servicesPage=source("app/services/page.jsx");
  const directory=source("components/LitixDirectory.jsx");
  const global=source("app/api/catalog/global/route.js");
  const css=source("app/metallic.css");
  const directoryCss=source("app/catalog.css");
- assert.match(home,/SERVICE_NAV_GROUPS\.map\(group=>/);
- assert.match(home,/onClick=\{\(\)=>applyServiceQuickFilter\(group\.platform,item\.kind\)\}/);
- assert.match(home,/kind:quickKind/);
- assert.match(home,/document\.getElementById\("service-results"\)\?\.scrollIntoView/);
- assert.match(home,/window\.history\.replaceState/);
- assert.match(home,/id="service-results"/);
- assert.match(home,/<option>Twitter \(X\)<\/option>/);
+ assert.match(home,/id="litix-autolikes-home-title"/);
+ assert.match(home,/Automatic Likes for Your Next Posts/);
+ assert.match(home,/href="\/autolikes">Explore Automatic Likes<\/a>/);
+ assert.match(home,/href="\/services">Browse All Litix Services<\/a>/);
+ assert.doesNotMatch(home,/<LitixDirectory\/>/);
+ assert.doesNotMatch(home,/id="service-results"/);
+ assert.doesNotMatch(home,/aria-label="Browse verified Litix services by platform"/);
+ assert.doesNotMatch(home,/className="cards"/);
+ assert.match(home,/id="checkout" className="panel sticky"/);
+ // Preserve a selected service from the full catalog when the customer reaches checkout.
+ assert.match(home,/new URLSearchParams\(location\.search\)\.get\("service"\)/);
+ assert.match(home,/fetch\("\/api\/catalog\/v1\?q="/);
+ assert.match(servicesPage,/<LitixDirectory standalone/);
  assert.match(directory,/SERVICE_NAV_GROUPS\.map\(group=>/);
  assert.match(directory,/onClick=\{\(\)=>selectFocus\(group\.platform,item\.kind\)\}/);
  assert.match(directory,/syncDirectoryFilterUrl/);
- assert.match(directory,/\["followers","likes","views","subscribers","retweets"/);
- assert.match(home,/onChange=\{e=>applyServiceQuickFilter\(e\.target\.value\)\}/);
  assert.match(directory,/href=\{"\/\?service="\+encodeURIComponent\(s\.id\)\+"#checkout"\}/);
  assert.match(global,/matchesServiceQuickKind\(s,kind\)/);
  assert.match(global,/return "retweets"/);
