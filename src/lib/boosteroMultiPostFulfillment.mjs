@@ -74,13 +74,32 @@ export async function dispatchBoosteroPost(orderId,ordinal,{sql=boosteroSQL(),op
  }
 }
 
+// Share one fresh, read-only Boostero catalog response across the 2–5 children
+// of a single paid purchase. Each child still independently verifies its
+// quantity, charged retail vs live wholesale, wallet balance and atomic claim.
+// On catalog transport failure, retain the existing per-child quote path.
+export function createBoosteroBatchQuote({loadServices=()=>boosteroProduction("services"),fallback=verifyBoosteroQuote}={}){
+ let catalogPromise;
+ return async (serviceId,quantity,sql)=>{
+  if(!/^\d{1,12}$/.test(String(serviceId)))throw Error("boostero_service_id_invalid");
+  if(!catalogPromise)catalogPromise=Promise.resolve().then(loadServices).catch(()=>null);
+  const raw=await catalogPromise;
+  if(!Array.isArray(raw))return fallback(serviceId,quantity,sql);
+  const service=raw.find(s=>String(s?.service)===String(serviceId));
+  if(!service)throw Error("boostero_live_service_not_found");
+  return {quote:boosteroQuote({service,quantity}),service};
+ };
+}
+
 export async function dispatchBoosteroMultiPosts(orderId,{sql=boosteroSQL(),operation=boosteroProduction,quote=verifyBoosteroQuote}={}){
  const rows=await sql.query(
   "select ordinal from public.litix_boostero_multi_posts where parent_order_id=$1 and state='QUEUED' order by ordinal limit 5",[orderId]);
  // Use bounded parallel requests. Each unique child is individually
  // claimed. No supplier operation runs for an unverified paid parent.
+ const batchQuote=rows.length>1&&quote===verifyBoosteroQuote&&operation===boosteroProduction
+  ?createBoosteroBatchQuote():quote;
  const settled=await Promise.allSettled(rows.map(({ordinal})=>
-  dispatchBoosteroPost(orderId,Number(ordinal),{sql,operation,quote})));
+  dispatchBoosteroPost(orderId,Number(ordinal),{sql,operation,quote:batchQuote})));
  const statuses=settled.map((s,i)=>s.status==="fulfilled"?s.value:{ordinal:Number(rows[i].ordinal),state:"UNKNOWN_OUTCOME",submitted:false});
  const after=await sql.query(
   "select state from public.litix_boostero_multi_posts where parent_order_id=$1 order by ordinal limit 5",[orderId]);
