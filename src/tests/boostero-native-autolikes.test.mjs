@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import {readFileSync} from "node:fs";
 import {eligibleNativeAutoLikes,nativeAutoLikesCatalog,nativeAutoLikesQuote,
  nativeAutoLikesExpiry,nativeAutoLikesSupplierParams} from "../lib/boosteroNativeAutoLikes.mjs";
 
@@ -37,7 +38,7 @@ test("native subscription has strict expiry and no historic posts",()=>{
  assert.throws(()=>nativeAutoLikesExpiry("2027-02-01T00:00:00Z",now));
 });
 test("read-only public catalog cannot charge or submit supplier add",()=>{
- const s=await import("node:fs").then(x=>x.readFileSync(new URL("../app/api/autolikes/catalog/route.js",import.meta.url),"utf8"));
+ const s=readFileSync(new URL("../app/api/autolikes/catalog/route.js",import.meta.url),"utf8");
  assert.match(s,/boosteroProduction\("services"\)/);
  assert.match(s,/checkoutEnabled=false/);
  assert.doesNotMatch(s,/boosteroProduction\("add"\)|startPaymentRequest|add_subscription/);
