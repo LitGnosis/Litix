@@ -1,6 +1,6 @@
 import {createHash,timingSafeEqual} from "node:crypto";
 import {reconcileNativeAutoLikes,dispatchNativeAutoLikes,
- nativeAutoLikesReconcileReady,nativeAutoLikesDispatchReady} from "../../../../lib/nativeAutoLikesFulfillment.mjs";
+ nativeAutoLikesReconcileReady,nativeAutoLikesDispatchReady,syncNativeAutoLikesStatuses} from "../../../../lib/nativeAutoLikesFulfillment.mjs";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 export const maxDuration=60;
@@ -21,7 +21,8 @@ export async function GET(req){
   const payments=await reconcileNativeAutoLikes({limit:3});
   // Only independently verified NMI receipts may open durable paid cycles.
   const supplier=await dispatchNativeAutoLikes({limit:2});
-  return send({ok:true,enabled:true,payments,supplier});
+  const tracking=await syncNativeAutoLikesStatuses({limit:8});
+  return send({ok:true,enabled:true,payments,supplier,tracking});
  }catch{
   return send({ok:false,error:"AutoLikes reconciliation requires review; existing orders unaffected"},503);
  }
