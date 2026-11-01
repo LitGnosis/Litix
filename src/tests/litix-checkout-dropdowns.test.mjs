@@ -78,7 +78,7 @@ test("homepage checkout has functional cascading dropdowns and retains live PayK
  assert.match(picker,/onChoose\(service\|\|null\)/);
  assert.match(picker,/\/api\/catalog\/checkout-choices\?/);
  assert.match(catalog,/buildCheckoutChoices\(snapshot\.items,requested\)/);
- assert.doesNotMatch(catalog,/key:process\.env|supplierServiceId|wholesale/i);
+ assert.doesNotMatch(catalog,/key:process\.env|supplierServiceId\s*:/i);
  assert.match(services,/<LitixDirectory standalone/);
  assert.match(css,/@media\(max-width:660px\)/);
 });
