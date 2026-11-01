@@ -80,7 +80,7 @@ test("same service-aware floor is applied in both catalog surfaces and charged s
  const global=root("app/api/catalog/global/route.js");
  assert.match(catalog,/litixRetailPer1000Cents\(item\.rate,item\)/);
  assert.match(checkout,/litixRetailPer1000Cents\(rate,service\)/);
- assert.match(global,/litixRetailPer1000Cents\(rate,raw\)/);
+ // The public directory now consumes the already price-validated catalog snapshot.\n assert.match(global,/allBoosteroCardsSnapshot\\(\\)/);\n assert.doesNotMatch(global,/boosteroProduction\\("services"\\)/);
  const orderHandler=root("lib/boosteroOrderHandler.mjs");
  assert.match(orderHandler,/verifyBoosteroQuote\(id,quoteQuantity,sql\)/);
  assert.match(orderHandler,/Number\(data\?\.expectedAmountCents\)!==quote\.amountCents/);
