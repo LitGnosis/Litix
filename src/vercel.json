@@ -18,6 +18,10 @@
     {
       "path": "/api/internal/boostero/cron",
       "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/autolikes/cron",
+      "schedule": "5,20,35,50 * * * *"
     }
   ]
 }
