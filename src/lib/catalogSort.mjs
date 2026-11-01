@@ -14,7 +14,7 @@ export function matchesServiceQuickKind(service,kind){
   ["plays",/\bplays?\b/i],
   ["members",/\bmembers?\b/i]
  ];
- if(!["retweets","followers","likes","views","subscribers"].includes(kind))return false;
+ if(!["retweets","followers","likes","views","subscribers","comments","shares","saves"].includes(kind))return false;
  const title=String(service?.name||"");
  const titleMatches=patterns.filter(([,regex])=>regex.test(title)).map(([k])=>k);
  // Explicit titles take priority over broad category labels. A service like
