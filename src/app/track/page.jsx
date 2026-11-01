@@ -20,7 +20,7 @@ function friendlyStatus(order){
  const children=Array.isArray(order.posts)?order.posts:[];
  if(children.some(p=>/^(in progress|in_progress|processing)$/i.test(String(p.status||"")))&&
    !["completed","failed","canceled"].includes(s))
-  return {title:"Litix delivery in progress",description:"Your selected posts are receiving delivery. View the latest supplier-reported progress below.",kind:"progress",step:2};
+  return {title:"Litix delivery in progress",description:"Your selected posts are receiving delivery. View the latest Litix order progress below.",kind:"progress",step:2};
  if(["in progress","in_progress","processing"].includes(latest)&&!["completed","failed","canceled"].includes(s))
   return {title:"Litix delivery in progress",description:"Your order is still processing. The latest update may show a remaining quantity; final delivery has not been confirmed.",kind:"progress",step:2};
  if(s==="completed")return {title:"Delivery reported complete",description:"Litix has received a completed delivery status. If anything is missing, contact support with your Litix order number.",kind:"success",step:3};
@@ -137,11 +137,11 @@ export default function OrderTracker(){
        <p style={{margin:"8px 0 0",wordBreak:"break-word",fontSize:12}}><a href={post.url} target="_blank" rel="noopener noreferrer">View selected post</a></p>
        {Number.isSafeInteger(post.delivered)&&<div style={{margin:"8px 0 0"}}>
           <div role="progressbar" aria-valuemin={0} aria-valuemax={Number(post.quantity||0)} aria-valuenow={post.delivered}
-           aria-label={"Supplier-reported likes delivered for post "+post.index}
+           aria-label={"Reported likes delivered for post "+post.index}
            style={{height:7,borderRadius:6,background:"#163550",overflow:"hidden"}}>
             <div style={{height:"100%",width:Math.min(100,100*post.delivered/Math.max(1,Number(post.quantity||1)))+"%",background:"#81c7fb"}}/>
           </div>
-          <p className="small" style={{margin:"6px 0 0"}}>{post.delivered.toLocaleString()} supplier-reported delivered · {(Number(post.quantity||0)-post.delivered).toLocaleString()} remaining</p>
+          <p className="small" style={{margin:"6px 0 0"}}>{post.delivered.toLocaleString()} reported delivered · {(Number(post.quantity||0)-post.delivered).toLocaleString()} remaining</p>
          </div>}
          {!Number.isSafeInteger(post.delivered)&&post.remains!==null&&post.remains!==undefined&&<p className="small" style={{margin:"6px 0 0"}}>{Number(post.remains).toLocaleString()} likes remaining</p>}
          {post.checkedAt&&<p className="small" style={{margin:"5px 0 0"}}>Status checked {new Date(post.checkedAt).toLocaleString()}</p>}
