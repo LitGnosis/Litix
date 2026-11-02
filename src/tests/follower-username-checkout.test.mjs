@@ -1,72 +1,70 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
-import vm from "node:vm";
+import {litixPlatform,litixKind} from "../lib/litixServiceClassify.mjs";
+import {profilePlatformForService,normalizeProfileDestination} from "../lib/litixOrderTarget.mjs";
+import {boosteroProfile,boosteroDestination} from "../lib/boosteroFulfillment.mjs";
 const read=p=>readFileSync(new URL("../"+p,import.meta.url),"utf8");
-const front=read("app/page.jsx"),back=read("app/api/[action]/route.js");
-const frontCode=front.slice(front.indexOf("const socialPlatformForService=service=>{"),front.indexOf("export default function Home(){"));
-const backCode=back.slice(back.indexOf("const followerPlatformForService=service=>{"),back.indexOf("const followerRank=x=>"));
-const frontend=vm.runInNewContext(frontCode+";({socialPlatformForService,normalizeSocialProfileInput})",{URL});
-const backend=vm.runInNewContext(backCode+";({followerPlatformForService,canonicalFollowerDestination})",{URL});
-
-test("followers are recognized from service name OR category for Instagram/IG and TikTok/Tik Tok",()=>{
- const examples=[
-  [{name:"Instagram Followers",category:"Instagram"}, "instagram"],
-  [{name:"APP Data | High Speed | No Refill",category:"Instagram Followers"}, "instagram"],
-  [{name:"IG followers | high speed",category:"Social Media"}, "instagram"],
-  [{name:"Tik Tok Followers Premium",category:"Tik Tok"}, "tiktok"],
-  [{name:"Fast followers",category:"TikTok Followers"}, "tiktok"],
- ];
- for(const [service,expected] of examples){
-  assert.equal(frontend.socialPlatformForService(service),expected);
-  assert.equal(backend.followerPlatformForService(service),expected);
+const home=read("app/page.jsx"),checkout=read("app/api/checkout/v1/route.js");
+const approved=[
+ ["Instagram followers","Social", "instagram"],
+ ["Fast followers","TikTok followers","tiktok"],
+ ["IG Followers | Active","Social media","instagram"],
+ ["Tik Tok Followers","Other","tiktok"]
+];
+test("litix frontend and current Boostero catalog recognize follower services",()=>{
+ for(const [name,category,platform] of approved){
+  const s={name,category,platform:litixPlatform(name,category),kind:litixKind(name,category)};
+  assert.equal(profilePlatformForService(s),platform);
  }
- for(const service of [{name:"Instagram Likes",category:"Instagram Likes"},{name:"TikTok Views",category:"TikTok Views"},{name:"Instagram Post Likes",category:"Instagram"}]){
-  assert.equal(frontend.socialPlatformForService(service),"");
-  assert.equal(backend.followerPlatformForService(service),"");
- }
+ assert.equal(profilePlatformForService({platform:"Instagram",kind:"likes"}),"");
+ assert.equal(profilePlatformForService({platform:"TikTok",kind:"views"}),"");
 });
-test("Instagram and TikTok username, @handle and direct profile links produce exact canonical destination",()=>{
+test("username and public profile links normalize for approved Followers checkout",()=>{
  const examples=[
   ["litixsocial","instagram","https://www.instagram.com/litixsocial/"],
   ["@litixsocial","instagram","https://www.instagram.com/litixsocial/"],
   ["https://instagram.com/litixsocial","instagram","https://www.instagram.com/litixsocial/"],
   ["instagram.com/litixsocial/?igsh=abc","instagram","https://www.instagram.com/litixsocial/"],
   ["@litixsocial","tiktok","https://www.tiktok.com/@litixsocial"],
-  ["https://www.tiktok.com/@litixsocial?lang=en","tiktok","https://www.tiktok.com/@litixsocial"],
+  ["https://www.tiktok.com/@litixsocial?lang=en","tiktok","https://www.tiktok.com/@litixsocial"]
  ];
- for(const [value,platform,expected] of examples){
-  assert.equal(frontend.normalizeSocialProfileInput(value,platform).url,expected);
-  assert.equal(backend.canonicalFollowerDestination(value,platform),expected);
+ for(const [input,platform,canonical] of examples){
+  const normalized=normalizeProfileDestination(input,platform);
+  assert.equal(normalized.ok,true,input);
+  assert.equal(normalized.url,canonical,input);
+  assert.equal(boosteroDestination(normalized.url,platform,"followers"),
+   platform==="tiktok"?canonical+"/":canonical);
  }
 });
-test("invalid post URLs, unsafe URLs and cross-platform handles are not accepted for Followers",()=>{
- const examples=[
+test("follower checkout rejects post URLs, unsafe hosts and cross-platform links",()=>{
+ const cases=[
   ["https://instagram.com/p/short123","instagram"],
   ["https://instagram.com/reel/short123","instagram"],
-  ["https://tiktok.com/@litixsocial/video/123","tiktok"],
+  ["https://tiktok.com/@litixsocial/video/12345678901234","tiktok"],
   ["https://instagram.evil.com/user","instagram"],
   ["https://tiktok.com/@litixsocial","instagram"],
   ["https://instagram.com/user:pass@evil.com/profile","instagram"],
   ["http://instagram.com/litixsocial","instagram"],
-  ["javascript:alert(1)","tiktok"],
+  ["javascript:alert(1)","tiktok"]
  ];
- for(const [value,platform] of examples){
-  assert.equal(backend.canonicalFollowerDestination(value,platform),null);
-  assert.equal(frontend.normalizeSocialProfileInput(value,platform).ok,false);
- }
+ for(const [input,platform] of cases)assert.equal(normalizeProfileDestination(input,platform).ok,false,input);
+ assert.equal(boosteroProfile("https://instagram.evil.com/user","instagram"),null);
 });
-test("frontend clearly requests username or profile link for follower purchases",()=>{
- assert.match(front,/Instagram username or profile link/);
- assert.match(front,/TikTok username or profile link/);
- assert.match(front,/socialPlatformForService\(selected\)/);
- assert.match(front,/link:normalizedOrderLink/);
+test("homepage switches between a public profile for Followers and a post URL for Likes",()=>{
+ assert.match(home,/profilePlatformForService\(selected\)/);
+ assert.match(home,/checkoutProfileLabel\(socialPlatform\)/);
+ assert.match(home,/normalizeProfileDestination\(link/);
+ assert.match(home,/selected\?\.kind==="likes"/);
+ assert.match(home,/tiktokLikes\?.*"One video"/);
+ assert.match(home,/link:normalizedOrderLink/);
 });
-test("backend validates follower destination, stores and dispatches the same normalized profile URL",()=>{
- assert.match(back,/const followerPlatform=followerPlatformForService\(service\)/);
- assert.match(back,/destination=canonicalFollowerDestination\(link,followerPlatform\)/);
- assert.match(back,/destination,qty,cents/);
- assert.match(back,/smm\("add",\{service:id,link:destination,quantity:String\(qty\)\}\)/);
- assert.match(back,/const cents=calculateOrderCents\(qty,retailPer1000\(service\)\)/);
- assert.match(back,/payment_token:token/);
+test("current checkout routes exclusively to verified Boostero orders without exposing keys",()=>{
+ assert.match(checkout,/handleBoosteroOrder/);
+ assert.match(checkout,/Only available Litix services can be purchased/);
+ assert.match(checkout,/action:"card_purchase"/);
+ assert.doesNotMatch(checkout,/smmglob|SMMFOLLOWOM|SMMGLOB/i);
+ const supplier=read("lib/boosteroFulfillment.mjs");
+ assert.match(supplier,/export function boosteroDestination/);
+ assert.match(supplier,/export async function verifyBoosteroQuote/);
 });
