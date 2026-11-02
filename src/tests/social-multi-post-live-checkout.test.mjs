@@ -63,10 +63,12 @@ test("Server enforces known platform, default supplier kind, signed pricing and 
  assert.match(handler,/idempotency_key\) do nothing/);
 });
 
-test("TikTok Likes deep links open Choose Your Posts without checkout form redirects",()=>{
+test("TikTok Likes deep links open an easy post URL first, with opt-in Choose Your Posts",()=>{
  const directory=read("components/LitixDirectory.jsx");
- assert.match(page,/setMultiPostEnabled\(choose\)/);
- assert.match(page,/newTikTokPost\(\{quantity:Number\(selected\.min\)\}\)/);
+ assert.match(page,/setMultiPostEnabled\(false\)/);
+ assert.match(page,/setMultiPosts\(\[\]\)/);
+ assert.match(page,/Choose multiple posts/);
+ assert.match(page,/newTikTokPost\(\{link,quantity:qty,verifiedUrl:tiktokLikes\?verifiedTikTokVideo/);
  assert.match(page,/document\.getElementById\("checkout"\)\?\.scrollIntoView/);
  assert.doesNotMatch(page,/if\(!services\.length\)return;const id=new URLSearchParams\(location\.search\)/);
  assert.match(directory,/Choose Your Posts & Pay/);

@@ -1,5 +1,6 @@
 "use client";
-import {useEffect,useMemo,useState} from "react";
+import {useEffect,useMemo,useRef,useState} from "react";
+import {LITIX_CUSTOM_QUICK_PICKS,litixPreferredCustomService} from "../lib/litixCustomQuickPick.mjs";
 const dollars=cents=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(Number(cents)/100);
 const DEFAULT_PLATFORMS=["Instagram","TikTok","YouTube","Facebook","Twitter (X)"];
 export default function LitixCheckoutSelector({selected,onChoose}){
@@ -10,6 +11,7 @@ export default function LitixCheckoutSelector({selected,onChoose}){
  const [loading,setLoading]=useState(true);
  const [error,setError]=useState("");
  const [retry,setRetry]=useState(0);
+ const pendingIntent=useRef(null);
  // Honor service deep links from All Litix Services; never select a package
  // without customer input.
  useEffect(()=>{
@@ -36,9 +38,15 @@ export default function LitixCheckoutSelector({selected,onChoose}){
    .then(value=>{
     if(cancelled)return;
     const kinds=Array.isArray(value.kinds)?value.kinds:[];
+    const items=Array.isArray(value.items)?value.items:[];
     setData({platforms:Array.isArray(value.platforms)?value.platforms:[],
-     kinds,items:Array.isArray(value.items)?value.items:[],total:value.total||0});
-    setKind(previous=>kinds.some(x=>x.value===previous)?previous:(kinds[0]?.value||""));
+     kinds,items,total:value.total||0});
+    const intent=pendingIntent.current;
+    if(intent?.platform===platform){
+     pendingIntent.current=null;
+     const type=kinds.some(x=>x.value===intent.kind)?intent.kind:(kinds[0]?.value||"");
+     setKind(type);onChoose(litixPreferredCustomService(items,platform,type));
+    }else setKind(previous=>kinds.some(x=>x.value===previous)?previous:(kinds[0]?.value||""));
    })
    .catch(err=>{if(!cancelled){setError(err.message||"Unable to load services");setData(d=>({...d,kinds:[],items:[],total:0}))}})
    .finally(()=>{if(!cancelled)setLoading(false)});
@@ -51,13 +59,27 @@ export default function LitixCheckoutSelector({selected,onChoose}){
  const actualSelected=selected?.id&&selected.platform===platform&&selected.kind===kind?
   selected:null;
  const visibleSelected=actualSelected&&!filtered.some(x=>x.id===actualSelected.id)?actualSelected:null;
+ function chooseCustom(nextPlatform,nextKind){
+  setSearch("");
+  if(nextPlatform===platform){
+   setKind(nextKind);
+   if(loading||!data.items.length){
+    pendingIntent.current={platform:nextPlatform,kind:nextKind};
+    onChoose(null);
+   }else onChoose(litixPreferredCustomService(data.items,platform,nextKind));
+  }else{
+   pendingIntent.current={platform:nextPlatform,kind:nextKind};
+   setKind(nextKind);setPlatform(nextPlatform);onChoose(null);
+  }
+ }
  function changePlatform(value){
   if(value===platform)return;
-  setPlatform(value);setKind("");setSearch("");onChoose(null);
+  pendingIntent.current={platform:value,kind:"followers"};
+  setPlatform(value);setKind("followers");setSearch("");onChoose(null);
  }
  function changeKind(value){
-  if(value===kind)return;
-  setKind(value);setSearch("");onChoose(null);
+  setKind(value);setSearch("");
+  onChoose(litixPreferredCustomService(data.items,platform,value));
  }
  function changeService(id){
   const service=data.items.find(item=>item.id===id);
@@ -67,6 +89,12 @@ export default function LitixCheckoutSelector({selected,onChoose}){
   <div className="litix-quick-intro">
    <span className="litix-quick-eyebrow">FAST CHECKOUT · 3 STEPS</span>
    <p>Select your platform and what you want, then enter your profile or post link below.</p>
+  </div>
+  <div className="litix-custom-picks" role="group" aria-label="Quick custom Likes and Followers orders">
+   {LITIX_CUSTOM_QUICK_PICKS.map(choice=><button key={choice.platform+choice.kind}
+    type="button" className="litix-custom-pick"
+    aria-pressed={selected?.platform===choice.platform&&selected?.kind===choice.kind}
+    onClick={()=>chooseCustom(choice.platform,choice.kind)}>{choice.label}</button>)}
   </div>
   <div className="litix-quick-fields">
    <label htmlFor="litix-platform">
