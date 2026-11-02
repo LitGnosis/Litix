@@ -62,7 +62,11 @@ export default function LitixCheckoutSelector({selected,onChoose}){
  function chooseCustom(nextPlatform,nextKind){
   setSearch("");
   if(nextPlatform===platform){
-   setKind(nextKind);onChoose(litixPreferredCustomService(data.items,platform,nextKind));
+   setKind(nextKind);
+   if(loading||!data.items.length){
+    pendingIntent.current={platform:nextPlatform,kind:nextKind};
+    onChoose(null);
+   }else onChoose(litixPreferredCustomService(data.items,platform,nextKind));
   }else{
    pendingIntent.current={platform:nextPlatform,kind:nextKind};
    setKind(nextKind);setPlatform(nextPlatform);onChoose(null);
