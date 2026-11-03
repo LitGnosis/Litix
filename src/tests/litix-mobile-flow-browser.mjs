@@ -15,8 +15,17 @@ try{
   page.on("pageerror",error=>errors.push(error.message));
   await page.route("**/api/**",route=>{
    const p=new URL(route.request().url()).pathname;
-   if(route.request().method()!=="GET"||p.includes("checkout"))checkoutRequests++;
-   const obj=p==="/api/bundles"?{bluevineEnabled:true,checkoutEnabled:true,autoFulfillmentEnabled:false,packages:[]}:
+   if(route.request().method()!=="GET"&&/(checkout|boostero|payment)/i.test(p))checkoutRequests++;
+   const checkoutCards=[
+    {id:"litix_4751",platform:"Instagram",kind:"likes",name:"Instagram Likes",purchasable:true,per1000:6.99,min:200,max:100000,unitStep:1},
+    {id:"litix_5461",platform:"Instagram",kind:"followers",name:"Instagram Followers",purchasable:true,per1000:15,min:100,max:100000,unitStep:1},
+    {id:"litix_5251",platform:"TikTok",kind:"likes",name:"TikTok Likes",purchasable:true,per1000:6.99,min:200,max:100000,unitStep:1},
+    {id:"litix_5101",platform:"TikTok",kind:"followers",name:"TikTok Followers",purchasable:true,per1000:14.99,min:100,max:100000,unitStep:1}
+   ];
+   const url=new URL(route.request().url());
+   const obj=p==="/api/catalog/checkout-choices"?
+    {items:checkoutCards.filter(x=>x.platform===(url.searchParams.get("platform")||"Instagram")),liveAvailability:true}:
+    p==="/api/bundles"?{bluevineEnabled:true,checkoutEnabled:true,autoFulfillmentEnabled:false,packages:[]}:
     p==="/api/config"?{ready:false,publicKey:null}:
     p==="/api/litix-ai"?{available:false,verified:false}:
     p.startsWith("/api/catalog/")?{items:[],platforms:[],kinds:[],categories:[],total:0,allCount:0}: {};
@@ -28,9 +37,14 @@ try{
   await hub.getByRole("button",{name:"TikTok"}).click();
   await hub.getByRole("button",{name:"Followers",exact:true}).click();
   await hub.getByRole("heading",{name:"TikTok Custom Followers"}).waitFor();
-  assert.match(await hub.locator(".litix-metal-cta").getAttribute("href"),/service=litix_5101#checkout/);
+  await hub.locator("#litix-custom-followers-quantity").waitFor();
+  await hub.locator("#litix-custom-followers-quantity").fill("2000");
+  assert.match(await hub.locator(".litix-custom-estimate").innerText(),/\\$29\\.98/);
+  assert.match(await hub.locator(".litix-metal-cta").getAttribute("href"),/service=litix_5101&quantity=2000#checkout/);
   await hub.getByRole("button",{name:"Likes",exact:true}).click();
   await hub.getByRole("heading",{name:"TikTok Custom Likes"}).waitFor();
+  await hub.locator(".litix-custom-calculator").waitFor();
+  assert.match(await hub.locator(".litix-custom-estimate").innerText(),/\\$1\\.40/);
   assert.match(await hub.locator(".litix-metal-cta").getAttribute("href"),/service=litix_5251&mode=multi#checkout/);
   if(mobile){
    const layout=await page.evaluate(()=>{
