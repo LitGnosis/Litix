@@ -1,0 +1,22 @@
+name: Litix live custom price audit — GET only, no charge
+on:
+  push:
+    branches:
+      - feat/litix-custom-live-prices-five-posts-20261103
+    paths:
+      - scripts/litix-live-custom-prices-no-charge.mjs
+      - .github/workflows/litix-live-custom-prices-no-charge.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  live-public-prices:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout public read-only verification
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Audit Instagram and TikTok customer price and supplier service eligibility
+        run: node scripts/litix-live-custom-prices-no-charge.mjs
