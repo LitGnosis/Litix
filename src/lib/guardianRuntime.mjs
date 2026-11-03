@@ -45,7 +45,7 @@ const catalog=async(path)=>{
   return {ok:false,code:"CATALOG_SOURCE_UNVERIFIED",detail:"Supplier catalog source status is not verified"};
  return {ok:true,code:"LIVE_SERVICES",detail:"Usable live services: "+d.total+" filtered; "+d.allCount+" eligible"};
 };
-export async function performGuardianChecks(sql,priorByComponent={},now=new Date()){
+export async function performGuardianChecks(sql,priorByComponent={},now=new Date(),selectedComponents=null){
  const every=15*60*1000, recent=name=>{const p=priorByComponent[name];return p?.checked_at && now.getTime()-new Date(p.checked_at).getTime()<every};
  const probes={
   website:()=>retryReadOnly(async()=>{const r=await get("/",9000);const t=await r.text();return {ok:t.includes("LITIX")||t.includes("Litix"),code:"WEBSITE_HTML",detail:"Homepage delivered Litix branding"}}),
@@ -104,7 +104,8 @@ export async function performGuardianChecks(sql,priorByComponent={},now=new Date
  };
  // Supplier calls are rate-limited to 15 minutes per persistent component row.
  const skipped=new Set(["boostero","resend"].filter(recent));
- const result=await Promise.all(componentKeys.filter(x=>!skipped.has(x)).map(x=>check(x,probes[x])));
+ const subset=Array.isArray(selectedComponents)?componentKeys.filter(x=>selectedComponents.includes(x)):componentKeys;
+ const result=await Promise.all(subset.filter(x=>!skipped.has(x)).map(x=>check(x,probes[x])));
  return result;
 }
 const sanitize=x=>({component:x.component,ok:x.ok,code:x.code,detail:x.detail,latencyMs:x.latencyMs,kind:x.kind});
@@ -173,7 +174,7 @@ async function sendQueuedAlerts(sql){
  const key=process.env.RESEND_API_KEY||process.env.LITIX_RESEND_API_KEY;
  if(!key)return {sent:0,disabled:"resend_not_configured"};
  // Atomic claim prevents competing workers sending the same alert simultaneously.
- const rows=await sql.query("update public.litix_guardian_alert_outbox set status='sending',attempts=attempts+1,last_attempt_at=now() where event_key in (select event_key from public.litix_guardian_alert_outbox where status='pending' or (status='sending' and last_attempt_at<now()-interval '3 minutes') order by created_at limit 10 for update skip locked) returning event_key,payload");
+ const rows=await sql.query("update public.litix_guardian_alert_outbox set status='sending',attempts=attempts+1,last_attempt_at=now() where event_key in (select event_key from public.litix_guardian_alert_outbox where status='pending' or (status='sending' and last_attempt_at<now()-interval '3 minutes') order by created_at limit 3 for update skip locked) returning event_key,payload");
  let sent=0;
  for(const entry of rows){
   const p=entry.payload;
@@ -188,11 +189,11 @@ async function sendQueuedAlerts(sql){
  }
  return {sent};
 }
-export async function runGuardianCycle({sql=guardianDb(),now=new Date(),observations=null,sendAlerts=true}={}){
+export async function runGuardianCycle({sql=guardianDb(),now=new Date(),observations=null,sendAlerts=true,selectedComponents=null}={}){
  const at=now instanceof Date?now:new Date(now);
  const previous=await sql.query("select * from public.litix_guardian_components");
  const current=Object.fromEntries(previous.map(x=>[x.component,x]));
- const checked=observations||await performGuardianChecks(sql,current,at);
+ const checked=observations||await performGuardianChecks(sql,current,at,selectedComponents);
  // These observations intentionally contain no customer identifiers or credentials.
  for(const o of checked)await persistObservation(sql,o,at);
  const delivery=sendAlerts?await sendQueuedAlerts(sql):{sent:0,disabled:"test"};
