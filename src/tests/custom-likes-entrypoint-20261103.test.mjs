@@ -27,6 +27,7 @@ test("Deep links open multi-post chooser only for approved Likes; Followers use 
  assert.match(home,/params\.get\("mode"\)==="multi"/);
  assert.match(home,/\["litix_4751","litix_5251"\]\.includes\(requested\)/);
  assert.match(home,/setMultiPostEnabled\(customLikesIntent\)/);
+ assert.match(home,/readCustomDraft\(saved,selected\)/);
  assert.match(home,/newTikTokPost\(\{quantity:Number\(selected\?\.min\)\|\|1\}\)/);
  assert.match(home,/SocialMultiPostChooser/);
  assert.match(hub,/kind==="likes"\?"&mode=multi":""/);
@@ -36,7 +37,7 @@ test("Service cards preserve one secure PayKings purchase and no-charge selectio
  assert.match(directory,/\?service=/);
  assert.match(directory,/&mode=multi/);
  assert.match(directory,/Review & pay with PayKings/);
- assert.match(hub,/No order is placed by selecting a service/);
+ assert.match(hub,/No order starts until payment is submitted/);
 });
 
 test("Gallery fallback and secure server-side two-to-five Likes gating remain unchanged",()=>{
