@@ -4,6 +4,7 @@ import "./growthBundles.css";
 import "./litix-ai.css";
 import "./catalog.css";
 import "./quick-checkout.css";
+import "./litix-flow.css";
 import LitixAI from "../components/LitixAI";
 import { LITIX_BRAND_MANIFEST } from "../config/brandEngine";
 
