@@ -1,0 +1,19 @@
+name: Litix supplier-status and catalog performance — no charge
+on:
+  push:
+    branches:
+      - fix/litix-fast-catalog-multipost-status-20261103
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  read-only-reliability:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Verify no-charge batch status, fail-closed catalog caching and idempotency
+        run: node --test src/tests/litix-reliability-readonly-20261103.test.mjs src/tests/boostero-batch-status.test.mjs
