@@ -32,3 +32,32 @@ export function boosteroSupplierDelivered(quantity,remains){
  return Number.isSafeInteger(total)&&total>=0&&remains!==null&&remains!==undefined&&
   Number.isSafeInteger(left)&&left>=0&&left<=total?total-left:null;
 }
+
+
+/**
+ * Poll already-created supplier order IDs only. A failed batch request may
+ * fall back to bounded, concurrent status reads; it must NEVER dispatch an
+ * add, refill, or replacement operation. Unknown results stay unknown.
+ */
+export async function readExistingBoosteroStatuses(operation,orderIds,{concurrency=3}={}){
+ if(typeof operation!=="function")throw Error("supplier_operation_required");
+ const ids=boosteroBatchIds(orderIds);
+ const bounded=Math.max(1,Math.min(3,Math.trunc(Number(concurrency)||3)));
+ try{
+  const result=await operation("status",{orders:ids});
+  if(!result||typeof result!=="object"||Array.isArray(result)||
+     ids.some(id=>!Object.hasOwn(result,id)))throw Error("boostero_batch_incomplete");
+  return {byId:new Map(ids.map(id=>[id,result[id]])),batched:1};
+ }catch{
+  const byId=new Map();
+  for(let start=0;start<ids.length;start+=bounded){
+   const segment=ids.slice(start,start+bounded);
+   const results=await Promise.all(segment.map(async id=>{
+    try{return await operation("status",{order:id})}
+    catch{return null}
+   }));
+   segment.forEach((id,i)=>byId.set(id,results[i]));
+  }
+  return {byId,batched:0};
+ }
+}
