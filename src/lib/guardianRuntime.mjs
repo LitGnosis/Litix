@@ -32,7 +32,7 @@ const check=async(component,operation)=>{
  catch(e){return {component,ok:false,kind:"check",code:codeOf(e),detail:"Read-only check unavailable",latencyMs:Date.now()-start}}
 };
 const catalog=async(path)=>{
- const r=await retryReadOnly(()=>get("/api/catalog/v1?"+path,26000));
+ const r=await retryReadOnly(()=>get("/api/catalog/v1?"+path,12000));
  const d=await r.json();
  if(!Array.isArray(d.items)||!Number.isSafeInteger(d.total)||!Number.isSafeInteger(d.allCount)||
   d.items.length===0||d.total<=0||d.allCount<d.total)
@@ -173,7 +173,7 @@ async function sendQueuedAlerts(sql){
  const key=process.env.RESEND_API_KEY||process.env.LITIX_RESEND_API_KEY;
  if(!key)return {sent:0,disabled:"resend_not_configured"};
  // Atomic claim prevents competing workers sending the same alert simultaneously.
- const rows=await sql.query("update public.litix_guardian_alert_outbox set status='sending',attempts=attempts+1,last_attempt_at=now() where event_key in (select event_key from public.litix_guardian_alert_outbox where status='pending' or (status='sending' and last_attempt_at<now()-interval '3 minutes') order by created_at limit 10 for update skip locked) returning event_key,payload");
+ const rows=await sql.query("update public.litix_guardian_alert_outbox set status='sending',attempts=attempts+1,last_attempt_at=now() where event_key in (select event_key from public.litix_guardian_alert_outbox where status='pending' or (status='sending' and last_attempt_at<now()-interval '3 minutes') order by created_at limit 2 for update skip locked) returning event_key,payload");
  let sent=0;
  for(const entry of rows){
   const p=entry.payload;
@@ -194,7 +194,13 @@ export async function runGuardianCycle({sql=guardianDb(),now=new Date(),observat
  const current=Object.fromEntries(previous.map(x=>[x.component,x]));
  const checked=observations||await performGuardianChecks(sql,current,at);
  // These observations intentionally contain no customer identifiers or credentials.
- for(const o of checked)await persistObservation(sql,o,at);
+ // Bounded concurrency: avoid 14+ serial Neon round trips exhausting the
+ // 60-second Vercel function budget, while preserving per-component CAS.
+ for(let i=0;i<checked.length;i+=4){
+  const batch=await Promise.allSettled(checked.slice(i,i+4).map(o=>persistObservation(sql,o,at)));
+  if(batch.some(result=>result.status==="rejected"))
+   throw Error("GUARDIAN_PERSISTENCE_INCOMPLETE");
+ }
  const delivery=sendAlerts?await sendQueuedAlerts(sql):{sent:0,disabled:"test"};
  const id="gr_"+randomUUID();
  await sql.query("insert into public.litix_guardian_runs(id,component_count,unhealthy_count,diag,finished_at) values($1,$2,$3,$4::jsonb,now())",
