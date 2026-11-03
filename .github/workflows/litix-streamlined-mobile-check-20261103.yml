@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - feat/litix-leofame-style-mobile-shopping-20261103
+      - feat/litix-custom-live-prices-five-posts-20261103
   workflow_dispatch:
 permissions:
   contents: read
@@ -19,7 +20,7 @@ jobs:
         working-directory: src
         run: npm ci --no-audit --no-fund
       - name: Validate custom Likes and Followers, bundle tiers, mobile navigation and unchanged PayKings gates
-        run: node --test src/tests/litix-mobile-flow-20261103.test.mjs src/tests/custom-likes-entrypoint-20261103.test.mjs src/tests/litix-frictionless-shop-20261103.test.mjs src/tests/litix-category-quick-order-20261103.test.mjs src/tests/bluevine-bundles.test.mjs src/tests/social-multi-post-live-checkout.test.mjs src/tests/litix-reliability-readonly-20261103.test.mjs
+        run: node --test src/tests/litix-custom-pricing-five-posts-20261103.test.mjs src/tests/litix-mobile-flow-20261103.test.mjs src/tests/custom-likes-entrypoint-20261103.test.mjs src/tests/litix-frictionless-shop-20261103.test.mjs src/tests/litix-category-quick-order-20261103.test.mjs src/tests/bluevine-bundles.test.mjs src/tests/social-multi-post-live-checkout.test.mjs src/tests/litix-reliability-readonly-20261103.test.mjs
   browser-no-charge:
     needs: frontend-no-charge
     runs-on: ubuntu-24.04
@@ -50,3 +51,4 @@ jobs:
           export CHROME_PATH="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
           if [ -z "$CHROME_PATH" ]; then npx playwright install chromium; fi
           node tests/litix-mobile-flow-browser.mjs
+          node tests/litix-custom-prices-five-posts-browser.mjs
