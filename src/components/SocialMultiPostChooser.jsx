@@ -88,7 +88,9 @@ export default function SocialMultiPostChooser({service,platform,posts,onChange}
   }catch(err){onChange(old=>old.map(item=>item.id===p.id&&item.link.trim()===input?{...item,status:"error",verifiedUrl:"",verifiedInput:"",error:String(err.message).slice(0,150)}:item))}
   finally{setRunning("")}
  }
- const active=posts.filter(p=>String(p.link||"").trim());
+ // Keep the price preview consistent with the selected quantity slots even
+ // before post URLs are entered; payment remains disabled until verified.
+ const active=posts;
  const cents=active.reduce((sum,p)=>sum+Math.max(0,eachCents(service,p.quantity)),0);
  const count=active.reduce((sum,p)=>sum+Number(p.quantity||0),0);
  return <div className="litix-social-picker">
@@ -141,7 +143,7 @@ export default function SocialMultiPostChooser({service,platform,posts,onChange}
     })}
     {posts.length<5&&<button type="button" className="alt" onClick={()=>onChange(old=>[...old,newTikTokPost({quantity:minimum})])}>Add another post</button>}
     <div className="totalbox"><strong>{posts.length} posts · {count.toLocaleString()} likes</strong>
-      <p className="small">Combined price: {usd(cents)}. One PayKings charge for all selected posts.</p>
+      <p className="small">Planned combined price: {usd(cents)}. Post links and final pricing must be verified before one PayKings charge.</p>
     </div>
     <p className="small">Fulfillment is coordinated separately for each post after confirmed payment. Do not pay again while a paid order is being processed.</p>
    </div>
