@@ -1,0 +1,28 @@
+name: Litix public legal pages and private token security
+on:
+  pull_request:
+    paths:
+      - 'src/app/legal/privacy/**'
+      - 'src/next.config.mjs'
+      - 'src/tests/litix-legal-trust.test.mjs'
+      - '.github/workflows/litix-legal-trust-ci.yml'
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: src
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: src/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - run: node --test tests/litix-legal-trust.test.mjs
+      - run: npm run build
