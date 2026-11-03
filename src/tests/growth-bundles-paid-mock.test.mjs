@@ -8,7 +8,7 @@ const source=readFileSync(new URL("../app/api/bundles/checkout/route.js",import.
  .replace('import {bundleCheckoutReady} from "../route.js";',
  'const bundleCheckoutReady=async()=>true;')
  .replace('import {bundleDB,hashToken,response,sameOrigin,verifyNmiSettlement,sendBundleReceipt} from "../../../../lib/bundleOrders.mjs";',
- 'const bundleDB=()=>({query:globalThis.__bundleMockDB});const hashToken=()=>"mock-hash";const response=(v,status=200)=>Response.json(v,{status});const sameOrigin=()=>true;const verifyNmiSettlement=async input=>{globalThis.__bundleMockVerified.push(input);return {settled:true}};const sendBundleReceipt=async order=>{globalThis.__bundleMockReceipts.push(order);return true};');
+ 'const bundleDB=()=>({query:globalThis.__bundleMockDB});const hashToken=()=>"mock-hash";const response=(v,status=200)=>Response.json(v,{status});const sameOrigin=()=>true;const verifyNmiSettlement=async input=>{globalThis.__bundleMockVerified.push(input);return {settled:true}};const sendBundleReceipt=async order=>{globalThis.__bundleMockReceipts.push(order);return true};')
  .replace('import {boosteroProduction} from "../../../../lib/boosteroReadOnly.mjs";',
   'const boosteroProduction=async()=>{throw Error("No supplier call permitted in one-time manual bundle payment test")};')
  .replace('import {quoteFixedBundle,isBundleAutoEnabled} from "../../../../lib/growthBundleRouting.mjs";',
