@@ -63,16 +63,18 @@ test("Server enforces known platform, default supplier kind, signed pricing and 
  assert.match(handler,/idempotency_key\) do nothing/);
 });
 
-test("TikTok Likes deep links open an easy post URL first, with opt-in Choose Your Posts",()=>{
+test("Approved Custom Likes deep links open the post picker and retain single-post choice",()=>{
  const directory=read("components/LitixDirectory.jsx");
  assert.match(page,/setMultiPostEnabled\(false\)/);
- assert.match(page,/setMultiPosts\(\[\]\)/);
+ assert.match(page,/setMultiPostEnabled\(customLikesIntent\)/);
+ assert.ok(page.includes("setMultiPosts(customLikesIntent?[newTikTokPost"),"approved Custom Likes links open with one editable post");
  assert.match(page,/Choose multiple posts/);
  assert.match(page,/newTikTokPost\(\{link,quantity:qty,verifiedUrl:tiktokLikes\?verifiedTikTokVideo/);
  assert.match(page,/document\.getElementById\("checkout"\)\?\.scrollIntoView/);
  assert.doesNotMatch(page,/if\(!services\.length\)return;const id=new URLSearchParams\(location\.search\)/);
- assert.match(directory,/Choose Your Posts & Pay/);
- assert.match(directory,/href=\{"\/\?service="\+encodeURIComponent\(s\.id\)\+"#checkout"\}/);
+ assert.match(directory,/Choose Your Posts/);
+ assert.match(directory,/&mode=multi/);
+ assert.match(directory,/encodeURIComponent\(s\.id\)/);
  assert.match(picker,/<div className="litix-picker-search">/);
  assert.match(picker,/<button type="button" onClick=\{lookup\}/);
  assert.doesNotMatch(picker,/<form\b/);
@@ -80,7 +82,8 @@ test("TikTok Likes deep links open an easy post URL first, with opt-in Choose Yo
  assert.match(picker,/setTimeout\(\(\)=>\{void lookup\(null,\{automatic:true\}\)\},1200\)/);
  assert.match(picker,/activeLookup\.current\?\.abort\(\)/);
  assert.match(picker,/signal:controller\.signal/);
- assert.match(picker,/username or profile link/);
+ assert.match(picker,/username or profile URL/);
+ assert.doesNotMatch(picker.match(/<input value=\{username\}[\s\S]*?\/>/)?.[0]||"",/\brequired\b/);
  assert.match(picker,/Retry \/ load posts/);
  assert.match(picker,/Your public posts loaded automatically/);
  assert.match(page,/const verifiedMultiPosts=multiMode&&multiPosts\.length>=1&&multiPosts\.length<=5/);
