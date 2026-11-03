@@ -20,3 +20,33 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: Validate custom Likes and Followers, bundle tiers, mobile navigation and unchanged PayKings gates
         run: node --test src/tests/litix-mobile-flow-20261103.test.mjs src/tests/custom-likes-entrypoint-20261103.test.mjs src/tests/litix-frictionless-shop-20261103.test.mjs src/tests/litix-category-quick-order-20261103.test.mjs src/tests/bluevine-bundles.test.mjs src/tests/social-multi-post-live-checkout.test.mjs src/tests/litix-reliability-readonly-20261103.test.mjs
+  browser-no-charge:
+    needs: frontend-no-charge
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: src
+    steps:
+      - name: Checkout reviewed source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Install pinned runtime packages
+        run: npm ci --no-audit --no-fund
+      - name: Build no-charge storefront
+        run: npm run build
+      - name: Install isolated browser dependency
+        run: npm install --no-save --ignore-scripts playwright@1.56.1
+      - name: Test 320, 390, and 1280-pixel custom checkout navigation and bundle dropdown
+        run: |
+          npm run start -- --port 3100 >/tmp/litix-mobile-acceptance.log 2>&1 &
+          app_pid=$!
+          trap 'kill $app_pid || true' EXIT
+          for i in $(seq 1 40); do
+            if curl --fail --silent --output /dev/null http://localhost:3100/; then break; fi
+            sleep 1
+          done
+          export CHROME_PATH="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
+          if [ -z "$CHROME_PATH" ]; then npx playwright install chromium; fi
+          node tests/litix-mobile-flow-browser.mjs
