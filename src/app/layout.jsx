@@ -5,6 +5,7 @@ import "./litix-ai.css";
 import "./catalog.css";
 import "./quick-checkout.css";
 import "./litix-flow.css";
+import "./litix-custom-calculator.css";
 import LitixAI from "../components/LitixAI";
 import { LITIX_BRAND_MANIFEST } from "../config/brandEngine";
 
