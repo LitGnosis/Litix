@@ -19,7 +19,7 @@ export async function GET() {
     const url = new URL(supplierUrl);
     supplierHostValid = url.protocol === "https:" &&
       url.hostname === "boostero.com" &&
-      url.pathname.replace(/\\/+$/, "") === "/api/v2" &&
+      url.pathname.replace(new RegExp("/+$"), "") === "/api/v2" &&
       !url.port && !url.username && !url.password && !url.search && !url.hash;
   } catch {}
 
