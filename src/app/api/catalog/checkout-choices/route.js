@@ -20,7 +20,10 @@ export async function GET(request){
    note:snapshot.status==="cached"?
     "Recently verified services. Prices and availability are checked again before payment.":
     "Select a verified service; the final total is checked before payment."},
-   {headers:{"cache-control":"private, no-store","x-content-type-options":"nosniff"}});
+   {headers:{"cache-control":snapshot.status==="live"
+     ?"public, s-maxage=30, stale-while-revalidate=60"
+     :"public, s-maxage=10, stale-while-revalidate=20",
+     "x-content-type-options":"nosniff"}});
  }catch{
   return Response.json({platforms:[],kinds:[],items:[],total:0,
    error:"Litix services are temporarily unavailable. No payment attempted."},
