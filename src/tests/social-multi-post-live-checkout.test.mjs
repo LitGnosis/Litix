@@ -67,7 +67,8 @@ test("Approved Custom Likes deep links open the post picker and retain single-po
  const directory=read("components/LitixDirectory.jsx");
  assert.match(page,/setMultiPostEnabled\(false\)/);
  assert.match(page,/setMultiPostEnabled\(customLikesIntent\)/);
- assert.ok(page.includes("setMultiPosts(customLikesIntent?[newTikTokPost"),"approved Custom Likes links open with one editable post");
+ assert.match(page,/restored\?\.length/);
+ assert.match(page,/newTikTokPost\(\{quantity:Number\(selected\?\.min\)\|\|1\}\)/,"Custom Likes links always retain a blank-post fallback");
  assert.match(page,/Choose multiple posts/);
  assert.match(page,/newTikTokPost\(\{link,quantity:qty,verifiedUrl:tiktokLikes\?verifiedTikTokVideo/);
  assert.match(page,/document\.getElementById\("checkout"\)\?\.scrollIntoView/);
