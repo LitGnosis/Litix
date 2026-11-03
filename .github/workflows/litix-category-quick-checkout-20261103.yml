@@ -1,0 +1,19 @@
+name: Litix category quick checkout — no-charge checks
+on:
+  push:
+    branches:
+      - feat/litix-direct-category-checkout-20261103
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  safe-category-checkout:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - name: Checkout reviewed source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Verify category routing, pricing and no-charge security
+        run: node --test src/tests/litix-category-quick-order-20261103.test.mjs
