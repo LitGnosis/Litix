@@ -1,5 +1,6 @@
 import {timingSafeEqual} from "node:crypto";
 import {syncBoosteroMultiStatuses,resumeBoosteroMultiQueue} from "../../../../../lib/boosteroMultiPostFulfillment.mjs";
+import {boosteroCronPhase,BOOSTERO_CRON_PHASE_LABELS} from "../../../../../lib/litixOperationalSchedule.mjs";
 import {syncBoosteroStatuses,boosteroProductionReady,deliverLitixCustomerUpdates} from "../../../../../lib/boosteroFulfillment.mjs";
 
 export const runtime="nodejs";
@@ -19,8 +20,7 @@ export async function GET(req){
  // sequentially ran four supplier/database/email batches in one 60s request.
  // Only status lookups operate in phases 0/1; phase 2 resumes ONLY unpaid-to-
  // paid-verified, previously queued children through existing atomic claims.
- const phase=Math.floor(Date.now()/300000)%3;
- const labels=["regular_delivery","multi_post_delivery","paid_multi_post_continuation"];
+ const phase=boosteroCronPhase();
  try{
   const sendUpdates=deliverLitixCustomerUpdates({limit:2});
   const task=phase===0?syncBoosteroStatuses({limit:3}):
@@ -32,10 +32,10 @@ export async function GET(req){
   const work=outcomes[0].status==="fulfilled"?outcomes[0].value:{failed:1};
   const customerNotifications=outcomes[1].status==="fulfilled"?outcomes[1].value:{failed:1};
   if(outcomes.some(x=>x.status==="rejected"))return send({
-   ok:false,phase:labels[phase],work,customerNotifications,
+   ok:false,phase:BOOSTERO_CRON_PHASE_LABELS[phase],work,customerNotifications,
    error:"Litix supplier reconciliation temporarily unavailable"
   },503);
-  return send({ok:true,phase:labels[phase],work,customerNotifications});
+  return send({ok:true,phase:BOOSTERO_CRON_PHASE_LABELS[phase],work,customerNotifications});
  }catch{
   return send({ok:false,error:"Private supplier polling unavailable"},503);
  }
