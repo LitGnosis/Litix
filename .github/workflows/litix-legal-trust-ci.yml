@@ -5,6 +5,8 @@ on:
       - 'src/app/legal/privacy/**'
       - 'src/next.config.mjs'
       - 'src/middleware.js'
+      - 'src/app/page.jsx'
+      - 'src/app/sitemap.js'
       - 'src/tests/litix-legal-trust.test.mjs'
       - '.github/workflows/litix-legal-trust-ci.yml'
 permissions:
