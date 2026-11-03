@@ -1,0 +1,41 @@
+name: Litix Custom Pricing and Five-Post Checkout — No-Charge Release Gate
+on:
+  push:
+    branches:
+      - feat/litix-live-custom-pricing-five-posts-20261103
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  price-and-mobile-flow:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout reviewed source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Install pinned application dependencies
+        working-directory: src
+        run: npm ci --no-audit --no-fund
+      - name: Test accurate prices, five-post supplier limits, and unchanged secure checkout
+        run: node --test src/tests/litix-custom-price-calculator-20261103.test.mjs src/tests/custom-likes-entrypoint-20261103.test.mjs src/tests/litix-mobile-flow-20261103.test.mjs src/tests/litix-category-quick-order-20261103.test.mjs src/tests/social-multi-post-live-checkout.test.mjs src/tests/litix-reliability-readonly-20261103.test.mjs src/tests/bluevine-bundles.test.mjs
+      - name: Build real Next.js production app (no charge)
+        working-directory: src
+        run: npm run build
+      - name: Install browser test dependency without changing lockfile
+        working-directory: src
+        run: npm install --no-save --ignore-scripts playwright@1.56.1
+      - name: Test mobile price and post selection at 320/390/1280px without payment
+        working-directory: src
+        run: |
+          npm run start -- --port 3100 >/tmp/litix-five-post-acceptance.log 2>&1 &
+          app_pid=$!
+          trap 'kill $app_pid || true' EXIT
+          for i in $(seq 1 40); do
+            if curl --fail --silent --output /dev/null http://localhost:3100/; then break; fi
+            sleep 1
+          done
+          export CHROME_PATH="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
+          if [ -z "$CHROME_PATH" ]; then npx playwright install chromium; fi
+          node tests/litix-mobile-flow-browser.mjs
