@@ -1,8 +1,8 @@
 // Shared navigation for Litix's live, already-approved service catalog.
 // Filters discover existing catalog rows; they never approve supplier operations.
 const groups=[
- ["TikTok","TikTok",["followers","likes","views","comments","shares","saves"]],
  ["Instagram","Instagram",["followers","likes","views","comments","shares","saves"]],
+ ["TikTok","TikTok",["followers","likes","views","comments","shares","saves"]],
  ["YouTube","YouTube",["subscribers","likes","views","comments"]],
  ["Twitter (X)","X",["likes","views","retweets","followers"]],
  ["Facebook","Facebook",["followers","likes","views"]]
