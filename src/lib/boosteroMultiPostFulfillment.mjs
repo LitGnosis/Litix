@@ -2,7 +2,7 @@ import {randomUUID} from "node:crypto";
 import {boosteroSQL,boosteroProductionReady,verifyBoosteroQuote} from "./boosteroFulfillment.mjs";
 import {boosteroProduction} from "./boosteroReadOnly.mjs";
 import {boosteroQuote} from "./boosteroFulfillment.mjs";
-import {boosteroBatchIds,normalizeBoosteroStatus,boosteroChildState} from "./boosteroStatusBatch.mjs";
+import {readExistingBoosteroStatuses,normalizeBoosteroStatus,boosteroChildState} from "./boosteroStatusBatch.mjs";
 import {reconciledMultiPostState} from "./boosteroPartialRecovery.mjs";
 import {queueMultiPostDeliveryMilestone} from "./litixCustomerUpdates.mjs";
 
@@ -128,20 +128,12 @@ export async function syncBoosteroMultiStatuses({sql=boosteroSQL(),operation=boo
  if(!batch.length)return {checked:0,failed:0,batched:0};
  let checked=0,failed=0,batched=0,recovered=0;
  const ids=batch.map(item=>String(item.supplier_order_id));
- const rawById=new Map();
- try{
-  const response=await operation("status",{orders:boosteroBatchIds(ids)});
-  if(!response||typeof response!=="object"||Array.isArray(response))throw Error("boostero_batch_invalid_response");
-  for(const id of ids)rawById.set(id,response[id]);
-  batched=1;
- }catch{
-  // Provider batch incompatibility: fall back to status-only lookups.
-  // Never call add or restart an accepted supplier order.
-  for(const id of ids){
-   try{rawById.set(id,await operation("status",{order:id}))}
-   catch{rawById.set(id,null)}
-  }
- }
+ // A single read-only provider batch for all five existing posts is preferred.
+ // If it fails, fall back to at most three concurrent read-only status calls.
+ // This NEVER reissues a supplier purchase or changes claimed order IDs.
+ const statusResult=await readExistingBoosteroStatuses(operation,ids,{concurrency:3});
+ const rawById=statusResult.byId;
+ batched=statusResult.batched;
  const affectedParents=new Set(),recoveredParents=new Set();
  for(const item of batch){
   const orderId=String(item.supplier_order_id);
