@@ -45,7 +45,7 @@ test("bundle menu displays one selected tier without changing any package, amoun
 
 test("site-wide Litix metallic branding and unobstructed mobile nav survive",()=>{
  assert.match(layout,/import "\.\/litix-flow\.css"/);
- assert.match(home,/litix-new-logo\.webp/);
+ assert.match(home,/litix-logo\.webp/);
  assert.match(quick,/INNOVATION, IGNITED/);
  assert.match(quick,/litix-platform-tabs/);
  assert.match(quick,/aria-pressed=\{platform===value\}/);
