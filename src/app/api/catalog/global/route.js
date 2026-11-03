@@ -61,7 +61,7 @@ async function directory(){
    return (ai<0?999:ai)-(bi<0?999:bi);
   }).map(([name,count])=>({name,count}));
   const categoryOptions=Object.entries(categories).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0])).map(([name,count])=>({name,count}));
-  memo={items,platformOptions,categoryOptions,liveCount:items.length,approvedCount:items.filter(s=>s.purchasable).length};
+  memo={items,platformOptions,categoryOptions,liveCount:items.length,approvedCount:items.filter(s=>s.purchasable).length,sourceStatus:snapshot.status};
   expireAt=Date.now()+120000;
   return memo;
  })().finally(()=>{inFlight=null});
@@ -86,7 +86,7 @@ export async function GET(request){
    platforms:data.platformOptions,categories:data.categoryOptions,
    verifiedPurchasableCount:data.approvedCount,checkoutPath:"/#checkout",currency:"USD",
    notice:"Browse Litix services and review the final price before secure checkout."
-  },{headers:{"cache-control":"no-store","x-content-type-options":"nosniff"}});
+  },{headers:{"cache-control":data.sourceStatus==="live"?"public, s-maxage=30, stale-while-revalidate=60":"public, s-maxage=10, stale-while-revalidate=20","x-content-type-options":"nosniff"}});
  }catch(err){
   console.error("Litix supplier directory error",String(err?.message||"unknown").slice(0,85));
   return Response.json({brand:"Litix",items:[],total:0,allCount:0,
