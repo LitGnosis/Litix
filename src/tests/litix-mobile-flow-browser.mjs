@@ -14,13 +14,19 @@ try{
   let checkoutRequests=0;
   page.on("pageerror",error=>errors.push(error.message));
   await page.route("**/api/**",route=>{
-   const p=new URL(route.request().url()).pathname;
+   const url=new URL(route.request().url()),p=url.pathname;
+   const requested=url.searchParams.get("q");
+   const idType={"litix_4751":["Instagram","likes",6.99],"litix_5461":["Instagram","followers",15.00],
+      "litix_5251":["TikTok","likes",6.99],"litix_5101":["TikTok","followers",14.99]};
+   const product=idType[requested];
+   const card=product?{id:requested,platform:product[0],kind:product[1],per1000:product[2],
+      min:product[1]==="likes"?150:100,max:10000,unitStep:1,purchasable:true}:null;
    // Read-only GET /api/catalog/checkout-choices is not a payment.
    if(route.request().method()!=="GET"&&/(checkout|boostero|payment)/i.test(p))checkoutRequests++;
    const obj=p==="/api/bundles"?{bluevineEnabled:true,checkoutEnabled:true,autoFulfillmentEnabled:false,packages:[]}:
     p==="/api/config"?{ready:false,publicKey:null}:
     p==="/api/litix-ai"?{available:false,verified:false}:
-    p.startsWith("/api/catalog/")?{items:[],platforms:[],kinds:[],categories:[],total:0,allCount:0}: {};
+    p.startsWith("/api/catalog/")?{items:card?[card]:[],platforms:[],kinds:[],categories:[],total:card?1:0,allCount:card?1:0,catalogStatus:"live"}: {};
    return route.fulfill({status:200,contentType:"application/json",body:JSON.stringify(obj)});
   });
   await page.goto("http://localhost:3100/custom-likes",{waitUntil:"domcontentloaded"});
@@ -29,10 +35,18 @@ try{
   await hub.getByRole("button",{name:"TikTok"}).click();
   await hub.getByRole("button",{name:"Followers",exact:true}).click();
   await hub.getByRole("heading",{name:"TikTok Custom Followers"}).waitFor();
-  assert.match(await hub.locator(".litix-metal-cta").getAttribute("href"),/service=litix_5101#checkout/);
+  await hub.getByRole("spinbutton",{name:"Followers quantity"}).fill("1000");
+  await page.waitForFunction(()=>document.querySelector(".litix-calculator-total strong")?.textContent?.trim()==="$14.99");
+  assert.match(await hub.locator(".litix-metal-cta").getAttribute("href"),/service=litix_5101&quantity=1000#checkout/);
   await hub.getByRole("button",{name:"Likes",exact:true}).click();
   await hub.getByRole("heading",{name:"TikTok Custom Likes"}).waitFor();
-  assert.match(await hub.locator(".litix-metal-cta").getAttribute("href"),/service=litix_5251&mode=multi#checkout/);
+  await hub.getByRole("spinbutton",{name:"Likes for post 1"}).waitFor();
+  for(let i=1;i<5;i++)await hub.getByRole("button",{name:/Add Post/}).click();
+  assert.equal(await hub.locator(".litix-post-price-row").count(),5);
+  await page.waitForFunction(()=>document.querySelector(".litix-calculator-total strong")?.textContent?.trim()==="$5.25");
+  const checkout=await hub.locator(".litix-metal-cta").getAttribute("href");
+  assert.match(checkout,/service=litix_5251&mode=multi&posts=5&quantities=150,150,150,150,150&customQuote=1#checkout/);
+  checks+=3;
   if(mobile){
    const layout=await page.evaluate(()=>{
     const nav=document.querySelector(".nav").getBoundingClientRect();
