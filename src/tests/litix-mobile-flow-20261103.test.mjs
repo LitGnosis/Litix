@@ -20,7 +20,7 @@ test("custom Likes and Followers offers four known approved service paths and ke
  assert.match(custom,/kind==="likes"\?"&mode=multi":""/);
  assert.match(custom,/encodeURIComponent\(product\.id\)/);
  assert.match(custom,/\/\?service=/);
- assert.match(custom,/href=\{customProductLink\(selected\)\}/);
+ assert.match(custom,/<LitixCustomPriceCalculator key=\{selected\.id\} product=\{selected\}\/>/);
  assert.match(custom,/aria-pressed=\{kind===value\}/);
  assert.match(custom,/aria-pressed=\{platform===value\}/);
  assert.doesNotMatch(custom,/fetch\(|paymentToken|startPaymentRequest|supplier_order_id/);
