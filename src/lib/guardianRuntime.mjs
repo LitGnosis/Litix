@@ -3,7 +3,7 @@ import {randomUUID,createHash,timingSafeEqual} from "node:crypto";
 import {componentKeys,nextGuardianState,safeCode} from "./guardianCore.mjs";
 import {boosteroProduction} from "./boosteroReadOnly.mjs";
 import {boosteroProductionReady} from "./boosteroFulfillment.mjs";
-import {boosteroBalanceSignal,multiPostHealthSignal,deliveryNotificationSignal,regularOrderHealthSignal} from "./guardianSignals.mjs";
+import {boosteroBalanceSignal,multiPostHealthSignal,deliveryNotificationSignal,regularOrderHealthSignal,paymentOutboxHealthSignal} from "./guardianSignals.mjs";
 export const guardianDb=()=>{
  const url=process.env.LITIX_AUTOLIKES_DATABASE_URL||process.env.LITIX_V2_DATABASE_URL||process.env.DATABASE_URL||process.env.POSTGRES_URL;
  if(!url)throw Error("GUARDIAN_DATABASE_UNCONFIGURED");
@@ -74,8 +74,14 @@ export async function performGuardianChecks(sql,priorByComponent={},now=new Date
   },
   fulfillment:async()=>{
    const rows=await sql.query(
-    "select count(*) filter (where state='SUBMITTED' and supplier_order_id is not null and created_at<now()-interval '45 minutes' and (checked_at is null or checked_at<now()-interval '45 minutes'))::int as stale, (select count(*)::int from public.litix_v2_orders where payment_state='paid' and fulfillment_state='manual_review') as unresolved from public.litix_boostero_fulfillment");
+    "select count(*) filter (where state='SUBMITTED' and supplier_order_id is not null and created_at<now()-interval '45 minutes' and (checked_at is null or checked_at<now()-interval '45 minutes'))::int as stale, (select count(*)::int from public.litix_v2_orders where payment_state='paid' and fulfillment_state='manual_review') as unresolved, (select count(*)::int from public.litix_v2_orders where payment_state='paid' and fulfillment_state in ('processing','submitted') and created_at<now()-interval '24 hours') as overdue from public.litix_boostero_fulfillment");
    return regularOrderHealthSignal(rows[0]);
+  },
+  payment_outbox:async()=>{
+   // Only inspect legacy gateway events, including those already settled.
+   // Never replay the gateway webhook, send another charge, or dispatch orders.
+   const rows=await sql.query("select count(*)::int as pending from public.litix_paykings_outbox where state='pending' and created_at<now()-interval '1 hour'");
+   return paymentOutboxHealthSignal(rows[0]);
   },
   multi_post:async()=>{
    if(process.env.LITIX_MULTIPOST_AUTO_FULFILL_ENABLED!=="true")
@@ -119,7 +125,8 @@ const repair={
  autolikes:"Confirm planned AutoLikes launch state; no production charges",
  subscriptions:"Review subscription provisioning and safe worker readiness",
  orders:"Inspect Neon read-only connectivity and order ledger",
- fulfillment:"Inspect existing supplier order IDs; status-only reconcile; never duplicate purchases",
+ fulfillment:"Inspect unpaid-to-paid transitions and all overdue orders; status-only reconcile, never duplicate purchases",
+ payment_outbox:"Audit old PayKings event state against settled payment and fulfillment; never replay or re-charge automatically",
  multi_post:"Run safe existing Boostero status reconciliation, inspect delayed paid children; never add again",
  email_delivery:"Check existing Resend delivery outboxes and retry policy; do not send duplicates",
  database:"Inspect Neon connectivity; do not modify customer records",
