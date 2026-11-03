@@ -24,7 +24,7 @@ export async function GET(req){
  try{
   const sendUpdates=deliverLitixCustomerUpdates({limit:2});
   const task=phase===0?syncBoosteroStatuses({limit:3}):
-   phase===1?syncBoosteroMultiStatuses({limit:2}):
+   phase===1?syncBoosteroMultiStatuses({limit:5}):
    process.env.LITIX_MULTIPOST_AUTO_FULFILL_ENABLED==="true"?
     resumeBoosteroMultiQueue({limitParents:1}):
     Promise.resolve({skipped:"multi_post_disabled"});
