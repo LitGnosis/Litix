@@ -1,0 +1,38 @@
+name: Litix Warrior isolated Prisma CI
+on:
+  push:
+    branches:
+      - feature/warrior-prisma-automation-20261031
+    paths:
+      - 'automation/**'
+      - '.github/workflows/litix-warrior-prisma-ci.yml'
+  pull_request:
+    paths:
+      - 'automation/**'
+      - '.github/workflows/litix-warrior-prisma-ci.yml'
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: automation
+    env:
+      DATABASE_URL: postgresql://unused:unused@localhost:5432/litix_validation
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+      - name: Install isolated dependencies
+        run: npm install --no-audit --no-fund
+      - name: Prisma validate and generate
+        run: npm run prisma:validate && npm run prisma:generate
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Unit tests
+        run: npm test

@@ -1,0 +1,198 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Platform {
+  INSTAGRAM
+  TIKTOK
+}
+
+enum ServiceKind {
+  FOLLOWERS
+  LIKES
+  VIEWS
+  SHARES
+}
+
+enum SupplierState {
+  ACTIVE
+  DEGRADED
+  INACTIVE
+}
+
+enum MasterState {
+  PROCESSING
+  COMPLETED
+  PARTIAL
+  NEEDS_REVIEW
+}
+
+enum SubState {
+  QUEUED
+  DISPATCHING
+  SUBMITTED
+  PROCESSING
+  CANCEL_REQUESTED
+  COMPLETED
+  REFUNDED
+  NEEDS_REVIEW
+  UNKNOWN_OUTCOME
+}
+
+enum AttemptState {
+  DISPATCHING
+  SUBMITTED
+  PROCESSING
+  CANCEL_REQUESTED
+  COMPLETED
+  PARTIAL
+  CANCELED
+  REJECTED
+  UNKNOWN_OUTCOME
+}
+
+model BundlePlan {
+  id         String            @id
+  platform   Platform
+  priceCents Int
+  enabled    Boolean           @default(false)
+  parts      BundleComponent[]
+  orders     MasterOrder[]
+}
+
+model BundleComponent {
+  id                String      @id @default(cuid())
+  bundleId          String
+  ordinal           Int
+  kind              ServiceKind
+  quantity          Int
+  retailShareCents  Int
+  bundle            BundlePlan  @relation(fields: [bundleId], references: [id], onDelete: Restrict)
+  @@unique([bundleId, ordinal])
+}
+
+model MasterOrder {
+  id               String       @id
+  paymentReference String       @unique
+  customerId       String
+  bundleId         String
+  paidCents        Int
+  profileUrl       String
+  postUrls         Json
+  paidAt           DateTime
+  state            MasterState  @default(PROCESSING)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  bundle           BundlePlan   @relation(fields: [bundleId], references: [id], onDelete: Restrict)
+  children         SubOrder[]
+  @@index([customerId, createdAt])
+}
+
+model Supplier {
+  id                String         @id
+  endpointUrl       String
+  credentialEnvKey  String
+  approved          Boolean        @default(false)
+  state             SupplierState  @default(INACTIVE)
+  walletBalanceCents Int?
+  balanceCheckedAt  DateTime?
+  failures          Int            @default(0)
+  circuitUntil      DateTime?
+  routes            SupplierRoute[]
+  children          SubOrder[]
+  attempts          DispatchAttempt[]
+}
+
+model SupplierRoute {
+  id             String      @id @default(cuid())
+  supplierId     String
+  platform       Platform
+  kind           ServiceKind
+  serviceId      String
+  priority       Int
+  enabled        Boolean     @default(false)
+  minQty         Int
+  maxQty         Int
+  cancelable     Boolean     @default(false)
+  supplier       Supplier    @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  @@unique([supplierId, platform, kind, serviceId])
+  @@index([platform, kind, enabled, priority])
+}
+
+model SubOrder {
+  id                String            @id @default(cuid())
+  masterId          String
+  componentOrdinal  Int
+  splitIndex        Int
+  platform          Platform
+  kind              ServiceKind
+  link              String
+  quantity          Int
+  delivered         Int               @default(0)
+  remaining         Int
+  retailShareCents  Int
+  state             SubState          @default(QUEUED)
+  supplierId        String?
+  apiOrderId        String?
+  leaseUntil        DateTime?
+  lastProgressAt    DateTime?
+  cancelRequestedAt DateTime?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  master            MasterOrder       @relation(fields: [masterId], references: [id], onDelete: Restrict)
+  supplier          Supplier?         @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  attempts          DispatchAttempt[]
+  walletCredits     WalletCredit[]
+  @@unique([masterId, componentOrdinal, splitIndex])
+  @@index([state, updatedAt])
+}
+
+model DispatchAttempt {
+  id                  String       @id @default(cuid())
+  subOrderId          String
+  supplierId          String
+  serviceId           String
+  apiOrderId          String?
+  requested           Int
+  delivered           Int          @default(0)
+  remaining           Int
+  state               AttemptState @default(DISPATCHING)
+  lastError           String?
+  lastCheckedAt       DateTime?
+  cancelRequestedAt   DateTime?
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+  subOrder            SubOrder     @relation(fields: [subOrderId], references: [id], onDelete: Restrict)
+  supplier            Supplier     @relation(fields: [supplierId], references: [id], onDelete: Restrict)
+  @@unique([supplierId, apiOrderId])
+  @@index([state, lastCheckedAt])
+}
+
+model WalletAccount {
+  customerId   String         @id
+  balanceCents Int            @default(0)
+  credits      WalletCredit[]
+}
+
+model WalletCredit {
+  id              String        @id @default(cuid())
+  customerId      String
+  subOrderId      String
+  amountCents     Int
+  idempotencyKey  String        @unique
+  createdAt       DateTime      @default(now())
+  account         WalletAccount @relation(fields: [customerId], references: [customerId], onDelete: Restrict)
+  subOrder        SubOrder      @relation(fields: [subOrderId], references: [id], onDelete: Restrict)
+  @@index([subOrderId])
+}
+
+model CronLease {
+  key       String   @id
+  holder    String
+  expiresAt DateTime
+}
