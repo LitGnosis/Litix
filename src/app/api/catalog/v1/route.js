@@ -13,7 +13,16 @@ export async function GET(request){
  }catch{
   // No backup supplier, no unlimited stale data. Checkout remains authoritative.
  }
- return Response.json(buildActiveStorefrontCatalog(snapshot.items,params,{sourceStatus:snapshot.status}),{
-  headers:{"cache-control":"no-store","x-content-type-options":"nosniff"}
+ const data=buildActiveStorefrontCatalog(snapshot.items,params,{sourceStatus:snapshot.status});
+ // Public pricing and categories only: never cache payment, user or tracking data.
+ // The checkout handler independently obtains a fresh quote before charging.
+ // An empty or unavailable catalog is never stored at the edge.
+ const cacheControl=data.allCount>0
+  ?snapshot.status==="live"
+   ?"public, s-maxage=30, stale-while-revalidate=60"
+   :"public, s-maxage=10, stale-while-revalidate=20"
+  :"no-store";
+ return Response.json(data,{
+  headers:{"cache-control":cacheControl,"x-content-type-options":"nosniff"}
  });
 }
