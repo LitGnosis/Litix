@@ -60,7 +60,7 @@ test("all eight bundle tiers use PayKings and notify owner only on first settled
   admin=read("app/api/bundles/admin/route.js");
  assert.match(checkout,/paykings\.transactiongateway\.com\/api\/transact\.php/);
  assert.match(checkout,/verifyNmiSettlement/);
- assert.match(checkout,/if\(settledRows\.length\)await sendBundleReceipt/);
+ assert.match(checkout,/if\(settledRows\.length\)\{[\s\S]*await sendBundleReceipt/);
  assert.match(cron,/payment_state='approved_pending_settlement' returning/);
  assert.match(admin,/payment_state='approved_pending_settlement' returning/);
  for(const x of [checkout,cron,admin])assert.doesNotMatch(x,/action:\s*["']add["']/);
