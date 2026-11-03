@@ -1,0 +1,47 @@
+/* Litix original blue-metallic custom price calculator, per-post totals and
+   mobile-first post selection. Styling only; final quotes remain server-side. */
+.litix-custom-calculator{display:grid;gap:14px;margin:17px 0 12px}
+.litix-custom-rate{display:flex;gap:12px;flex-wrap:wrap;padding:13px 15px;background:linear-gradient(145deg,#12496a,#08293f);border:1px solid #6bc6fa7f;border-radius:13px}
+.litix-custom-rate>div{display:flex;flex:1 1 170px;flex-direction:column;gap:4px}
+.litix-custom-rate small,.litix-custom-estimate small{font-size:12px;color:#afdef7;font-weight:700}
+.litix-custom-rate strong{font-size:clamp(17px,3vw,25px);color:#f2fbff;font-variant-numeric:tabular-nums;line-height:1.25}
+.litix-custom-rate strong span{font-size:12px;font-weight:600;color:#a7d8f3}
+.litix-custom-quantity{padding:16px;background:linear-gradient(145deg,#092639,#08192a);border:1px solid #6ebbed57;border-radius:13px}
+.litix-custom-quantity>label{display:block;font-weight:800;color:#e6f5ff;margin-bottom:9px}
+.litix-custom-quantity input[type=number]{display:block;box-sizing:border-box;width:100%;max-width:360px;min-height:50px;border:1px solid #78cfff8c;border-radius:10px;background:#081829;color:#f4fbff;padding:11px 14px;font-size:19px;font-variant-numeric:tabular-nums}
+.litix-custom-presets{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 9px}
+.litix-custom-presets button{flex:0 1 auto;min-height:41px;padding:9px 12px;border:1px solid #66b9e970;border-radius:10px;background:#10334a;color:#e4f5ff;font-size:13px;font-weight:750}
+.litix-custom-presets button:hover,.litix-custom-presets button.selected{background:linear-gradient(140deg,#def8ff,#7cc7ff);color:#092337}
+.litix-custom-row{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:7px}
+.litix-custom-row strong{font-size:15px;color:#eaf7ff}
+.litix-custom-row span{font-size:12px;color:#9dd9fa}
+.litix-picker-expand{display:flex;align-items:center;justify-content:space-between;width:100%;gap:10px;padding:14px 15px;margin:13px 0 6px;border:1px solid #90dafa;border-radius:12px;color:#ecf8ff;background:linear-gradient(135deg,#0f4d70,#0b2943);font-size:15px;font-weight:850;text-align:left;cursor:pointer}
+.litix-picker-expand span{font-size:21px}
+.litix-picker-expand:hover{background:#1a5680}
+.litix-custom-post-summary{display:grid;gap:0;border-top:1px solid #6bb5e34a;margin-top:10px}
+.litix-custom-post-summary>div{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 0;border-bottom:1px solid #6bb5e329;font-size:13px;color:#cce8fb}
+.litix-custom-post-summary>div strong{font-variant-numeric:tabular-nums}
+.litix-custom-post-summary>div:first-child{color:#dff6ff}
+.litix-custom-post-summary>div:first-child span{font-size:12px;color:#9fd2ed}
+.litix-custom-estimate{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;border:1px solid #85d5fb92;border-radius:14px;padding:16px;background:radial-gradient(circle at 85% 0%,#1899eb45,transparent 53%),linear-gradient(135deg,#0e3754,#072138);box-shadow:0 8px 22px #0004,inset 0 1px #ddf5ff2c}
+.litix-custom-estimate>div{display:flex;flex-direction:column;gap:3px}
+.litix-custom-estimate strong{color:#fff;font-size:clamp(27px,6vw,38px);letter-spacing:-.04em;font-variant-numeric:tabular-nums;line-height:1.1}
+.litix-custom-estimate>span{color:#b9e7ff;font-size:12px}
+.litix-custom-rate-error,.litix-custom-warning{background:#432d1940;border:1px solid #edc27663;color:#ffe0ac;border-radius:11px;padding:12px 14px}
+.litix-custom-rate-error p{margin:0 0 10px}
+.litix-custom-warning a{color:#b7ebff}
+.litix-social-picker{width:100%;max-width:100%;overflow-wrap:anywhere}
+.litix-social-picker input{max-width:100%;min-width:0}
+@media(max-width:575px){
+ .litix-custom-calculator{gap:10px}
+ .litix-custom-quantity{padding:12px}
+ .litix-custom-presets button{font-size:12px;min-height:40px;padding:8px 10px}
+ .litix-custom-rate{padding:12px}
+ .litix-custom-estimate{padding:14px}
+ .litix-custom-estimate strong{font-size:29px}
+ .litix-picker-expand{font-size:14px}
+ .litix-custom-rate>div{flex-basis:125px}
+}
+@media(prefers-reduced-motion:reduce){
+ .litix-custom-calculator *{animation:none!important;transition:none!important}
+}
