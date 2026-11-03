@@ -1,6 +1,9 @@
 import {neon} from "@neondatabase/serverless";
 import {randomUUID,createHash,timingSafeEqual} from "node:crypto";
 import {componentKeys,nextGuardianState,safeCode} from "./guardianCore.mjs";
+import {boosteroProduction} from "./boosteroReadOnly.mjs";
+import {boosteroProductionReady} from "./boosteroFulfillment.mjs";
+import {boosteroBalanceSignal,multiPostHealthSignal,deliveryNotificationSignal,regularOrderHealthSignal} from "./guardianSignals.mjs";
 export const guardianDb=()=>{
  const url=process.env.LITIX_AUTOLIKES_DATABASE_URL||process.env.LITIX_V2_DATABASE_URL||process.env.DATABASE_URL||process.env.POSTGRES_URL;
  if(!url)throw Error("GUARDIAN_DATABASE_UNCONFIGURED");
@@ -29,7 +32,7 @@ const check=async(component,operation)=>{
  catch(e){return {component,ok:false,kind:"check",code:codeOf(e),detail:"Read-only check unavailable",latencyMs:Date.now()-start}}
 };
 const catalog=async(path)=>{
- const r=await retryReadOnly(()=>get("/api/catalog/v1?"+path,26000));
+ const r=await retryReadOnly(()=>get("/api/catalog/v1?"+path,12000));
  const d=await r.json();
  if(!Array.isArray(d.items)||!Number.isSafeInteger(d.total)||!Number.isSafeInteger(d.allCount)||
   d.items.length===0||d.total<=0||d.allCount<d.total)
@@ -46,25 +49,18 @@ export async function performGuardianChecks(sql,priorByComponent={},now=new Date
  const every=15*60*1000, recent=name=>{const p=priorByComponent[name];return p?.checked_at && now.getTime()-new Date(p.checked_at).getTime()<every};
  const probes={
   website:()=>retryReadOnly(async()=>{const r=await get("/",9000);const t=await r.text();return {ok:t.includes("LITIX")||t.includes("Litix"),code:"WEBSITE_HTML",detail:"Homepage delivered Litix branding"}}),
-  smmglob:async()=>{
-   const endpoint=new URL(process.env.SMMGLOB_API_URL||"https://smmglob.com/api/v2");
-   if(!process.env.SMMGLOB_API_KEY||endpoint.protocol!=="https:"||!["smmglob.com","www.smmglob.com"].includes(endpoint.hostname))
-    return {ok:false,code:"SUPPLIER_CONFIG",detail:"SMMGLOB service credential or endpoint missing"};
-   const d=await retryReadOnly(async()=>{
-    const r=await fetch(endpoint,{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded"},
-     body:new URLSearchParams({key:process.env.SMMGLOB_API_KEY,action:"services"}),cache:"no-store",signal:AbortSignal.timeout(11000)});
-    if(!r.ok)throw Error("HTTP_"+r.status);
-    return r.json();
-   });
-   return {ok:Array.isArray(d)&&d.length>0,code:Array.isArray(d)&&d.length>0?"SUPPLIER_READ_ONLY_OK":"SUPPLIER_INVALID_RESPONSE",
-    detail:Array.isArray(d)?"Supplier service records: "+d.length:"Supplier service list invalid"};
+  boostero:async()=>{
+   if(!boosteroProductionReady())return {ok:false,code:"BOOSTERO_CONFIG_UNAVAILABLE",detail:"Only approved supplier is not ready for live orders"};
+   // Only a read-only account balance operation. Runs every 15 minutes.
+   const data=await retryReadOnly(()=>boosteroProduction("balance"),2);
+   return boosteroBalanceSignal(data);
   },
   catalog:()=>catalog("page=1"),
   tiktok:()=>catalog("platform=TikTok&page=1"),
   instagram:()=>catalog("platform=Instagram&page=1"),
   paykings_readiness:async()=>{const r=await get("/api/config");const d=await r.json();return {ok:d.ready===true&&!!d.publicKey,code:d.ready&&d.publicKey?"PAYKINGS_CONFIG_READY":"PAYKINGS_CONFIG_UNAVAILABLE",detail:"Readiness config only; no charge or merchant authorization attempted"}},
   bluevine_readiness:async()=>{const r=await get("/api/bundles");const d=await r.json();return {ok:d.bluevineEnabled===true&&Array.isArray(d.packages)&&d.packages.length===8,code:d.bluevineEnabled?"BLUEVINE_CONFIG_READY":"BLUEVINE_CONFIG_UNAVAILABLE",detail:"Fixed-link configuration only; never interpreted as a payment"}},
-  autolikes:async()=>{const r=await get("/autolikes");const t=await r.text();return t.includes("COMING SOON")?{kind:"not_launched",code:"AUTOLIKES_COMING_SOON",detail:"AutoLikes intentionally not launched"}:{ok:t.includes("AUTOLIKES")||t.includes("AutoLikes"),code:"AUTOLIKES_PAGE",detail:"AutoLikes page responsive"}},
+  autolikes:async()=>{const r=await get("/autolikes");const t=await r.text();return t.includes("COMING SOON")?{kind:"not_launched",code:"AUTOLIKES_COMING_SOON",detail:"AutoLikes intentionally not launched"}:{ok:t.includes("AUTOLIKES")||t.includes("AutoLikes")||t.includes("Automatic Likes for Your Next Posts"),code:"AUTOLIKES_PAGE",detail:"AutoLikes page responsive"}},
   subscriptions:async()=>{
    const rows=await sql.query("select to_regclass('public.litix_recurring_subscriptions')::text as existing");
    if(!rows[0]?.existing)return {kind:"not_launched",code:"SUBSCRIPTIONS_NOT_PROVISIONED",detail:"Subscription database table is not provisioned"};
@@ -77,8 +73,23 @@ export async function performGuardianChecks(sql,priorByComponent={},now=new Date
    return {ok:true,code:"ORDER_STORAGE",detail:"Read-only order tables responsive; regular "+Number(a[0]?.n||0)+", bundles "+Number(b[0]?.n||0)};
   },
   fulfillment:async()=>{
-   const r=await sql.query("select count(*)::int as pending from public.litix_v2_orders where supplier_order_id is not null and fulfillment_state in ('dispatching','submitted','in_progress','processing','manual_review')");
-   return {ok:true,code:"FULFILLMENT_LEDGER",detail:"Supplier order ledger readable; open records "+Number(r[0]?.pending||0)+" (delivery not inferred)"};
+   const rows=await sql.query(
+    "select count(*) filter (where state='SUBMITTED' and supplier_order_id is not null and created_at<now()-interval '45 minutes' and (checked_at is null or checked_at<now()-interval '45 minutes'))::int as stale from public.litix_boostero_fulfillment");
+   return regularOrderHealthSignal(rows[0]);
+  },
+  multi_post:async()=>{
+   if(process.env.LITIX_MULTIPOST_AUTO_FULFILL_ENABLED!=="true")
+    return {kind:"not_launched",code:"MULTIPOST_NOT_ENABLED",detail:"Multi-post fulfillment intentionally disabled"};
+   const rows=await sql.query(
+    "select count(*) filter (where state='SUBMITTED' and supplier_order_id is not null and created_at<now()-interval '40 minutes' and (checked_at is null or checked_at<now()-interval '40 minutes'))::int as stale, count(*) filter (where state in ('DISPATCHING','UNKNOWN_OUTCOME','MANUAL_REVIEW') and updated_at<now()-interval '20 minutes')::int as unresolved, count(*) filter (where state='QUEUED' and created_at<now()-interval '20 minutes')::int as queued from public.litix_boostero_multi_posts");
+   return multiPostHealthSignal(rows[0]);
+  },
+  email_delivery:async()=>{
+   const [customer,guardian]=await Promise.all([
+    sql.query("select count(*)::int as n from public.litix_customer_delivery_updates where send_state<>'sent' and created_at<now()-interval '15 minutes'"),
+    sql.query("select count(*)::int as n from public.litix_guardian_alert_outbox where status<>'sent' and created_at<now()-interval '15 minutes'")
+   ]);
+   return deliveryNotificationSignal({customer:customer[0]?.n,guardian:guardian[0]?.n});
   },
   database:async()=>{const r=await sql.query("select 1::int as alive");return {ok:r[0]?.alive===1,code:"DATABASE_READ_ONLY",detail:"Database read-only query succeeded"}},
   resend:async()=>{
@@ -92,12 +103,28 @@ export async function performGuardianChecks(sql,priorByComponent={},now=new Date
   }
  };
  // Supplier calls are rate-limited to 15 minutes per persistent component row.
- const skipped=new Set(["smmglob","resend"].filter(recent));
+ const skipped=new Set(["boostero","resend"].filter(recent));
  const result=await Promise.all(componentKeys.filter(x=>!skipped.has(x)).map(x=>check(x,probes[x])));
  return result;
 }
 const sanitize=x=>({component:x.component,ok:x.ok,code:x.code,detail:x.detail,latencyMs:x.latencyMs,kind:x.kind});
-const repair={website:"Inspect Vercel routing, deployment and runtime logs",smmglob:"Verify SMMGLOB account/API and inspect read-only supplier status; retry later",catalog:"Inspect /api/catalog/v1 upstream timeout/cache and verify usable items",tiktok:"Check TikTok supplier categories and service filtering",instagram:"Check Instagram supplier categories and service filtering",paykings_readiness:"Verify gateway configuration in Vercel; do not change keys automatically",bluevine_readiness:"Verify fixed Bluevine links and bundle environment flags; do not charge",autolikes:"Confirm planned AutoLikes launch state and subscription configuration",subscriptions:"Review subscription schema/permissions without editing customer subscriptions",orders:"Inspect read-only database connectivity and order-table permissions",fulfillment:"Review supplier order statuses manually; never submit or retry orders automatically",database:"Inspect Neon branch and Vercel database connection, avoid destructive changes",resend:"Inspect Resend API permissions and verified sending domain"};
+const repair={
+ website:"Inspect Vercel production routing and runtime logs",
+ boostero:"Inspect Boostero API credentials and wallet funding; do not reissue existing supplier orders",
+ catalog:"Inspect live Boostero service catalog, pricing and fallback cache",
+ tiktok:"Check TikTok supplier service availability and catalog filter",
+ instagram:"Check Instagram supplier service availability and catalog filter",
+ paykings_readiness:"Verify PayKings configuration without charging cards",
+ bluevine_readiness:"Verify Bluevine link configuration without changing payment state",
+ autolikes:"Confirm planned AutoLikes launch state; no production charges",
+ subscriptions:"Review subscription provisioning and safe worker readiness",
+ orders:"Inspect Neon read-only connectivity and order ledger",
+ fulfillment:"Inspect existing supplier order IDs; status-only reconcile; never duplicate purchases",
+ multi_post:"Run safe existing Boostero status reconciliation, inspect delayed paid children; never add again",
+ email_delivery:"Check existing Resend delivery outboxes and retry policy; do not send duplicates",
+ database:"Inspect Neon connectivity; do not modify customer records",
+ resend:"Verify Resend domain and API without sending test emails"
+};
 async function queueAlert(sql,component,event,incidentId,obs,at){
  const incident=await sql.query("select started_at from public.litix_guardian_incidents where id=$1",[incidentId]);
  const eventKey="guardian-"+incidentId+"-"+event.kind+(event.kind==="escalation"?"-"+Math.floor(at.getTime()/3600000):"");
@@ -146,7 +173,7 @@ async function sendQueuedAlerts(sql){
  const key=process.env.RESEND_API_KEY||process.env.LITIX_RESEND_API_KEY;
  if(!key)return {sent:0,disabled:"resend_not_configured"};
  // Atomic claim prevents competing workers sending the same alert simultaneously.
- const rows=await sql.query("update public.litix_guardian_alert_outbox set status='sending',attempts=attempts+1,last_attempt_at=now() where event_key in (select event_key from public.litix_guardian_alert_outbox where status='pending' or (status='sending' and last_attempt_at<now()-interval '3 minutes') order by created_at limit 10 for update skip locked) returning event_key,payload");
+ const rows=await sql.query("update public.litix_guardian_alert_outbox set status='sending',attempts=attempts+1,last_attempt_at=now() where event_key in (select event_key from public.litix_guardian_alert_outbox where status='pending' or (status='sending' and last_attempt_at<now()-interval '3 minutes') order by created_at limit 2 for update skip locked) returning event_key,payload");
  let sent=0;
  for(const entry of rows){
   const p=entry.payload;
@@ -167,7 +194,13 @@ export async function runGuardianCycle({sql=guardianDb(),now=new Date(),observat
  const current=Object.fromEntries(previous.map(x=>[x.component,x]));
  const checked=observations||await performGuardianChecks(sql,current,at);
  // These observations intentionally contain no customer identifiers or credentials.
- for(const o of checked)await persistObservation(sql,o,at);
+ // Bounded concurrency: avoid 14+ serial Neon round trips exhausting the
+ // 60-second Vercel function budget, while preserving per-component CAS.
+ for(let i=0;i<checked.length;i+=4){
+  const batch=await Promise.allSettled(checked.slice(i,i+4).map(o=>persistObservation(sql,o,at)));
+  if(batch.some(result=>result.status==="rejected"))
+   throw Error("GUARDIAN_PERSISTENCE_INCOMPLETE");
+ }
  const delivery=sendAlerts?await sendQueuedAlerts(sql):{sent:0,disabled:"test"};
  const id="gr_"+randomUUID();
  await sql.query("insert into public.litix_guardian_runs(id,component_count,unhealthy_count,diag,finished_at) values($1,$2,$3,$4::jsonb,now())",

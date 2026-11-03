@@ -45,3 +45,15 @@
 .lg-bundle-method:disabled{opacity:.45;cursor:not-allowed}
 .lg-bundle-method:focus-visible{outline:3px solid #fff;outline-offset:2px}
 @media(max-width:390px){.lg-bundle-methods{grid-template-columns:1fr}}
+
+/* Fixed-price automated bundle picker; no private supplier details on storefront. */
+.lg-bundle-auto-posts{margin:18px 0;padding:18px;border:1px solid #477f9e;border-radius:15px;background:linear-gradient(145deg,#0c263e,#061626)}
+.lg-bundle-auto-posts>label{display:block;line-height:1.4}
+.lg-bundle-auto-posts textarea{width:100%;min-height:125px;margin-top:9px;background:#071725;border:1px solid #497a99;border-radius:12px;color:#edfaff;padding:13px;resize:vertical;font:inherit}
+.lg-auto-gallery{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:15px 0}
+.lg-auto-thumb{min-width:0;display:flex;flex-direction:column;gap:6px;align-items:center;padding:7px;border:2px solid #477f9e;border-radius:12px;background:#071725;color:#e5f5ff;font-size:12px;font-weight:700}
+.lg-auto-thumb.selected{border-color:#70d3ff;background:#104767}
+.lg-auto-thumb:focus-visible{outline:3px solid #e1f6ff;outline-offset:3px}
+.lg-auto-thumb img{display:block;width:100%;aspect-ratio:9/14;object-fit:cover;border-radius:8px}
+@media(max-width:650px){.lg-auto-gallery{grid-template-columns:repeat(3,minmax(0,1fr))}.lg-bundle-auto-posts{padding:12px}}
+@media(max-width:385px){.lg-auto-gallery{grid-template-columns:repeat(2,minmax(0,1fr))}}

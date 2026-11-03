@@ -4,7 +4,7 @@ import {createHash,randomUUID,timingSafeEqual} from "node:crypto";
 import {boosteroProduction,boosteroCompatibleServices} from "./boosteroReadOnly.mjs";
 import {litixRetailPer1000Cents,litixOrderCents,litixPurchasableDefault,litixSupplierSafeLink} from "./litixRetail60.mjs";
 import {litixPlatform,litixKind} from "./litixServiceClassify.mjs";
-import {litixCustomerServiceName} from "./serviceCardDisplay.mjs";
+import {publicServiceCardName} from "./serviceCardDisplay.mjs";
 import {queueCustomerDeliveryChange,sendCustomerDeliveryUpdates} from "./litixCustomerUpdates.mjs";
 
 export const boosteroDatabaseURL=()=>process.env.LITIX_BOOSTERO_DATABASE_URL||process.env.LITIX_V2_DATABASE_URL||
@@ -64,7 +64,7 @@ export function boosteroQuote({service,quantity}){
  if(!lowest||!Number.isSafeInteger(qty)||qty<lowest||qty>max||qty>1000000)
   throw Error("boostero_quantity_or_type_not_supported");
  const rate=Number(service?.rate);
- const retailPer1000Cents=litixRetailPer1000Cents(rate);
+ const retailPer1000Cents=litixRetailPer1000Cents(rate,service);
  const amountCents=litixOrderCents(retailPer1000Cents,qty);
  const costUSD=rate*qty/1000;
  const wholesaleCents=Math.ceil(costUSD*100-1e-8);
@@ -100,9 +100,11 @@ export async function boosteroNotice(orderId,secret){
  if(orders.length!==1)return false;
  const o=orders[0];
  const allocations=Array.isArray(o.metadata?.postAllocations)?o.metadata.postAllocations.slice(0,5):[];
+ const postPlatform=o.metadata?.postPlatform==="instagram"?"Instagram":"TikTok";
+ const automatedMulti=allocations.length>1&&o.metadata?.fulfillmentMode==="boostero_child_order_dispatch";
  const allocationLines=allocations.map((p,i)=>
-  "Video "+(i+1)+": "+String(p.link||"")+" — "+Number(p.quantity||0).toLocaleString()+" likes");
- const publicService=litixCustomerServiceName(o.service_name);
+  (postPlatform==="Instagram"?"Post ":"Video ")+(i+1)+": "+String(p.link||"")+" — "+Number(p.quantity||0).toLocaleString()+" likes");
+ const publicService=publicServiceCardName({name:o.service_name});
  const publicLink=secret?"https://www.litix.net/track?track="+encodeURIComponent(orderId)+"&token="+encodeURIComponent(secret):null;
  // Customer communication stays Litix-branded. The private owner notification
  // retains supplier references needed for fulfillment and support.
@@ -112,8 +114,8 @@ export async function boosteroNotice(orderId,secret){
   "Litix Order: "+orderId,
   "Service: "+publicService,
   "Quantity: "+o.quantity,
-  ...(allocations.length?["Your selected TikTok videos:",...allocationLines,
-   "Litix will coordinate separate delivery for each video."]:[]),
+  ...(allocations.length?["Your selected "+postPlatform+" posts:",...allocationLines,
+   "Litix will coordinate separate delivery for each post."]:[]),
   "Total paid: "+amount,
   "Payment status: "+o.payment_state,
   "Litix order status: "+(o.state==="COMPLETED"?"Completed":o.state==="FAILED"?"Needs support":"Processing"),
@@ -128,13 +130,17 @@ export async function boosteroNotice(orderId,secret){
   "Litix Order: "+orderId,
   "Service: "+publicService,
   "Quantity: "+o.quantity,
-  ...(allocations.length?["ACTION REQUIRED: Manual TikTok multi-post fulfillment.",
-    "Submit each video separately to the existing supplier. Never submit the parent destination as a single order.",
-    ...allocationLines]:[]),
+  ...(allocations.length?(automatedMulti?[
+    "AUTOMATED PER-POST FULFILLMENT: Review the individual Boostero child statuses in Litix tracking.",
+    "Do NOT submit any selected post manually unless its prior supplier outcome is independently confirmed not accepted. Unknown outcomes require reconciliation.",
+    ...allocationLines
+   ]:[postPlatform==="Instagram"?"ACTION REQUIRED: Manual Instagram multi-post fulfillment.":"ACTION REQUIRED: Manual TikTok multi-post fulfillment.",
+    postPlatform==="Instagram"?"Submit each post separately to the existing supplier. Never submit the parent destination as a single order.":"Submit each video separately to the existing supplier. Never submit the parent destination as a single order.",
+    ...allocationLines]):[]),
   "Amount: "+amount,
   "Payment: "+o.payment_state,
   "Supplier: Boostero",
-  "Boostero Order ID: "+(o.supplier_order_id||"Awaiting confirmation"),
+  automatedMulti?"Boostero order IDs are recorded separately for each selected post.": "Boostero Order ID: "+(o.supplier_order_id||"Awaiting confirmation"),
   "Fulfillment: "+o.state,
   ownerLink?"Private tracking URL: "+ownerLink:null
  ].filter(Boolean).join("\n");
@@ -175,7 +181,9 @@ export async function dispatchBoostero(orderId,{sql=boosteroSQL(),operation=boos
  try{
   // Refresh current wholesale and remaining account balance just before spend.
   const {quote}=await verifyBoosteroQuote(String(orders[0].supplier_service_id),Number(orders[0].quantity),sql);
-  if(Number(orders[0].amount_cents)<quote.amountCents)throw Error("boostero_wholesale_changed_after_payment");
+  // Paid orders keep their locked historical retail totals after a future pricing-floor increase.
+  // Still enforce the original 60% wholesale protection before any supplier spend.
+  if(Number(orders[0].amount_cents)<Math.ceil(quote.costUSD*160-1e-8))throw Error("boostero_wholesale_changed_after_payment");
   const balance=await operation("balance");
   if(!Number.isFinite(Number(balance.balance))||Number(balance.balance)<quote.costUSD)throw Error("boostero_insufficient_balance");
   result=await operation("add",{service:quote.serviceId,link:orders[0].destination,quantity:quote.quantity},{claimed:true});

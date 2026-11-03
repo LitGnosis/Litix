@@ -2,6 +2,9 @@ import {randomUUID,randomBytes} from "node:crypto";
 import {growthBundle} from "../../../../lib/growthBundles.mjs";
 import {bundleCheckoutReady} from "../route.js";
 import {bundleDB,hashToken,response,sameOrigin,verifyNmiSettlement,sendBundleReceipt} from "../../../../lib/bundleOrders.mjs";
+import {boosteroProduction} from "../../../../lib/boosteroReadOnly.mjs";
+import {quoteFixedBundle,isBundleAutoEnabled} from "../../../../lib/growthBundleRouting.mjs";
+import {stagePaidBundlePlan,releaseSettledBundle,dispatchPaidBundleBatch} from "../../../../lib/growthBundleAutoDispatch.mjs";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 export const maxDuration=50;
@@ -18,6 +21,21 @@ export async function POST(req){
    !/^[\w.@:/-]{2,150}$/.test(profile)||
    !/^[a-f0-9-]{36}$/i.test(idem)||token.length<10||token.length>500||input?.whatsappConsent!==true)
    return response({error:"Invalid package, account, email, consent or secure payment token"},422);
+ // No card is charged until every selected bundle component has a live
+ // eligible Boostero service, a confirmed USD wallet, and a safe wholesale margin.
+ const auto=Boolean(input?.autoFulfill===true);
+ let plan=null;
+ if(auto){
+  if(!isBundleAutoEnabled())return response({error:"Automatic bundle fulfillment is not ready. No card was charged."},503);
+  try{
+   const [services,wallet]=await Promise.all([boosteroProduction("services"),boosteroProduction("balance")]);
+   if(String(wallet?.currency||"").toUpperCase()!=="USD")throw Error("supplier_currency_not_verified");
+   plan=quoteFixedBundle(pkg,profile,input?.postUrls,services,{balanceUSD:Number(wallet.balance)});
+  }catch(error){
+   console.warn("Litix automated bundle preflight not eligible",{packageId:pkg.id,reason:String(error?.message||"error").slice(0,68)});
+   return response({error:"This bundle cannot be automatically fulfilled with the selected posts at its fixed price. No payment was attempted. Try fewer posts or use the manual coordination option."},409);
+  }
+ }
  const id="lbg_"+randomUUID(),secret=randomBytes(28).toString("base64url"),sql=bundleDB();
  try{
   const rows=await sql.query(
@@ -25,6 +43,13 @@ export async function POST(req){
    [id,email,pkg.id,pkg.platform,pkg.name,pkg.priceCents,JSON.stringify(pkg.items),idem,hashToken(secret),profile]);
   if(!rows.length)return response({error:"This checkout was already submitted. Do not retry a payment without reconciling the original attempt."},409);
  }catch{return response({error:"Bundle order database unavailable. Payment not submitted."},503);}
+ if(auto){
+  try{await stagePaidBundlePlan(id,plan,{sql})}
+  catch{
+   await sql.query("update public.litix_growth_bundle_orders set payment_state='review',order_state='Needs Attention',updated_at=now() where id=$1 and payment_state='processing'",[id]).catch(()=>{});
+   return response({error:"Automatic package order records could not be secured. No card was charged."},503);
+  }
+ }
  let pay;
  try{
   const r=await fetch("https://paykings.transactiongateway.com/api/transact.php",{
@@ -49,17 +74,25 @@ export async function POST(req){
   await sql.query("update litix_growth_bundle_orders set payment_state='review',order_state='Needs Attention',updated_at=now() where id=$1",[id]).catch(()=>{});
   return response({orderId:id,trackingToken:secret,payment:"review",message:"Gateway approval requires independent reconciliation."},202);
  }
- try{await sql.query("update litix_growth_bundle_orders set payment_state='approved_pending_settlement',order_state='Awaiting WhatsApp Submission',gateway_transaction_id=$2,updated_at=now() where id=$1",[id,transactionId]);}
+ try{await sql.query("update litix_growth_bundle_orders set payment_state='approved_pending_settlement',order_state=case when auto_fulfillment_enabled then 'Processing' else 'Awaiting WhatsApp Submission' end,gateway_transaction_id=$2,updated_at=now() where id=$1",[id,transactionId]);}
  catch{return response({orderId:id,trackingToken:secret,payment:"review",message:"Gateway result must be reconciled. Do not pay twice."},202);}
  const settled=await verifyNmiSettlement({orderId:id,transactionId,priceCents:pkg.priceCents});
  if(settled.settled){
-  const settledRows=await sql.query("update litix_growth_bundle_orders set payment_state='settled',order_state='Awaiting WhatsApp Submission',settled_at=now(),updated_at=now() where id=$1 and payment_state='approved_pending_settlement' returning id,email,package_id,package_name,package_items,price_cents,profile_ref,created_at",[id]);
-  if(settledRows.length)await sendBundleReceipt(settledRows[0]).catch(()=>false);
+  const settledRows=await sql.query("update litix_growth_bundle_orders set payment_state='settled',order_state=case when auto_fulfillment_enabled then 'Processing' else 'Awaiting WhatsApp Submission' end,settled_at=now(),updated_at=now() where id=$1 and payment_state='approved_pending_settlement' returning id,email,package_id,package_name,package_items,price_cents,profile_ref,created_at,auto_fulfillment_enabled",[id]);
+  if(settledRows.length){
+   await sendBundleReceipt(settledRows[0]).catch(()=>false);
+   if(auto)try{
+    await releaseSettledBundle(id,{sql});
+    await dispatchPaidBundleBatch(id,{sql,limit:4});
+   }catch{console.error("Litix paid bundle child dispatch needs reconciliation",{orderId:id});}
+  }
  }
  // Never call SMMGLOB in this route. Supplier dispatch can ONLY be admin-approved.
  return response({
   orderId:id,trackingToken:secret,payment:settled.settled?"settled":"approved_pending_settlement",
-  status:"Awaiting WhatsApp Submission",
-  message:settled.settled?"Payment settled. Contact LITIX on WhatsApp to submit up to 10 posts.":"PayKings approved your payment. Tap WhatsApp on your order confirmation to send the order number and post links. Fulfillment begins only after settlement verification and manual review. Do not pay again."
+  status:auto?"Processing":"Awaiting WhatsApp Submission",
+  message:auto
+   ?"Your fixed-price bundle payment was processed. Litix dispatches separate verified orders for each included engagement type and post after settlement. Check your private tracking link. Never pay twice."
+   :settled.settled?"Payment settled. Contact LITIX on WhatsApp to submit up to 10 posts.":"PayKings approved your payment. Tap WhatsApp on your order confirmation to send the order number and post links. Fulfillment begins only after settlement verification and manual review. Do not pay again."
  },settled.settled?200:202);
 }

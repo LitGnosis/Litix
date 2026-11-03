@@ -17,7 +17,15 @@
     },
     {
       "path": "/api/internal/boostero/cron",
-      "schedule": "*/15 * * * *"
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/autolikes/cron",
+      "schedule": "5,20,35,50 * * * *"
+    },
+    {
+      "path": "/api/autolikes/prepaid/cron",
+      "schedule": "7,22,37,52 * * * *"
     }
   ]
 }

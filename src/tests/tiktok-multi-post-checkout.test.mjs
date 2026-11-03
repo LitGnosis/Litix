@@ -20,7 +20,8 @@ test("multiple TikTok post checkout validates every video before payment",()=>{
  assert.match(handler,/multiple\?\{postAllocations:verifiedPosts/);
 });
 test("one card charge, no automatic supplier dispatch for multi-post orders",()=>{
- assert.match(handler,/const attempt=multiple\?\{submitted:false,state:"MANUAL_REVIEW",requiresReview:false\}/);
+ assert.match(handler,/const attempt=autoMulti/);
+ assert.match(handler,/:multiple\?\{submitted:false,state:"MANUAL_REVIEW",requiresReview:false\}/);
  assert.match(handler,/multiple\?"MANUAL_REVIEW":"QUEUED"/);
  assert.match(handler,/multiple\?"manual_review":"pending"/);
  assert.match(handler,/Checkout already submitted; no repeat charge/);

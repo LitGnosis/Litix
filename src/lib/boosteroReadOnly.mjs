@@ -4,6 +4,7 @@
  * This module is NOT imported by the storefront, checkout, or supplier dispatch.
  */
 import {litixSupplierSafeLink} from "./litixRetail60.mjs";
+import {boosteroBatchIds} from "./boosteroStatusBatch.mjs";
 const actions=new Set(["balance","services"]);
 const host="boostero.com";
 function endpoint(){
@@ -86,7 +87,7 @@ export const boosteroFollowers=input=>boosteroCompatibleServices(input).filter(x
  * Supplier add requests are never retried on network/timeout uncertainty.
  */
 export async function boosteroProduction(action,parameters={},options={}){
- const allowed=new Set(["balance","services","add","status","refill"]);
+ const allowed=new Set(["balance","services","add","subscription","prepaid_subscription","status","refill"]);
  if(!allowed.has(action))throw Error("boostero_action_forbidden");
  if(process.env.VERCEL_ENV!=="production"||process.env.LITIX_BOOSTERO_ENABLED!=="true")
   throw Error("boostero_production_disabled");
@@ -98,6 +99,28 @@ export async function boosteroProduction(action,parameters={},options={}){
      quantity<1||quantity>1000000||litixSupplierSafeLink(link)!==link)
    throw Error("boostero_add_not_authorized");
   params={service:id,quantity:String(quantity),link};
+ }else if(action==="subscription"||action==="prepaid_subscription"){
+  // Only the already-claimed, independently paid monthly cycle worker may
+  // request Boostero's native future-post subscription. Never a public action.
+  if(options.claimed!==true||
+   (action==="subscription"?process.env.LITIX_AUTOLIKES_DISPATCH_ENABLED!=="true":process.env.LITIX_AUTOLIKES_PREPAID_ENABLED!=="true"))
+   throw Error("boostero_subscription_not_authorized");
+  const id=String(parameters.service||"");
+  const username=String(parameters.username||"");
+  const qty=Number(parameters.min),max=Number(parameters.max),posts=Number(parameters.posts);
+  const delay=Number(parameters.delay),expiry=String(parameters.expiry||"");
+  if(!/^\d{1,12}$/.test(id)||!/^[A-Za-z0-9._]{1,30}$/.test(username)||
+   !Number.isSafeInteger(qty)||qty<1||qty>1000000||max!==qty||
+   !Number.isSafeInteger(posts)||posts<1||posts>30||
+   String(parameters.old_posts)!=="0"||
+   ![0,5,10,15,20,30,40,50,60,90,120,150,180,210,240,270,300,360,420,480,540,600].includes(delay)||
+   !/^(0[1-9]|[12]\d|3[01])\/(0[1-9]|1[0-2])\/20\d{2}$/.test(expiry))
+   throw Error("boostero_subscription_parameters_invalid");
+  params={service:id,username,min:String(qty),max:String(qty),posts:String(posts),
+   old_posts:"0",delay:String(delay),expiry};
+ }else if(action==="status"&&parameters.orders!==undefined){
+  // Read-only batch status for up to 100 existing supplier order IDs.
+  params={orders:boosteroBatchIds(parameters.orders).join(",")};
  }else if(action==="status"||action==="refill"){
   const order=String(parameters.order||"");
   if(!/^\d{1,24}$/.test(order))throw Error("boostero_supplier_id_invalid");
@@ -108,11 +131,11 @@ export async function boosteroProduction(action,parameters={},options={}){
  try{
   response=await (options.fetcher||fetch)(endpoint(),{
    method:"POST",headers:{"content-type":"application/x-www-form-urlencoded"},
-   body:new URLSearchParams({key:process.env.BOOSTERO_API_KEY,action,...params}).toString(),
+   body:new URLSearchParams({key:process.env.BOOSTERO_API_KEY,action:action==="subscription"||action==="prepaid_subscription"?"add":action,...params}).toString(),
    cache:"no-store",redirect:"error",signal:AbortSignal.timeout(action==="services"?20000:15000)
   });
  }catch{throw Error("boostero_network_unknown_outcome");}
- if(!response.ok)throw Error("boostero_http_"+response.status+(action==="add"?"_unknown_outcome":""));
+ if(!response.ok)throw Error("boostero_http_"+response.status+(["add","subscription","prepaid_subscription"].includes(action)?"_unknown_outcome":""));
  let data;
  try{data=await response.json()}catch{throw Error("boostero_invalid_json"+(action==="add"?"_unknown_outcome":""))}
  if(data&&typeof data==="object"&&!Array.isArray(data)&&data.error)
@@ -120,7 +143,10 @@ export async function boosteroProduction(action,parameters={},options={}){
  if(action==="services"&&!Array.isArray(data))throw Error("boostero_services_invalid_shape");
  if(action==="balance"&&(!data||Array.isArray(data)||!Object.hasOwn(data,"balance")))
   throw Error("boostero_balance_invalid_shape");
- if(action==="add"&&(!data||!/^\d{1,24}$/.test(String(data.order||""))))
+ if((action==="add"||action==="subscription"||action==="prepaid_subscription")&&(!data||!/^\d{1,24}$/.test(String(data.order||""))))
   throw Error("boostero_add_unconfirmed_outcome");
+ if(action==="status"&&parameters.orders!==undefined&&
+   (!data||typeof data!=="object"||Array.isArray(data)))
+  throw Error("boostero_batch_invalid_response");
  return data;
 }

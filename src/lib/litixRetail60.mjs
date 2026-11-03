@@ -1,12 +1,28 @@
 // One pricing policy for the Litix public directory and live supplier checkout.
+import {litixPlatform,litixKind} from "./litixServiceClassify.mjs";
 // A 60% markup means 1.6x the supplier's price (NOT a 60% gross margin).
 export const LITIX_RETAIL_MARKUP=1.6;
 export const LITIX_MINIMUM_CHARGE_CENTS=100;
 const finitePositive=n=>Number.isFinite(n)&&n>0;
-export const litixRetailPer1000Cents=rate=>{
+// Retail rate floors per 1,000 units. Raise underpriced items only.
+// Existing higher catalog rates stay unchanged, as do wholesale and bundles.
+export const LITIX_MIN_OTHER_PER_1000_CENTS=300;
+export const LITIX_MIN_SOCIAL_LIKES_PER_1000_CENTS=600;
+export const LITIX_MIN_SOCIAL_FOLLOWERS_PER_1000_CENTS=900;
+export const litixRateFloorCents=service=>{
+ const platform=litixPlatform(service?.name,service?.category);
+ const kind=litixKind(service?.name,service?.category);
+ if(platform==="Instagram"||platform==="TikTok"){
+  if(kind==="followers")return LITIX_MIN_SOCIAL_FOLLOWERS_PER_1000_CENTS;
+  if(kind==="likes")return LITIX_MIN_SOCIAL_LIKES_PER_1000_CENTS;
+ }
+ return LITIX_MIN_OTHER_PER_1000_CENTS;
+};
+export const litixRetailPer1000Cents=(rate,service)=>{
  const n=Number(rate);
  if(!finitePositive(n)||n>1000000)return null;
- return Math.ceil(n*LITIX_RETAIL_MARKUP*100-1e-8);
+ const markedUp=Math.ceil(n*LITIX_RETAIL_MARKUP*100-1e-8);
+ return Math.max(markedUp,litixRateFloorCents(service));
 };
 export const litixOrderCents=(retailPer1000Cents,quantity)=>{
  const q=Number(quantity);
@@ -23,7 +39,7 @@ export const litixServiceMinimum=(min,max,per1000Cents)=>{
 export const litixPurchasableDefault=x=>{
  const type=String(x?.type??"");
  const id=String(x?.service??x?.id??"");
- const per1000Cents=litixRetailPer1000Cents(x?.rate);
+ const per1000Cents=litixRetailPer1000Cents(x?.rate,x);
  const min=Number(x?.min),max=Number(x?.max);
  const minimum=litixServiceMinimum(min,max,per1000Cents);
  return /^default$/i.test(type)&&/^\d{1,12}$/.test(id)&&minimum!==null&&max<=1000000?minimum:null;

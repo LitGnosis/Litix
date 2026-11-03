@@ -41,6 +41,10 @@ function requiredPermission(method) {
 
 export async function middleware(request) {
   const { pathname, searchParams } = request.nextUrl;
+  // Vercel has been returning a platform 404 for the legacy /privacy path.
+  // Redirect at the edge to the independently deployed policy page.
+  if(pathname==="/privacy"||pathname==="/privacy/")
+   return NextResponse.redirect(new URL("/legal/privacy",request.url),307);
   const host = (request.headers.get("host") || "").split(":")[0].toLowerCase().replace(/\.$/, "");
   const primaryHosts = new Set(["litix.net", "www.litix.net", "localhost"]);
   const vercelHost = host.endsWith(".vercel.app");

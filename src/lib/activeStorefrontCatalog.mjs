@@ -2,8 +2,10 @@
 // Litix store. Unusual API types remain visible in /services for manual review.
 import {sortServicesPer1000} from "./catalogSort.mjs";
 import {filterBoosteroCards} from "./boosteroCatalog.mjs";
+import {litixPublicCard} from "./publicLitixCatalog.mjs";
+import {publicServiceCardName} from "./serviceCardDisplay.mjs";
 
-export function buildActiveStorefrontCatalog(rows,params){
+export function buildActiveStorefrontCatalog(rows,params,{sourceStatus="live"}={}){
  const unique=new Map();
  for(const x of Array.isArray(rows)?rows:[]){
   if(!/^boostero_\d+$/.test(String(x?.id||""))||x?.purchasable!==true||
@@ -16,15 +18,14 @@ export function buildActiveStorefrontCatalog(rows,params){
  const requested=Number(params.get("page")||1);
  const page=Number.isSafeInteger(requested)&&requested>0?Math.min(requested,100000):1;
  const size=24;
- const categories=[...new Set(all.map(x=>x.category))].sort();
+ const categories=[...new Set(all.map(x=>publicServiceCardName({name:x.category})))].sort();
  const goal=String(params.get("goal")||"");
  const recommendations=goal==="Grow audience"?filtered.filter(x=>x.kind==="followers").slice(0,3):
   goal==="Increase engagement"?filtered.filter(x=>x.kind==="likes").slice(0,3):[];
  return {
-  items:filtered.slice((page-1)*size,page*size),total:filtered.length,allCount:all.length,page,
-  categories,recommendations,catalogStatus:all.length?"live":"unavailable",
-  boosteroCatalogStatus:all.length?"live_supplier_priced":"unavailable",
-  message:all.length?undefined:"Litix services are temporarily unavailable",
-  boosteroOnly:true,markupPercent:60,minimumOrderCents:100
+  items:filtered.slice((page-1)*size,page*size).map(litixPublicCard).filter(Boolean),total:filtered.length,allCount:all.length,page,
+  categories,recommendations:recommendations.map(litixPublicCard).filter(Boolean),catalogStatus:all.length?(sourceStatus==="cached"?"cached":"live"):"unavailable",
+  message:!all.length?"Litix services are temporarily unavailable":sourceStatus==="cached"?"Displaying recently verified services. Every purchase still receives a fresh price and availability check.":undefined,
+  minimumOrderCents:100
  };
 }

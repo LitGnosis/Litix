@@ -49,7 +49,7 @@ test("all eight bundle tiers use PayKings and notify owner only on first settled
  assert.equal(messages.length,2);
  const owner=messages.find(x=>x.data.to.length===2);
  assert.ok(owner);
- assert.match(owner.data.text,/MANUAL FULFILLMENT ONLY/);
+ assert.match(owner.data.text,/MANUAL BUNDLE FULFILLMENT/);
  assert.match(owner.data.text,/Likes: 25,000/);
  assert.match(owner.data.text,/Followers: 5,000/);
  assert.match(owner.data.text,/Payment status: settled/);
@@ -60,7 +60,7 @@ test("all eight bundle tiers use PayKings and notify owner only on first settled
   admin=read("app/api/bundles/admin/route.js");
  assert.match(checkout,/paykings\.transactiongateway\.com\/api\/transact\.php/);
  assert.match(checkout,/verifyNmiSettlement/);
- assert.match(checkout,/if\(settledRows\.length\)await sendBundleReceipt/);
+ assert.match(checkout,/if\(settledRows\.length\)\{[\s\S]*await sendBundleReceipt/);
  assert.match(cron,/payment_state='approved_pending_settlement' returning/);
  assert.match(admin,/payment_state='approved_pending_settlement' returning/);
  for(const x of [checkout,cron,admin])assert.doesNotMatch(x,/action:\s*["']add["']/);

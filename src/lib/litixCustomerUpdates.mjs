@@ -1,4 +1,6 @@
 import {createHash,randomUUID} from "node:crypto";
+import {multiPostMilestone} from "./litixMultiPostMilestones.mjs";
+import {publicServiceCardName} from "./serviceCardDisplay.mjs";
 
 // Outbox keys deduplicate supplier polls. Never include tracking tokens or card data.
 export async function queueCustomerDeliveryChange({sql,orderId,supplierOrderId,previous,latest,state,quantity}){
@@ -19,6 +21,21 @@ export async function queueCustomerDeliveryChange({sql,orderId,supplierOrderId,p
   "insert into public.litix_customer_delivery_updates(id,order_id,fingerprint,payload) select $2,$1,$3,$4::jsonb from public.litix_v2_orders where id=$1 and payment_state='paid' on conflict(order_id,fingerprint) do nothing returning id",
   [orderId,randomUUID(),fingerprint,JSON.stringify(payload)]);
  return inserted.length===1;
+}
+
+// One durable, idempotent email per material milestone across ALL child posts.
+// Always checks the paid parent in SQL; never calls Boostero add, refill or
+// cancellation. An uncertain quantity is not represented as zero delivered.
+export async function queueMultiPostDeliveryMilestone({sql,orderId,children}){
+ const milestone=multiPostMilestone(children);
+ if(!milestone||!/^ltx2_[a-f0-9-]{36}$/.test(String(orderId)))return false;
+ const fingerprint=createHash("sha256").update("multi|"+orderId+"|"+milestone.phase).digest("hex");
+ const payload={label:milestone.label,remaining:milestone.remaining,total:milestone.total,
+  updatedAt:new Date().toISOString()};
+ const rows=await sql.query(
+  "insert into public.litix_customer_delivery_updates(id,order_id,fingerprint,payload) select $2,$1,$3,$4::jsonb from public.litix_v2_orders where id=$1 and payment_state='paid' on conflict(order_id,fingerprint) do nothing returning id",
+  [orderId,randomUUID(),fingerprint,JSON.stringify(payload)]);
+ return rows.length===1;
 }
 
 // Claimed events survive a crashed cron invocation. Resend receives a stable
@@ -42,7 +59,7 @@ export async function sendCustomerDeliveryUpdates({sql,sendEmail,limit=12}){
    const message=[
     "Litix — Your delivery status has changed",
     "Litix Order: "+event.order_id,
-    "Service: "+String(o.service_name||"Litix service"),
+    "Service: "+publicServiceCardName({name:o.service_name||"Litix service"}),
     "Status: "+label,remaining,
     "Payment: Paid · USD $"+(Number(o.amount_cents)/100).toFixed(2),
     "Track your order: "+trackUrl,

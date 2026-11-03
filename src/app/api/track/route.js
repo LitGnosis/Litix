@@ -14,7 +14,9 @@ export async function GET(request){
     const payload=await r.json(),x=payload.order;
     return Response.json({order:{id:x.id,service:x.service,quantity:Number(x.quantity),
      amount:(Number(x.amountCents)/100).toFixed(2),payment:x.payment,fulfillment:x.fulfillment,
-     status:x.supplierStatus,remains:x.remains,checkedAt:x.lastChecked,
+     status:x.supplierStatus,remains:x.remains,
+     checkedAt:x.lastChecked||((Array.isArray(x.posts)?x.posts:[]).map(p=>p.checkedAt).filter(Boolean).sort().at(-1)||null),
+     posts:Array.isArray(x.posts)?x.posts:[],
      deliveryConfirmed:x.fulfillment==="COMPLETED",liveSupplierStatus:false,
      statusNote:"Latest recorded Litix delivery status. A submitted order is not yet a completed delivery."}},
      {headers:{"cache-control":"no-store","referrer-policy":"no-referrer"}});

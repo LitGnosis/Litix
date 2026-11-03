@@ -1,5 +1,6 @@
 import {neon} from "@neondatabase/serverless";
 import {GROWTH_BUNDLES,configuredWhatsApp,BUNDLE_INSTRUCTIONS} from "../../../lib/growthBundles.mjs";
+import {isBundleAutoEnabled} from "../../../lib/growthBundleRouting.mjs";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 export const bundleDBUrl=()=>process.env.LITIX_BUNDLES_DATABASE_URL||process.env.LITIX_AUTOLIKES_DATABASE_URL||process.env.LITIX_V2_DATABASE_URL;
@@ -33,12 +34,21 @@ export async function bundleBluevineReady(){
 export async function GET(){
  const ready=await bundleCheckoutReady();
  const bluevineReady=await bundleBluevineReady();
+ let autoFulfillmentEnabled=false;
+ if(ready&&isBundleAutoEnabled()){
+  try{
+   const sql=neon(bundleDBUrl());
+   const found=await sql.query("select to_regclass('public.litix_growth_bundle_auto_dispatch') as ledger");
+   autoFulfillmentEnabled=!!found?.[0]?.ledger;
+  }catch{autoFulfillmentEnabled=false}
+ }
  return Response.json({
   packages:GROWTH_BUNDLES,
   checkoutEnabled:ready,
   bluevineEnabled:bluevineReady,
   whatsappConfigured:Boolean(configuredWhatsApp()),
   manualFulfillment:true,
+  autoFulfillmentEnabled,
   instructions:BUNDLE_INSTRUCTIONS,
   publicKey:ready?(process.env.NEXT_PUBLIC_PAYKINGS_NMI_COLLECT_PUBLIC_KEY||process.env.PAYKINGS_NMI_COLLECT_PUBLIC_KEY):null
  },{headers:{"cache-control":"no-store"}});

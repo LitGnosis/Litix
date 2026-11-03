@@ -57,7 +57,7 @@ test("Checkout resolves TikTok Likes before collecting any payment; existing Ins
  const server=readFileSync(new URL("../lib/boosteroOrderHandler.mjs",import.meta.url),"utf8");
  const page=readFileSync(new URL("../app/page.jsx",import.meta.url),"utf8");
  assert.match(server,/resolveTikTokVideoLink/);
- assert.ok(server.indexOf("resolveTikTokVideoLink")<server.indexOf("idempotencyKey required"));
+ assert.ok(server.indexOf("resolveTikTokVideoLink")>=0&&server.indexOf("Idempotency key required")>server.indexOf("resolveTikTokVideoLink"));
  assert.match(page,/tiktokLinkVerification/);
  assert.match(page,/Verify TikTok video link/);
  assert.match(page,/TikTok video verified/);

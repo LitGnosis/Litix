@@ -8,7 +8,13 @@ const source=readFileSync(new URL("../app/api/bundles/checkout/route.js",import.
  .replace('import {bundleCheckoutReady} from "../route.js";',
  'const bundleCheckoutReady=async()=>true;')
  .replace('import {bundleDB,hashToken,response,sameOrigin,verifyNmiSettlement,sendBundleReceipt} from "../../../../lib/bundleOrders.mjs";',
- 'const bundleDB=()=>({query:globalThis.__bundleMockDB});const hashToken=()=>"mock-hash";const response=(v,status=200)=>Response.json(v,{status});const sameOrigin=()=>true;const verifyNmiSettlement=async input=>{globalThis.__bundleMockVerified.push(input);return {settled:true}};const sendBundleReceipt=async order=>{globalThis.__bundleMockReceipts.push(order);return true};');
+ 'const bundleDB=()=>({query:globalThis.__bundleMockDB});const hashToken=()=>"mock-hash";const response=(v,status=200)=>Response.json(v,{status});const sameOrigin=()=>true;const verifyNmiSettlement=async input=>{globalThis.__bundleMockVerified.push(input);return {settled:true}};const sendBundleReceipt=async order=>{globalThis.__bundleMockReceipts.push(order);return true};')
+ .replace('import {boosteroProduction} from "../../../../lib/boosteroReadOnly.mjs";',
+  'const boosteroProduction=async()=>{throw Error("No supplier call permitted in one-time manual bundle payment test")};')
+ .replace('import {quoteFixedBundle,isBundleAutoEnabled} from "../../../../lib/growthBundleRouting.mjs";',
+  'const quoteFixedBundle=()=>{throw Error("Auto bundle preflight must not run")};const isBundleAutoEnabled=()=>false;')
+ .replace('import {stagePaidBundlePlan,releaseSettledBundle,dispatchPaidBundleBatch} from "../../../../lib/growthBundleAutoDispatch.mjs";',
+  'const stagePaidBundlePlan=async()=>{throw Error("Auto staging must not run")};const releaseSettledBundle=async()=>{throw Error("Auto release must not run")};const dispatchPaidBundleBatch=async()=>{throw Error("Auto dispatch must not run")};');
 test("all eight fixed-price bundles record verified paid orders in mocked PayKings checkout without charging a card",async t=>{
  const oldFetch=globalThis.fetch,oldDB=globalThis.__bundleMockDB,oldLookup=globalThis.__bundleMockLookup;
  const keys=["NMI_SECURITY_KEY"];const originals=Object.fromEntries(keys.map(k=>[k,process.env[k]]));
