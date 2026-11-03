@@ -5,6 +5,7 @@ import {multiPostHealthSignal,regularOrderHealthSignal} from "../lib/guardianSig
 
 const source=readFileSync(new URL("../lib/guardianRuntime.mjs",import.meta.url),"utf8");
 const orderSource=readFileSync(new URL("../lib/boosteroOrderHandler.mjs",import.meta.url),"utf8");
+const fulfillmentSource=readFileSync(new URL("../lib/boosteroFulfillment.mjs",import.meta.url),"utf8");
 const checkoutSource=readFileSync(new URL("../app/api/checkout/v1/route.js",import.meta.url),"utf8");
 const pricingSource=readFileSync(new URL("../lib/litixRetail60.mjs",import.meta.url),"utf8");
 
@@ -29,7 +30,7 @@ test("payment and supplier protections stay unchanged",()=>{
  assert.match(checkoutSource,/Only available Litix services can be purchased/);
  assert.match(orderSource,/if\(Number\(data\?\.expectedAmountCents\)!==quote\.amountCents\)/);
  assert.match(orderSource,/idempotencyKey/);
- assert.match(orderSource,/supplier_order_id is null/);
+ assert.match(fulfillmentSource,/f\.supplier_order_id is null/);
  assert.match(pricingSource,/LITIX_RETAIL_MARKUP=1\.6/);
  assert.match(pricingSource,/LITIX_MINIMUM_CHARGE_CENTS=100/);
  assert.match(pricingSource,/LITIX_MIN_SOCIAL_LIKES_PER_1000_CENTS=600/);
