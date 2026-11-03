@@ -17,7 +17,7 @@ export default function ShopIndex(){
    <div className="kicker">LITIX · SHOP BY PLATFORM</div>
    <h1 id="shop-head">Choose a platform. Find your service.</h1>
    <p>Pick your social network and the result you want. Every category opens the actual Litix catalog, with prices and availability checked again at checkout.</p>
-   <a href="/services">Explore all Litix services</a>
+   <div style={{display:"flex",flexWrap:"wrap",gap:12,marginTop:15}}><a className="primary" href="/custom-likes" style={{display:"inline-flex",alignItems:"center",textDecoration:"none"}}>Custom Likes &amp; Followers</a><a href="/services">Explore all Litix services</a></div>
   </section>
   {platforms.map(platform=>{
    const links=SHOP_CATEGORIES.filter(x=>x.platform===platform);
