@@ -8,7 +8,7 @@ const read=path=>readFileSync(new URL("../"+path,import.meta.url),"utf8");
 
 test("Quick shop links only to real supported category routes",()=>{
   const source=read("components/LitixQuickShop.jsx");
-  assert.match(source,/Custom Likes — Choose Your Posts/);
+  assert.match(source,/Custom Likes &amp; Followers/);
   const urls=[...source.matchAll(/href: "(\/shop\/[^"]+)"/g)].map(x=>x[1]);
   assert.equal(urls.length,9);
   for(const url of urls)assert.ok(SHOP_CATEGORIES.some(c=>c.href===url),url);
