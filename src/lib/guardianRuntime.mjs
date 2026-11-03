@@ -74,14 +74,14 @@ export async function performGuardianChecks(sql,priorByComponent={},now=new Date
   },
   fulfillment:async()=>{
    const rows=await sql.query(
-    "select count(*) filter (where state='SUBMITTED' and supplier_order_id is not null and created_at<now()-interval '45 minutes' and (checked_at is null or checked_at<now()-interval '45 minutes'))::int as stale from public.litix_boostero_fulfillment");
+    "select count(*) filter (where state='SUBMITTED' and supplier_order_id is not null and created_at<now()-interval '45 minutes' and (checked_at is null or checked_at<now()-interval '45 minutes'))::int as stale, (select count(*)::int from public.litix_v2_orders where payment_state='paid' and fulfillment_state='manual_review') as unresolved from public.litix_boostero_fulfillment");
    return regularOrderHealthSignal(rows[0]);
   },
   multi_post:async()=>{
    if(process.env.LITIX_MULTIPOST_AUTO_FULFILL_ENABLED!=="true")
     return {kind:"not_launched",code:"MULTIPOST_NOT_ENABLED",detail:"Multi-post fulfillment intentionally disabled"};
    const rows=await sql.query(
-    "select count(*) filter (where state='SUBMITTED' and supplier_order_id is not null and created_at<now()-interval '40 minutes' and (checked_at is null or checked_at<now()-interval '40 minutes'))::int as stale, count(*) filter (where state in ('DISPATCHING','UNKNOWN_OUTCOME','MANUAL_REVIEW') and updated_at<now()-interval '20 minutes')::int as unresolved, count(*) filter (where state='QUEUED' and created_at<now()-interval '20 minutes')::int as queued from public.litix_boostero_multi_posts");
+    "select count(*) filter (where state='SUBMITTED' and supplier_order_id is not null and created_at<now()-interval '40 minutes' and (checked_at is null or checked_at<now()-interval '40 minutes'))::int as stale, count(*) filter (where state in ('UNKNOWN_OUTCOME','MANUAL_REVIEW') or (state='DISPATCHING' and updated_at<now()-interval '20 minutes'))::int as unresolved, count(*) filter (where state='QUEUED' and created_at<now()-interval '20 minutes')::int as queued from public.litix_boostero_multi_posts");
    return multiPostHealthSignal(rows[0]);
   },
   email_delivery:async()=>{
