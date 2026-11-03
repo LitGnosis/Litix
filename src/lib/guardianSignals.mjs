@@ -26,8 +26,13 @@ export function deliveryNotificationSignal(raw){
  return {ok:true,code:"EMAIL_OUTBOX_CLEAR",detail:"Customer and Guardian email outboxes have no overdue notices"};
 }
 export function regularOrderHealthSignal(raw){
- const stale=count(raw?.stale);
- if(stale===null)return {ok:false,code:"FULFILLMENT_HEALTH_INVALID",detail:"Order fulfillment freshness check unavailable"};
+ const stale=count(raw?.stale),unresolved=count(raw?.unresolved??0);
+ if(stale===null||unresolved===null)
+  return {ok:false,code:"FULFILLMENT_HEALTH_INVALID",detail:"Order fulfillment freshness check unavailable"};
+ // A recently-polled but undelivered paid order is NOT healthy. Never infer
+ // success from a fresh status timestamp or a gateway approval alone.
+ if(unresolved>0)
+  return {ok:false,code:"PAID_ORDERS_NEED_REVIEW",detail:unresolved+" paid Litix orders still require supplier reconciliation"};
  return stale>0?{ok:false,code:"ORDER_STATUS_STALE",detail:stale+" single-order supplier statuses are overdue"}
   :{ok:true,code:"FULFILLMENT_LEDGER",detail:"Confirmed supplier single-order status records are current"};
 }
