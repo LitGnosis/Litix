@@ -10,6 +10,8 @@ test("customer privacy URL is rewritten to a published independent legal page",a
  assert.match(privacy,/Privacy Policy/);
  assert.match(privacy,/Card details are collected by our payment provider/);
  assert.match(privacy,/Do not send passwords/);
+ const edge=readFileSync(new URL("../middleware.js",import.meta.url),"utf8");
+ assert.match(edge,/NextResponse\.redirect\(new URL\("\/legal\/privacy",request\.url\),307\)/);
 });
 test("customer refund-policy bookmark resolves to current published refunds route",async()=>{
  const redirects=await config.redirects();
