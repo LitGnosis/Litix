@@ -1,5 +1,6 @@
 import {notFound} from "next/navigation";
 import LitixDirectory from "../../../../components/LitixDirectory";
+import LitixCategoryQuickOrder from "../../../../components/LitixCategoryQuickOrder";
 import {SHOP_CATEGORIES,shopCategory} from "../../../../lib/litixShopRoutes.mjs";
 
 export const dynamicParams=false;
@@ -42,6 +43,7 @@ export default async function ShopCategoryPage({params}){
      style={{padding:"8px 12px",border:"1px solid currentColor",borderRadius:12}}>{item.kindLabel}</a>)}
    </div>
   </section>
+  <LitixCategoryQuickOrder platform={selected.platform} kind={selected.kind}/>
   <LitixDirectory standalone initialPlatform={selected.platform} initialKind={selected.kind}/>
  </main>;
 }
