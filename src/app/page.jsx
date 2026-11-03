@@ -74,7 +74,48 @@ export default function Home(){
    selected?.kind==="likes" &&
    ["instagram","tiktok"].includes(String(selected?.platform||"").toLowerCase());
   setMultiPostEnabled(customLikesIntent);
-  setMultiPosts(customLikesIntent?[newTikTokPost({quantity:Number(selected?.min)||1})]:[]);
+  if(!customLikesIntent){
+   setMultiPosts([]);
+   return;
+  }
+  // Preserve the customer-selected 1–5 post quantities from the custom price
+  // calculator. Each selected post is independently re-quoted server-side.
+  const count=Number(params.get("posts")),raw=(params.get("quantities")||"").split(",");
+  const qs=raw.map(Number),min=Number(selected?.min),max=Number(selected?.max),
+   step=Number(selected?.unitStep||1);
+  const valid=count>=1&&count<=5&&Number.isSafeInteger(count)&&raw.length===count&&
+   qs.every(q=>Number.isSafeInteger(q)&&q>=min&&q<=max&&
+     Number.isSafeInteger(step)&&step>0&&(q-min)%step===0&&
+     Math.ceil(Number(selected?.per1000||0)*q/10-1e-8)>=100)&&
+   qs.reduce((sum,q)=>sum+q,0)<=1000000;
+  if(!valid){
+   setMultiPosts([newTikTokPost({quantity:Number(selected?.min)||1})]);
+   return;
+  }
+  let prior=null;
+  if(params.get("customQuote")==="1"){
+   try{
+    const rawChoice=sessionStorage.getItem("litix:custom-quote-v1");
+    sessionStorage.removeItem("litix:custom-quote-v1");
+    const saved=JSON.parse(rawChoice||"null");
+    if(saved?.version===1&&saved?.serviceId===requested&&
+       Number.isFinite(Number(saved.savedAt))&&
+       Date.now()-Number(saved.savedAt)<600000&&Date.now()>=Number(saved.savedAt)&&
+       Array.isArray(saved.posts)&&saved.posts.length===count)
+      prior=saved.posts;
+   }catch{/* The price and empty post rows still transfer without saved links. */}
+  }
+  setMultiPosts(qs.map((quantity,i)=>{
+   const candidate=prior?.[i];
+   const matching=Number(candidate?.quantity)===quantity;
+   const url=matching?String(candidate?.link||"").trim().slice(0,1100):"";
+   const checked=matching?String(candidate?.verifiedUrl||"").trim().slice(0,1100):"";
+   const domain=String(selected?.platform||"").toLowerCase()==="tiktok"?
+    /^https:\/\/(?:www\.)?tiktok\.com\/@[^/]+\/video\/[0-9]{10,25}/:
+    /^https:\/\/www\.instagram\.com\/(?:p|reel)\/[A-Za-z0-9_-]+/;
+   const verifiedUrl=domain.test(checked)&&url?checked:"";
+   return newTikTokPost({link:url,quantity,verifiedUrl});
+  }));
  },[selected?.id]);
  const [tiktokLinkVerification,setTikTokLinkVerification]=useState({input:"",serviceId:"",status:"idle",url:"",error:""});
  useEffect(()=>{
