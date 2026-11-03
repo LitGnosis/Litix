@@ -60,7 +60,7 @@ export async function performGuardianChecks(sql,priorByComponent={},now=new Date
   instagram:()=>catalog("platform=Instagram&page=1"),
   paykings_readiness:async()=>{const r=await get("/api/config");const d=await r.json();return {ok:d.ready===true&&!!d.publicKey,code:d.ready&&d.publicKey?"PAYKINGS_CONFIG_READY":"PAYKINGS_CONFIG_UNAVAILABLE",detail:"Readiness config only; no charge or merchant authorization attempted"}},
   bluevine_readiness:async()=>{const r=await get("/api/bundles");const d=await r.json();return {ok:d.bluevineEnabled===true&&Array.isArray(d.packages)&&d.packages.length===8,code:d.bluevineEnabled?"BLUEVINE_CONFIG_READY":"BLUEVINE_CONFIG_UNAVAILABLE",detail:"Fixed-link configuration only; never interpreted as a payment"}},
-  autolikes:async()=>{const r=await get("/autolikes");const t=await r.text();return t.includes("COMING SOON")?{kind:"not_launched",code:"AUTOLIKES_COMING_SOON",detail:"AutoLikes intentionally not launched"}:{ok:t.includes("AUTOLIKES")||t.includes("AutoLikes"),code:"AUTOLIKES_PAGE",detail:"AutoLikes page responsive"}},
+  autolikes:async()=>{const r=await get("/autolikes");const t=await r.text();return t.includes("COMING SOON")?{kind:"not_launched",code:"AUTOLIKES_COMING_SOON",detail:"AutoLikes intentionally not launched"}:{ok:t.includes("AUTOLIKES")||t.includes("AutoLikes")||t.includes("Automatic Likes for Your Next Posts"),code:"AUTOLIKES_PAGE",detail:"AutoLikes page responsive"}},
   subscriptions:async()=>{
    const rows=await sql.query("select to_regclass('public.litix_recurring_subscriptions')::text as existing");
    if(!rows[0]?.existing)return {kind:"not_launched",code:"SUBSCRIPTIONS_NOT_PROVISIONED",detail:"Subscription database table is not provisioned"};
