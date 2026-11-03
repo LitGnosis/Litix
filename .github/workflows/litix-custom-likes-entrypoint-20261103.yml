@@ -1,0 +1,19 @@
+name: Litix Custom Likes entrypoint — no charge regression
+on:
+  push:
+    branches:
+      - fix/litix-custom-likes-entrypoint-20261103
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  custom-likes-no-charge:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - name: Checkout pinned source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Test approved Likes routes and guarded payment entrypoint
+        run: node --test src/tests/custom-likes-entrypoint-20261103.test.mjs
