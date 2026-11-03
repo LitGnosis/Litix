@@ -24,7 +24,7 @@ export default function sitemap() {
     {url:base+"/platform",changeFrequency:"monthly",priority:0.5},
     {url:base+"/acceptable-use",changeFrequency:"yearly",priority:0.3},
     {url:base+"/resources/visibility-acceleration",changeFrequency:"monthly",priority:0.4},
-    {url:base+"/privacy",changeFrequency:"yearly",priority:0.3},
+    {url:base+"/legal/privacy",changeFrequency:"yearly",priority:0.3},
     {url:base+"/terms",changeFrequency:"yearly",priority:0.3},
     {url:base+"/refunds",changeFrequency:"yearly",priority:0.3},
   ];
