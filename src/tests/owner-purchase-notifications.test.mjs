@@ -49,7 +49,7 @@ test("all eight bundle tiers use PayKings and notify owner only on first settled
  assert.equal(messages.length,2);
  const owner=messages.find(x=>x.data.to.length===2);
  assert.ok(owner);
- assert.match(owner.data.text,/MANUAL FULFILLMENT ONLY/);
+ assert.match(owner.data.text,/MANUAL BUNDLE FULFILLMENT/);
  assert.match(owner.data.text,/Likes: 25,000/);
  assert.match(owner.data.text,/Followers: 5,000/);
  assert.match(owner.data.text,/Payment status: settled/);
