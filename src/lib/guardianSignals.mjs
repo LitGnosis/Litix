@@ -40,7 +40,7 @@ export function regularOrderHealthSignal(raw){
   :{ok:true,code:"FULFILLMENT_LEDGER",detail:"Paid order ledger has no overdue or manual-review orders"};
 }
 export function paymentOutboxHealthSignal(raw){
- const pending=count(raw?.pending);
+ const pending=raw?.pending===null||raw?.pending===undefined?null:count(raw.pending);
  if(pending===null)return {ok:false,code:"PAYMENT_OUTBOX_INVALID",detail:"PayKings outbox health query unavailable"};
  if(pending>0)
   return {ok:false,code:"PAYMENT_OUTBOX_UNRECONCILED",
