@@ -96,6 +96,7 @@ export default function LitixDirectory({standalone=false,initialPlatform="",init
     <h2>All Litix Services</h2>
     <p>Find followers, likes, views, engagement, streams and more. Browse across every supported social platform, all in your Litix blue storefront.</p>
    </div>
+   <a className="litix-directory-feature-link" href="/custom-likes">Custom Likes · Choose Your Posts</a>
    <a className="litix-directory-feature-link" href="/bundles">Explore Growth Bundles</a>
   </div>
   <div className="litix-directory-stats">
@@ -171,7 +172,7 @@ export default function LitixDirectory({standalone=false,initialPlatform="",init
         {Number.isInteger(s.min)&&Number.isInteger(s.max)?s.min.toLocaleString()+"–"+s.max.toLocaleString()+" units":"Quantity confirmed on request"}
         <span>Litix verified service</span>
        </div>
-       <a className="litix-directory-buy" href={"/?service="+encodeURIComponent(s.id)+"#checkout"}>{["litix_4751","litix_5251"].includes(String(s.id))?"Choose Your Posts & Pay":"Review & pay with PayKings"}</a>
+       <a className="litix-directory-buy" href={"/?service="+encodeURIComponent(s.id)+(["litix_4751","litix_5251"].includes(String(s.id))?"&mode=multi":"")+"#checkout"}>{["litix_4751","litix_5251"].includes(String(s.id))?"Choose Your Posts":"Review & pay with PayKings"}</a>
       </article>
      })}
     </div>
