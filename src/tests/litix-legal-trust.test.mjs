@@ -10,6 +10,11 @@ test("customer privacy URL is rewritten to a published independent legal page",a
  assert.match(privacy,/Privacy Policy/);
  assert.match(privacy,/Card details are collected by our payment provider/);
  assert.match(privacy,/Do not send passwords/);
+ const homepage=readFileSync(new URL("../app/page.jsx",import.meta.url),"utf8");
+ const sitemap=readFileSync(new URL("../app/sitemap.js",import.meta.url),"utf8");
+ assert.match(homepage,/href="\/legal\/privacy">Privacy/);
+ assert.match(sitemap,/\/legal\/privacy/);
+ assert.doesNotMatch(homepage,/href="\/privacy"/);
  const edge=readFileSync(new URL("../middleware.js",import.meta.url),"utf8");
  assert.match(edge,/NextResponse\.redirect\(new URL\("\/legal\/privacy",request\.url\),307\)/);
 });
