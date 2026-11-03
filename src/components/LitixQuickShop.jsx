@@ -1,33 +1,43 @@
-// Discovery only. Routes reuse the existing live catalog and checkout gates.
-// Do not show invented delivery times, supplier guarantees or stale price quotes.
-const categories = [
-  { label: "Instagram Followers", href: "/shop/instagram/followers", group: "Instagram" },
-  { label: "Instagram Likes", href: "/shop/instagram/likes", group: "Instagram" },
-  { label: "Instagram Views", href: "/shop/instagram/views", group: "Instagram" },
-  { label: "TikTok Followers", href: "/shop/tiktok/followers", group: "TikTok" },
-  { label: "TikTok Likes", href: "/shop/tiktok/likes", group: "TikTok" },
-  { label: "TikTok Views", href: "/shop/tiktok/views", group: "TikTok" },
-  { label: "YouTube Subscribers", href: "/shop/youtube/subscribers", group: "YouTube" },
-  { label: "YouTube Likes & Views", href: "/shop/youtube/likes", group: "YouTube" },
-  { label: "X Likes & Retweets", href: "/shop/x/likes", group: "X" }
-];
+"use client";
+import {useState} from "react";
 
-export default function LitixQuickShop() {
-  return <section className="panel" aria-labelledby="litix-quick-shop-title">
-    <div className="kicker">LITIX · QUICK SHOP</div>
-    <h1 id="litix-quick-shop-title">Choose your platform. Pick your service.</h1>
-    <p>Find the right package in seconds. See prices and quantity limits before payment, with final availability checked at checkout.</p>
-    <nav aria-label="Quick shop social media services" style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,220px),1fr))",gap:12,margin:"18px 0"}}>
-      {categories.map(item=><a key={item.href} className="alt" href={item.href}
-        style={{display:"flex",justifyContent:"space-between",alignItems:"center",minHeight:52,padding:"12px 14px",textDecoration:"none",borderRadius:12}}>
-        <span>{item.label}</span><span aria-hidden="true">›</span>
-      </a>)}
-    </nav>
-    <div style={{display:"flex",flexWrap:"wrap",gap:12}}>
-      <a className="primary" href="/custom-likes" style={{display:"inline-flex",alignItems:"center",padding:"12px 18px",textDecoration:"none"}}>Custom Likes — Choose Your Posts</a>
-      <a className="alt" href="/services" style={{display:"inline-flex",alignItems:"center",padding:"12px 18px",textDecoration:"none"}}>Browse Every Litix Service</a>
-      <a className="alt" href="/track" style={{display:"inline-flex",alignItems:"center",padding:"12px 18px",textDecoration:"none"}}>Track an Existing Order</a>
-    </div>
-    <p className="small muted" style={{marginTop:12}}>No password required. Supported services depend on live supplier verification; no purchase is made by browsing.</p>
-  </section>;
+// Navigation only. We never manufacture prices, timing or supplier guarantees.
+const categories = [
+  { label: "Instagram Followers", href: "/shop/instagram/followers", group: "Instagram",kind:"Followers" },
+  { label: "Instagram Likes", href: "/shop/instagram/likes", group: "Instagram",kind:"Likes" },
+  { label: "Instagram Views", href: "/shop/instagram/views", group: "Instagram",kind:"Views" },
+  { label: "TikTok Followers", href: "/shop/tiktok/followers", group: "TikTok",kind:"Followers" },
+  { label: "TikTok Likes", href: "/shop/tiktok/likes", group: "TikTok",kind:"Likes" },
+  { label: "TikTok Views", href: "/shop/tiktok/views", group: "TikTok",kind:"Views" },
+  { label: "YouTube Subscribers", href: "/shop/youtube/subscribers", group: "YouTube",kind:"Subscribers" },
+  { label: "YouTube Likes & Views", href: "/shop/youtube/likes", group: "YouTube",kind:"Likes & Views" },
+  { label: "X Likes & Retweets", href: "/shop/x/likes", group: "X",kind:"Likes & Retweets" }
+];
+const platforms=["Instagram","TikTok","YouTube","X"];
+export default function LitixQuickShop(){
+ const [platform,setPlatform]=useState("Instagram");
+ const choices=categories.filter(item=>item.group===platform);
+ return <section className="panel litix-hero-shop" aria-labelledby="litix-quick-shop-title">
+  <div className="litix-hero-topline"><span className="kicker">LITIX · INNOVATION, IGNITED.</span><span className="litix-live-label">BLUE METALLIC EXPERIENCE</span></div>
+  <h1 id="litix-quick-shop-title">Choose your platform.<br/>Get to checkout faster.</h1>
+  <p className="litix-hero-subtitle">Followers, Likes, Views and more—find a verified Litix service, customize your quantity, and review the price before you pay.</p>
+  <div className="litix-hero-steps" aria-label="Three easy steps">
+   <span><b>01</b> Pick a service</span><span><b>02</b> Paste a public link</span><span><b>03</b> Check out securely</span>
+  </div>
+  <div className="litix-platform-tabs" role="group" aria-label="Select a social platform">
+   {platforms.map(value=><button key={value} type="button" className={platform===value?"selected":""}
+    aria-pressed={platform===value} onClick={()=>setPlatform(value)}>{value}</button>)}
+  </div>
+  <nav className="litix-platform-choices" aria-label={platform+" shopping categories"}>
+   {choices.map(item=><a key={item.href} href={item.href} className="litix-choice-link">
+    <span>{item.kind}</span><span aria-hidden="true">›</span></a>)}
+  </nav>
+  <div className="litix-shop-actions">
+   <a className="litix-metal-cta" href="/custom-likes">Custom Likes &amp; Followers <span aria-hidden="true">›</span></a>
+   <a className="litix-shop-secondary" href="/bundles">Growth Bundles</a>
+   <a className="litix-shop-secondary" href="/services">Browse All Litix Services</a>
+   <a className="litix-shop-secondary" href="/track">Track an Order</a>
+  </div>
+  <p className="litix-hero-footnote">Public links only · No social password required · Every order receives an independent price and availability check before payment.</p>
+ </section>;
 }
