@@ -20,10 +20,11 @@ test("custom Likes and Followers offers four known approved service paths and ke
  assert.match(custom,/kind==="likes"\?"&mode=multi":""/);
  assert.match(custom,/encodeURIComponent\(product\.id\)/);
  assert.match(custom,/\/\?service=/);
- assert.match(custom,/href=\{customProductLink\(selected\)\}/);
+ assert.match(custom,/href=\{checkoutHref\}/);
  assert.match(custom,/aria-pressed=\{kind===value\}/);
  assert.match(custom,/aria-pressed=\{platform===value\}/);
- assert.doesNotMatch(custom,/fetch\(|paymentToken|startPaymentRequest|supplier_order_id/);
+ assert.match(custom,/fetch\("\/api\/catalog\/checkout-choices\?/);
+ assert.doesNotMatch(custom,/paymentToken|startPaymentRequest|supplier_order_id|boosteroProduction\(/);
 });
 
 test("bundle menu displays one selected tier without changing any package, amounts or payment URLs",()=>{
