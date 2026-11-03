@@ -62,10 +62,18 @@ export default function Home(){
    (Number(p.quantity)-Number(selected?.supplierMin??selected?.min))%Number(selected?.unitStep||1)===0&&
    Math.ceil(Number(selected?.per1000||0)*Number(p.quantity)/10-1e-8)>=100
  )&&new Set(multiPosts.map(p=>p.verifiedUrl)).size===multiPosts.length;
- // Default to an easy single-post URL. Choose multiple posts is opt-in.
+ // An approved Custom Likes deep link opens Choose Your Posts directly.
+ // No supplier request or payment is created by navigating here.
  useEffect(()=>{
-  setMultiPostEnabled(false);
-  setMultiPosts([]);
+  const params=new URLSearchParams(window.location.search);
+  const requested=(params.get("service")||"").replace(/^boostero_/,"litix_");
+  const customLikesIntent=params.get("mode")==="multi" &&
+   String(selected?.id||"")===requested &&
+   ["litix_4751","litix_5251"].includes(requested) &&
+   selected?.kind==="likes" &&
+   ["instagram","tiktok"].includes(String(selected?.platform||"").toLowerCase());
+  setMultiPostEnabled(customLikesIntent);
+  setMultiPosts(customLikesIntent?[newTikTokPost({quantity:Number(selected?.min)||1})]:[]);
  },[selected?.id]);
  const [tiktokLinkVerification,setTikTokLinkVerification]=useState({input:"",serviceId:"",status:"idle",url:"",error:""});
  useEffect(()=>{
@@ -122,6 +130,9 @@ export default function Home(){
     const requested=id.replace(/^boostero_/,"litix_");
      const chosen=(body.items||[]).find(s=>s.id===requested&&s.purchasable===true);
     if(chosen){setSelected(chosen);setQty(chosen.min);setNotice("");}
+    else if(new URLSearchParams(location.search).get("mode")==="multi"){
+     setNotice("This Custom Likes service is temporarily unavailable. No payment has been attempted. Try another service or contact Litix support.");
+    }
    }).catch(()=>{});
   return()=>controller.abort();
  },[]);
@@ -345,7 +356,16 @@ export default function Home(){
  const submit=e=>{e.preventDefault();if(!detailsReady||!cardReady||!selected||busy)return;if(!Number.isSafeInteger(orderQuantity)||orderQuantity<selected.min||(multiMode?orderQuantity>1000000:orderQuantity>selected.max)){setNotice("Enter a whole-number quantity within this service’s limits.");return}if(!selected.purchasable){setNotice("This service requires additional supplier fields and cannot be checked out here.");return}setBusy(true);setNotice("");try{getCollectJS().startPaymentRequest()}catch{setBusy(false);setNotice("Complete your secure card fields before paying")}};
  const track=async value=>{try{const u=new URL(value,location.origin),id=u.searchParams.get("track"),token=u.searchParams.get("token");if(!id||!token)throw Error("Paste the full private tracking URL");const r=await fetch("/api/track?id="+encodeURIComponent(id)+"&token="+encodeURIComponent(token)),v=await r.json();if(!r.ok)throw Error(v.error||"Tracking failed");setTracked(v.order)}catch(e){setNotice(e.message)}};
  useEffect(()=>{if(location.search.includes("track=")){setPrivateUrl(location.href);track(location.href)}},[]);
- return <main className="wrap"><nav className="nav litix-home-nav"><a className="brand" href="/" aria-label="Litix home"><img src="/assets/brand/litix-logo.webp" alt="Litix — Innovation, Ignited." className="litix-new-logo" /></a><div><a href="/shop">Shop by Platform</a><a href="/services">All Litix Services</a><a href="/custom-orders">Custom Orders</a><a href="#checkout">Checkout</a><a href="/autolikes">AutoLikes</a><a href="/track">Track Order</a><a href="#growth-studio">Growth OS</a></div></nav>
+ return <main className="wrap"><nav className="nav litix-home-nav"><a className="brand" href="/" aria-label="Litix home"><img src="/assets/brand/litix-logo.webp" alt="Litix — Innovation, Ignited." className="litix-new-logo" /></a><div><a href="/shop">Shop by Platform</a><a href="/services">All Litix Services</a><a href="/custom-orders">Custom Orders</a><a href="/custom-likes">Custom Likes</a><a href="#checkout">Checkout</a><a href="/autolikes">AutoLikes</a><a href="/track">Track Order</a><a href="#growth-studio">Growth OS</a></div></nav>
+ <section className="panel" aria-label="Litix Custom Likes" style={{marginTop:18}}>
+  <div className="kicker">CUSTOM LIKES · CHOOSE YOUR POSTS</div>
+  <h2 style={{marginBottom:8}}>Instagram & TikTok Custom Likes</h2>
+  <p>Choose up to five posts, set the likes for each, and review one secure checkout. Public gallery and direct-link options are available.</p>
+  <div style={{display:"flex",flexWrap:"wrap",gap:12}}>
+   <a className="primary" style={{display:"inline-flex",alignItems:"center",padding:"12px 20px",textDecoration:"none"}} href="/custom-likes">Choose Your Posts</a>
+   <a className="alt" style={{display:"inline-flex",alignItems:"center",padding:"12px 20px",textDecoration:"none"}} href="/custom-orders">All Custom Orders</a>
+  </div>
+ </section>
  <GrowthBundles/>
  <section className="panel" aria-label="Litix customer support"><h2>Litix Order Support</h2><p>Track your paid order or contact support if you need assistance. Never share card details or social media passwords.</p><div style={{display:"flex",gap:16,flexWrap:"wrap"}}><a href="/track">Track your order</a><a href="/shop">Shop by platform</a><a href={"https://wa.me/"+(whatsappNumber.length>=8?whatsappNumber:"19452106315")+"?text="+encodeURIComponent("Hello Litix, I need help with a Litix order.")} target="_blank" rel="noopener noreferrer">WhatsApp Support</a><a href="mailto:Litixsocial@gmail.com?subject=Litix%20Order%20Support">Email Litix Support</a></div></section>
  <div className="cols"><section id="services" className="panel litix-autolikes-feature" aria-labelledby="litix-autolikes-home-title">
