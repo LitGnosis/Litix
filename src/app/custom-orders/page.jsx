@@ -16,6 +16,7 @@ export default function CustomOrdersPage() {
           <a href="/">Home</a>
           <a href="/shop">Shop by Platform</a>
           <a href="/services">All Litix Services</a>
+        <a href="/custom-likes">Custom Likes</a>
           <a href="/#checkout">PayKings Checkout</a>
           <a href="/track">Track Order</a>
         </div>
@@ -23,6 +24,7 @@ export default function CustomOrdersPage() {
       <section className="panel" aria-labelledby="custom-orders-title">
         <h1 id="custom-orders-title">Custom Orders</h1>
         <p>Select Instagram, TikTok, YouTube, X or another available platform, then choose your service and quantity. Review the details before secure checkout.</p>
+        <p><a className="primary" style={{display:"inline-flex",padding:"12px 20px",textDecoration:"none"}} href="/custom-likes">Custom Likes — Choose Your Instagram or TikTok Posts</a></p>
       </section>
       <LitixDirectory standalone />
     </main>
