@@ -2,20 +2,21 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 import {componentKeys} from "../lib/guardianCore.mjs";
-import {GUARDIAN_COHORTS,guardianCohort} from "../app/api/guardian/cron/route.js";
+import {GUARDIAN_COHORTS,CRITICAL_GUARDIAN_CHECKS,guardianCohort} from "../app/api/guardian/cron/route.js";
 
 const file=path=>readFileSync(new URL("../"+path,import.meta.url),"utf8");
 test("every Guardian diagnostic is scheduled exactly once per 15-minute rotation",()=>{
  assert.equal(GUARDIAN_COHORTS.length,3);
  const flattened=GUARDIAN_COHORTS.flat();
- assert.equal(new Set(flattened).size,componentKeys.length);
- assert.deepEqual([...flattened].sort(),[...componentKeys].sort());
+ assert.equal(new Set(flattened).size,componentKeys.length-CRITICAL_GUARDIAN_CHECKS.length);
+ assert.deepEqual([...CRITICAL_GUARDIAN_CHECKS,...flattened].sort(),[...componentKeys].sort());
+ assert.deepEqual(CRITICAL_GUARDIAN_CHECKS,["website","paykings_readiness","database"]);
  assert.deepEqual([0,5,10,15,20,25].map(m=>guardianCohort(new Date("2026-11-02T12:"+String(m).padStart(2,"0")+":00Z"))),[0,1,2,0,1,2]);
 });
 test("Guardian does not perform duplicate supplier order status polling",()=>{
  const guardian=file("app/api/guardian/cron/route.js");
  assert.doesNotMatch(guardian,/syncBoosteroMultiStatuses|resumeBoosteroMultiQueue|dispatchBoosteroPost/);
- assert.match(guardian,/runGuardianCycle\(\{selectedComponents:/);
+ assert.match(guardian,/selectedComponents:\[\.\.\.CRITICAL_GUARDIAN_CHECKS,\.\.\.GUARDIAN_COHORTS\[cohort\]\]/);
  assert.match(file("lib/guardianRuntime.mjs"),/selectedComponents=null/);
  assert.match(file("lib/guardianRuntime.mjs"),/order by created_at limit 3 for update skip locked/);
 });
