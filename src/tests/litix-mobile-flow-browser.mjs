@@ -39,12 +39,13 @@ try{
   await hub.getByRole("heading",{name:"TikTok Custom Followers"}).waitFor();
   await hub.locator("#litix-custom-followers-quantity").waitFor();
   await hub.locator("#litix-custom-followers-quantity").fill("2000");
-  assert.match(await hub.locator(".litix-custom-estimate").innerText(),/\$29\.98/);
+  await hub.locator(".litix-custom-estimate").getByText("$29.98").waitFor({timeout:6000});
   assert.match(await hub.locator(".litix-metal-cta").getAttribute("href"),/service=litix_5101&quantity=2000#checkout/);
   await hub.getByRole("button",{name:"Likes",exact:true}).click();
   await hub.getByRole("heading",{name:"TikTok Custom Likes"}).waitFor();
   await hub.locator(".litix-custom-calculator").waitFor();
-  assert.match(await hub.locator(".litix-custom-estimate").innerText(),/\$1\.40/);
+  await hub.getByRole("button",{name:"Choose your posts (up to 5)"}).waitFor();
+  await hub.locator(".litix-custom-estimate").getByText("$1.40").waitFor({timeout:6000});
   assert.match(await hub.locator(".litix-metal-cta").getAttribute("href"),/service=litix_5251&mode=multi#checkout/);
   if(mobile){
    const layout=await page.evaluate(()=>{
