@@ -61,5 +61,5 @@ test("all payment and supplier operations are still solely server-side",()=>{
 test("Custom Likes multi-post option remains discoverable",()=>{
  assert.match(component,/kind==="likes"/);
  assert.match(component,/href="\/custom-likes"/);
- assert.match(read("app/custom-likes/page.jsx"),/Choose Your Posts/);
+ assert.match(read("components/LitixCustomHub.jsx"),/Choose Instagram Posts/);
 });
