@@ -19,7 +19,7 @@ test("every published category route renders quick order before full directory",
 
 test("only live-validated purchasable service choices can proceed",()=>{
  assert.match(component,/purchasable===true/);
- assert.match(component,/^litix_/);
+ assert.ok(component.includes("^litix_"));
  assert.match(component,/ready:"true"/);
  assert.match(component,/platform,kind/);
  assert.match(component,/!response\.ok/);
