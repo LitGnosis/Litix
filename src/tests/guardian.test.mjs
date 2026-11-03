@@ -104,3 +104,9 @@ test("scheduled monitoring is additive and independent of existing Vercel crons"
  assert.match(runtime,/idempotency-key/);
  assert.doesNotMatch(runtime,/action:"add"|type:"sale"|security_key/);
 });
+
+test("Guardian recognizes the live Automatic Likes landing-page text",()=>{
+ const runtime=file("lib/guardianRuntime.mjs");
+ assert.match(runtime,/t\.includes\("Automatic Likes for Your Next Posts"\)/);
+ assert.match(runtime,/AUTOLIKES_PAGE/);
+});
