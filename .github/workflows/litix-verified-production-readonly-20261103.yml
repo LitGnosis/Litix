@@ -1,0 +1,29 @@
+name: Litix production verified — safe no-charge validation
+on:
+  push:
+    branches: [fix/litix-verified-fulfillment-health-20261103]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  paid-review-monitoring:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - name: Checkout reviewed source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Test payment guards, unresolved supplier statuses and Guardian false recovery
+        run: node --test src/tests/guardian-paid-order-health-20261103.test.mjs src/tests/guardian-signals.test.mjs src/tests/litix-category-quick-order-20261103.test.mjs src/tests/litix-reliability-readonly-20261103.test.mjs
+  live-readonly-smoke:
+    needs: paid-review-monitoring
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout reviewed source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Verify live pages, public payment readiness and safe checkout rejection
+        run: node scripts/litix-production-no-charge-smoke.mjs
