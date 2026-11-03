@@ -1,5 +1,6 @@
 "use client";
 import {useEffect,useState} from "react";
+import LitixCustomPriceCalculator from "./LitixCustomPriceCalculator";
 
 // IDs are approved in the Litix supplier allowlist. Actual checkout verifies
 // real-time eligibility, quantity and pricing before charging a customer.
@@ -62,7 +63,7 @@ export default function LitixCustomHub(){
      <h2>{selected.title}</h2>
      <p>{selected.blurb}</p>
      <p className="litix-custom-facts">{selected.detail}</p>
-     <a className="litix-metal-cta" href={customProductLink(selected)}>{selected.button} <span aria-hidden="true">›</span></a>
+     <LitixCustomPriceCalculator key={selected.id} product={selected}/>
      <p className="litix-custom-fine">Final USD pricing and supplier availability are checked before payment. No order is placed by selecting a service.</p>
    </article>
    <div className="litix-custom-support-links">
