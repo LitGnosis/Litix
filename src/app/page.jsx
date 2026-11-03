@@ -11,6 +11,7 @@ import {SERVICE_NAV_GROUPS,allowedServiceFilter} from "../lib/serviceNavigation.
 import {publicServiceCardName,litixCustomerServiceName} from "../lib/serviceCardDisplay.mjs";
 import {inspectTikTokVideoLink} from "../lib/tiktokVideoLinks.mjs";
 import {newTikTokPost} from "../components/TikTokMultiPostChooser";
+import {readCustomDraft,CUSTOM_DRAFT_PREFIX} from "../lib/customQuote.mjs";
 import SocialMultiPostChooser from "../components/SocialMultiPostChooser";
 import LitixQuickShop from "../components/LitixQuickShop";
 const money=n=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD",currencyDisplay:"code"}).format(n/100);
@@ -74,7 +75,18 @@ export default function Home(){
    selected?.kind==="likes" &&
    ["instagram","tiktok"].includes(String(selected?.platform||"").toLowerCase());
   setMultiPostEnabled(customLikesIntent);
-  setMultiPosts(customLikesIntent?[newTikTokPost({quantity:Number(selected?.min)||1})]:[]);
+  let restored=null;
+  if(customLikesIntent&&/^[0-9a-f-]{36}$/i.test(params.get("draft")||"")){
+   try{
+    const saved=JSON.parse(sessionStorage.getItem(CUSTOM_DRAFT_PREFIX+params.get("draft"))||"null");
+    restored=readCustomDraft(saved,selected);
+   }catch{restored=null}
+  }
+  // This is untrusted preview state; existing post verification and the
+  // server-side supplier quote still validate every link and quantity.
+  setMultiPosts(customLikesIntent?
+   restored?.length?restored.map(p=>newTikTokPost({link:p.link,quantity:p.quantity,verifiedUrl:p.verifiedUrl})):
+   [newTikTokPost({quantity:Number(selected?.min)||1})]:[]);
  },[selected?.id]);
  const [tiktokLinkVerification,setTikTokLinkVerification]=useState({input:"",serviceId:"",status:"idle",url:"",error:""});
  useEffect(()=>{
