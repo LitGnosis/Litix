@@ -1,0 +1,19 @@
+name: Litix frictionless shopping — no-charge regression
+on:
+  push:
+    branches:
+      - fix/litix-frictionless-quickshop-20261103
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - name: Checkout reviewed changes
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Check quick shop, link fallback, and supplier safety
+        run: node --test src/tests/litix-frictionless-shop-20261103.test.mjs
