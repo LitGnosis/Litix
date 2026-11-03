@@ -15,7 +15,8 @@ try{
   page.on("pageerror",error=>errors.push(error.message));
   await page.route("**/api/**",route=>{
    const p=new URL(route.request().url()).pathname;
-   if(route.request().method()!=="GET"||p.includes("checkout"))checkoutRequests++;
+   // Read-only GET /api/catalog/checkout-choices is not a payment.
+   if(route.request().method()!=="GET"&&/(checkout|boostero|payment)/i.test(p))checkoutRequests++;
    const obj=p==="/api/bundles"?{bluevineEnabled:true,checkoutEnabled:true,autoFulfillmentEnabled:false,packages:[]}:
     p==="/api/config"?{ready:false,publicKey:null}:
     p==="/api/litix-ai"?{available:false,verified:false}:
