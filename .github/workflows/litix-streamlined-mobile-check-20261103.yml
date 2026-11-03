@@ -15,5 +15,8 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           persist-credentials: false
+      - name: Install exact application dependencies for route imports
+        working-directory: src
+        run: npm ci --no-audit --no-fund
       - name: Validate custom Likes and Followers, bundle tiers, mobile navigation and unchanged PayKings gates
         run: node --test src/tests/litix-mobile-flow-20261103.test.mjs src/tests/custom-likes-entrypoint-20261103.test.mjs src/tests/litix-frictionless-shop-20261103.test.mjs src/tests/litix-category-quick-order-20261103.test.mjs src/tests/bluevine-bundles.test.mjs src/tests/social-multi-post-live-checkout.test.mjs src/tests/litix-reliability-readonly-20261103.test.mjs
