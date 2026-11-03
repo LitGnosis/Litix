@@ -130,7 +130,18 @@ export default function Home(){
     if(controller.signal.aborted)return;
     const requested=id.replace(/^boostero_/,"litix_");
      const chosen=(body.items||[]).find(s=>s.id===requested&&s.purchasable===true);
-    if(chosen){setSelected(chosen);setQty(chosen.min);setNotice("");}
+    if(chosen){
+     const requestedQuantity=Number(new URLSearchParams(location.search).get("quantity"));
+     const quantityStep=Number(chosen.unitStep)||1;
+     const quantityValid=Number.isSafeInteger(requestedQuantity)&&
+      requestedQuantity>=Number(chosen.min)&&requestedQuantity<=Number(chosen.max)&&
+      Number.isSafeInteger(quantityStep)&&quantityStep>0&&
+      (requestedQuantity-Number(chosen.min))%quantityStep===0&&
+      Math.ceil(Number(chosen.per1000)*requestedQuantity/10-1e-8)>=100;
+     setSelected(chosen);
+     setQty(quantityValid?requestedQuantity:chosen.min);
+     setNotice("");
+    }
     else if(new URLSearchParams(location.search).get("mode")==="multi"){
      setNotice("This Custom Likes service is temporarily unavailable. No payment has been attempted. Try another service or contact Litix support.");
     }
