@@ -1,6 +1,6 @@
 // SMMXPERT preflight only. No payment, supplier purchase, order dispatch,
 // customer checkout or catalog imports. Never treat Indian rupees as US dollars.
-import {litixPlatform,litixKind} from "./litixServiceClassify.mjs";
+import {classifySmmxpertService} from "./smmxpertServiceSafety.mjs";
 import {litixRetailPer1000Cents,litixServiceMinimum,litixOrderCents} from "./litixRetail60.mjs";
 
 export const SMMXPERT_ENDPOINT="https://smmxpert.com/api/v2";
@@ -11,10 +11,11 @@ export const normalizeSmmxpertCurrency=x=>{
  if(v!=="USD"&&v!=="INR")throw Error("smmxpert_unsupported_account_currency");
  return v;
 };
-export function smmxpertRateUsd(rate,{accountCurrency,fxUsdPerInr,fxVerifiedAt,now=Date.now()}={}){
+export function smmxpertRateUsd(rate,{rateCurrency,rateCurrencyVerified=false,fxUsdPerInr,fxVerifiedAt,now=Date.now()}={}){
  const wholesale=Number(rate);
  if(!finitePositive(wholesale)||wholesale>10000000)throw Error("smmxpert_invalid_supplier_rate");
- const currency=normalizeSmmxpertCurrency(accountCurrency);
+ if(rateCurrencyVerified!==true)throw Error("smmxpert_rate_currency_not_verified");
+ const currency=normalizeSmmxpertCurrency(rateCurrency);
  if(currency==="USD")return wholesale;
  // When the reseller account is INR, the correct USD/INR spot rate must be
  // supplied independently and recently verified. No implicit 1:1 conversion.
@@ -27,7 +28,7 @@ export function smmxpertRateUsd(rate,{accountCurrency,fxUsdPerInr,fxVerifiedAt,n
  return converted;
 }
 export function smmxpertDraftQuote(service,quantity,{
- accountCurrency,fxUsdPerInr,fxVerifiedAt,now=Date.now(),
+ accountCurrency,rateCurrency,rateCurrencyVerified=false,fxUsdPerInr,fxVerifiedAt,now=Date.now(),
  approvedServiceIds=[],requiredPlatform,requiredKind
 }={}){
  const id=String(service?.id??service?.service??"");
@@ -35,22 +36,22 @@ export function smmxpertDraftQuote(service,quantity,{
   !approvedServiceIds.some(x=>String(x)===id))throw Error("smmxpert_service_not_approved");
  if(String(service?.serviceType??service?.type??"").toLowerCase()!=="default")
   throw Error("smmxpert_service_type_not_supported");
- const platform=litixPlatform(service?.name,service?.category);
- const kind=litixKind(service?.name,service?.category);
- if(platform!==requiredPlatform||kind!==requiredKind||
+ const classification=classifySmmxpertService(service);
+ const {platform,kind}=classification;
+ if(!classification.eligible||platform!==requiredPlatform||kind!==requiredKind||
   !["Instagram","TikTok","YouTube","Twitter (X)"].includes(platform)||
   !["followers","likes","views","subscribers","retweets"].includes(kind))
   throw Error("smmxpert_service_category_mismatch");
  const min=Number(service?.min),max=Number(service?.max),qty=Number(quantity);
- if(!Number.isSafeInteger(min)||min<1||!Number.isSafeInteger(max)||max<min||max>1_000_000||
-  !Number.isSafeInteger(qty)||qty<min||qty>max)
+ if(!Number.isSafeInteger(min)||min<1||!Number.isSafeInteger(max)||max<min||min>1_000_000||
+  !Number.isSafeInteger(qty)||qty<min||qty>Math.min(max,1_000_000))
   throw Error("smmxpert_invalid_quantity");
  const wholesalePer1000USD=smmxpertRateUsd(
   service?.retailIndependentRate??service?.rate,
-  {accountCurrency,fxUsdPerInr,fxVerifiedAt,now}
+  {rateCurrency,rateCurrencyVerified,fxUsdPerInr,fxVerifiedAt,now}
  );
  const retailPer1000Cents=litixRetailPer1000Cents(wholesalePer1000USD,service);
- const retailMinimum=litixServiceMinimum(min,max,retailPer1000Cents);
+ const retailMinimum=litixServiceMinimum(min,Math.min(max,1_000_000),retailPer1000Cents);
  const retailTotalCents=litixOrderCents(retailPer1000Cents,qty);
  const wholesaleTotalCents=Math.ceil(wholesalePer1000USD*qty/1000*100-1e-8);
  if(retailMinimum===null||qty<retailMinimum||retailTotalCents===null||
@@ -60,7 +61,7 @@ export function smmxpertDraftQuote(service,quantity,{
  return {
   provider:"smmxpert",id,platform,kind,quantity:qty,
   retailMinimum,retailPer1000Cents,retailTotalCents,
-  wholesaleTotalCents,wholesalePer1000USD,accountCurrency
+  wholesaleTotalCents,wholesalePer1000USD,accountCurrency,rateCurrency
  };
 }
 export function smmxpertActivationBlockers({
