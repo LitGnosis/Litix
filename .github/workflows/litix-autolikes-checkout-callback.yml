@@ -1,0 +1,30 @@
+name: Litix AutoLikes Payment Callback Repair — No Charge
+on:
+  push:
+    branches:
+      - fix/autolikes-stuck-processing-20261104
+    paths:
+      - "src/app/autolikes/page.jsx"
+      - "src/lib/litixAutoLikesCheckoutGate.mjs"
+      - "src/tests/litix-autolikes-checkout-callback.test.mjs"
+      - ".github/workflows/litix-autolikes-checkout-callback.yml"
+  pull_request:
+    paths:
+      - "src/app/autolikes/page.jsx"
+      - "src/lib/litixAutoLikesCheckoutGate.mjs"
+      - "src/tests/litix-autolikes-checkout-callback.test.mjs"
+      - ".github/workflows/litix-autolikes-checkout-callback.yml"
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - run: node --version
+      - run: node --check src/lib/litixAutoLikesCheckoutGate.mjs
+      - run: node --test src/tests/litix-autolikes-checkout-callback.test.mjs
+      - run: node --test src/tests/litix-autolikes-prepaid.test.mjs
