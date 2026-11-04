@@ -1,3 +1,4 @@
+import {autolikesNewSalesEnabled,AUTOLIKES_SALES_PAUSED_MESSAGE} from "../../../../../lib/litixAutoLikesSalesGate.mjs";
 // Independent ONE-TIME PayKings payment. Does not use or modify recurring APIs
 // or existing Litix orders. All supplier operations occur only after durable PAID.
 import {randomUUID,createHash} from "node:crypto";
@@ -11,6 +12,7 @@ export const runtime="nodejs";export const dynamic="force-dynamic";export const 
 const hash=s=>createHash("sha256").update(String(s)).digest("hex");
 const reply=(b,s=200)=>Response.json(b,{status:s,headers:{"cache-control":"no-store","referrer-policy":"no-referrer","x-content-type-options":"nosniff"}});
 export async function POST(request){
+ if(!autolikesNewSalesEnabled())return reply({error:AUTOLIKES_SALES_PAUSED_MESSAGE,checkoutEnabled:false},503);
  if(!prepaidAutoLikesEnabled())return reply({error:"Prepaid AutoLikes checkout unavailable. No charge attempted."},503);
  const origin=request.headers.get("origin");
  if(!origin||origin!==new URL(request.url).origin)return reply({error:"Invalid checkout origin"},403);
