@@ -19,7 +19,7 @@ export function eligibleFuturePostLikes(services){
  return services.filter(row=>{
   if(!row||typeof row!=="object")return false;
   if(!/^subscriptions?$/i.test(trim(row.type)))return false;
-  if(!platformFor(row)||!/\blikes?\b/i.test(trim(row.name)+" "+trim(row.category)))return false;
+  if(!platformFor(row)||!/\blikes?\b/i.test(trim(row.name))||/\bfollowers?\b/i.test(trim(row.name)))return false;
   const id=Number(row.service),rate=Number(row.rate),min=Number(row.min),max=Number(row.max);
   return Number.isSafeInteger(id)&&id>0&&positive(rate)&&Number.isSafeInteger(min)&&min>0&&Number.isSafeInteger(max)&&max>=min;
  }).map(row=>Object.freeze({
