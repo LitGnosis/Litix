@@ -1,5 +1,6 @@
 "use client";
 import {useState} from "react";
+import {quickShopCustomHref} from "../lib/litixXCustomRouting.mjs";
 
 // Navigation only. We never manufacture prices, timing or supplier guarantees.
 const categories = [
@@ -33,7 +34,7 @@ export default function LitixQuickShop(){
     <span>{item.kind}</span><span aria-hidden="true">›</span></a>)}
   </nav>
   <div className="litix-shop-actions">
-   <a className="litix-metal-cta" href="/custom-likes">Custom Likes &amp; Followers <span aria-hidden="true">›</span></a>
+   <a className="litix-metal-cta" href={quickShopCustomHref(platform)} aria-label={platform==="X"?"Custom X Followers":"Custom Likes & Followers"}>Custom Likes &amp; Followers <span aria-hidden="true">›</span></a>
    <a className="litix-shop-secondary" href="/bundles">Growth Bundles</a>
    <a className="litix-shop-secondary" href="/services">Browse All Litix Services</a>
    <a className="litix-shop-secondary" href="/track">Track an Order</a>
