@@ -7,6 +7,8 @@ on:
     paths:
       - "src/lib/litixSubscriptionSupplierEvaluation.mjs"
       - "src/tests/litix-reseller-autolikes-evaluation.test.mjs"
+      - "src/lib/litixVerifiedAutoLikesSupplier.mjs"
+      - "src/tests/litix-verified-autolikes-supplier.test.mjs"
       - ".github/workflows/litix-autolikes-provider-evaluation.yml"
 permissions:
   contents: read
@@ -19,4 +21,5 @@ jobs:
         with:
           persist-credentials: false
       - run: node --check src/lib/litixSubscriptionSupplierEvaluation.mjs
-      - run: node --test src/tests/litix-reseller-autolikes-evaluation.test.mjs
+      - run: node --check src/lib/litixVerifiedAutoLikesSupplier.mjs
+      - run: node --test src/tests/litix-reseller-autolikes-evaluation.test.mjs src/tests/litix-verified-autolikes-supplier.test.mjs
