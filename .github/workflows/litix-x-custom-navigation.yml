@@ -1,0 +1,38 @@
+name: Litix X Custom Followers Routing Regression
+on:
+  push:
+    branches: ["fix/x-custom-followers-navigation-20261104"]
+    paths:
+      - "src/components/LitixQuickShop.jsx"
+      - "src/components/LitixCustomHub.jsx"
+      - "src/lib/litixXCustomRouting.mjs"
+      - "src/app/custom-likes/page.jsx"
+      - "src/tests/litix-x-custom-navigation.test.mjs"
+      - ".github/workflows/litix-x-custom-navigation.yml"
+  pull_request:
+    paths:
+      - "src/components/LitixQuickShop.jsx"
+      - "src/components/LitixCustomHub.jsx"
+      - "src/lib/litixXCustomRouting.mjs"
+      - "src/app/custom-likes/page.jsx"
+      - "src/tests/litix-x-custom-navigation.test.mjs"
+      - ".github/workflows/litix-x-custom-navigation.yml"
+permissions:
+  contents: read
+jobs:
+  navigation-and-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Verify Node runtime
+        run: node --version
+      - name: Verify routing helper syntax
+        run: node --check src/lib/litixXCustomRouting.mjs
+      - name: Run X routing and existing multi-post tests (no charges)
+        run: |
+          node --test src/tests/litix-x-custom-navigation.test.mjs
+          node --test src/tests/custom-likes-entrypoint-20261103.test.mjs
+          node --test src/tests/litix-custom-pricing-five-posts-20261103.test.mjs
