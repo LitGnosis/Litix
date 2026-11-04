@@ -22,7 +22,8 @@ export function supplierConfigFromEnvironment(env=process.env){
    tiktok:Number.isSafeInteger(tiktok)&&tiktok>0?tiktok:null
   }),
   // Do not expose API keys in status or UI.
-  canDispatch:!!candidate&&!!key&&key.length>=8&&verified&&enabled
+  canDispatch:!!candidate&&!!key&&key.length>=8&&verified&&enabled&&
+   [instagram,tiktok].some(id=>Number.isSafeInteger(id)&&id>0)
  });
 }
 
@@ -82,16 +83,28 @@ export function createVerifiedFuturePostSupplier({
   },
   async validate({platform,username,likesPerPost,postCount,now}){
    const verified=await findVerified(platform);
-   const request=buildFuturePostSubscription({service:verified,username,likesPerPost,postCount,now});
-   return {service:verified,request};
+   const validatedAt=now?new Date(now):new Date();
+   const request=buildFuturePostSubscription({service:verified,username,likesPerPost,postCount,now:validatedAt});
+   return {service:verified,request,validatedAt:validatedAt.toISOString()};
   },
   async placeSubscription(prepared){
    if(!allowNewOrders)throw Error("supplier_ordering_not_authorized");
    if(!prepared?.service||!prepared?.request)throw Error("missing_verified_subscription");
    const current=await findVerified(prepared.service.platform);
    if(current.id!==prepared.service.id)throw Error("service_changed_reverify");
-   // Validated caller must also hold the single-use durable PAID claim.
-   const response=await api(prepared.request,{mutating:true});
+   // Reject stale, changed or fabricated payloads. Caller must additionally
+   // hold a durable one-time claim on a PAID order before invoking this method.
+   const at=new Date(prepared.validatedAt);
+   if(!Number.isFinite(at.getTime())||Math.abs(Date.now()-at.getTime())>15*60_000)
+    throw Error("subscription_validation_expired");
+   const rebuilt=buildFuturePostSubscription({
+    service:current,username:prepared.request.username,
+    likesPerPost:Number(prepared.request.min),postCount:Number(prepared.request.posts),
+    delayMinutes:Number(prepared.request.delay||0),now:at
+   });
+   if(JSON.stringify(rebuilt)!==JSON.stringify(prepared.request))
+    throw Error("subscription_request_modified");
+   const response=await api(rebuilt,{mutating:true});
    const orderId=numberOrderId(response?.order);
    if(!orderId)throw new UnknownSupplierOutcome();
    return {supplierOrderId:orderId};
