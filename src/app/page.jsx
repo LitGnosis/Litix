@@ -381,25 +381,20 @@ export default function Home(){
  const submit=e=>{e.preventDefault();if(!detailsReady||!cardReady||!selected||busy)return;if(!Number.isSafeInteger(orderQuantity)||orderQuantity<selected.min||(multiMode?orderQuantity>1000000:orderQuantity>selected.max)){setNotice("Enter a whole-number quantity within this service’s limits.");return}if(!selected.purchasable){setNotice("This service requires additional supplier fields and cannot be checked out here.");return}setBusy(true);setNotice("");try{getCollectJS().startPaymentRequest()}catch{setBusy(false);setNotice("Complete your secure card fields before paying")}};
  const track=async value=>{try{const u=new URL(value,location.origin),id=u.searchParams.get("track"),token=u.searchParams.get("token");if(!id||!token)throw Error("Paste the full private tracking URL");const r=await fetch("/api/track?id="+encodeURIComponent(id)+"&token="+encodeURIComponent(token)),v=await r.json();if(!r.ok)throw Error(v.error||"Tracking failed");setTracked(v.order)}catch(e){setNotice(e.message)}};
  useEffect(()=>{if(location.search.includes("track=")){setPrivateUrl(location.href);track(location.href)}},[]);
- return <main className="wrap"><nav className="nav litix-home-nav"><a className="brand" href="/" aria-label="Litix home"><img src="/assets/brand/litix-logo.webp" alt="Litix — Innovation, Ignited." className="litix-new-logo" /></a><div><a href="/shop">Shop</a><a href="/partners">Partners</a><a href="/custom-likes">Custom Likes &amp; Followers</a><a href="#growth-bundles">Bundles</a><a href="/services">All Services</a><a href="#checkout">Checkout</a><a href="/autolikes">AutoLikes</a><a href="/track">Track Order</a></div></nav>
+ return <main className="wrap"><nav className="nav litix-home-nav"><a className="brand" href="/" aria-label="Litix home"><img src="/assets/brand/litix-logo.webp" alt="Litix — Innovation, Ignited." className="litix-new-logo" /></a><div><a href="/shop">Shop</a><a href="/partners">Partners</a><a href="/custom-likes">Custom Likes &amp; Followers</a><a href="#growth-bundles">Bundles</a><a href="/services">All Services</a><a href="#checkout">Checkout</a><a href="/track">Track Order</a></div></nav>
  <LitixAutoLikesHomeNotice/>
  <LitixQuickShop/>
  <GrowthBundles/>
  <section className="panel" aria-label="Litix customer support"><h2>Litix Order Support</h2><p>Track your paid order or contact support if you need assistance. Never share card details or social media passwords.</p><div style={{display:"flex",gap:16,flexWrap:"wrap"}}><a href="/track">Track your order</a><a href="/shop">Shop by platform</a><a href={"https://wa.me/"+(whatsappNumber.length>=8?whatsappNumber:"19452106315")+"?text="+encodeURIComponent("Hello Litix, I need help with a Litix order.")} target="_blank" rel="noopener noreferrer">WhatsApp Support</a><a href="mailto:Litixsocial@gmail.com?subject=Litix%20Order%20Support">Email Litix Support</a></div></section>
- <div className="cols"><section id="services" className="panel litix-autolikes-feature" aria-labelledby="litix-autolikes-home-title">
-   <div className="kicker">LITIX · AUTOMATIC LIKES</div>
-   <h2 id="litix-autolikes-home-title">Automatic Likes for Your Next Posts</h2>
-   <p className="muted">Give your next Instagram or TikTok posts a boost without ordering each post separately. Choose your package, pay once, and cover up to 10 new posts within 30 days.</p>
-   <div style={{display:"flex",gap:10,flexWrap:"wrap",margin:"16px 0 20px"}} aria-label="AutoLikes package highlights">
-    <span className="alt" style={{fontSize:14,padding:"8px 12px"}}>Instagram + TikTok</span>
-    <span className="alt" style={{fontSize:14,padding:"8px 12px"}}>Up to 10 new posts</span>
-    <span className="alt" style={{fontSize:14,padding:"8px 12px"}}>One-time payment · No renewal</span>
+ <div className="cols"><section id="services" className="panel" aria-labelledby="litix-services-spotlight-title">
+   <div className="kicker">LITIX · AVAILABLE SERVICES</div>
+   <h2 id="litix-services-spotlight-title">Choose a service with verified checkout.</h2>
+   <p className="muted">Explore social media services with live price and availability checks, or build a custom order across eligible public posts. AutoLikes new sales are paused until reliable post detection and fulfillment are independently verified.</p>
+   <div style={{display:"flex",flexWrap:"wrap",gap:12,alignItems:"center",marginTop:20}}>
+    <a className="primary" style={{textDecoration:"none",padding:"12px 20px"}} href="/services">Browse All Litix Services</a>
+    <a className="alt" style={{textDecoration:"none",padding:"12px 20px"}} href="/custom-likes">Custom Likes &amp; Followers</a>
+    <a className="alt" style={{textDecoration:"none",padding:"12px 20px"}} href="/track">Track a Paid Order</a>
    </div>
-   <div style={{display:"flex",flexWrap:"wrap",gap:12,alignItems:"center"}}>
-    <a className="primary" style={{display:"inline-flex",alignItems:"center",justifyContent:"center",textDecoration:"none",padding:"12px 20px"}} href="/autolikes">Explore Automatic Likes</a>
-    <a className="alt" style={{display:"inline-flex",alignItems:"center",justifyContent:"center",textDecoration:"none",padding:"12px 20px"}} href="/services">Browse All Litix Services</a>
-   </div>
-   <p className="small muted" style={{marginTop:16}}>Packages and checkout are subject to live availability. Only future public posts qualify. No social-media password needed.</p>
   </section>
   <section id="checkout" className="panel sticky"><div className="kicker">SECURE PAYKINGS CHECKOUT</div><h2>Your order</h2><ol className="checkout-steps" aria-label="Checkout steps"><li className={selected?"step-done":"step-current"}>1. Choose service</li><li className={selected&&link?"step-current":"step-pending"}>2. Order details</li><li className={cardReady?"step-done":"step-pending"}>3. Secure payment</li></ol><p className="checkout-hint">You’ll review the final USD total before paying. Card details are entered securely with PayKings.</p><form onSubmit={submit} className="form"><LitixCheckoutSelector selected={selected} onChoose={service=>{setSelected(service);setQty(service?.min||100);setLink("");setReceipt(null);setNotice("");setKey(crypto.randomUUID())}}/>{selected?<>{selected&&<div className="selected-service-meta"><span>{selected.min.toLocaleString()}–{selected.max.toLocaleString()} units</span><span>Litix service</span><span>{selected.refill?"Refill eligible":"Standard service"}</span><span>{money(Math.ceil(selected.per1000*100))} / 1,000</span></div>}{likesWithPostPicker&&<div role="group" aria-label="Choose Likes checkout mode" style={{display:"flex",gap:10,flexWrap:"wrap",padding:"8px 0 16px"}}>
   <button type="button" className="alt" aria-pressed={!multiMode} onClick={()=>{
