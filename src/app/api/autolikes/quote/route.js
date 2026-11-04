@@ -1,3 +1,4 @@
+import {autolikesNewSalesEnabled,AUTOLIKES_SALES_PAUSED_MESSAGE} from "../../../../lib/litixAutoLikesSalesGate.mjs";
 import {boosteroProduction} from "../../../../lib/boosteroReadOnly.mjs";
 import {boosteroProductionReady} from "../../../../lib/boosteroFulfillment.mjs";
 import {nativeAutoLikesQuote} from "../../../../lib/boosteroNativeAutoLikes.mjs";
@@ -7,6 +8,7 @@ export const dynamic="force-dynamic";
 export const maxDuration=30;
 const send=(data,status=200)=>Response.json(data,{status,headers:{"cache-control":"no-store","x-content-type-options":"nosniff"}});
 export async function POST(request){
+ if(!autolikesNewSalesEnabled())return send({error:AUTOLIKES_SALES_PAUSED_MESSAGE,checkoutEnabled:false},503);
  const origin=request.headers.get("origin");
  if(origin&&origin!==new URL(request.url).origin)return send({error:"Invalid origin"},403);
  if(!boosteroProductionReady())return send({error:"AutoLikes supplier unavailable"},503);
