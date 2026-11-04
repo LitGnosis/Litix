@@ -13,6 +13,9 @@ export default function LitixAutoLikesPrepaid(){
  const [key,setKey]=useState(""),[cardReady,setCardReady]=useState(false);
  const [message,setMessage]=useState(""),[privateLink,setPrivateLink]=useState(""),[receipt,setReceipt]=useState(null);
  const [locked,setLocked]=useState(false);const paymentCallback=useRef(null);
+ const [homeRedirect,setHomeRedirect]=useState(false);
+ const homeTimer=useRef(null);
+ useEffect(()=>()=>{if(homeTimer.current)clearTimeout(homeTimer.current)},[]);
  // Tokenization and gateway submission are separate phases. Busy UI state
  // must not cause the asynchronous Collect.js callback to be dropped.
  const tokenizationPending=useRef(false);
@@ -65,6 +68,13 @@ export default function LitixAutoLikesPrepaid(){
    setMessage(body.message||body.error||"Payment response needs review. Do not submit another purchase until status is verified.");
    if(body.privateTrackingUrl)setPrivateLink(body.privateTrackingUrl);
    if(body.orderId)setReceipt({id:body.orderId,payment:body.payment||"review",amount:body.amountCents});
+   // Redirect ONLY a confirmed paid order with a private tracking link.
+   // Do not redirect a declined or uncertain payment; they require review.
+   if(body.payment==="paid"&&body.orderId&&body.privateTrackingUrl){
+    setHomeRedirect(true);
+    if(homeTimer.current)clearTimeout(homeTimer.current);
+    homeTimer.current=setTimeout(()=>window.location.assign("/?autolikes=confirmed"),10000);
+   }
    // Token may already have reached the gateway even if a response is ambiguous.
    // Never re-submit it automatically or offer a second payment from this view.
    setLocked(true);
@@ -190,9 +200,14 @@ export default function LitixAutoLikesPrepaid(){
     {catalog.checkoutEnabled&&!key&&<p>PayKings secure checkout is temporarily unavailable. No charge attempted.</p>}
    </section>}
    {message&&<div className="msg" role="status">{message}</div>}
-   {receipt&&<div className="panel"><h2>Litix order: {receipt.id}</h2>
-    <p>Payment status: {receipt.payment}</p>
-    {privateLink&&<p><a href={privateLink}>Track your private AutoLikes order</a> · Save your secure link.</p>}
+   {receipt&&<div className="panel" aria-label="AutoLikes order confirmation">
+    <h2>{receipt.payment==="paid"?"Payment successful":"Order needs review"}</h2>
+    <p>Litix order: <strong>{receipt.id}</strong></p>
+    <p>Payment status: <strong>{receipt.payment}</strong></p>
+    {receipt.payment==="paid"&&<p>Your payment confirmation and private order-tracking emails are being sent to the address you provided. Check your inbox and spam folder; contact support if they're missing.</p>}
+    {privateLink&&<p><a href={privateLink} rel="noreferrer">Track your private AutoLikes order</a> · Keep this link private.</p>}
+    {homeRedirect&&<p role="status">Returning to the Litix homepage automatically in about 10 seconds.</p>}
+    <p><a className="primary" href="/">Return to Litix Home</a></p>
    </div>}
    <p className="small">No password is needed. Need help with an order? <a href="mailto:litixsocial@gmail.com">Contact Litix support</a>.</p>
   </section>
