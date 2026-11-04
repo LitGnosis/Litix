@@ -8,6 +8,8 @@
 .litix-custom-rate strong span{font-size:12px;font-weight:600;color:#a7d8f3}
 .litix-custom-quantity{padding:16px;background:linear-gradient(145deg,#092639,#08192a);border:1px solid #6ebbed57;border-radius:13px}
 .litix-custom-quantity>label{display:block;font-weight:800;color:#e6f5ff;margin-bottom:9px}
+.litix-custom-quantity select{display:block;box-sizing:border-box;width:100%;max-width:100%;min-height:48px;padding:10px 12px;border:1px solid #78cfff8c;border-radius:10px;background:#081829;color:#f4fbff;font:inherit;margin:8px 0 16px}
+.litix-custom-quantity select:focus-visible{outline:3px solid #85d6ff;outline-offset:2px}
 .litix-custom-quantity input[type=number]{display:block;box-sizing:border-box;width:100%;max-width:360px;min-height:50px;border:1px solid #78cfff8c;border-radius:10px;background:#081829;color:#f4fbff;padding:11px 14px;font-size:19px;font-variant-numeric:tabular-nums}
 .litix-custom-presets{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0 9px}
 .litix-custom-presets button{flex:0 1 auto;min-height:41px;padding:9px 12px;border:1px solid #66b9e970;border-radius:10px;background:#10334a;color:#e4f5ff;font-size:13px;font-weight:750}

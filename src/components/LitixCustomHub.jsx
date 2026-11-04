@@ -3,6 +3,7 @@ import {useEffect,useMemo,useState} from "react";
 import SocialMultiPostChooser from "./SocialMultiPostChooser";
 import {newTikTokPost} from "./TikTokMultiPostChooser";
 import {customQuote,customLineCents,CUSTOM_DRAFT_PREFIX} from "../lib/customQuote.mjs";
+import {customPlatformFromQuery,eligibleXFollowers,preferredXFollowers} from "../lib/litixXCustomRouting.mjs";
 
 // These four public IDs map to approved Litix Default services. Live rates,
 // quantity limits and purchase eligibility always come from the checkout catalog.
@@ -18,10 +19,13 @@ export const CUSTOM_PRODUCTS=Object.freeze([
   button:"Review TikTok Likes Order",detail:"Up to five videos · one payment · private tracking"},
  {platform:"TikTok",kind:"followers",id:"litix_5101",title:"TikTok Custom Followers",
   blurb:"Choose an exact follower quantity for one public TikTok account.",
-  button:"Review TikTok Followers Order",detail:"Public profile · adjustable quantity · no password"}
+  button:"Review TikTok Followers Order",detail:"Public profile · adjustable quantity · no password"},
+ {platform:"Twitter (X)",kind:"followers",id:null,title:"X Custom Followers",
+  blurb:"Choose an available X follower package and customize the quantity for one public X profile.",
+  button:"Review X Followers Order",detail:"Public profile · live packages · no password"}
 ]);
-export function customProductLink(product){
- return "/?service="+encodeURIComponent(product.id)+(product.kind==="likes"?"&mode=multi":"")+"#checkout";
+export function customProductLink(product,serviceId=product.id){
+ return "/?service="+encodeURIComponent(serviceId)+(product.kind==="likes"?"&mode=multi":"")+"#checkout";
 }
 const money=cents=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(cents/100);
 const presets=[100,250,500,1000,2500,5000,10000];
@@ -30,6 +34,7 @@ export default function LitixCustomHub(){
  const [platform,setPlatform]=useState("Instagram");
  const [kind,setKind]=useState("likes");
  const [liveService,setLiveService]=useState(null);
+ const [xFollowerServices,setXFollowerServices]=useState([]);
  const [loading,setLoading]=useState(true);
  const [catalogNote,setCatalogNote]=useState("");
  const [retry,setRetry]=useState(0);
@@ -39,13 +44,14 @@ export default function LitixCustomHub(){
  const [notice,setNotice]=useState("");
  useEffect(()=>{
   const p=new URLSearchParams(window.location.search);
-  if(p.get("platform")==="tiktok")setPlatform("TikTok");
+  const requested=customPlatformFromQuery(p.get("platform"));
+  if(requested){setPlatform(requested);if(requested==="Twitter (X)")setKind("followers");}
   if(p.get("kind")==="followers")setKind("followers");
  },[]);
  const product=CUSTOM_PRODUCTS.find(p=>p.platform===platform&&p.kind===kind);
  useEffect(()=>{
   const controller=new AbortController();
-  setLiveService(null);setLoading(true);setCatalogNote("");setNotice("");
+  setLiveService(null);setXFollowerServices([]);setLoading(true);setCatalogNote("");setNotice("");
   setPosts([]);setQuantity(0);setPickerOpen(false);
   const q=new URLSearchParams({platform});
   fetch("/api/catalog/checkout-choices?"+q,{signal:controller.signal,cache:"no-store"})
@@ -55,11 +61,14 @@ export default function LitixCustomHub(){
    })
    .then(d=>{
     if(controller.signal.aborted)return;
-    const match=(Array.isArray(d.items)?d.items:[]).find(s=>
-     s.id===product.id&&s.platform===platform&&s.kind===kind&&s.purchasable===true&&
+    const eligible=(Array.isArray(d.items)?d.items:[]).filter(s=>
+     (product.id?s.id===product.id:true)&&s.platform===platform&&s.kind===kind&&s.purchasable===true&&
+     /^litix_\d{1,12}$/.test(String(s.id||""))&&
      Number.isFinite(Number(s.per1000))&&Number(s.per1000)>0&&
      Number.isSafeInteger(Number(s.min))&&Number(s.min)>0&&
      Number.isSafeInteger(Number(s.max))&&Number(s.max)>=Number(s.min));
+    const match=product.id?eligible[0]:preferredXFollowers(eligible);
+    if(platform==="Twitter (X)")setXFollowerServices(eligibleXFollowers(eligible));
     if(!match)throw Error("This Litix service is temporarily unavailable; no charge attempted.");
     setLiveService(match);
     setQuantity(Number(match.min));
@@ -84,8 +93,8 @@ export default function LitixCustomHub(){
   p.status==="verified"&&Boolean(p.verifiedUrl)&&p.verifiedInput===String(p.link||"").trim())&&
   new Set(posts.map(p=>p.verifiedUrl)).size===posts.length;
  const checkoutHref=kind==="followers"&&quote.valid?
-  customProductLink(product).replace("#checkout","&quantity="+encodeURIComponent(quantity)+"#checkout"):
-  customProductLink(product);
+  customProductLink(product,liveService?.id).replace("#checkout","&quantity="+encodeURIComponent(quantity)+"#checkout"):
+  customProductLink(product,liveService?.id);
  function prepareCheckout(event){
   if(!quote.valid){event.preventDefault();setNotice("Choose an allowed quantity for every post and try again.");return}
   if(kind==="followers")return; // URL carries the calculated quantity to existing secure checkout.
@@ -100,7 +109,7 @@ export default function LitixCustomHub(){
     }))
    };
    sessionStorage.setItem(CUSTOM_DRAFT_PREFIX+id,JSON.stringify(payload));
-   window.location.assign(customProductLink(product).replace("#checkout","&draft="+encodeURIComponent(id)+"#checkout"));
+   window.location.assign(customProductLink(product,liveService?.id).replace("#checkout","&draft="+encodeURIComponent(id)+"#checkout"));
   }catch{
    setNotice("Your browser could not retain the post selections. Open secure checkout to choose the posts there; no payment has been attempted.");
   }
@@ -115,14 +124,14 @@ export default function LitixCustomHub(){
      <div className="litix-choice-row">
        <strong>01 · Platform</strong>
        <div className="litix-segments" role="group" aria-label="Platform">
-        {["Instagram","TikTok"].map(value=><button key={value} type="button" className={platform===value?"active":""}
-          aria-pressed={platform===value} onClick={()=>setPlatform(value)}>{value}</button>)}
+        {["Instagram","TikTok","Twitter (X)"].map(value=><button key={value} type="button" className={platform===value?"active":""}
+          aria-pressed={platform===value} onClick={()=>{setPlatform(value);if(value==="Twitter (X)")setKind("followers")}}>{value==="Twitter (X)"?"X":value}</button>)}
        </div>
      </div>
      <div className="litix-choice-row">
        <strong>02 · Service</strong>
        <div className="litix-segments" role="group" aria-label="Service type">
-        {[["likes","Likes"],["followers","Followers"]].map(([value,label])=><button key={value} type="button"
+        {(platform==="Twitter (X)"?[["followers","Followers"]]:[["likes","Likes"],["followers","Followers"]]).map(([value,label])=><button key={value} type="button"
          className={kind===value?"active":""} aria-pressed={kind===value} onClick={()=>setKind(value)}>{label}</button>)}
        </div>
      </div>
@@ -140,6 +149,14 @@ export default function LitixCustomHub(){
       <button type="button" className="alt" onClick={()=>setRetry(n=>n+1)}>Retry prices</button>
      </div>}
     {liveService&&<div className="litix-custom-calculator" aria-label="Live Litix custom price calculator">
+     {platform==="Twitter (X)"&&xFollowerServices.length>1&&<label className="litix-custom-quantity">Choose your X followers package
+       <select aria-label="Choose an available X followers package" value={liveService.id} onChange={e=>{
+         const found=xFollowerServices.find(s=>s.id===e.target.value);
+         if(found){setLiveService(found);setQuantity(Number(found.min));setNotice("")}
+       }}>
+        {xFollowerServices.map(s=><option key={s.id} value={s.id}>{s.name} · {money(Math.ceil(Number(s.per1000)*100-1e-8))} / 1,000</option>)}
+       </select>
+     </label>}
      <div className="litix-custom-rate">
       <div><small>Current retail rate</small>
        <strong>{money(Math.ceil(Number(liveService.per1000)*100-1e-8))} <span>/ 1,000 {kind}</span></strong>
@@ -190,7 +207,7 @@ export default function LitixCustomHub(){
      {kind==="likes"&&!allVerified&&<p className="litix-custom-fine">
       You can select and verify posts here or finish choosing them at checkout. Checkout requires each public post link to be verified before payment.
      </p>}
-     {notice&&<p role="alert" className="litix-custom-warning">{notice} <a href={customProductLink(product)}>Open checkout</a></p>}
+     {notice&&<p role="alert" className="litix-custom-warning">{notice} <a href={customProductLink(product,liveService?.id)}>Open checkout</a></p>}
     </div>}
     <p className="litix-custom-fine">Live rate previews are estimates. PayKings charges only the final server-verified total after you review the order. No order starts until payment is submitted.</p>
    </article>
@@ -202,7 +219,7 @@ export default function LitixCustomHub(){
    <details className="litix-compact-details">
     <summary>How does ordering work?</summary>
     <ol>
-     <li>Choose Instagram or TikTok and Likes or Followers.</li>
+     <li>Choose Instagram or TikTok Likes/Followers, or X Followers.</li>
      <li>See your estimated price update whenever quantities change.</li>
      <li>For Likes, select up to five public posts or videos and customize each amount.</li>
      <li>Review the live-verified total at secure checkout, pay once, and save your tracking link.</li>

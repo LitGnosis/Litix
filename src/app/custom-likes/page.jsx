@@ -1,8 +1,8 @@
 import LitixCustomHub from "../../components/LitixCustomHub";
 
 export const metadata={
- title:"Custom Likes & Followers | Instagram & TikTok | Litix",
- description:"Build a custom Instagram or TikTok Likes and Followers order. Choose quantities, select public post links, and check out securely.",
+ title:"Custom Likes & Followers | Instagram, TikTok & X | Litix",
+ description:"Customize Instagram and TikTok Likes or Followers and X Followers. Choose your quantities, select up to five Instagram or TikTok posts for likes, and review secure checkout.",
  alternates:{canonical:"https://www.litix.net/custom-likes"}
 };
 
