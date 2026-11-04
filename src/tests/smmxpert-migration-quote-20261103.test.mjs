@@ -44,9 +44,11 @@ test("production switch stays BLOCKED until every operational safety gate is pro
  assert.ok(checks.includes("idempotentDispatchImplemented"));
  assert.ok(checks.includes("historicalOrderIsolationVerified"));
  assert.ok(checks.includes("paidEndToEndTestVerified"));
- assert.equal(checks.length,9);
+ assert.equal(checks.length,11);
+ assert.ok(checks.includes("walletFunded"));
+ assert.ok(checks.includes("rateCurrencyVerified"));
  const ready=smmxpertActivationBlockers({
-  apiKeyPresent:true,catalogReadVerified:true,balanceCurrencyVerified:true,fxVerified:true,
+  apiKeyPresent:true,catalogReadVerified:true,balanceCurrencyVerified:true,walletFunded:true,rateCurrencyVerified:true,fxVerified:true,
   serviceIdsApproved:true,idempotentDispatchImplemented:true,historicalOrderIsolationVerified:true,
   trackingAndRefundsVerified:true,paidEndToEndTestVerified:true
  });
