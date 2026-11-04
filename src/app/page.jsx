@@ -14,6 +14,7 @@ import {newTikTokPost} from "../components/TikTokMultiPostChooser";
 import {readCustomDraft,CUSTOM_DRAFT_PREFIX} from "../lib/customQuote.mjs";
 import SocialMultiPostChooser from "../components/SocialMultiPostChooser";
 import LitixQuickShop from "../components/LitixQuickShop";
+import LitixAutoLikesHomeNotice from "../components/LitixAutoLikesHomeNotice";
 const money=n=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD",currencyDisplay:"code"}).format(n/100);
 const cardMoney=n=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(n/100); // display-only: preserve stored cents
 // Collect.js is documented as a global named CollectJS. Some script builds expose
@@ -381,6 +382,7 @@ export default function Home(){
  const track=async value=>{try{const u=new URL(value,location.origin),id=u.searchParams.get("track"),token=u.searchParams.get("token");if(!id||!token)throw Error("Paste the full private tracking URL");const r=await fetch("/api/track?id="+encodeURIComponent(id)+"&token="+encodeURIComponent(token)),v=await r.json();if(!r.ok)throw Error(v.error||"Tracking failed");setTracked(v.order)}catch(e){setNotice(e.message)}};
  useEffect(()=>{if(location.search.includes("track=")){setPrivateUrl(location.href);track(location.href)}},[]);
  return <main className="wrap"><nav className="nav litix-home-nav"><a className="brand" href="/" aria-label="Litix home"><img src="/assets/brand/litix-logo.webp" alt="Litix — Innovation, Ignited." className="litix-new-logo" /></a><div><a href="/shop">Shop</a><a href="/partners">Partners</a><a href="/custom-likes">Custom Likes &amp; Followers</a><a href="#growth-bundles">Bundles</a><a href="/services">All Services</a><a href="#checkout">Checkout</a><a href="/autolikes">AutoLikes</a><a href="/track">Track Order</a></div></nav>
+ <LitixAutoLikesHomeNotice/>
  <LitixQuickShop/>
  <GrowthBundles/>
  <section className="panel" aria-label="Litix customer support"><h2>Litix Order Support</h2><p>Track your paid order or contact support if you need assistance. Never share card details or social media passwords.</p><div style={{display:"flex",gap:16,flexWrap:"wrap"}}><a href="/track">Track your order</a><a href="/shop">Shop by platform</a><a href={"https://wa.me/"+(whatsappNumber.length>=8?whatsappNumber:"19452106315")+"?text="+encodeURIComponent("Hello Litix, I need help with a Litix order.")} target="_blank" rel="noopener noreferrer">WhatsApp Support</a><a href="mailto:Litixsocial@gmail.com?subject=Litix%20Order%20Support">Email Litix Support</a></div></section>
