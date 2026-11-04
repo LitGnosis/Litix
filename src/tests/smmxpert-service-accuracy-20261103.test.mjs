@@ -37,7 +37,7 @@ test("supported Default services preserve platform, geo, min and API eligibility
  assert.equal(result.eligible[1].max,1000000);
  assert.equal(result.eligible[0].apiRefillEligible,false);
  assert.equal(result.eligible[2].apiRefillEligible,true);
- assert.ok(result.rejected.name_kind_unknown>=1);
+ assert.ok(result.rejected.name_platform_unknown>=1);
 });
 
 test("rate currency must be confirmed independently before any customer quote",()=>{
