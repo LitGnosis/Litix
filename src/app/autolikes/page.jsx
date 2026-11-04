@@ -1,6 +1,7 @@
 "use client";
 import {useEffect,useMemo,useRef,useState} from "react";
 import PremiumInlineCheckout from "../../components/PremiumInlineCheckout";
+import {maySubmitPrepaidToken} from "../../lib/litixAutoLikesCheckoutGate.mjs";
 const dollars=c=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(Number(c||0)/100);
 const collect=()=>{try{if(typeof CollectJS!=="undefined")return CollectJS}catch{};return typeof window!=="undefined"?window.CollectJS:null};
 export default function LitixAutoLikesPrepaid(){
@@ -12,6 +13,13 @@ export default function LitixAutoLikesPrepaid(){
  const [key,setKey]=useState(""),[cardReady,setCardReady]=useState(false);
  const [message,setMessage]=useState(""),[privateLink,setPrivateLink]=useState(""),[receipt,setReceipt]=useState(null);
  const [locked,setLocked]=useState(false);const paymentCallback=useRef(null);
+ // Tokenization and gateway submission are separate phases. Busy UI state
+ // must not cause the asynchronous Collect.js callback to be dropped.
+ const tokenizationPending=useRef(false);
+ const checkoutStarted=useRef(false);
+ const tokenTimer=useRef(null);
+ const clearTokenTimer=()=>{if(tokenTimer.current){clearTimeout(tokenTimer.current);tokenTimer.current=null}};
+ useEffect(()=>()=>clearTokenTimer(),[]);
  useEffect(()=>{
   const controller=new AbortController();
   fetch("/api/autolikes/prepaid/catalog",{cache:"no-store",signal:controller.signal})
@@ -40,20 +48,26 @@ export default function LitixAutoLikesPrepaid(){
   }catch(e){setMessage(e.message||"Please verify your profile and plan.")}finally{setBusy(false)}
  }
  async function pay(paymentToken){
-  if(!quote||!requestKey||!catalog.checkoutEnabled||busy||locked)return;
-  setBusy(true);setMessage("");
+  if(!maySubmitPrepaidToken({quote,requestKey,checkoutEnabled:catalog.checkoutEnabled,
+   locked,checkoutStarted:checkoutStarted.current})||!tokenizationPending.current)return;
+  // Claim the request before await; Collect.js may call back more than once.
+  checkoutStarted.current=true;
+  tokenizationPending.current=false;
+  clearTokenTimer();
+  setBusy(true);setMessage("Checking the payment securely. Do not submit another payment.");
   try{
    const res=await fetch("/api/autolikes/prepaid/checkout",{
-    method:"POST",headers:{"content-type":"application/json"},
+    method:"POST",headers:{"content-type":"application/json"},signal:AbortSignal.timeout(70000),
     body:JSON.stringify({platform,profile,tierId:quote.plan,posts:quote.posts,
      expectedAmountCents:quote.amountCents,email,requestKey,paymentToken,
      singlePaymentConsent:true,monitoringConsent:consent})});
-   const body=await res.json();
-   setMessage(body.message||body.error||"Please review your order status.");
+   const body=await res.json().catch(()=>({}));
+   setMessage(body.message||body.error||"Payment response needs review. Do not submit another purchase until status is verified.");
    if(body.privateTrackingUrl)setPrivateLink(body.privateTrackingUrl);
    if(body.orderId)setReceipt({id:body.orderId,payment:body.payment||"review",amount:body.amountCents});
-   // A 202 status includes paid or uncertain gateway outcome; never retry automatically.
-   if(res.ok||res.status===202||res.status===402)setLocked(true);
+   // Token may already have reached the gateway even if a response is ambiguous.
+   // Never re-submit it automatically or offer a second payment from this view.
+   setLocked(true);
   }catch{
    setMessage("The payment response could not be confirmed. Do not retry; contact Litix support.");
    setLocked(true);
@@ -82,8 +96,12 @@ export default function LitixAutoLikesPrepaid(){
      fields:{ccnumber:{selector:"#ccnumber",title:"Card Number",placeholder:"Card number"},
       ccexp:{selector:"#ccexp",title:"Expiry",placeholder:"MM/YY"},
       cvv:{selector:"#cvv",title:"Security Code",placeholder:"CVV"}},
-     callback:data=>{if(!active)return;if(data?.token)void paymentCallback.current?.(data.token);
-      else{setBusy(false);setMessage("Secure card authorization failed. No purchase submitted.")}},
+     callback:data=>{
+      if(!active||!tokenizationPending.current)return;
+      if(data?.token){clearTokenTimer();void paymentCallback.current?.(data.token)}
+      else{tokenizationPending.current=false;clearTokenTimer();setBusy(false);
+       setMessage("Secure card authorization failed before checkout submission. No purchase was requested.");}
+     },
      fieldsAvailableCallback:()=>{if(active)setCardReady(true)}
     });
    }catch{if(active){setCardReady(false);setMessage("PayKings secure fields are unavailable. No payment attempted.")}}
@@ -96,9 +114,27 @@ export default function LitixAutoLikesPrepaid(){
  },[quote,locked,catalog.checkoutEnabled,key]);
  function submitCard(e){
   e.preventDefault();
-  if(!cardReady||busy||locked||!consent||!email||!quote)return;
+  if(!cardReady||busy||locked||!consent||!email||!quote||
+   tokenizationPending.current||checkoutStarted.current)return;
+  const api=collect();
+  if(typeof api?.startPaymentRequest!=="function"){
+   setMessage("Secure card fields are not ready; no checkout was submitted.");return;
+  }
+  tokenizationPending.current=true;
   setBusy(true);
-  try{collect()?.startPaymentRequest()}catch{setBusy(false);setMessage("Secure payment could not start; no charge attempted.")}
+  setMessage("Securely authorizing your card. Please do not click Pay again.");
+  clearTokenTimer();
+  tokenTimer.current=setTimeout(()=>{
+   if(!tokenizationPending.current||checkoutStarted.current)return;
+   tokenizationPending.current=false;
+   tokenTimer.current=null;
+   setBusy(false);
+   setMessage("Secure card fields did not return an authorization. No Litix checkout request was sent by this page. Check for a previous charge before trying again.");
+  },20000);
+  try{api.startPaymentRequest()}catch{
+   tokenizationPending.current=false;clearTokenTimer();setBusy(false);
+   setMessage("Secure payment could not start. No Litix checkout request was sent.");
+  }
  }
  return <main className="wrap">
   <nav className="nav"><a className="brand" href="/" aria-label="Litix home">
