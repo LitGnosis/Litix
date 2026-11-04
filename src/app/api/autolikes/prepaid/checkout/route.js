@@ -1,6 +1,7 @@
 // Independent ONE-TIME PayKings payment. Does not use or modify recurring APIs
 // or existing Litix orders. All supplier operations occur only after durable PAID.
 import {randomUUID,createHash} from "node:crypto";
+import {sendPrepaidAutoLikesNotifications} from "../../../../../lib/litixPrepaidAutoLikesEmails.mjs";
 import {boosteroProduction} from "../../../../../lib/boosteroReadOnly.mjs";
 import {boosteroSQL,boosteroProductionReady} from "../../../../../lib/boosteroFulfillment.mjs";
 import {quotePrepaidAutoLikes} from "../../../../../lib/litixPrepaidAutoLikes.mjs";
@@ -9,21 +10,6 @@ import {after} from "next/server";
 export const runtime="nodejs";export const dynamic="force-dynamic";export const maxDuration=60;
 const hash=s=>createHash("sha256").update(String(s)).digest("hex");
 const reply=(b,s=200)=>Response.json(b,{status:s,headers:{"cache-control":"no-store","referrer-policy":"no-referrer","x-content-type-options":"nosniff"}});
-async function emailReceipt(to,portal,orderId,amountCents,posts,likes){
- const key=process.env.RESEND_API_KEY||process.env.LITIX_RESEND_API_KEY,from=process.env.EMAIL_FROM;
- if(!key||!from)return;
- const text="Your Litix AutoLikes prepaid order is recorded.\n"+
-  "Order: "+orderId+"\nPaid: $"+(amountCents/100).toFixed(2)+
-  "\nPlan: "+likes+" Likes per new post; up to "+posts+" future posts for 30 days. No recurring charges.\n"+
-  "Manage your order privately: "+portal+
-  "\nSupplier monitoring begins after payment and fulfillment verification. "+
-  "Need assistance? litixsocial@gmail.com";
- try{await fetch("https://api.resend.com/emails",{method:"POST",
-  headers:{"authorization":"Bearer "+key,"content-type":"application/json",
-   "Idempotency-Key":"litix-prepaid-receipt-"+hash(orderId).slice(0,36)},
-  body:JSON.stringify({from,to:[to],subject:"Litix — AutoLikes prepaid order "+orderId,text}),
-  redirect:"error",cache:"no-store",signal:AbortSignal.timeout(10000)})}catch{}
-}
 export async function POST(request){
  if(!prepaidAutoLikesEnabled())return reply({error:"Prepaid AutoLikes checkout unavailable. No charge attempted."},503);
  const origin=request.headers.get("origin");
@@ -113,7 +99,20 @@ export async function POST(request){
  }catch{fulfillment="QUEUED"}
  const portal=new URL("/autolikes/prepaid/manage",request.url);
  portal.searchParams.set("token",token);
- after(()=>emailReceipt(email,portal.toString(),id,quote.amountCents,quote.posts,quote.likesPerPost));
+ // Payment is durably PAID before any customer or owner message is sent.
+ // Email provider accepts each notice under an independent idempotency key.
+ // Never delay the customer response, charge a second time, or call Boostero again.
+ after(async()=>{
+  try{
+   await sendPrepaidAutoLikesNotifications({
+    email,portal:portal.toString(),orderId:id,amountCents:quote.amountCents,
+    posts:quote.posts,likes:quote.likesPerPost,platform:quote.platform,
+    fulfillment:fulfillment==="SUBMITTED"?"processing":"review"
+   });
+  }catch{
+   console.error("litix_autolikes_notification_batch_failed",{orderId:id});
+  }
+ });
  return reply({orderId:id,privateTrackingUrl:portal.toString(),payment:"paid",
   fulfillment:fulfillment==="SUBMITTED"?"processing":fulfillment==="UNKNOWN_OUTCOME"?"review":
    fulfillment==="MANUAL_REVIEW"?"review":"pending",
