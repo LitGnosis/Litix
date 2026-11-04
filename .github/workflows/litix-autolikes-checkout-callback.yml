@@ -27,4 +27,7 @@ jobs:
       - run: node --version
       - run: node --check src/lib/litixAutoLikesCheckoutGate.mjs
       - run: node --test src/tests/litix-autolikes-checkout-callback.test.mjs
+      - name: Install locked app dependencies for supplier simulation tests
+        run: npm ci --no-audit --no-fund
+        working-directory: src
       - run: node --test src/tests/litix-autolikes-prepaid.test.mjs
