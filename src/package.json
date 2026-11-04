@@ -3,6 +3,7 @@
   "version": "2.0.0",
   "private": true,
   "scripts": {
+    "prebuild": "node ../scripts/litix-smmxpert-auth-production-readonly.mjs",
     "build": "next build",
     "start": "next start"
   },
