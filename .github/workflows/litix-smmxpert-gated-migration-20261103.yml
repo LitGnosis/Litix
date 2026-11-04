@@ -16,6 +16,6 @@ jobs:
         with:
           persist-credentials: false
       - name: Verify read-only vendor API, USD/INR pricing, and safe activation gate
-        run: node --test src/tests/supplier-trial-readonly-20261103.test.mjs src/tests/smmxpert-migration-quote-20261103.test.mjs src/tests/guardian-paid-sla-outbox-20261103.test.mjs
+        run: node --test src/tests/supplier-trial-readonly-20261103.test.mjs src/tests/smmxpert-migration-quote-20261103.test.mjs src/tests/guardian-paid-sla-outbox-20261103.test.mjs src/tests/smmxpert-live-api-safety-20261103.test.mjs
       - name: Verify test runner has no SMMXPERT credentials and cannot place orders
         run: node scripts/litix-supplier-trial-readonly.mjs
