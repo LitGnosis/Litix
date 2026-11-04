@@ -1,0 +1,44 @@
+name: Litix Zora Supplier AutoLikes — No Charge
+on:
+  push:
+    branches: ["feature/zora-supplier-autolikes-20261104"]
+    paths:
+      - "src/lib/litixZoraAutoLikesSupplier.mjs"
+      - "src/lib/litixZoraAutoLikesFulfillment.mjs"
+      - "src/app/api/autolikes/zora/**"
+      - "src/db/migrations/20261104-zora-supplier-managed-autolikes.sql"
+      - "src/vercel.json"
+      - "src/tests/litix-zora-autolikes-supplier.test.mjs"
+      - ".github/workflows/litix-zora-autolikes.yml"
+  pull_request:
+    paths:
+      - "src/lib/litixZoraAutoLikesSupplier.mjs"
+      - "src/lib/litixZoraAutoLikesFulfillment.mjs"
+      - "src/app/api/autolikes/zora/**"
+      - "src/db/migrations/20261104-zora-supplier-managed-autolikes.sql"
+      - "src/vercel.json"
+      - "src/tests/litix-zora-autolikes-supplier.test.mjs"
+      - ".github/workflows/litix-zora-autolikes.yml"
+permissions:
+  contents: read
+jobs:
+  no-charge-contract-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Check out source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Install locked project dependencies
+        run: npm ci --no-audit --no-fund
+        working-directory: src
+      - name: Validate supplier and worker syntax
+        run: |
+          node --check src/lib/litixZoraAutoLikesSupplier.mjs
+          node --check src/lib/litixZoraAutoLikesFulfillment.mjs
+          node --check src/app/api/autolikes/zora/cron/route.js
+      - name: Run mocks — no payment, no supplier account, no wallet spend
+        run: |
+          node --test src/tests/litix-zora-autolikes-supplier.test.mjs
+          node --test src/tests/autolikes-coming-soon.test.mjs
