@@ -66,12 +66,13 @@ export function smmxpertDraftQuote(service,quantity,{
 }
 export function smmxpertActivationBlockers({
  apiKeyPresent=false,catalogReadVerified=false,balanceCurrencyVerified=false,
+ walletFunded=false,rateCurrencyVerified=false,
  fxVerified=false,serviceIdsApproved=false,idempotentDispatchImplemented=false,
  historicalOrderIsolationVerified=false,trackingAndRefundsVerified=false,
  paidEndToEndTestVerified=false
 }={}){
  const gates={
-  apiKeyPresent,catalogReadVerified,balanceCurrencyVerified,fxVerified,
+  apiKeyPresent,catalogReadVerified,balanceCurrencyVerified,walletFunded,rateCurrencyVerified,fxVerified,
   serviceIdsApproved,idempotentDispatchImplemented,historicalOrderIsolationVerified,
   trackingAndRefundsVerified,paidEndToEndTestVerified
  };
