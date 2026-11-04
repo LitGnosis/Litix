@@ -1,3 +1,4 @@
+import {autolikesNewSalesEnabled,AUTOLIKES_SALES_PAUSED_MESSAGE} from "../../../../lib/litixAutoLikesSalesGate.mjs";
 import {boosteroProduction} from "../../../../lib/boosteroReadOnly.mjs";
 import {boosteroProductionReady} from "../../../../lib/boosteroFulfillment.mjs";
 import {nativeAutoLikesCatalog} from "../../../../lib/boosteroNativeAutoLikes.mjs";
@@ -24,6 +25,7 @@ async function liveNativeCatalog(){
  return inFlight;
 }
 export async function GET(){
+ if(!autolikesNewSalesEnabled())return send({available:false,checkoutEnabled:false,items:[],note:AUTOLIKES_SALES_PAUSED_MESSAGE});
  if(!boosteroProductionReady())return send({available:false,items:[],note:"AutoLikes supplier verification unavailable"},503);
  try{
   const items=await liveNativeCatalog();

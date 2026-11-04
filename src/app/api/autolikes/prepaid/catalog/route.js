@@ -1,9 +1,11 @@
+import {autolikesNewSalesEnabled,AUTOLIKES_SALES_PAUSED_MESSAGE} from "../../../../../lib/litixAutoLikesSalesGate.mjs";
 import {boosteroProduction} from "../../../../../lib/boosteroReadOnly.mjs";
 import {boosteroProductionReady} from "../../../../../lib/boosteroFulfillment.mjs";
 import {prepaidAutoLikesEnabled} from "../../../../../lib/litixPrepaidAutoLikesFulfillment.mjs";
 import {PREPAID_PRICE_TIERS,quotePrepaidAutoLikes} from "../../../../../lib/litixPrepaidAutoLikes.mjs";
 export const runtime="nodejs";export const dynamic="force-dynamic";export const maxDuration=30;
 export async function GET(){
+ if(!autolikesNewSalesEnabled())return Response.json({available:false,checkoutEnabled:false,platforms:[],message:AUTOLIKES_SALES_PAUSED_MESSAGE},{headers:{"cache-control":"no-store"}});
  if(!boosteroProductionReady())return Response.json({available:false,checkoutEnabled:false,platforms:[],message:"AutoLikes availability cannot be verified."},{status:503,headers:{"cache-control":"no-store"}});
  try{
   const services=await boosteroProduction("services");
