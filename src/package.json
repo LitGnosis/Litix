@@ -3,7 +3,6 @@
   "version": "2.0.0",
   "private": true,
   "scripts": {
-    "prebuild": "node ../scripts/litix-supplier-trial-readonly.mjs",
     "build": "next build",
     "start": "next start"
   },
