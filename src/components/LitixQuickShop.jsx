@@ -36,6 +36,7 @@ export default function LitixQuickShop(){
   <div className="litix-shop-actions">
    <a className="litix-metal-cta" href={quickShopCustomHref(platform)} aria-label={platform==="X"?"Custom X Followers":"Custom Likes & Followers"}>Custom Likes &amp; Followers <span aria-hidden="true">›</span></a>
    <a className="litix-shop-secondary" href="/bundles">Growth Bundles</a>
+   <a className="litix-shop-secondary" href="/solutions">Business & Creator Growth</a>
    <a className="litix-shop-secondary" href="/services">Browse All Litix Services</a>
    <a className="litix-shop-secondary" href="/track">Track an Order</a>
   </div>

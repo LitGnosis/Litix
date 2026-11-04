@@ -1,5 +1,6 @@
 import {SHOP_CATEGORIES} from "../lib/litixShopRoutes.mjs";
 import {GLOBAL_CODES,GLOBAL_LANG_ALTERNATES} from "../lib/globalLocales.mjs";
+import {LITIX_SOLUTION_SLUGS} from "../lib/litixSolutions.mjs";
 export default function sitemap() {
   const base = "https://litix.net";
   const localAlternates={languages:Object.fromEntries(
@@ -9,6 +10,11 @@ export default function sitemap() {
     {url:base,changeFrequency:"daily",priority:1},
     {url:base+"/shop",changeFrequency:"weekly",priority:0.9},
     {url:base+"/partners",changeFrequency:"monthly",priority:0.7},
+    {url:base+"/solutions",changeFrequency:"monthly",priority:0.8},
+    ...LITIX_SOLUTION_SLUGS.map(slug=>({url:base+"/solutions/"+slug,changeFrequency:"monthly",priority:0.55})),
+    {url:base+"/tools/caption-builder",changeFrequency:"monthly",priority:0.7},
+    {url:base+"/tools/link-page-builder",changeFrequency:"monthly",priority:0.7},
+    {url:base+"/tools/local-visibility",changeFrequency:"monthly",priority:0.7},
     {url:base+"/tools/tiktok-engagement",changeFrequency:"monthly",priority:0.7},
     {url:base+"/services",changeFrequency:"daily",priority:0.9},
     {url:base+"/track",changeFrequency:"monthly",priority:0.4},
