@@ -3,7 +3,6 @@
   "version": "2.0.0",
   "private": true,
   "scripts": {
-    "prebuild": "node ../scripts/litix-smmxpert-live-catalog-qualification.mjs",
     "build": "next build",
     "start": "next start"
   },
