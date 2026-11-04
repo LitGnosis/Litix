@@ -37,6 +37,15 @@ export default function ShopIndex(){
    <a href="/tools/tiktok-engagement">Open free engagement calculator</a>
   </section>
   <section className="panel">
+   <h2>Grow a business or creator brand</h2>
+   <p>Explore Litix Local Growth, creator tools, content production and future agency solutions. Free tools work now; new service programs accept manual proposals rather than automatic payments.</p>
+   <div style={{display:"flex",flexWrap:"wrap",gap:14}}>
+    <a href="/solutions">Business & Creator Growth Hub</a>
+    <a href="/tools/caption-builder">Free Caption Builder</a>
+    <a href="/tools/local-visibility">Free Local Checklist</a>
+   </div>
+  </section>
+  <section className="panel">
    <h2>Before you check out</h2>
    <p>Choose a supported service, review the final price and quantity, and use only the eligible public link requested. Never enter your social account password or pay again when an order is under review.</p>
    <div style={{display:"flex",gap:14,flexWrap:"wrap"}}>
