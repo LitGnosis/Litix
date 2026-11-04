@@ -1,3 +1,4 @@
+import {autolikesNewSalesEnabled,AUTOLIKES_SALES_PAUSED_MESSAGE} from "../../../../lib/litixAutoLikesSalesGate.mjs";
 import {createHash,randomUUID} from "node:crypto";
 import {boosteroSQL,boosteroProductionReady} from "../../../../lib/boosteroFulfillment.mjs";
 import {boosteroProduction} from "../../../../lib/boosteroReadOnly.mjs";
@@ -23,6 +24,7 @@ async function sendManagementEmail(email,link){
  }catch{return false}
 }
 export async function POST(request){
+ if(!autolikesNewSalesEnabled())return send({error:AUTOLIKES_SALES_PAUSED_MESSAGE,checkoutEnabled:false},503);
  const origin=request.headers.get("origin");
  if(!origin||origin!==new URL(request.url).origin)return send({error:"Invalid request origin"},403);
  // Hard deny charging before merchant recurring capability is independently authorized.
