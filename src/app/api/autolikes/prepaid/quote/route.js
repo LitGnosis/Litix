@@ -1,3 +1,4 @@
+import {autolikesNewSalesEnabled,AUTOLIKES_SALES_PAUSED_MESSAGE} from "../../../../../lib/litixAutoLikesSalesGate.mjs";
 import {boosteroProduction} from "../../../../../lib/boosteroReadOnly.mjs";
 import {boosteroProductionReady} from "../../../../../lib/boosteroFulfillment.mjs";
 import {quotePrepaidAutoLikes} from "../../../../../lib/litixPrepaidAutoLikes.mjs";
@@ -5,6 +6,7 @@ import {prepaidAutoLikesEnabled} from "../../../../../lib/litixPrepaidAutoLikesF
 export const runtime="nodejs";export const dynamic="force-dynamic";export const maxDuration=30;
 const send=(o,s=200)=>Response.json(o,{status:s,headers:{"cache-control":"no-store","x-content-type-options":"nosniff"}});
 export async function POST(req){
+ if(!autolikesNewSalesEnabled())return send({error:AUTOLIKES_SALES_PAUSED_MESSAGE,checkoutEnabled:false},503);
  const origin=req.headers.get("origin");if(origin&&origin!==new URL(req.url).origin)return send({error:"Invalid origin"},403);
  if(!boosteroProductionReady())return send({error:"Litix AutoLikes unavailable"},503);
  let input;
