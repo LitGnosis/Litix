@@ -26,6 +26,10 @@
     {
       "path": "/api/autolikes/prepaid/cron",
       "schedule": "7,22,37,52 * * * *"
+    },
+    {
+      "path": "/api/autolikes/zora/cron",
+      "schedule": "12,27,42,57 * * * *"
     }
   ]
 }
