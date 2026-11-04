@@ -37,6 +37,20 @@ export default function ShopIndex(){
    <a href="/tools/tiktok-engagement">Open free engagement calculator</a>
   </section>
   <section className="panel">
+   <h2>Before you check out</h2>
+   <p>Choose a supported service, review the final price and quantity, and use only the eligible public link requested. Never enter your social account password or pay again when an order is under review.</p>
+   <div style={{display:"flex",gap:14,flexWrap:"wrap"}}>
+     <a href="/#checkout">Continue to secure checkout</a>
+     <a href="/terms">Review service terms</a>
+     <a href="/track">Check an existing order</a>
+   </div>
+  </section>
+  <section className="panel">
+   <h2>Work with Litix</h2>
+   <p>Agencies, creators and marketing professionals can apply for an individually reviewed partnership or referral pilot. No automatic commission or wholesale pricing is promised.</p>
+   <a href="/partners">Explore partnership opportunities</a>
+  </section>
+  <section className="panel">
    <h2>Already purchased?</h2>
    <p>Check your existing order without purchasing again or sharing a social password.</p>
    <a href="/track">Track your Litix order</a>
