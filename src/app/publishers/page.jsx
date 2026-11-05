@@ -30,6 +30,7 @@ export default function LitixPublisherPartners(){
   </section>
   <section className="ls-panel">
    <h2>How a genuine Litix campaign would work</h2>
+   <p><Link href="/native/supply">See which Litix-owned and verified publisher services are actually available</Link>.</p>
    <ol className="ls-list">
     <li>Submit a partnership inquiry with your public portfolio, content niche, location and proposed deliverables.</li>
     <li>Litix verifies identity, applicable content rights, brand fit and any audience or traffic claims.</li>
