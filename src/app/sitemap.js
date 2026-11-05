@@ -15,6 +15,7 @@ export default function sitemap() {
     {url:base+"/solutions",changeFrequency:"monthly",priority:0.8},
     ...LITIX_SOLUTION_SLUGS.map(slug=>({url:base+"/solutions/"+slug,changeFrequency:"monthly",priority:0.55})),
     {url:base+"/native",changeFrequency:"weekly",priority:0.75},
+    {url:base+"/native/supply",changeFrequency:"weekly",priority:0.65},
     {url:base+"/tools/caption-builder",changeFrequency:"monthly",priority:0.7},
     {url:base+"/tools/link-page-builder",changeFrequency:"monthly",priority:0.7},
     {url:base+"/tools/local-visibility",changeFrequency:"monthly",priority:0.7},
