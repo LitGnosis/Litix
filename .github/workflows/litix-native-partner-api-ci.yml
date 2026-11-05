@@ -1,0 +1,24 @@
+name: Litix Native partner API — no-charge QA
+on:
+  pull_request:
+    paths:
+      - "src/lib/litixNativePartnerApi.mjs"
+      - "src/app/api/native/v1/reseller/**"
+      - "src/db/litix_native_partner_trial.sql"
+      - "src/tests/litixNativePartnerApi.test.mjs"
+      - ".github/workflows/litix-native-partner-api-ci.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  native-partner-api:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout (no credentials persisted)
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Run self-contained native partner contract tests (no DB, network or secrets)
+        working-directory: src
+        run: node --test tests/litixNativePartnerApi.test.mjs
