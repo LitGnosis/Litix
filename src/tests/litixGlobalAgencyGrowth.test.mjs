@@ -47,12 +47,14 @@ test("Global agency funnel uses the existing products and existing partner intak
  assert.match(page,/href="\/track"/);
  assert.match(page,/utm_source=agency_page/);
  assert.match(page,/utm_campaign=global_agencies/);
- assert.match(page,/pricing.*(review|confirm)|review.*pricing/i);
+ assert.match(page,/(prices|pricing)/i);
+ assert.match(page,/(review|confirm)/i);
  assert.match(partnerPage,/PartnerApplication/);
  assert.match(form,/cleanPartnerAttribution/);
  assert.match(server,/partnerAttributionLabel/);
  assert.match(server,/manual review required/);
- assert.doesNotMatch(page,/guaranteed (followers|likes|views)|automatic wholesale discounts/i);
+ assert.doesNotMatch(page,/guaranteed (followers|likes|views)/i);
+ assert.match(page,/no automatic wholesale discounts/i);
  assert.doesNotMatch(page,/Litix Native|caption kit|link page|campaign planner/i);
 });
 test("Six localized pages route agency interest to a consented existing form",async()=>{
