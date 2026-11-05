@@ -2,7 +2,7 @@ import {SHOP_CATEGORIES} from "../lib/litixShopRoutes.mjs";
 import {GLOBAL_CODES,GLOBAL_LANG_ALTERNATES} from "../lib/globalLocales.mjs";
 import {LITIX_SOLUTION_SLUGS} from "../lib/litixSolutions.mjs";
 export default function sitemap() {
-  const base = "https://litix.net";
+  const base = "https://www.litix.net";
   const localAlternates={languages:Object.fromEntries(
     Object.entries(GLOBAL_LANG_ALTERNATES).map(([key,path])=>[key,base+path])
   )};
