@@ -17,6 +17,7 @@ export async function GET(){
 }
 export async function POST(request){
  if(process.env.LITIX_NATIVE_PAID_ENABLED!=="true"||
+    process.env.LITIX_NATIVE_RELEASE_APPROVAL!=="approved-native-pro30-v1"||
     process.env.VERCEL_ENV!=="production")
   return send({error:"NATIVE_PAID_CHECKOUT_DISABLED",charged:false},503);
  const origin=request.headers.get("origin");
