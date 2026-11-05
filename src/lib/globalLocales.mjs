@@ -1,6 +1,9 @@
 // Informational landing-page translations only. Checkout and legal terms remain in English.
 export const GLOBAL_LOCALES={
   "en": {
+    "agencyTitle": "Work with Litix as an agency",
+    "agencyCopy": "Serving clients in multiple markets? Request a reviewed agency or referral partnership. Terms, service eligibility and pricing must be confirmed.",
+    "agencyCta": "Discuss an agency partnership",
     "name": "English",
     "metaTitle": "Litix Global | Social media marketing and creator tools",
     "metaDescription": "Explore Litix services and creator planning tools. Browse available options, then review USD prices and checkout details on the main Litix store.",
@@ -30,6 +33,9 @@ export const GLOBAL_LOCALES={
     "badge3": "Live eligibility at checkout"
   },
   "es": {
+    "agencyTitle": "Colabora con Litix como agencia",
+    "agencyCopy": "¿Atiendes clientes en varios mercados? Solicita una colaboración de agencia o referidos. Los precios, las condiciones y los servicios disponibles se confirman por separado.",
+    "agencyCta": "Consultar colaboración para agencias",
     "name": "Español",
     "metaTitle": "Litix Global | Marketing en redes sociales y herramientas para creadores",
     "metaDescription": "Conoce los servicios y herramientas de planificación de Litix. Consulta los precios finales en USD y las condiciones en la tienda principal.",
@@ -59,6 +65,9 @@ export const GLOBAL_LOCALES={
     "badge3": "Requisitos verificados al pagar"
   },
   "pt": {
+    "agencyTitle": "Trabalhe com a Litix como agência",
+    "agencyCopy": "Atende clientes em vários mercados? Solicite uma parceria para agências ou indicações. Preços, termos e serviços disponíveis devem ser confirmados.",
+    "agencyCta": "Consultar parceria para agências",
     "name": "Português",
     "metaTitle": "Litix Global | Marketing em redes sociais e ferramentas para criadores",
     "metaDescription": "Conheça os serviços e as ferramentas de planejamento da Litix. Confira os preços finais em USD e as condições na loja principal.",
@@ -88,6 +97,9 @@ export const GLOBAL_LOCALES={
     "badge3": "Elegibilidade verificada no checkout"
   },
   "fr": {
+    "agencyTitle": "Développez votre activité avec Litix",
+    "agencyCopy": "Vous accompagnez des clients dans plusieurs pays ? Proposez un partenariat d'agence ou de recommandation. Les prix et les conditions sont à confirmer.",
+    "agencyCta": "Demander un partenariat agence",
     "name": "Français",
     "metaTitle": "Litix Global | Marketing sur les réseaux sociaux et outils pour créateurs",
     "metaDescription": "Découvrez les services et outils de planification Litix. Consultez les prix définitifs en USD et les conditions dans la boutique principale.",
@@ -117,6 +129,9 @@ export const GLOBAL_LOCALES={
     "badge3": "Éligibilité vérifiée au paiement"
   },
   "de": {
+    "agencyTitle": "Mit Litix als Agentur zusammenarbeiten",
+    "agencyCopy": "Sie betreuen Kunden in mehreren Märkten? Fragen Sie eine Agentur- oder Empfehlungspartnerschaft an. Preise, Konditionen und verfügbare Leistungen müssen bestätigt werden.",
+    "agencyCta": "Agenturpartnerschaft anfragen",
     "name": "Deutsch",
     "metaTitle": "Litix Global | Social-Media-Marketing und Tools für Creator",
     "metaDescription": "Entdecke Litix-Dienstleistungen und Planungstools. Die endgültigen USD-Preise und Bedingungen findest du im Hauptshop.",
@@ -146,6 +161,9 @@ export const GLOBAL_LOCALES={
     "badge3": "Verfügbarkeit im Checkout geprüft"
   },
   "ar": {
+    "agencyTitle": "تعاون مع ليتكس كوكالة",
+    "agencyCopy": "هل تخدم عملاء في بلدان متعددة؟ اطلب مراجعة شراكة وكالة أو إحالة. يجب تأكيد الأسعار والشروط والخدمات المتاحة قبل الشراء.",
+    "agencyCta": "طلب شراكة للوكالات",
     "name": "العربية",
     "metaTitle": "ليتكس العالمية | التسويق عبر وسائل التواصل وأدوات صنّاع المحتوى",
     "metaDescription": "تعرّف على خدمات ليتكس وأدوات التخطيط. راجع الأسعار النهائية بالدولار الأمريكي والشروط في المتجر الرئيسي.",
