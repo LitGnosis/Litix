@@ -10,6 +10,7 @@ export default function sitemap() {
     {url:base,changeFrequency:"daily",priority:1},
     {url:base+"/shop",changeFrequency:"weekly",priority:0.9},
     {url:base+"/partners",changeFrequency:"monthly",priority:0.7},
+    {url:base+"/publishers",changeFrequency:"monthly",priority:0.7},
     {url:base+"/solutions",changeFrequency:"monthly",priority:0.8},
     ...LITIX_SOLUTION_SLUGS.map(slug=>({url:base+"/solutions/"+slug,changeFrequency:"monthly",priority:0.55})),
     {url:base+"/native",changeFrequency:"weekly",priority:0.75},
