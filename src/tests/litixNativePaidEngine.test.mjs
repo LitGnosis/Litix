@@ -4,6 +4,7 @@ import {nativePaidQuote,nativeOrderToken,nativeTokenValid,verifyNativeNmiSettlem
 import {checkoutNativePaid,statusNativePaid,sendNativePaidDelivery,nmiSettledFor,quoteNativeOffer} from "../lib/litixNativePaidEngine.mjs";
 const key="no-real-secrets-"+ "X".repeat(48);
 const prod={VERCEL_ENV:"production",LITIX_NATIVE_PAID_ENABLED:"true",
+ LITIX_NATIVE_RELEASE_APPROVAL:"approved-native-pro30-v1",
  LITIX_NATIVE_PRICES_JSON:JSON.stringify({
   "litix-native-30day-campaign-pro":{priceCents:999,costCents:80,supportReserveCents:150}
  }),NMI_SECURITY_KEY:"test-only-nmi-credential",
