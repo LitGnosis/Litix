@@ -28,7 +28,7 @@ export default async function GlobalLanding({params}){
   const rtl=isRTLGlobalLocale(locale);
   const cards=[
     {heading:t.servicesTitle,copy:t.services,href:"/#services",cta:t.start,number:"01"},
-    {heading:t.toolsTitle,copy:t.tools,href:"/#growth-studio",cta:t.planning,number:"02"},
+    {heading:t.toolsTitle,copy:t.tools,href:"/bundles",cta:t.planning,number:"02"},
     {heading:t.trackTitle,copy:t.track,href:"/track",cta:t.tracking,number:"03"},
     {heading:t.agencyTitle,copy:t.agencyCopy,href:"/partners?utm_source=global_"+locale+"&utm_medium=owned&utm_campaign=global_agencies#apply",cta:t.agencyCta,number:"04"},
   ];
@@ -50,7 +50,7 @@ export default async function GlobalLanding({params}){
         <p className="lxglobal-intro">{t.intro}</p>
         <div className="lxglobal-actions">
           <Link className="lxglobal-primary" href="/#services">{t.start}</Link>
-          <Link className="lxglobal-secondary" href="/#growth-studio">{t.planning}</Link>
+          <Link className="lxglobal-secondary" href="/bundles">{t.planning}</Link>
         </div>
         <ul className="lxglobal-badges">
           <li>{t.badge1}</li><li>{t.badge2}</li><li>{t.badge3}</li>
