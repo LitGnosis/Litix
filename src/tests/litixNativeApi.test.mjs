@@ -13,7 +13,7 @@ test("native catalog is free, locally produced, and not publicly billable",async
  assert.equal(x.supplier,"Litix Native");
  assert.equal(x.paidCheckoutEnabled,false);
  assert.equal(x.externalSupplierRequired,false);
- assert.equal(x.services.length,2);
+ assert.equal(x.services.length,3);
  assert.ok(x.services.every(s=>s.publiclyPurchasable===false));
 });
 test("preview response supplies no-charge deterministic original content",async()=>{
