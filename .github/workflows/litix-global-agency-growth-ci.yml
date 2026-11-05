@@ -1,0 +1,33 @@
+name: Litix global agency acquisition and source attribution QA
+on:
+  pull_request:
+    paths:
+      - "src/app/for-agencies/**"
+      - "src/app/global/**"
+      - "src/app/api/partners/**"
+      - "src/components/PartnerApplication.jsx"
+      - "src/lib/globalLocales.mjs"
+      - "src/lib/litixPartnerAttribution.mjs"
+      - "src/lib/partnerApplications.mjs"
+      - "src/app/sitemap.js"
+      - "src/tests/litixGlobalAgencyGrowth.test.mjs"
+      - "src/tests/global-locales.test.mjs"
+      - "src/tests/partnerApplications.test.mjs"
+      - ".github/workflows/litix-global-agency-growth-ci.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  safe-global-sales:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout source without retaining Git credentials
+        uses: actions/checkout@v4.2.2
+        with:
+          persist-credentials: false
+      - name: Test source attribution and international lead conversion without charging customers
+        working-directory: src
+        run: |
+          set -euo pipefail
+          node --test tests/litixGlobalAgencyGrowth.test.mjs tests/global-locales.test.mjs tests/partnerApplications.test.mjs
