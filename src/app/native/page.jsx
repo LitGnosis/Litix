@@ -21,7 +21,7 @@ export default function LitixNativePage(){
   <section className="ls-panel">
    <h2>For agencies and businesses</h2>
    <p>Interested in recurring creative assets, agency reporting, or a verified creator partnership? Share your requirements so Litix can review the service scope before proposing terms.</p>
-   <p><Link href="/partners">Discuss agency wholesale access</Link> or <Link href="/publishers">apply as a creator or publisher</Link> to help supply genuine campaigns.</p>
+   <p><Link href="/wholesale">Request agency wholesale access</Link> or <Link href="/publishers">apply as a creator or publisher</Link> to help supply genuine campaigns.</p>
   </section>
   <footer className="ls-footer"><Link href="/legal/privacy">Privacy</Link><Link href="/terms">Terms</Link><Link href="/">Litix home</Link></footer>
  </main>;
