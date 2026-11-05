@@ -5,7 +5,7 @@ create table if not exists public.litix_native_partner_orders (
  id uuid primary key,
  partner_id text not null check(length(partner_id) between 2 and 40),
  request_id text not null check(length(request_id) between 8 and 64),
- service_id text not null check(service_id in ('litix-native-caption-kit','litix-native-link-page')),
+ service_id text not null check(service_id in ('litix-native-caption-kit','litix-native-link-page','litix-native-campaign-plan')),
  request_hash char(64) not null,
  filename text not null check(length(filename) between 5 and 110),
  mime_type text not null check(length(mime_type) between 5 and 80),
