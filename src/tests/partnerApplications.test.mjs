@@ -9,6 +9,11 @@ test("valid partner inquiry is normalized",()=>{
   assert.equal(result.ok,true);
   assert.equal(result.data.email,"person@example.com");
 });
+test("accepts explicit opt-in creator or publisher partnership",()=>{
+  const result=validatePartnerInquiry({...valid,type:"publisher",goals:"We want to discuss a genuine content-placement campaign for our opted-in audience."});
+  assert.equal(result.ok,true);
+  assert.equal(result.data.type,"publisher");
+});
 test("rejects unconsented applications",()=>assert.equal(validatePartnerInquiry({...valid,consent:false}).ok,false));
 test("rejects invalid email and internal hostnames",()=>{
   assert.equal(validatePartnerInquiry({...valid,email:"not-email"}).ok,false);

@@ -5,7 +5,7 @@ const captionBrief={business:"Elm Street Bakery",audience:"local pastry lovers",
 
 test("first-party inventory is not publicly purchasable",()=>{
  const services=litixNativeServices();
- assert.equal(services.length,2);
+ assert.equal(services.length,3);
  assert.ok(services.every(s=>s.publiclyPurchasable===false&&s.status==="INTERNAL_QA_ONLY"));
  assert.equal(litixNativeService("boostero_5271"),null);
  assert.equal(litixNativeService("litix-native-followers"),null);

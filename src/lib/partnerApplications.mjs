@@ -1,5 +1,5 @@
 // Public, manually reviewed partner-interest intake. No affiliate payouts are activated here.
-export const PARTNER_TYPES = Object.freeze(["agency", "affiliate", "reviewer", "business"]);
+export const PARTNER_TYPES = Object.freeze(["agency", "affiliate", "reviewer", "business", "publisher"]);
 
 const clean = (value) => typeof value === "string" ? value.trim().replace(/\s+/g, " ") : "";
 const validEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) && value.length <= 254;

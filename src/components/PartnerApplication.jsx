@@ -34,6 +34,7 @@ export default function PartnerApplication(){
           <option value="affiliate">Referral / affiliate pilot</option>
           <option value="reviewer">Independent reviewer / creator</option>
           <option value="business">Business collaboration</option>
+          <option value="publisher">Creator / publisher campaign partnership</option>
         </select>
       </label>
     </div>

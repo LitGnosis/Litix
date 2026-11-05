@@ -32,7 +32,7 @@ test("public catalog reports genuine trial-only original digital services",()=>{
  assert.equal(c.paidCheckoutEnabled,false);
  assert.equal(c.artificialEngagementAvailable,false);
  assert.ok(c.services.every(x=>x.trialOnly&&x.trialPriceCents===0&&x.activeForPaidOrders===false));
- assert.equal(c.services.length,2);
+ assert.equal(c.services.length,3);
 });
 test("API keys are verified against hashes and reject malformed config",()=>{
  assert.equal(resolveNativePartner(key,env.LITIX_NATIVE_PARTNER_API_CONFIG).id,"agency-one");

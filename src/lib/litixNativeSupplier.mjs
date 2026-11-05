@@ -9,10 +9,12 @@
  */
 import {createHash} from "node:crypto";
 import {buildCaptionIdeas,linkPageExport,CAPTION_TONES,CAPTION_PLATFORMS} from "./litixCreatorTools.mjs";
+import {campaignPlanCsv} from "./litixNativeCampaign.mjs";
 
 const INVENTORY=Object.freeze([
  Object.freeze({id:"litix-native-caption-kit",name:"Litix Caption Starter Kit",kind:"owned-digital-asset",type:"caption-pack",quantity:1,status:"INTERNAL_QA_ONLY",publiclyPurchasable:false}),
- Object.freeze({id:"litix-native-link-page",name:"Litix Exportable Link Page",kind:"owned-digital-asset",type:"link-page",quantity:1,status:"INTERNAL_QA_ONLY",publiclyPurchasable:false})
+ Object.freeze({id:"litix-native-link-page",name:"Litix Exportable Link Page",kind:"owned-digital-asset",type:"link-page",quantity:1,status:"INTERNAL_QA_ONLY",publiclyPurchasable:false}),
+ Object.freeze({id:"litix-native-campaign-plan",name:"Litix 7-Day Campaign Planner",kind:"owned-digital-asset",type:"campaign-plan",quantity:1,status:"INTERNAL_QA_ONLY",publiclyPurchasable:false})
 ]);
 export function litixNativeServices(){return INVENTORY;}
 export function litixNativeService(id){return INVENTORY.find(s=>s.id===id)||null;}
@@ -39,6 +41,10 @@ export function previewLitixNativeAsset({serviceId,brief}={}){
    ...[clear[0],clear[1],...announcements].flatMap((entry,i)=>[(i+1)+". "+entry.label,entry.text,""])].join("\n");
   filename=safeName(brief.business)+"-captions.txt";
   mimeType="text/plain; charset=utf-8";
+ }else if(service.type==="campaign-plan"){
+  content=campaignPlanCsv(brief);
+  filename=safeName(brief.business)+"-campaign-7days.csv";
+  mimeType="text/csv; charset=utf-8";
  }else if(service.type==="link-page"){
   content=linkPageExport({name:brief.name,tagline:brief.tagline,links:brief.links});
   filename=safeName(brief.name)+"-links.html";

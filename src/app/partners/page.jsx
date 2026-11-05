@@ -11,7 +11,8 @@ export const metadata = {
 const paths=[
   {name:"Agencies and consultants",summary:"Discuss ongoing client needs, service eligibility and partnership terms. Wholesale access is not activated by applying."},
   {name:"Referral and affiliate pilots",summary:"Apply to discuss a trackable referral partnership. Rates, attribution and payouts require written approval and technical verification."},
-  {name:"Independent reviewers",summary:"Pitch an honest editorial review or founder conversation. Reviews must disclose sponsorships and retain editorial independence."}
+  {name:"Independent reviewers",summary:"Pitch an honest editorial review or founder conversation. Reviews must disclose sponsorships and retain editorial independence."},
+  {name:"Creators and publishers",summary:"Propose an opt-in, disclosed content placement or original promotion partnership. Litix reviews actual audience, rights and capacity before any paid campaign is offered."}
 ];
 
 export default function PartnersPage(){
