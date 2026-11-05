@@ -39,6 +39,7 @@ export default function LitixWholesalePage(){
     <li>After operational approval, Litix can provision scoped API credentials and a written wholesale agreement for specific genuinely deliverable products.</li>
     <li>Prices, billing terms, service limits, and customer support commitments must be agreed before any paid API orders are enabled.</li>
    </ol>
+   <p><Link href="/native/supply">See Litix Native supplier capacity and independent service readiness</Link></p>
    <p className="ls-note">The reseller API currently supports public service discovery only. New automated partner orders and paid Native checkout remain disabled until the separate security and settlement checks are approved. Litix cannot manufacture authentic followers, likes or views.</p>
   </section>
   <section className="ls-panel" id="apply">

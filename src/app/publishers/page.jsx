@@ -1,4 +1,5 @@
 import Link from "next/link";
+import LitixPublisherApplication from "../../components/LitixPublisherApplication";
 import "../solutions/solutions.css";
 export const metadata={
  title:"Partner With Litix | Creator & Publisher Campaigns",
@@ -15,7 +16,7 @@ export default function LitixPublisherPartners(){
    <span className="ls-eyebrow">LITIX NATIVE · GLOBAL CREATOR NETWORK</span>
    <h1>Help create genuine campaigns with Litix.</h1>
    <p>We're looking for independent creators, publishers, and legitimate agencies worldwide who can provide original content or approved promotional placements to relevant audiences. Apply to discuss the fit.</p>
-   <div className="ls-actions"><Link className="ls-cta" href="/partners#apply">Apply to collaborate</Link><Link className="ls-link" href="/native">Try our free creator tools</Link></div>
+   <div className="ls-actions"><Link className="ls-cta" href="#apply">Apply to collaborate</Link><Link className="ls-link" href="/native">Try our free creator tools</Link></div>
   </section>
   <section className="ls-panel">
    <h2>What we're recruiting</h2>
@@ -29,6 +30,7 @@ export default function LitixPublisherPartners(){
   </section>
   <section className="ls-panel">
    <h2>How a genuine Litix campaign would work</h2>
+   <p><Link href="/native/supply">See which Litix-owned and verified publisher services are actually available</Link>.</p>
    <ol className="ls-list">
     <li>Submit a partnership inquiry with your public portfolio, content niche, location and proposed deliverables.</li>
     <li>Litix verifies identity, applicable content rights, brand fit and any audience or traffic claims.</li>
@@ -36,8 +38,9 @@ export default function LitixPublisherPartners(){
     <li>The creator publishes or delivers permitted content, then shares a legitimate report or proof of delivery.</li>
    </ol>
    <p className="ls-note">No purchased likes, follower exchanges, fabricated views, secret endorsements, credential sharing or promises of guaranteed engagement. Actual customer campaign bookings are not enabled by this application.</p>
-   <Link className="ls-cta" href="/partners#apply">Request partnership review</Link>
+   <Link className="ls-cta" href="#apply">Request partnership review</Link>
   </section>
+  <LitixPublisherApplication/>
   <footer className="ls-footer"><Link href="/legal/privacy">Privacy</Link><Link href="/terms">Terms</Link><Link href="/">Litix home</Link></footer>
  </main>;
 }
