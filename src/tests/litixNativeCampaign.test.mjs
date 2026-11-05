@@ -34,7 +34,7 @@ test("Validate creator identity, platform, outbound URL and CSV formulas",()=>{
   assert.throws(()=>campaignPlanCsv({...brief,website}),/NATIVE_CAMPAIGN_URL_INVALID/);
  }
  const csv=campaignPlanCsv({...brief,business:"=HYPERLINK",action:"=IMPORTXML"});
- assert.match(csv,/"'=HYPERLINK/);
+ assert.match(csv,/"'=IMPORTXML"/);
  assert.match(csv,/=IMPORTXML/);
 });
 test("Native preview stays non-billable and is reproducible",()=>{
