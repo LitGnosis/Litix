@@ -6,7 +6,7 @@ export default function robots() {
       // Retain exclusions from the prior October 19 robots proxy, and exclude admin pages.
       disallow:["/api/","/account","/signin","/checkout","/guardian/admin","/bundles/admin"]
     }],
-    sitemap:"https://litix.net/sitemap.xml",
-    host:"https://litix.net",
+    sitemap:"https://www.litix.net/sitemap.xml",
+    host:"https://www.litix.net",
   };
 }
