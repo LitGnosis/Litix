@@ -5,14 +5,12 @@ import {checkoutNativePaid,statusNativePaid,sendNativePaidDelivery,nmiSettledFor
 const key="no-real-secrets-"+ "X".repeat(48);
 const prod={VERCEL_ENV:"production",LITIX_NATIVE_PAID_ENABLED:"true",
  LITIX_NATIVE_PRICES_JSON:JSON.stringify({
-  "litix-native-caption-kit":{priceCents:699,costCents:50,supportReserveCents:100},
-  "litix-native-link-page":{priceCents:799,costCents:60,supportReserveCents:120},
-  "litix-native-campaign-plan":{priceCents:999,costCents:80,supportReserveCents:150}
+  "litix-native-30day-campaign-pro":{priceCents:999,costCents:80,supportReserveCents:150}
  }),NMI_SECURITY_KEY:"test-only-nmi-credential",
  RESEND_API_KEY:"test-only-resend",LITIX_NATIVE_ORDER_SECRET:key};
 const brief={business:"Studio Seven",audience:"local businesses",offer:"a custom campaign plan",action:"Book a call",platform:"Instagram",website:"https://example.com"};
 const requestId="11111111-1111-4111-8111-111111111111";
-const input={serviceId:"litix-native-campaign-plan",brief,requestId,email:"Customer@example.com",
+const input={serviceId:"litix-native-30day-campaign-pro",brief,requestId,email:"Customer@example.com",
  paymentToken:"GATEWAY_TOKEN_ACCEPTED_12345",expectedAmountCents:999};
 function mockSql(){
  const orders=[],emails=[];
@@ -92,7 +90,7 @@ test("Per-product unit economics are server-owned and reject negative margin",()
  assert.equal(q.priceCents,999);assert.equal(q.asset.publiclyPurchasable,false);
  assert.ok(q.estimatedMarginCents>Math.ceil(q.priceCents*.25));
  const bad={...prod,LITIX_NATIVE_PRICES_JSON:JSON.stringify({
-  "litix-native-campaign-plan":{priceCents:300,costCents:200,supportReserveCents:75}})};
+  "litix-native-30day-campaign-pro":{priceCents:300,costCents:200,supportReserveCents:75}})};
  assert.throws(()=>nativePaidQuote({serviceId:input.serviceId,brief,env:bad}),/MARGIN_BELOW_FLOOR/);
 });
 test("HMAC order links require original signing secret",()=>{
