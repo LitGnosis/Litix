@@ -36,6 +36,7 @@ export default function LitixSolutions(){
   <section className="ls-section" aria-labelledby="tools-heading">
    <div className="ls-section-head"><span className="ls-eyebrow">AVAILABLE NOW · NO PAYMENT</span><h2 id="tools-heading">Free Litix tools</h2></div>
    <div className="ls-toolgrid">
+    <article className="ls-card"><h3>Litix Native Self-Service Studio</h3><p>Create and download original caption kits and custom link pages directly from Litix. Free preview, no outside fulfillment or payment.</p><Link href="/native">Open Litix Native</Link></article>
     <article className="ls-card"><h3>Caption & CTA Builder</h3><p>Make starter captions with different tones and clear calls to action. No login or model account required.</p><Link href="/tools/caption-builder">Create captions</Link></article>
     <article className="ls-card"><h3>Creator Link Page Maker</h3><p>Preview a simple branded link page and export your own HTML. Hosting is not included.</p><Link href="/tools/link-page-builder">Build a link page</Link></article>
     <article className="ls-card"><h3>Local Visibility Checklist</h3><p>Assess local search and marketing basics with a simple self-check. No external account required.</p><Link href="/tools/local-visibility">Run the checklist</Link></article>
