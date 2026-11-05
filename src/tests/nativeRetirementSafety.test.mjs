@@ -17,7 +17,7 @@ test("main store, existing payment and supplier fulfillment are preserved",()=>{
   "app/page.jsx","app/shop/page.jsx","app/track/page.jsx",
   "lib/boosteroOrderHandler.mjs","lib/boosteroFulfillment.mjs",
   "lib/nativeAutoLikesFulfillment.mjs","lib/boosteroNativeAutoLikes.mjs",
-  "app/api/config/route.js","app/api/partners/route.js"
+  "app/api/[action]/route.js","app/api/partners/route.js"
  ])assert.equal(exists(path),true,"Working order system was removed: "+path);
 });
 test("no broken links to retired customer-facing routes are advertised",()=>{
