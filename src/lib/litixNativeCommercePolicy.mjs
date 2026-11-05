@@ -4,7 +4,7 @@
  * approved via protected server-side configuration.
  * No supplier or payment side effects in this module.
  */
-import {litixNativeService,previewLitixNativeAsset} from "./litixNativeSupplier.mjs";
+import {NATIVE_PREMIUM_PRODUCTS,createNativePremiumAsset} from "./litixNativePremiumAssets.mjs";
 import {createHash,createHmac,timingSafeEqual} from "node:crypto";
 
 const sha=s=>createHash("sha256").update(s).digest("hex");
@@ -26,7 +26,7 @@ export const nativeRequestIdValid=x=>typeof x==="string"&&/^[a-f0-9]{8}-[a-f0-9]
 /** Set explicit, approved prices AND COGS. Never trust client-side amounts. */
 export function nativePaidQuote({serviceId,brief,env={}}={}){
  if(env.LITIX_NATIVE_PAID_ENABLED!=="true")throw Error("NATIVE_PAID_DISABLED");
- if(!litixNativeService(serviceId))throw Error("NATIVE_SERVICE_UNSUPPORTED");
+ if(!NATIVE_PREMIUM_PRODUCTS.some(x=>x.id===serviceId))throw Error("NATIVE_SERVICE_UNSUPPORTED");
  let config;try{config=JSON.parse(String(env.LITIX_NATIVE_PRICES_JSON||"{}"));}
  catch{throw Error("NATIVE_PRICES_NOT_APPROVED");}
  const entry=config?.[serviceId];
@@ -39,7 +39,7 @@ export function nativePaidQuote({serviceId,brief,env={}}={}){
  const gatewayFee=Math.ceil(price*.035)+30;
  const margin=price-cost-reserve-gatewayFee;
  if(margin<Math.ceil(price*.25))throw Error("NATIVE_MARGIN_BELOW_FLOOR");
- const asset=previewLitixNativeAsset({serviceId,brief});
+ const asset=createNativePremiumAsset({serviceId,brief});
  if(asset.content.length>25000)throw Error("NATIVE_ASSET_TOO_LARGE");
  return Object.freeze({serviceId,priceCents:price,directCostCents:cost,
   supportReserveCents:reserve,estimatedGatewayFeeCents:gatewayFee,
