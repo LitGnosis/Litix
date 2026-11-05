@@ -1,0 +1,30 @@
+name: Litix Native self-service tests
+on:
+  pull_request:
+    paths:
+      - "src/lib/litixNativeSupplier.mjs"
+      - "src/lib/litixCreatorTools.mjs"
+      - "src/app/native/**"
+      - "src/app/api/native/**"
+      - "src/components/LitixNativeStudio.jsx"
+      - "src/tests/litixNative*.test.mjs"
+      - ".github/workflows/litix-native-self-service-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Check out reviewed PR code
+        uses: actions/checkout@v4.2.2 # no secrets; scoped contents:read only
+        with:
+          persist-credentials: false
+      - name: Verify native provider and HTTP routes
+        working-directory: src
+        run: |
+          node --version
+          node --test tests/litixNativeSupplier.test.mjs tests/litixNativeApi.test.mjs
