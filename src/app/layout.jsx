@@ -17,7 +17,7 @@ const keywords = [
   "promotions",
   "social media growth",
 ];
-const siteUrl = "https://litix.net/";
+const siteUrl = "https://www.litix.net/";
 const description =
   "Litix provides social media promotion services with a live service catalog, secure tokenized checkout, and order tracking.";
 
