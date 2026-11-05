@@ -41,7 +41,6 @@ export default function ShopIndex(){
    <p>Explore Litix Local Growth, creator tools, content production and future agency solutions. Free tools work now; new service programs accept manual proposals rather than automatic payments.</p>
    <div style={{display:"flex",flexWrap:"wrap",gap:14}}>
     <a href="/solutions">Business & Creator Growth Hub</a>
-    <a href="/tools/caption-builder">Free Caption Builder</a>
     <a href="/tools/local-visibility">Free Local Checklist</a>
    </div>
   </section>

@@ -34,8 +34,6 @@ export default async function SolutionDetail({params}){
     <p><strong>Best suited for:</strong> {s.fit}</p>
     <p><strong>Business model:</strong> {s.model}</p>
     <p className="ls-note">This is a pilot or proposed service. The inquiry does not activate subscriptions, automatic fulfillment, hosted stores, creator payouts, or other unbuilt features. Rates, scope and terms are confirmed individually before any purchase.</p>
-    {slug==="ai-studio"&&<p><Link href="/tools/caption-builder">Try the free caption builder</Link> — a template-based tool, not a paid AI generation service.</p>}
-    {slug==="linkstore"&&<p><Link href="/tools/link-page-builder">Try the free link-page builder</Link> — exports a local HTML page, not hosted storefront software.</p>}
     {slug==="local"&&<p><Link href="/tools/local-visibility">Open the free local visibility checklist</Link>.</p>}
     {slug==="growth-analyzer"&&<p><Link href="/tools/tiktok-engagement">TikTok engagement calculator</Link> · <Link href="/growth">Content calendar</Link></p>}
    </section>
