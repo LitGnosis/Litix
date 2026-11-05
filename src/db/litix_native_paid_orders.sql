@@ -7,7 +7,7 @@ create table if not exists public.litix_native_paid_orders (
  request_id uuid not null unique,
  email text not null check(length(email) between 6 and 254),
  service_id text not null check(service_id in
-  ('litix-native-caption-kit','litix-native-link-page','litix-native-campaign-plan')),
+  ('litix-native-30day-campaign-pro')),
  brief_hash char(64) not null,
  amount_cents integer not null check(amount_cents between 300 and 20000),
  cost_budget_cents integer not null check(cost_budget_cents>=0 and cost_budget_cents<amount_cents),
