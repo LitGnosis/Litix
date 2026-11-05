@@ -13,7 +13,8 @@ const sha=x=>createHash("sha256").update(String(x)).digest("hex");
 const UUID=/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
 const safe=(code,http=409)=>({http,body:{error:code,charged:false,delivered:false}});
 const dbAvailable=sql=>sql&&typeof sql.query==="function";
-const paidEnabled=env=>env?.LITIX_NATIVE_PAID_ENABLED==="true"&&env?.VERCEL_ENV==="production";
+const paidEnabled=env=>env?.LITIX_NATIVE_PAID_ENABLED==="true"&&
+ env?.LITIX_NATIVE_RELEASE_APPROVAL==="approved-native-pro30-v1"&&env?.VERCEL_ENV==="production";
 const fixedGateway="https://paykings.transactiongateway.com/api/transact.php";
 const fixedReport="https://paykings.transactiongateway.com/api/query.php";
 const hostUrl=id=>/^[a-f0-9-]{36}$/i.test(id)?"https://www.litix.net/native/order?id="+encodeURIComponent(id):null;
