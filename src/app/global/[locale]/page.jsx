@@ -30,6 +30,7 @@ export default async function GlobalLanding({params}){
     {heading:t.servicesTitle,copy:t.services,href:"/#services",cta:t.start,number:"01"},
     {heading:t.toolsTitle,copy:t.tools,href:"/#growth-studio",cta:t.planning,number:"02"},
     {heading:t.trackTitle,copy:t.track,href:"/track",cta:t.tracking,number:"03"},
+    {heading:t.agencyTitle,copy:t.agencyCopy,href:"/partners?utm_source=global_"+locale+"&utm_medium=owned&utm_campaign=global_agencies#apply",cta:t.agencyCta,number:"04"},
   ];
   return <main className="lxglobal" lang={locale} dir={rtl?"rtl":"ltr"}>
     <div className="lxglobal-container">
