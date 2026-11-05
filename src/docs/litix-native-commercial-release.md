@@ -12,6 +12,7 @@ The order token is an HMAC derived from a server-only signing secret, and the UR
 
 ## Required production configuration (server only)
 - LITIX_NATIVE_PAID_ENABLED=false (do not enable before final review)
+- LITIX_NATIVE_RELEASE_APPROVAL=<independently reviewed commercial approval identifier; absent by default>
 - LITIX_NATIVE_DATABASE_URL=<separate approved Neon connection to the migrated Native ledger>
 - LITIX_NATIVE_ORDER_SECRET=<random secret of at least 32 characters generated in an authorized secret manager>
 - LITIX_NATIVE_PRICES_JSON=<owner-approved JSON mapping premium SKU to priceCents, costCents, supportReserveCents>
