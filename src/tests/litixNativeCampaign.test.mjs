@@ -18,8 +18,8 @@ test("Litix produces seven distinct campaign themes and customer-owned CSV",()=>
  assert.match(a,/"Education"/);
  assert.match(a,/"Questions"/);
  assert.match(a,/"Recap and next step"/);
- assert.match(a,/"utm_content=day_7"/);
- assert.match(a,/"utm_source=instagram"/);
+ assert.match(a,/utm_content=day_7/);
+ assert.match(a,/utm_source=instagram/);
  assert.match(a,/source=site/);
 });
 test("No tracking links when a customer elects not to enter a website",()=>{
