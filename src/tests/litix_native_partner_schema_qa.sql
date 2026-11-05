@@ -23,7 +23,7 @@ insert into public.litix_native_partner_orders
 values
  ('66666666-6666-4666-8666-666666666666','agency-beta','litix-native-test-004','litix-native-campaign-plan',
   repeat('g',64),'original-campaign.csv','text/csv; charset=utf-8',repeat('h',64),'campaign plan','COMPLETED');
-do $
+do $native_qa$
 declare rejected boolean:=false;
 begin
  if (select count(*) from public.litix_native_partner_orders where partner_id='agency-alpha' and request_id='litix-native-test-001')<>1
@@ -51,5 +51,5 @@ begin
  exception when check_violation then rejected:=true;
  end;
  if not rejected then raise exception 'Unpaid/nontrial order status was accepted'; end if;
-end $$;
+end $native_qa$;
 rollback;
