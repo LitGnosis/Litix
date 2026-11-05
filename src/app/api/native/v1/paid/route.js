@@ -9,9 +9,9 @@ const headers={"cache-control":"no-store, private","x-content-type-options":"nos
 const send=(body,status=200)=>Response.json(body,{status,headers});
 export async function GET(){
  // No prices are publicly available unless an explicit controlled rollout.
- return send({supplier:"Litix Native",available:process.env.LITIX_NATIVE_PAID_ENABLED==="true",
+ return send({supplier:"Litix Native",available:process.env.LITIX_NATIVE_PAID_ENABLED==="true"&&process.env.LITIX_NATIVE_RELEASE_APPROVAL==="approved-native-pro30-v1",
   settlementRequired:true,noThirdPartySupplier:true,artificialEngagementAvailable:false,
-  checkoutEnabled:process.env.LITIX_NATIVE_PAID_ENABLED==="true"&&
+  checkoutEnabled:process.env.LITIX_NATIVE_PAID_ENABLED==="true"&&process.env.LITIX_NATIVE_RELEASE_APPROVAL==="approved-native-pro30-v1"&&
    process.env.VERCEL_ENV==="production"&&!!process.env.LITIX_NATIVE_ORDER_SECRET&&
    !!process.env.LITIX_NATIVE_PRICES_JSON});
 }
