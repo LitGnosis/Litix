@@ -2,6 +2,7 @@ name: Litix Native independent paid order safety
 on:
   pull_request:
     paths:
+      - "src/lib/litixNativePremiumAssets.mjs"
       - "src/lib/litixNativeCommercePolicy.mjs"
       - "src/lib/litixNativePaidEngine.mjs"
       - "src/app/api/native/v1/paid/**"
