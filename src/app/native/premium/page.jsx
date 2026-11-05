@@ -1,4 +1,5 @@
 import Link from "next/link";
+import LitixNativePremiumCheckout from "../../../components/LitixNativePremiumCheckout";
 import "../../solutions/solutions.css";
 export const metadata={
  title:"Litix Native Pro | 30-Day Campaign Kit",
@@ -26,5 +27,6 @@ export default function NativePremium(){
    </ul>
    <p>Litix Native produces original digital assets. It does not sell invented followers, fake views, or a guarantee of social media reach.</p>
   </section>
+  <LitixNativePremiumCheckout/>
  </main>;
 }
