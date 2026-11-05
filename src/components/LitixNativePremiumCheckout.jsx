@@ -76,7 +76,7 @@ export default function LitixNativePremiumCheckout(){
   if(!active||price===null||!key||attempted)return;
   let live=true,script=null,deadline=null;
   setFieldsReady(false);
-  const failed=()=>{if(live){setFieldsReady(false);setNotice("PayKings secure fields are unavailable. No payment was requested.");}};
+  const failed=()=>{if(live){setFieldsReady(false);setBusy(false);setNotice("PayKings secure fields are unavailable. No payment was requested.");}};
   const init=()=>{
    const sdk=window.CollectJS;
    if(!live||!sdk||typeof sdk.configure!=="function"){failed();return;}
