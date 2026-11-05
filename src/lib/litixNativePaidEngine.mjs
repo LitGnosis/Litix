@@ -68,7 +68,7 @@ export async function checkoutNativePaid({data,env,sql,fetcher=fetch}={}){
   return safe("NATIVE_PAYMENT_INFRASTRUCTURE_NOT_READY",503);
  if(!data||typeof data!=="object"||Array.isArray(data))return safe("INVALID_ORDER",422);
  const email=String(data.email||"").trim().toLowerCase();
- if(!nativeEmailValid(email)||!nativeRequestIdValid(data.requestId)||!/^tok_[A-Za-z0-9_-]{8,450}$/.test(String(data.paymentToken||"")))
+ if(!nativeEmailValid(email)||!nativeRequestIdValid(data.requestId)||!/^[A-Za-z0-9_.:-]{10,500}$/.test(String(data.paymentToken||"")))
   return safe("INVALID_CHECKOUT_INPUT",422);
  let q;
  try{q=nativePaidQuote({serviceId:data.serviceId,brief:data.brief,env});}
