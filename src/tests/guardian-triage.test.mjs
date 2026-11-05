@@ -16,7 +16,7 @@ test("unknown payment and stale supplier snapshots guide safe reconciliation, no
  assert.match(uncertain[0].action,/before charging/);
  assert.deepEqual(mapOwnerTriage("partial",[{order_id:"bad",email:"hidden"}]),[]);
 });
-test("all five diagnostic queries are read-only and partial failure is visible",async()=>{
+test("all seven diagnostic queries are read-only and partial failure is visible",async()=>{
  const executed=[];
  const db={query:async(sql)=>{
   executed.push(sql);
@@ -27,7 +27,7 @@ test("all five diagnostic queries are read-only and partial failure is visible",
   return [];
  }};
  const r=await loadGuardianOwnerTriage(db);
- assert.equal(executed.length,5);
+ assert.equal(executed.length,7);
  assert.equal(r.unavailableChecks,1);
  assert.equal(r.items.length,1);
  assert.equal(r.readOnly,true);

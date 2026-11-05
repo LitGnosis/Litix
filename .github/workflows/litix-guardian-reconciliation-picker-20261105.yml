@@ -1,0 +1,25 @@
+name: Litix Guardian historical reconciliation and Choose Your Posts QA
+on:
+  pull_request:
+    paths:
+      - "src/lib/guardianTriage.mjs"
+      - "src/components/SocialMultiPostChooser.jsx"
+      - "src/tests/litixGuardianReconciliationPicker20261105.test.mjs"
+      - ".github/workflows/litix-guardian-reconciliation-picker-20261105.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  read-only-reconciliation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout reviewed code
+        uses: actions/checkout@v4.2.2
+        with:
+          persist-credentials: false
+      - name: Run no-charge reconciliation and custom likes regression
+        working-directory: src
+        run: |
+          set -euo pipefail
+          node --test tests/litixGuardianReconciliationPicker20261105.test.mjs tests/guardian-triage.test.mjs tests/custom-likes-entrypoint-20261103.test.mjs tests/social-multi-post-live-checkout.test.mjs

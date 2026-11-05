@@ -96,7 +96,7 @@ export default function SocialMultiPostChooser({service,platform,posts,onChange}
     <h3>Choose Your Posts</h3>
     <p>Optional: enter your public {isTikTok?"TikTok":"Instagram"} username or profile URL to browse posts. You can also paste links directly below without entering a username.</p>
     <div className="litix-picker-search">
-      <input value={username} placeholder={isTikTok?"@yourtiktok or TikTok profile link":"@yourinstagram or Instagram profile link"} aria-label={isTikTok?"Public TikTok username or profile link":"Public Instagram username or profile link"} autoCapitalize="none" autoCorrect="off" spellCheck={false} onChange={e=>{setUsername(e.target.value);setGallery([]);setMessage("");activeLookup.current?.abort();setLoading(false)}} onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();if(profileHandle)lookup(e)}}} />
+      <input value={username} placeholder={isTikTok?"@yourtiktok or TikTok profile link":"@yourinstagram or Instagram profile link"} aria-label={isTikTok?"Public TikTok username or profile link":"Public Instagram username or profile link"} autoCapitalize="none" autoCorrect="off" spellCheck={false} onChange={e=>{lastAutomaticLookup.current="";setUsername(e.target.value);setGallery([]);setMessage("");activeLookup.current?.abort();setLoading(false)}} onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();if(profileHandle)lookup(e)}}} />
       <button type="button" onClick={lookup} className="alt" disabled={loading||!profileHandle}>{loading?"Loading your posts…":gallery.length?"Refresh posts":"Retry / load posts"}</button>
     </div>
     {message&&<p className="small" role="status">{message}</p>}

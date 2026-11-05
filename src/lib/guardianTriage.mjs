@@ -28,9 +28,30 @@ const QUERIES={
    from public.litix_growth_bundle_orders
    where payment_state in ('review','processing','approved_pending_settlement')
     and created_at<now()-interval '30 minutes'
-   order by created_at asc limit 25`
+   order by created_at asc limit 25`,
+ legacy:`select id as order_id,fulfillment_state as state,supplier_order_id,
+       metadata->>'supplier' as supplier_code,created_at
+   from public.litix_v2_orders
+   where payment_state='paid' and fulfillment_state in ('processing','submitted','manual_review')
+     and created_at<now()-interval '24 hours'
+   order by created_at asc limit 25`,
+ outbox:`select e.order_id,e.created_at,e.state,
+     (c.payment_state='settled' and c.gateway_transaction_id=e.transaction_id
+       and c.amount_cents=e.amount_cents) as settled_match,
+     (s.payment_status='paid' and s.payment_reference=e.transaction_id
+       and s.retail_cents=e.amount_cents) as supplier_match,
+     s.fulfillment_status as supplier_fulfillment_state,
+     s.provider_order_id as supplier_order_id,
+     exists(select 1 from public.litix_order_notifications n
+       where n.order_id=e.order_id and n.status='sent'
+         and n.event_type in ('submitted','completed')) as notification_sent
+   from public.litix_paykings_outbox e
+   left join public.litix_paykings_checkout_orders c on c.order_id=e.order_id
+   left join public.litix_supplier_orders s on s.id=e.order_id
+   where e.state='pending' and e.created_at<now()-interval '1 hour'
+   order by e.created_at asc limit 25`
 };
-const safeOrder=id=>/^(?:ltx2_|lbg_)[a-f0-9-]{36}$/.test(String(id||""))?String(id):null;
+const safeOrder=id=>/^(?:ltx2_|ltx_|lbg_)[a-f0-9-]{36}$/.test(String(id||""))?String(id):null;
 const safeSupplier=id=>/^\d{1,24}$/.test(String(id||""))?String(id):null;
 export function mapOwnerTriage(kind,rows){
  if(!Array.isArray(rows))return [];
@@ -45,6 +66,23 @@ export function mapOwnerTriage(kind,rows){
   if(kind==="payment"||kind==="bundle")return [{orderId,supplierOrderId:null,postIndex:null,checkedAt:x.created_at||null,
     code:kind==="bundle"?"BUNDLE_PAYMENT_UNCERTAIN":"PAYMENT_OUTCOME_UNCERTAIN",
     action:"Confirm original gateway transaction before charging or dispatching",severity:"attention"}];
+  if(kind==="legacy")return [{...extra,checkedAt:x.created_at||null,
+    code:x.supplier_code==="boostero"?"BOOSTERO_PAID_ORDER_UNRESOLVED":"HISTORICAL_PAID_ORDER_UNRESOLVED",
+    action:x.supplier_code==="boostero"
+      ?"Reconcile the existing Boostero order or canceled children; verify provider credits and customer remedy without re-buying"
+      :"Identify the historical supplier and its original order outcome; never dispatch to Boostero as a replacement",
+    severity:"attention"}];
+  if(kind==="outbox"){
+    const reflected=x.settled_match===true&&x.supplier_match===true&&
+      x.notification_sent===true&&Boolean(supplierOrderId)&&
+      ["completed","processing","submitted"].includes(String(x.supplier_fulfillment_state||"").toLowerCase());
+    return [{...extra,checkedAt:x.created_at||null,
+      code:reflected?"SETTLED_EVENT_ALREADY_REFLECTED":"SETTLED_EVENT_NEEDS_RECONCILIATION",
+      action:reflected
+       ?"Payment and supplier work already recorded. Owner may audit and mark the EVENT processed; never replay payment or supplier purchase"
+       :"Review historical settled payment and missing fulfillment/notification evidence; do not clear event or repurchase",
+      severity:"attention"}];
+  }
   return [];
  });
 }
