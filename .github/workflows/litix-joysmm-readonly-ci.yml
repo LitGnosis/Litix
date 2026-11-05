@@ -1,0 +1,25 @@
+name: Litix JoySMM read-only supplier verification
+on:
+  pull_request:
+    paths:
+      - "src/lib/joysmmReadOnly.mjs"
+      - "src/app/api/internal/supplier-probe/**"
+      - "src/tests/joysmmReadOnly.test.mjs"
+      - ".github/workflows/litix-joysmm-readonly-ci.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  safe-provider-adapter:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout source without persisting credentials
+        uses: actions/checkout@v4.2.2
+        with:
+          persist-credentials: false
+      - name: Run read-only supplier contract tests without external calls
+        working-directory: src
+        run: |
+          set -euo pipefail
+          node --test tests/joysmmReadOnly.test.mjs
