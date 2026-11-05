@@ -3,18 +3,24 @@ import {useState} from "react";
 
 const captionInitial={business:"",audience:"",offer:"",action:"",platform:"Instagram"};
 const linkInitial={name:"",tagline:"",links:[{label:"",url:""},{label:"",url:""}]};
+const campaignInitial={...captionInitial,website:""};
 const serviceChoices=[
  {id:"litix-native-caption-kit",title:"Caption Starter Kit",details:"Six editable original caption drafts, generated from your business brief."},
- {id:"litix-native-link-page",title:"Creator Link Page",details:"A downloadable personal link-page HTML file, ready to host on your own website."}
+ {id:"litix-native-link-page",title:"Creator Link Page",details:"A downloadable personal link-page HTML file, ready to host on your own website."},
+ {id:"litix-native-campaign-plan",title:"7-Day Campaign Planner",details:"Seven original campaign prompts with captions, production guidance and optional tagged links. Download as a CSV."}
 ];
 export default function LitixNativeStudio(){
  const [serviceId,setServiceId]=useState(serviceChoices[0].id);
  const [caption,setCaption]=useState(captionInitial);
  const [links,setLinks]=useState(linkInitial);
+ const [campaign,setCampaign]=useState(campaignInitial);
  const [status,setStatus]=useState("idle");
  const [message,setMessage]=useState("");
  const [asset,setAsset]=useState(null);
  const captionField=(name,value)=>{setCaption(old=>({...old,[name]:value}));setAsset(null);};
+ const campaignField=(name,value)=>{setCampaign(old=>({...old,[name]:value}));setAsset(null);};
+ const current=serviceId==="litix-native-campaign-plan"?campaign:caption;
+ const currentField=serviceId==="litix-native-campaign-plan"?campaignField:captionField;
  const linkField=(name,value)=>{setLinks(old=>({...old,[name]:value}));setAsset(null);};
  const rowField=(i,name,value)=>{setLinks(old=>({...old,links:old.links.map((p,index)=>index===i?{...p,[name]:value}:p)}));setAsset(null);};
  const changeService=id=>{setServiceId(id);setAsset(null);setMessage("");setStatus("idle");};
@@ -23,14 +29,14 @@ export default function LitixNativeStudio(){
   if(status==="working")return;
   setStatus("working");setMessage("");setAsset(null);
   try{
-   const brief=serviceId==="litix-native-caption-kit"?caption:links;
+   const brief=serviceId==="litix-native-caption-kit"?caption:serviceId==="litix-native-campaign-plan"?campaign:links;
    const response=await fetch("/api/native/v1/preview",{
     method:"POST",headers:{"content-type":"application/json"},cache:"no-store",
     body:JSON.stringify({serviceId,brief})
    });
    const payload=await response.json().catch(()=>({}));
    if(!response.ok||payload.deliveryState!=="PREVIEW_ONLY_NOT_PURCHASED")throw Error("Check your inputs and try again.");
-   if(!["text/plain; charset=utf-8","text/html; charset=utf-8"].includes(payload.mimeType)||
+   if(!["text/plain; charset=utf-8","text/html; charset=utf-8","text/csv; charset=utf-8"].includes(payload.mimeType)||
       typeof payload.content!=="string"||typeof payload.filename!=="string"||
       payload.content.length>25000)throw Error("The file could not be verified.");
    setAsset(payload);setStatus("ready");
@@ -59,16 +65,17 @@ export default function LitixNativeStudio(){
   <p className="ls-note">{serviceChoices.find(x=>x.id===serviceId)?.details}</p>
   <form onSubmit={generate}>
    <div className="ls-tool-fields">
-    {serviceId==="litix-native-caption-kit"?<>
-     <label>Business or creator name<input required minLength={2} maxLength={80} value={caption.business} onChange={e=>captionField("business",e.target.value)} /></label>
-     <label>Audience<input required minLength={2} maxLength={110} value={caption.audience} onChange={e=>captionField("audience",e.target.value)} /></label>
-     <label>Offer or message<textarea rows={3} required minLength={4} maxLength={170} value={caption.offer} onChange={e=>captionField("offer",e.target.value)} /></label>
-     <label>Call to action<input required minLength={3} maxLength={110} value={caption.action} onChange={e=>captionField("action",e.target.value)} /></label>
+    {serviceId!=="litix-native-link-page"?<>
+     <label>Business or creator name<input required minLength={2} maxLength={80} value={current.business} onChange={e=>currentField("business",e.target.value)} /></label>
+     <label>Audience<input required minLength={2} maxLength={110} value={current.audience} onChange={e=>currentField("audience",e.target.value)} /></label>
+     <label>Offer or message<textarea rows={3} required minLength={4} maxLength={170} value={current.offer} onChange={e=>currentField("offer",e.target.value)} /></label>
+     <label>Call to action<input required minLength={3} maxLength={110} value={current.action} onChange={e=>currentField("action",e.target.value)} /></label>
      <label>Social network
-      <select value={caption.platform} onChange={e=>captionField("platform",e.target.value)}>
+      <select value={current.platform} onChange={e=>currentField("platform",e.target.value)}>
        {["Instagram","TikTok","YouTube","Facebook","LinkedIn","X"].map(x=><option key={x}>{x}</option>)}
       </select>
      </label>
+     {serviceId==="litix-native-campaign-plan"&&<label>Landing page (optional HTTPS URL)<input type="url" maxLength={300} placeholder="https://your-site.com" value={campaign.website} onChange={e=>campaignField("website",e.target.value)} /></label>}
     </>:<>
      <label>Creator / business name<input required minLength={2} maxLength={80} value={links.name} onChange={e=>linkField("name",e.target.value)} /></label>
      <label>Tagline<input maxLength={160} value={links.tagline} onChange={e=>linkField("tagline",e.target.value)} /></label>
