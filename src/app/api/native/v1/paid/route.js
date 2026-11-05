@@ -7,18 +7,21 @@ export const dynamic="force-dynamic";
 export const maxDuration=40;
 const headers={"cache-control":"no-store, private","x-content-type-options":"nosniff","referrer-policy":"no-referrer"};
 const send=(body,status=200)=>Response.json(body,{status,headers});
+const nativeCheckoutGate=()=>process.env.LITIX_NATIVE_PAID_ENABLED==="true"&&
+ process.env.LITIX_NATIVE_RELEASE_APPROVAL==="approved-native-pro30-v1"&&
+ process.env.VERCEL_ENV==="production"&&
+ !!process.env.LITIX_NATIVE_DATABASE_URL&&
+ !!process.env.NMI_SECURITY_KEY&&!!process.env.RESEND_API_KEY&&
+ !!process.env.LITIX_NATIVE_ORDER_SECRET&&process.env.LITIX_NATIVE_ORDER_SECRET.length>=32&&
+ !!process.env.LITIX_NATIVE_PRICES_JSON;
 export async function GET(){
- // No prices are publicly available unless an explicit controlled rollout.
- return send({supplier:"Litix Native",available:process.env.LITIX_NATIVE_PAID_ENABLED==="true"&&process.env.LITIX_NATIVE_RELEASE_APPROVAL==="approved-native-pro30-v1",
+ // Always report false until every mandatory server-side component is configured.
+ return send({supplier:"Litix Native",available:nativeCheckoutGate(),
   settlementRequired:true,noThirdPartySupplier:true,artificialEngagementAvailable:false,
-  checkoutEnabled:process.env.LITIX_NATIVE_PAID_ENABLED==="true"&&process.env.LITIX_NATIVE_RELEASE_APPROVAL==="approved-native-pro30-v1"&&
-   process.env.VERCEL_ENV==="production"&&!!process.env.LITIX_NATIVE_ORDER_SECRET&&
-   !!process.env.LITIX_NATIVE_PRICES_JSON});
+  checkoutEnabled:nativeCheckoutGate()});
 }
 export async function POST(request){
- if(process.env.LITIX_NATIVE_PAID_ENABLED!=="true"||
-    process.env.LITIX_NATIVE_RELEASE_APPROVAL!=="approved-native-pro30-v1"||
-    process.env.VERCEL_ENV!=="production")
+ if(!nativeCheckoutGate())
   return send({error:"NATIVE_PAID_CHECKOUT_DISABLED",charged:false},503);
  const origin=request.headers.get("origin");
  if(!origin||origin!==new URL(request.url).origin)
