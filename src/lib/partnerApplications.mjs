@@ -1,4 +1,5 @@
 // Public, manually reviewed partner-interest intake. No affiliate payouts are activated here.
+import {cleanPartnerAttribution} from "./litixPartnerAttribution.mjs";
 export const PARTNER_TYPES = Object.freeze(["agency", "affiliate", "reviewer", "business", "publisher"]);
 
 const clean = (value) => typeof value === "string" ? value.trim().replace(/\s+/g, " ") : "";
@@ -23,7 +24,8 @@ export function validatePartnerInquiry(raw) {
     organization: clean(raw.organization),
     website: clean(raw.website),
     type: clean(raw.type),
-    goals: typeof raw.goals === "string" ? raw.goals.trim() : ""
+    goals: typeof raw.goals === "string" ? raw.goals.trim() : "",
+    attribution: cleanPartnerAttribution(raw.attribution)
   };
   if (data.name.length < 2 || data.name.length > 100) return {ok:false,error:"Enter a name between 2 and 100 characters."};
   if (!validEmail(data.email)) return {ok:false,error:"Enter a valid email address."};

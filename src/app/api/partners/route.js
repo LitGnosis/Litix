@@ -1,5 +1,6 @@
 import {createHash} from "node:crypto";
 import {validatePartnerInquiry} from "../../../lib/partnerApplications.mjs";
+import {partnerAttributionLabel} from "../../../lib/litixPartnerAttribution.mjs";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -33,10 +34,11 @@ export async function POST(request) {
 
   const resendKey = key();
   if (!resendKey) return respond({error:"Applications are temporarily unavailable. Email litixsocial@gmail.com instead."}, 503);
-  const {name,email,organization,website,type,goals} = checked.data;
+  const {name,email,organization,website,type,goals,attribution} = checked.data;
   const body = [
     "New Litix partner interest — manual review required",
     "Partnership type: " + type,
+    "Source tags (unverified client-provided): " + partnerAttributionLabel(attribution),
     "Name: " + name,
     "Email: " + email,
     "Organization: " + (organization || "Not supplied"),

@@ -1,8 +1,16 @@
 "use client";
-import {useState} from "react";
-const initial = {name:"", email:"", organization:"", website:"", type:"agency", goals:"", consent:false, websiteTrap:""};
+import {useEffect,useState} from "react";
+import {cleanPartnerAttribution,PARTNER_SOURCE_FIELDS} from "../lib/litixPartnerAttribution.mjs";
+const initial = {name:"", email:"", organization:"", website:"", type:"agency", goals:"", consent:false, websiteTrap:"", attribution:{}};
 export default function PartnerApplication(){
   const [form,setForm]=useState(initial);
+  // Only partner-inquiry campaign tags. No persistent tracking cookie or fingerprint.
+  useEffect(()=>{
+    const query=new URLSearchParams(window.location.search);
+    const raw=Object.fromEntries(PARTNER_SOURCE_FIELDS.map(key=>[key,query.get(key)]));
+    const attribution=cleanPartnerAttribution(raw);
+    setForm(f=>({...f,attribution}));
+  },[]);
   const [status,setStatus]=useState("idle");
   const [message,setMessage]=useState("");
   const update=(key,value)=>setForm(f=>({...f,[key]:value}));
