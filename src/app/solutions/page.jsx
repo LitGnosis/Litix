@@ -3,8 +3,8 @@ import {LITIX_SOLUTIONS} from "../../lib/litixSolutions.mjs";
 import "./solutions.css";
 
 export const metadata={
- title:"Litix Solutions | Local Marketing, Creator Tools & Business Services",
- description:"Explore Litix growth solutions: local business marketing, creator tools, video production and more. Free tools are available now; service programs accept pilot inquiries.",
+ title:"Litix Solutions | Social Media Services & Partnerships",
+ description:"Explore Litix services and partnerships. Order available social-media services through the existing storefront and track delivery.",
  alternates:{canonical:"https://www.litix.net/solutions"}
 };
 const featured=LITIX_SOLUTIONS.filter(s=>s.featured);
@@ -17,9 +17,9 @@ export default function LitixSolutions(){
   <section className="ls-hero">
    <span className="ls-eyebrow">LITIX · INNOVATION, IGNITED</span>
    <h1>More ways to build your business.</h1>
-   <p>Discover practical creator tools, small-business marketing ideas and new ways to collaborate. Our free tools are open now; new paid programs begin with a manual proposal, not an automatic charge.</p>
+   <p>Find available social-media services and explore independently reviewed marketing partnerships. Services are fulfilled through their stated suppliers until Litix has independently verified capacity.</p>
    <div className="ls-actions">
-    <Link className="ls-cta" href="/tools/caption-builder">Try a free tool</Link>
+    <Link className="ls-cta" href="/shop">Shop Litix services</Link>
     <Link className="ls-link" href="#solutions">Browse the solutions</Link>
    </div>
   </section>
@@ -34,11 +34,8 @@ export default function LitixSolutions(){
    </div>
   </section>
   <section className="ls-section" aria-labelledby="tools-heading">
-   <div className="ls-section-head"><span className="ls-eyebrow">AVAILABLE NOW · NO PAYMENT</span><h2 id="tools-heading">Free Litix tools</h2></div>
+   <div className="ls-section-head"><span className="ls-eyebrow">ADDITIONAL HELP · NO PURCHASE</span><h2 id="tools-heading">Other Litix resources</h2></div>
    <div className="ls-toolgrid">
-    <article className="ls-card"><h3>Litix Native Self-Service Studio</h3><p>Create and download original caption kits and custom link pages directly from Litix. Free preview, no outside fulfillment or payment.</p><Link href="/native">Open Litix Native</Link></article>
-    <article className="ls-card"><h3>Caption & CTA Builder</h3><p>Make starter captions with different tones and clear calls to action. No login or model account required.</p><Link href="/tools/caption-builder">Create captions</Link></article>
-    <article className="ls-card"><h3>Creator Link Page Maker</h3><p>Preview a simple branded link page and export your own HTML. Hosting is not included.</p><Link href="/tools/link-page-builder">Build a link page</Link></article>
     <article className="ls-card"><h3>Local Visibility Checklist</h3><p>Assess local search and marketing basics with a simple self-check. No external account required.</p><Link href="/tools/local-visibility">Run the checklist</Link></article>
     <article className="ls-card"><h3>Growth Calendar & TikTok Metrics</h3><p>Use Litix's existing content calendar and engagement calculator.</p><Link href="/growth">Open calendar</Link> <Link href="/tools/tiktok-engagement">TikTok calculator</Link></article>
    </div>
