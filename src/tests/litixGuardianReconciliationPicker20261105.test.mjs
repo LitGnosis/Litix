@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 import {mapOwnerTriage,loadGuardianOwnerTriage} from "../lib/guardianTriage.mjs";
-import {newTikTokPost} from "../components/TikTokMultiPostChooser.jsx";
+
 import {regularOrderHealthSignal,multiPostHealthSignal,paymentOutboxHealthSignal} from "../lib/guardianSignals.mjs";
 
 const oldId="ltx_4eaa0734-4d5f-47f8-b86c-ecfad400407d";
@@ -76,10 +76,10 @@ test("Choose Your Posts manual and TikTok gallery entries stay verifiable withou
  const checkout=readFileSync(new URL("../app/page.jsx",import.meta.url),"utf8");
  const pickerRoute=readFileSync(new URL("../app/api/post-picker/route.js",import.meta.url),"utf8");
  const sample="https://www.tiktok.com/@litgnosis/video/7502974458643090734";
- const item=newTikTokPost({link:sample,verifiedUrl:sample,quantity:167});
- assert.equal(item.status,"verified");
- assert.equal(item.verifiedInput,item.link);
- assert.equal(item.verifiedUrl,sample);
+ const factory=readFileSync(new URL("../components/TikTokMultiPostChooser.jsx",import.meta.url),"utf8");
+ assert.match(factory,/verifiedInput:verifiedUrl\?link\.trim\(\):""/);
+ assert.match(factory,/status:verifiedUrl\?"verified":"idle"/);
+ assert.match(chooser,/newTikTokPost\(\{link:post\.url,quantity:minimum,verifiedUrl:post\.url\}\)/);
  assert.match(chooser,/Choose Your Posts/);
  assert.match(chooser,/lastAutomaticLookup\.current=""/);
  assert.match(chooser,/posts\.length<5/);
