@@ -5,22 +5,16 @@ on:
       - feature/litix-global-solutions-pilots-20261104
     paths:
       - "src/lib/litixSolution*"
-      - "src/lib/litixCreatorTools.mjs"
       - "src/app/solutions/**"
       - "src/app/api/solutions/**"
-      - "src/app/tools/caption-builder/**"
-      - "src/app/tools/link-page-builder/**"
       - "src/app/tools/local-visibility/**"
       - "src/tests/litix-global-solutions.test.mjs"
       - ".github/workflows/litix-solutions-pilot.yml"
   pull_request:
     paths:
       - "src/lib/litixSolution*"
-      - "src/lib/litixCreatorTools.mjs"
       - "src/app/solutions/**"
       - "src/app/api/solutions/**"
-      - "src/app/tools/caption-builder/**"
-      - "src/app/tools/link-page-builder/**"
       - "src/app/tools/local-visibility/**"
       - "src/tests/litix-global-solutions.test.mjs"
       - ".github/workflows/litix-solutions-pilot.yml"
@@ -41,7 +35,6 @@ jobs:
         run: |
           node --check src/lib/litixSolutions.mjs
           node --check src/lib/litixSolutionInquiries.mjs
-          node --check src/lib/litixCreatorTools.mjs
           node --check src/app/api/solutions/inquiry/route.js
       - name: Run focused no-payment tests
         run: |
