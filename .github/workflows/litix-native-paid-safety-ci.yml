@@ -9,6 +9,7 @@ on:
       - "src/app/native/order/**"
       - "src/components/LitixNativeOrderStatus.jsx"
       - "src/tests/litixNativePaidEngine.test.mjs"
+      - "src/tests/litixNativePremiumAssets.test.mjs"
       - ".github/workflows/litix-native-paid-safety-ci.yml"
   workflow_dispatch:
 permissions:
@@ -26,4 +27,4 @@ jobs:
         working-directory: src
         run: |
           set -euo pipefail
-          node --test tests/litixNativePaidEngine.test.mjs
+          node --test tests/litixNativePaidEngine.test.mjs tests/litixNativePremiumAssets.test.mjs
