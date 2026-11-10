@@ -52,6 +52,6 @@ export default function AgencyGrowth(){
     <LitixAgencyGrowthInquiry/>
    </div>
   </section>
-  <footer className="partner-footer"><Link href="/">Home</Link><Link href="/partners">Partners</Link><Link href="/terms">Terms</Link><Link href="/legal/privacy">Privacy</Link></footer>
+  <footer className="partner-footer"><Link href="/">Home</Link><Link href="/partners">Partners</Link><Link href="/about">About</Link><Link href="/press">Media</Link><Link href="/terms">Terms</Link><Link href="/legal/privacy">Privacy</Link></footer>
  </main>;
 }
