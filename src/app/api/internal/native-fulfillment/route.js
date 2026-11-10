@@ -119,6 +119,7 @@ export async function POST(request) {
   const requestedStates = {
     approve: ["DRAFT", "READY_FOR_OPERATOR"],
     start: ["READY_FOR_OPERATOR", "IN_PROGRESS"],
+    resume: ["REVIEW_REQUIRED", "IN_PROGRESS"],
     complete: ["IN_PROGRESS", "DELIVERED"],
     review: ["READY_FOR_OPERATOR", "REVIEW_REQUIRED"],
     cancel: ["DRAFT", "CANCELLED"],
