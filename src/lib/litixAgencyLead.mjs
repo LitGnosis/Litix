@@ -1,4 +1,5 @@
 import {cleanPartnerAttribution} from "./litixPartnerAttribution.mjs";
+import {selectedB2BOffer} from "./litixB2BOffers.mjs";
 
 // Qualification options only. These are prospective buyers' stated budgets,
 // never sales, commitments, guarantees or collected payment details.
@@ -26,8 +27,12 @@ export function buildAgencyLeadPayload(raw,query={}){
  const budget=String(raw.budget||"");
  if(!Object.hasOwn(AGENCY_SEGMENTS,segment)||!Object.hasOwn(AGENCY_GOALS,goal)||!Object.hasOwn(AGENCY_BUDGETS,budget))throw Error("Please complete the business and project selections.");
  const extra=clean(raw.notes,300);
+ const offerId=typeof raw.offer==="string"?raw.offer:"lead-response";
+ const requestedOffer=selectedB2BOffer(offerId);
+ if(!requestedOffer)throw Error("Select a valid proposal type.");
  const goals=[
   "Business marketing inquiry. Segment: "+AGENCY_SEGMENTS[segment]+".",
+  "Proposal requested: "+requestedOffer.name+" (quote only).",
   "Primary goal: "+AGENCY_GOALS[goal]+".",
   "Stated monthly budget: "+AGENCY_BUDGETS[budget]+".",
   extra?"Project details: "+extra+".":""
