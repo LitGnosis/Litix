@@ -23,7 +23,7 @@ export default function PartnerApplication(){
       const payload=await response.json().catch(()=>({}));
       if(!response.ok)throw Error(payload.error||"Application could not be sent.");
       setStatus("success");
-      setMessage("Thank you. Your inquiry has been submitted for a manual review. No partnership or commission is active yet.");
+      setMessage(payload.acknowledgementQueued?"Thank you. Your inquiry was submitted for manual review, and a confirmation email was queued. No partnership or commission is active yet.":"Thank you. Your inquiry was submitted for manual review. No partnership or commission is active yet. If you do not hear back, contact litixsocial@gmail.com.");
       setForm(initial);
     }catch(error){
       setStatus("error");
