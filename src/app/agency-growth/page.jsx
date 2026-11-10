@@ -12,7 +12,7 @@ export const metadata={
 const areas=[
  {title:"Business conversion basics",text:"Review the visitor journey, calls to action and how qualified inquiries can be tracked without collecting unnecessary personal data."},
  {title:"Content and campaign workflow",text:"Discuss publishing calendars, creative review, permitted distribution and how to evaluate which channels drive real inquiries."},
- {title:"Agency client operations",text:"Scope a repeatable client-order and reporting process, with verified deliverables, clear responsibilities and exception handling."}
+ {title:"AI-supported business workflows",text:"Discuss opt-in lead acknowledgements, reviewed content scheduling, staff escalations and reporting. Only approved tools and human-reviewed actions can go live."}
 ];
 export default function AgencyGrowth(){
  return <main className="wrap partner-page agency-growth">
@@ -32,6 +32,7 @@ export default function AgencyGrowth(){
    <div className="partner-grid">
     {areas.map(a=><article key={a.title} className="partner-card"><h3>{a.title}</h3><p>{a.text}</p></article>)}
    </div>
+   <p><Link href="/solutions/automation-ops">Explore AI Marketing Operations and request a scoped pilot.</Link></p>
    <p className="small">These are proposal topics, not automatically available subscriptions. Deliverables, provider access, timing, legal eligibility and prices are confirmed individually in writing before any sale.</p>
   </section>
   <section className="panel agency-growth-grid">
