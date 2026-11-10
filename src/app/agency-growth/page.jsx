@@ -18,13 +18,13 @@ export default function AgencyGrowth(){
  return <main className="wrap partner-page agency-growth">
   <nav className="nav" aria-label="Litix business growth">
    <Link href="/" className="brand">LITIX</Link>
-   <div><Link href="/for-agencies">For agencies</Link><Link href="/shop">Shop</Link><Link href="/track">Order support</Link></div>
+   <div><Link href="/for-agencies">For agencies</Link><Link href="/demo/lead-operations">Workflow demo</Link><Link href="/shop">Shop</Link><Link href="/track">Order support</Link></div>
   </nav>
   <section className="panel agency-growth-hero">
    <p className="kicker">LITIX · BUSINESSES & AGENCIES</p>
    <h1>Build a marketing plan you can actually measure.</h1>
    <p>Need a clearer way to turn attention into real inquiries? Tell us about your business, budget and priorities. Litix can review the fit for a custom proposal before you commit to any services.</p>
-   <div className="partner-actions"><a className="primary" href="#request">Request a business proposal</a><Link href="/tools/local-visibility">Try the free visibility checklist</Link></div>
+   <div className="partner-actions"><a className="primary" href="#request">Request a business proposal</a><a href="https://calendly.com/spears5417/litix-business-growth-discovery-call">Book a 20-minute discovery call</a></div>
    <p className="small">Worldwide inquiries welcome. No guarantee of leads, sales, followers, rankings or earnings. No payment is collected here.</p>
   </section>
   <section className="panel">
@@ -32,7 +32,7 @@ export default function AgencyGrowth(){
    <div className="partner-grid">
     {areas.map(a=><article key={a.title} className="partner-card"><h3>{a.title}</h3><p>{a.text}</p></article>)}
    </div>
-   <p><Link href="/solutions/automation-ops">Explore AI Marketing Operations and request a scoped pilot.</Link></p>
+   <p><Link href="/solutions/automation-ops">Explore AI Marketing Operations</Link> · <Link href="/demo/lead-operations">See a verified Litix lead-response workflow demo</Link></p>
    <p className="small">These are proposal topics, not automatically available subscriptions. Deliverables, provider access, timing, legal eligibility and prices are confirmed individually in writing before any sale.</p>
   </section>
   <section className="panel agency-growth-grid">
@@ -48,6 +48,7 @@ export default function AgencyGrowth(){
    <div id="request" className="agency-growth-form">
     <p className="kicker">NO PAYMENT · MANUAL REVIEW</p>
     <h2>Tell us what you need</h2>
+    <p>Prefer a conversation? <a href="https://calendly.com/spears5417/litix-business-growth-discovery-call">Book an available 20-minute discovery call</a>. Booking a call does not create a contract or paid order.</p>
     <LitixAgencyGrowthInquiry/>
    </div>
   </section>

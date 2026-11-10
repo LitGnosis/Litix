@@ -25,6 +25,7 @@ export default function GlobalAgencyPage(){
    <div className="partner-actions">
     <Link className="primary" href="/agency-growth?utm_source=agency_page&utm_medium=owned&utm_campaign=agency_inquiry#request">Request a business growth proposal</Link>
     <Link href="/shop">Explore live services</Link>
+    <a href="https://calendly.com/spears5417/litix-business-growth-discovery-call">Book a discovery call</a>
    </div>
    <p className="small">Worldwide inquiries welcome. Actual service eligibility, supported payment methods, fulfillment and local requirements are reviewed individually; the checkout currently uses USD.</p>
   </section>

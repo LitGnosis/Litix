@@ -14,6 +14,8 @@ export function buildLeadAcknowledgement(type){
   "",
   "While reviewing, you can explore:",
   "Business growth proposals: https://www.litix.net/agency-growth",
+  "Optional discovery call booking: https://calendly.com/spears5417/litix-business-growth-discovery-call",
+  "Live workflow demonstration: https://www.litix.net/demo/lead-operations",
   "Current services: https://www.litix.net/shop",
   "Order support: https://www.litix.net/track",
   "",
