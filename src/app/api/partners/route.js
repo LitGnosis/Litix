@@ -1,6 +1,7 @@
 import {createHash} from "node:crypto";
 import {validatePartnerInquiry} from "../../../lib/partnerApplications.mjs";
 import {partnerAttributionLabel} from "../../../lib/litixPartnerAttribution.mjs";
+import {sendLeadAcknowledgement} from "../../../lib/litixLeadAcknowledgement.mjs";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -71,7 +72,18 @@ export async function POST(request) {
       console.error("Partner inquiry email rejected", {status:response.status});
       return respond({error:"We couldn't send your inquiry. Please email litixsocial@gmail.com."}, 503);
     }
-    return respond({ok:true});
+    // Send a fixed transactional acknowledgement only AFTER the internal
+    // inquiry was accepted. Its failure never triggers a second owner email
+    // or causes the browser to resubmit the lead.
+    const acknowledgement=await sendLeadAcknowledgement({
+      email,type,digest,apiKey:resendKey
+    });
+    if(!acknowledgement.queued){
+      console.error("litix_inquiry_acknowledgement_failed",{
+        reason:acknowledgement.reason
+      });
+    }
+    return respond({ok:true,acknowledgementQueued:acknowledgement.queued});
   } catch {
     return respond({error:"We couldn't send your inquiry. Please email litixsocial@gmail.com."}, 503);
   }
