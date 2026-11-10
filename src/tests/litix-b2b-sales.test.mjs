@@ -35,7 +35,7 @@ test("all quote options route through existing consent-based manual review",()=>
  assert.match(page,/written agreement/);
  assert.match(page,/No payment is collected here/);
  assert.match(form,/LITIX_B2B_OFFER_OPTIONS/);
- assert.match(form,/\?offer=/);
+ assert.match(form,/query\.get\("offer"\)/);
  assert.match(form,/fetch\("\/api\/partners"/);
  assert.match(backend,/validatePartnerInquiry/);
  assert.match(backend,/Idempotency-Key/);
