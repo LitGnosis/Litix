@@ -1,0 +1,25 @@
+name: Litix B2B Sales Proposal Conversion QA
+on:
+  push:
+    branches:
+      - growth/20261109-b2b-sales-offers-conversion
+  pull_request:
+    paths:
+      - "src/lib/litixB2BOffers.mjs"
+      - "src/lib/litixAgencyLead.mjs"
+      - "src/components/LitixAgencyGrowthInquiry.jsx"
+      - "src/app/agency-growth/**"
+      - "src/tests/litix-b2b-sales.test.mjs"
+      - ".github/workflows/litix-b2b-sales.yml"
+permissions:
+  contents: read
+jobs:
+  offline-no-charge:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - run: node --check src/lib/litixB2BOffers.mjs
+      - run: node --test src/tests/litix-b2b-sales.test.mjs src/tests/litix-agency-growth-leads.test.mjs
