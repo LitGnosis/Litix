@@ -38,7 +38,7 @@ export async function repurpose(sourceFile, destinationDirectory, { authorized =
   const source = resolve(sourceFile);
   const outDir = resolve(destinationDirectory);
   if (!existsSync(source) || !statSync(source).isFile() ||
-      !/^(\\.mp4|\\.mov|\\.webm)$/i.test(extname(source)))
+      !/^(\.mp4|\.mov|\.webm)$/i.test(extname(source)))
     throw new Error("A local MP4/MOV/WebM source file is required");
   if (statSync(source).size > 1024 * 1024 * 1024)
     throw new Error("Source exceeds 1 GB; transcode via managed video processing");
@@ -62,7 +62,7 @@ if (invokedDirectly) {
     process.exitCode = 2;
   } else {
     repurpose(sourceFile, destinationDirectory, { authorized: true })
-      .then(outputs => process.stdout.write(JSON.stringify({ variants: outputs }) + "\\n"))
+      .then(outputs => process.stdout.write(JSON.stringify({ variants: outputs }) + "\n"))
       .catch(error => { console.error(error.message); process.exitCode = 1; });
   }
 }
