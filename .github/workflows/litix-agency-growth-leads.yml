@@ -1,0 +1,24 @@
+name: Litix Agency Growth Lead Capture — No-Charge QA
+on:
+  push:
+    branches:
+      - growth/agency-qualified-inquiries-20261109
+  pull_request:
+    paths:
+      - "src/app/agency-growth/**"
+      - "src/components/LitixAgencyGrowthInquiry.jsx"
+      - "src/lib/litixAgencyLead.mjs"
+      - "src/tests/litix-agency-growth-leads.test.mjs"
+      - ".github/workflows/litix-agency-growth-leads.yml"
+permissions:
+  contents: read
+jobs:
+  no-charge-qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - run: node --check src/lib/litixAgencyLead.mjs
+      - run: node --test src/tests/litix-agency-growth-leads.test.mjs
