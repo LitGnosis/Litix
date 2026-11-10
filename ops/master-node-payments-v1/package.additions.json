@@ -1,0 +1,19 @@
+{
+  "dependencies": {
+    "pg": "^8.14.0",
+    "socks-proxy-agent": "^8.0.5",
+    "bullmq": "^5.40.0",
+    "ioredis": "^5.4.0"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.11.0",
+    "@types/node": "^22.15.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.8.0"
+  },
+  "scripts": {
+    "litix:payment-tests": "node --experimental-strip-types --test tests/payment-signatures.test.mjs",
+    "litix:payment-outbox": "tsx worker/payment-outbox-relay.ts",
+    "litix:proxy-audit": "tsx scripts/audit-proxy-rings.ts"
+  }
+}
