@@ -2,8 +2,9 @@
 import {useEffect,useState} from "react";
 import {buildAgencyLeadPayload,AGENCY_SEGMENTS,AGENCY_GOALS,AGENCY_BUDGETS} from "../lib/litixAgencyLead.mjs";
 import {PARTNER_SOURCE_FIELDS} from "../lib/litixPartnerAttribution.mjs";
+import {LITIX_B2B_OFFER_OPTIONS,selectedB2BOffer} from "../lib/litixB2BOffers.mjs";
 
-const empty={name:"",email:"",organization:"",segment:"business",goal:"leads",budget:"from_1000",notes:"",consent:false,websiteTrap:""};
+const empty={name:"",email:"",organization:"",offer:"lead-response",segment:"business",goal:"leads",budget:"from_1000",notes:"",consent:false,websiteTrap:""};
 const choices=values=>Object.entries(values).map(([value,title])=><option key={value} value={value}>{title}</option>);
 export default function LitixAgencyGrowthInquiry(){
  const [value,setValue]=useState(empty);
@@ -14,6 +15,8 @@ export default function LitixAgencyGrowthInquiry(){
  useEffect(()=>{
   const query=new URLSearchParams(window.location.search);
   setSource(Object.fromEntries(PARTNER_SOURCE_FIELDS.map(key=>[key,query.get(key)])));
+  const offer=query.get("offer");
+  if(selectedB2BOffer(offer))setValue(current=>({...current,offer}));
  },[]);
  async function submit(e){
   e.preventDefault();
@@ -37,6 +40,7 @@ export default function LitixAgencyGrowthInquiry(){
  }
  return <form className="agency-lead-form partner-form" aria-label="Request a Litix business growth proposal" onSubmit={submit}>
   <div className="partner-fields">
+   <label>Interested in<select value={value.offer} onChange={e=>update("offer",e.target.value)}>{choices(LITIX_B2B_OFFER_OPTIONS)}</select></label>
    <label>Your name<input type="text" autoComplete="name" required minLength={2} maxLength={100}
     value={value.name} onChange={e=>update("name",e.target.value)}/></label>
    <label>Work email<input type="email" autoComplete="email" required maxLength={254}
