@@ -9,3 +9,12 @@
 .agency-growth .partner-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
 @media(max-width:860px){.agency-growth-grid{grid-template-columns:1fr}}
 @media(max-width:620px){.agency-growth-form .partner-fields,.agency-growth .partner-grid{grid-template-columns:1fr}}
+
+.agency-sales-offers{align-items:stretch}
+.agency-sales-offer{display:flex;flex-direction:column;gap:9px}
+.agency-sales-price{font-size:clamp(1.1rem,2vw,1.4rem);font-weight:800;color:#b8dfff}
+.agency-sales-offer ul{padding-left:18px;margin:0 0 10px;line-height:1.5}
+.agency-sales-offer li{margin-bottom:6px}
+.agency-sales-offer h4{margin:6px 0 0}
+.agency-sales-link{margin-top:auto;display:inline-flex;align-items:center;justify-content:center;max-width:100%}
+@media(max-width:620px){.agency-sales-offer{gap:7px}}
