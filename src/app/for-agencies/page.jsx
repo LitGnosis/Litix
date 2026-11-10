@@ -23,7 +23,7 @@ export default function GlobalAgencyPage(){
    <h1>One storefront. Clients around the world.</h1>
    <p>Manage client-service purchasing without juggling multiple storefronts. Discover Litix's existing services, review available bundles and request an agency partnership for your business.</p>
    <div className="partner-actions">
-    <Link className="primary" href="/partners?utm_source=agency_page&utm_medium=owned&utm_campaign=global_agencies#apply">Discuss agency purchasing</Link>
+    <Link className="primary" href="/agency-growth?utm_source=agency_page&utm_medium=owned&utm_campaign=agency_inquiry#request">Request a business growth proposal</Link>
     <Link href="/shop">Explore live services</Link>
    </div>
    <p className="small">Worldwide inquiries welcome. Actual service eligibility, supported payment methods, fulfillment and local requirements are reviewed individually; the checkout currently uses USD.</p>
