@@ -14,7 +14,7 @@ test("organization and website schema use publicly supportable first-party facts
  const site=nodes.find(n=>n["@type"]==="WebSite");
  assert.ok(org&&site);
  assert.equal(org.name,"Litix");
- assert.equal(org.logo,"https://www.litix.net/assets/brand/logo.svg");
+ assert.equal(org.logo,"https://www.litix.net/assets/brand/litix-logo.webp");
  assert.equal(org.email,"litixsocial@gmail.com");
  assert.equal(site.publisher["@id"],org["@id"]);
  assert.equal(site.url,LITIX_SITE_URL);
@@ -32,7 +32,7 @@ test("app layout embeds schema and descriptive search metadata",()=>{
  assert.match(layout,/LITIX_DISCOVERY_DESCRIPTION/);
 });
 test("about and editorial pages are factual with no invented media placements",()=>{
- const about=source("app/about/page.jsx"),press=source("app/press/page.jsx");
+ const about=source("app/company/page.jsx"),press=source("app/press/page.jsx");
  assert.match(about,/Litix\.net/);
  assert.match(about,/New AutoLikes purchases are currently paused/);
  assert.match(about,/No\. Marketing outcomes/);
