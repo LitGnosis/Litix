@@ -1,0 +1,24 @@
+name: Litix Owned Payments and Node Telemetry — No-Charge Tests
+on:
+  pull_request:
+    paths:
+      - "ops/master-node-payments-v1/**"
+      - ".github/workflows/litix-owned-payments-tests.yml"
+  push:
+    branches:
+      - feature/20261110-signed-dual-gateway-direct-ops
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+      - name: Test payment signatures, event gating, owner session
+        run: node --experimental-strip-types --test ops/master-node-payments-v1/tests/*.test.mjs
