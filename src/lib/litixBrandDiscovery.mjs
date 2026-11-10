@@ -12,7 +12,7 @@ export const LITIX_DISCOVERY_SCHEMA=Object.freeze({
    name:"Litix",
    alternateName:"Litix.net",
    url:LITIX_SITE_URL,
-   logo:LITIX_SITE_URL+"assets/brand/logo.svg",
+   logo:LITIX_SITE_URL+"assets/brand/litix-logo.webp",
    description:LITIX_DISCOVERY_DESCRIPTION,
    email:"litixsocial@gmail.com"
   },
