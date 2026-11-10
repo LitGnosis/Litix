@@ -28,7 +28,7 @@ export default function LitixAgencyGrowthInquiry(){
    const result=await response.json().catch(()=>({}));
    if(!response.ok)throw Error(result.error||"Your inquiry could not be delivered.");
    setStatus("sent");
-   setMessage("Your business inquiry was submitted for manual review. No payment or service order was created. Litix will contact you if we can offer a suitable proposal.");
+   setMessage(result.acknowledgementQueued?"Your business inquiry was received and an acknowledgement email was queued. Litix will review whether a suitable proposal can be offered. No payment or service order was created.":"Your business inquiry was submitted for review, but the confirmation email was not queued. Contact litixsocial@gmail.com if you need a receipt. No payment or service order was created.");
    setValue(empty);
   }catch(error){
    setStatus("error");
