@@ -1,0 +1,36 @@
+name: Litix Native Growth Engine — No-Charge QA
+on:
+  pull_request:
+    paths:
+      - "src/lib/litixNativeGrowthEngine.mjs"
+      - "src/components/LitixGrowthStudio.jsx"
+      - "src/app/growth-studio/**"
+      - "src/app/agency-growth/page.jsx"
+      - "src/app/sitemap.js"
+      - "src/tests/litix-native-growth-engine.test.mjs"
+      - ".github/workflows/litix-native-growth-engine.yml"
+  push:
+    branches:
+      - feature/native-litix-content-growth-engine-20261110
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: src
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22"
+      - name: Test content engine, tracking and sales-run-rate math
+        run: node --test tests/litix-native-growth-engine.test.mjs
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Build website without external provider credentials
+        run: npm run build

@@ -53,6 +53,12 @@ export default function AgencyGrowth(){
    <p><Link href="/solutions/automation-ops">Explore AI Marketing Operations</Link> · <Link href="/demo/lead-operations">See a verified Litix lead-response workflow demo</Link></p>
    <p className="small">These are proposal topics, not automatically available subscriptions. Deliverables, provider access, timing, legal eligibility and prices are confirmed individually in writing before any sale.</p>
   </section>
+  <section className="panel">
+   <p className="kicker">LITIX OWNED TECHNOLOGY</p>
+   <h2>Preview our first-party creative planning engine</h2>
+   <p>Use the native Litix Growth Studio to prepare twelve reviewed content drafts with platform-specific creative direction and tracked campaign links, then discuss a properly scoped content-operations service. This is not automatic video editing or social posting.</p>
+   <div className="partner-actions"><Link className="primary" href="/growth-studio">Open Litix Growth Studio</Link><Link href="/demo/lead-operations">See our lead-response demonstration</Link></div>
+  </section>
   <section className="panel agency-growth-grid">
    <div>
     <h2>How a partnership starts</h2>

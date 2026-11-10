@@ -13,6 +13,7 @@ export default function sitemap() {
     {url:base+"/for-agencies",changeFrequency:"weekly",priority:0.8},
     {url:base+"/agency-growth",changeFrequency:"weekly",priority:0.85},
     {url:base+"/demo/lead-operations",changeFrequency:"monthly",priority:0.75},
+    {url:base+"/growth-studio",changeFrequency:"weekly",priority:0.8},
     {url:base+"/solutions",changeFrequency:"monthly",priority:0.8},
     ...LITIX_SOLUTION_SLUGS.map(slug=>({url:base+"/solutions/"+slug,changeFrequency:"monthly",priority:0.55})),
     {url:base+"/tools/local-visibility",changeFrequency:"monthly",priority:0.7},
