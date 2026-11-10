@@ -32,7 +32,7 @@ export function validHttpsUrl(value) {
     const url = new URL(value);
     return url.protocol === "https:" && !url.username && !url.password &&
       !url.hash && !url.port && Boolean(url.hostname) &&
-      !/^(localhost|.*\\.localhost|.*\\.local|[0-9.]+)$/i.test(url.hostname);
+      !/^(localhost|.*\.localhost|.*\.local|[0-9.]+)$/i.test(url.hostname);
   } catch { return false; }
 }
 
