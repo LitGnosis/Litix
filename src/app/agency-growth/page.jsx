@@ -1,5 +1,6 @@
 import Link from "next/link";
 import LitixAgencyGrowthInquiry from "../../components/LitixAgencyGrowthInquiry";
+import {LITIX_B2B_OFFERS} from "../../lib/litixB2BOffers.mjs";
 import "../partners/partners.css";
 import "./agency-growth.css";
 
@@ -27,6 +28,23 @@ export default function AgencyGrowth(){
    <div className="partner-actions"><a className="primary" href="#request">Request a business proposal</a><a href="https://calendly.com/spears5417/litix-business-growth-discovery-call">Book a 20-minute discovery call</a></div>
    <p className="small">Worldwide inquiries welcome. No guarantee of leads, sales, followers, rankings or earnings. No payment is collected here.</p>
   </section>
+  <section className="panel" id="services">
+   <h2>Three scoped services for businesses and agencies</h2>
+   <p>These are proposed starting ranges for a qualified sales discussion, not a payment checkout or automatic subscription. Each project is accepted only after Litix confirms delivery capacity and a written agreement.</p>
+   <div className="partner-grid agency-sales-offers">
+    {LITIX_B2B_OFFERS.map(offer=><article className="partner-card agency-sales-offer" key={offer.id}>
+     <p className="kicker">BUSINESS PROPOSAL</p>
+     <h3>{offer.name}</h3>
+     <p className="agency-sales-price">{offer.price}</p>
+     <p>{offer.outcome}</p>
+     <h4>Potential scope</h4>
+     <ul>{offer.scope.map(task=><li key={task}>{task}</li>)}</ul>
+     <p className="small">{offer.pricingNote}. {offer.limits}.</p>
+     <a className="primary agency-sales-link" href={`?offer=${offer.id}#request`}>Discuss this service</a>
+    </article>)}
+   </div>
+   <p className="small">All suggested price bands are illustrative USD amounts. No project is sold, paid, activated, or promised by filling out this form. Scope, technical requirements, fees, timelines and responsibilities require written approval.</p>
+  </section>
   <section className="panel">
    <h2>Three areas we can discuss</h2>
    <div className="partner-grid">
@@ -47,7 +65,8 @@ export default function AgencyGrowth(){
    </div>
    <div id="request" className="agency-growth-form">
     <p className="kicker">NO PAYMENT · MANUAL REVIEW</p>
-    <h2>Tell us what you need</h2>
+    <h2>Request a scoped proposal</h2>
+    <p>Select a service and tell us your goals. The inquiry is routed for manual qualification, not automatic payment or supplier fulfillment.</p>
     <p>Prefer a conversation? <a href="https://calendly.com/spears5417/litix-business-growth-discovery-call">Book an available 20-minute discovery call</a>. Booking a call does not create a contract or paid order.</p>
     <LitixAgencyGrowthInquiry/>
    </div>
