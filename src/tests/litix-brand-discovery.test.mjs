@@ -39,15 +39,15 @@ test("about and editorial pages are factual with no invented media placements",(
  assert.match(press,/not.*independent review/);
  assert.match(press,/not.*media coverage/);
  assert.match(press,/litixsocial@gmail\.com/);
- assert.match(press,/\/assets\/brand\/logo\.svg/);
+ assert.match(press,/\/assets\/brand\/litix-logo\.webp/);
  assert.match(press,/verify|first-party|first.hand/i);
  assert.doesNotMatch(press,/featured in Forbes|featured on CNN|published in Fortune/);
 });
 test("factual resources linked from homepage and included in sitemap",()=>{
  const home=source("app/page.jsx"),map=source("app/sitemap.js"),robots=source("app/robots.js");
- assert.match(home,/href="\/about"/);
+ assert.match(home,/href="\/company"/);
  assert.match(home,/href="\/press"/);
- assert.match(map,/base\+"\/about"/);
+ assert.match(map,/base\+"\/company"/);
  assert.match(map,/base\+"\/press"/);
  assert.match(robots,/sitemap\.xml/);
 });
