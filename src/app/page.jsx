@@ -387,7 +387,7 @@ export default function Home(){
  <section className="panel" aria-label="Business and agency proposals">
   <p className="kicker">BUSINESSES & AGENCIES</p><h2>Need a measurable marketing plan for your business?</h2>
   <p>Discuss qualified leads, content workflow, local visibility and client reporting before paying for any work. Every proposal is manually scoped and subject to delivery capacity.</p>
-  <p><a className="primary" href="/agency-growth?utm_source=home&utm_medium=owned&utm_campaign=agency_inquiry">Request a business proposal</a> · <a href="/for-agencies">Learn about agency purchasing</a></p>
+  <p><a className="primary" href="/agency-growth?utm_source=home&utm_medium=owned&utm_campaign=agency_inquiry">Request a business proposal</a> · <a href="/for-agencies">Learn about agency purchasing</a> · <a href="https://calendly.com/spears5417/litix-business-growth-discovery-call">Book a 20-minute call</a> · <a href="/demo/lead-operations">See workflow demo</a></p>
  </section>
  <GrowthBundles/>
  <section className="panel" aria-label="Litix customer support"><h2>Litix Order Support</h2><p>Track your paid order or contact support if you need assistance. Never share card details or social media passwords.</p><div style={{display:"flex",gap:16,flexWrap:"wrap"}}><a href="/track">Track your order</a><a href="/shop">Shop by platform</a><a href={"https://wa.me/"+(whatsappNumber.length>=8?whatsappNumber:"19452106315")+"?text="+encodeURIComponent("Hello Litix, I need help with a Litix order.")} target="_blank" rel="noopener noreferrer">WhatsApp Support</a><a href="mailto:Litixsocial@gmail.com?subject=Litix%20Order%20Support">Email Litix Support</a></div></section>
