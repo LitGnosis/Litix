@@ -28,7 +28,8 @@ export default function sitemap() {
       alternates:localAlternates
     })),
     // Preserve previously listed October 19 SEO pages during retirement of proxy sitemap.
-    {url:base+"/about",changeFrequency:"monthly",priority:0.5},
+    {url:base+"/about",changeFrequency:"monthly",priority:0.65},
+    {url:base+"/press",changeFrequency:"monthly",priority:0.6},
     {url:base+"/platform",changeFrequency:"monthly",priority:0.5},
     {url:base+"/acceptable-use",changeFrequency:"yearly",priority:0.3},
     {url:base+"/resources/visibility-acceleration",changeFrequency:"monthly",priority:0.4},
