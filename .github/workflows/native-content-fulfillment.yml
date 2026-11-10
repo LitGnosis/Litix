@@ -1,0 +1,32 @@
+name: Litix Native Fulfillment Unit + No-Charge Media Tests
+
+on:
+  pull_request:
+    paths:
+      - "src/native/**"
+      - "src/app/api/internal/native-fulfillment/**"
+      - "src/db/migrations/20261110-native-content-work-orders.sql"
+      - "src/tests/native-fulfillment.test.mjs"
+      - ".github/workflows/native-content-fulfillment.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  native-fulfillment:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Validate native work-order code and local repurposing
+        run: node --test src/tests/native-fulfillment.test.mjs
+      - name: Verify native Next route is syntactically valid
+        run: node --check src/app/api/internal/native-fulfillment/route.js
+      - name: Verify source worker modules are syntactically valid
+        run: |
+          node --check src/native/fulfillment-core.mjs
+          node --check src/native/repurpose-video.mjs
