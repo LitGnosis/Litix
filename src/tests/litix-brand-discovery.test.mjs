@@ -14,7 +14,7 @@ test("organization and website schema use publicly supportable first-party facts
  const site=nodes.find(n=>n["@type"]==="WebSite");
  assert.ok(org&&site);
  assert.equal(org.name,"Litix");
- assert.equal(org.logo,"https://www.litix.net/assets/brand/logo.svg");
+ assert.equal(org.logo,"https://www.litix.net/assets/brand/litix-logo.webp");
  assert.equal(org.email,"litixsocial@gmail.com");
  assert.equal(site.publisher["@id"],org["@id"]);
  assert.equal(site.url,LITIX_SITE_URL);
@@ -32,22 +32,22 @@ test("app layout embeds schema and descriptive search metadata",()=>{
  assert.match(layout,/LITIX_DISCOVERY_DESCRIPTION/);
 });
 test("about and editorial pages are factual with no invented media placements",()=>{
- const about=source("app/about/page.jsx"),press=source("app/press/page.jsx");
+ const about=source("app/company/page.jsx"),press=source("app/press/page.jsx");
  assert.match(about,/Litix\.net/);
  assert.match(about,/New AutoLikes purchases are currently paused/);
  assert.match(about,/No\. Marketing outcomes/);
  assert.match(press,/not.*independent review/);
  assert.match(press,/not.*media coverage/);
  assert.match(press,/litixsocial@gmail\.com/);
- assert.match(press,/\/assets\/brand\/logo\.svg/);
+ assert.match(press,/\/assets\/brand\/litix-logo\.webp/);
  assert.match(press,/verify|first-party|first.hand/i);
  assert.doesNotMatch(press,/featured in Forbes|featured on CNN|published in Fortune/);
 });
 test("factual resources linked from homepage and included in sitemap",()=>{
  const home=source("app/page.jsx"),map=source("app/sitemap.js"),robots=source("app/robots.js");
- assert.match(home,/href="\/about"/);
+ assert.match(home,/href="\/company"/);
  assert.match(home,/href="\/press"/);
- assert.match(map,/base\+"\/about"/);
+ assert.match(map,/base\+"\/company"/);
  assert.match(map,/base\+"\/press"/);
  assert.match(robots,/sitemap\.xml/);
 });

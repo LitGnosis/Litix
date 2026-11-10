@@ -10,12 +10,12 @@ export const metadata={
 
 export default function LitixMedia(){
  return <main className="wrap partner-page" style={{maxWidth:1100}}>
-  <nav className="nav" aria-label="Litix press information"><Link className="brand" href="/">LITIX</Link><div><Link href="/about">About</Link><Link href="/agency-growth">Business growth</Link><Link href="/shop">Shop</Link></div></nav>
+  <nav className="nav" aria-label="Litix press information"><Link className="brand" href="/">LITIX</Link><div><Link href="/company">About</Link><Link href="/agency-growth">Business growth</Link><Link href="/shop">Shop</Link></div></nav>
   <section className="panel partner-hero">
    <p className="kicker">MEDIA AND EDITORIAL INFORMATION</p>
    <h1>Litix.net company fact sheet</h1>
    <p>For journalists, podcasters, creators, potential business partners, and editorial teams researching Litix. This page is supplied by the company itself; it is <strong>not</strong> an independent review, earned press mention, third-party endorsement, or statement that any news outlet has published our story.</p>
-   <div className="partner-actions"><a className="primary" href="mailto:litixsocial@gmail.com?subject=Litix%20Editorial%20Inquiry">Contact Litix for an interview</a><Link href="/about">Company overview</Link></div>
+   <div className="partner-actions"><a className="primary" href="mailto:litixsocial@gmail.com?subject=Litix%20Editorial%20Inquiry">Contact Litix for an interview</a><Link href="/company">Company overview</Link></div>
   </section>
   <section className="panel">
    <h2>Verified public information</h2>
@@ -39,10 +39,10 @@ export default function LitixMedia(){
   <section className="panel">
    <h2>Media inquiries and brand assets</h2>
    <p><strong>Editorial contact:</strong> <a href="mailto:litixsocial@gmail.com">litixsocial@gmail.com</a>.</p>
-   <p><strong>Brand logo:</strong> <a href="/assets/brand/logo.svg">Litix official vector mark</a>. Please request permission before modifying or using the mark commercially.</p>
+   <p><strong>Brand logo:</strong> <a href="/assets/brand/litix-logo.webp">Litix official brand image</a>. Please request permission before modifying or using the mark commercially.</p>
    <p><strong>Website:</strong> <a href="https://www.litix.net/">www.litix.net</a>. <strong>Service catalog:</strong> <Link href="/shop">Shop</Link>. <strong>Business inquiries:</strong> <Link href="/agency-growth">Business Growth</Link>.</p>
    <p><strong>Transparency:</strong> Paid sponsorships, advertorials, and promotional placements should be identified as such. Editors retain independent publication decisions.</p>
   </section>
-  <footer className="partner-footer"><Link href="/">Home</Link><Link href="/about">About Litix</Link><Link href="/legal/privacy">Privacy</Link><Link href="/terms">Terms</Link></footer>
+  <footer className="partner-footer"><Link href="/">Home</Link><Link href="/company">About Litix</Link><Link href="/legal/privacy">Privacy</Link><Link href="/terms">Terms</Link></footer>
  </main>;
 }

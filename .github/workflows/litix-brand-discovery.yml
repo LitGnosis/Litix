@@ -7,7 +7,7 @@ on:
     paths:
       - "src/lib/litixBrandDiscovery.mjs"
       - "src/app/layout.jsx"
-      - "src/app/about/**"
+      - "src/app/company/**"
       - "src/app/press/**"
       - "src/app/sitemap.js"
       - "src/app/page.jsx"

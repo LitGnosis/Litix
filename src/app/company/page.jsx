@@ -4,7 +4,7 @@ import "../partners/partners.css";
 export const metadata={
  title:"About Litix | Social Media Services & Business Workflow Tools",
  description:"Learn what Litix.net offers, how its customer orders work, and what its proposed AI marketing operations services do and do not include.",
- alternates:{canonical:"https://www.litix.net/about"},
+ alternates:{canonical:"https://www.litix.net/company"},
  openGraph:{title:"About Litix.net",url:"https://www.litix.net/about"}
 };
 const facts=[
@@ -14,7 +14,7 @@ const facts=[
  {question:"Are automatic likes on new posts available?",answer:"New AutoLikes purchases are currently paused while supplier-side future-post delivery is verified. This is separate from existing order tracking and other services."},
  {question:"Does Litix offer AI automation or marketing retainers?",answer:"Businesses can request a proposal about consent-based lead capture, reviewed content workflows, analytics, and reporting. These are custom inquiries, not automatically activated subscriptions. Work begins only after a suitable scope and delivery arrangements have been agreed."}
 ];
-export default function AboutLitix(){
+export default function LitixCompanyFacts(){
  return <main className="wrap partner-page" style={{maxWidth:1100}}>
   <nav className="nav" aria-label="Litix information"><Link href="/" className="brand">LITIX</Link>
    <div><Link href="/shop">Shop</Link><Link href="/agency-growth">Business growth</Link><Link href="/press">Media</Link><Link href="/track">Track order</Link></div>
