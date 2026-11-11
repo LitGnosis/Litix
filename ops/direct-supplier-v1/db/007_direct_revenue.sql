@@ -223,4 +223,44 @@ VALUES
 ('post_monitoring',FALSE,TRUE,FALSE,'Owner-authorized post detection and notification'),
 ('first_party_content_review',FALSE,TRUE,FALSE,'Human-verified content quality review')
 ON CONFLICT(service_kind) DO NOTHING;
+
+-- First-party wholesale order rates must be set by verified operations, not invented retail prices.
+CREATE TABLE IF NOT EXISTS growth_ops.direct_service_rates (
+ service_kind TEXT PRIMARY KEY REFERENCES growth_ops.direct_service_catalog(service_kind),
+ unit_price_usd NUMERIC(12,2) NOT NULL CHECK(unit_price_usd>0),
+ enabled BOOLEAN NOT NULL DEFAULT FALSE,
+ updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS growth_ops.child_panel_orders (
+ id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+ panel_id UUID NOT NULL REFERENCES growth_ops.child_panels(id),
+ idempotency_key TEXT NOT NULL CHECK(length(idempotency_key) BETWEEN 16 AND 128),
+ service_kind TEXT NOT NULL REFERENCES growth_ops.direct_service_catalog(service_kind),
+ unit_price_usd NUMERIC(12,2) NOT NULL CHECK(unit_price_usd>0),
+ status TEXT NOT NULL DEFAULT 'QUEUED' CHECK(status IN ('QUEUED','CLAIMED','COMPLETED','REVIEW','FAILED')),
+ created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+ UNIQUE(panel_id,idempotency_key)
+);
+ALTER TABLE growth_ops.direct_fulfillment_jobs
+ ADD COLUMN IF NOT EXISTS panel_order_id UUID UNIQUE REFERENCES growth_ops.child_panel_orders(id);
+
+CREATE TABLE IF NOT EXISTS growth_ops.child_panel_wallet_topup_intents (
+ id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+ panel_id UUID NOT NULL REFERENCES growth_ops.child_panels(id),
+ provider_transaction_id TEXT NOT NULL UNIQUE,
+ order_reference TEXT NOT NULL UNIQUE,
+ expected_amount_cents INTEGER NOT NULL CHECK(expected_amount_cents>0),
+ state TEXT NOT NULL DEFAULT 'PENDING' CHECK(state IN ('PENDING','SETTLED','REVIEW')),
+ created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+ settled_at TIMESTAMPTZ
+);
+
+ALTER TABLE growth_ops.child_panels
+ ADD COLUMN IF NOT EXISTS source_application_id UUID REFERENCES growth_ops.revenue_applications(id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_child_panel_application ON growth_ops.child_panels(source_application_id);
+ALTER TABLE growth_ops.agency_retainers
+ ADD COLUMN IF NOT EXISTS source_application_id UUID REFERENCES growth_ops.revenue_applications(id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_agency_application ON growth_ops.agency_retainers(source_application_id);
+
 COMMIT;
