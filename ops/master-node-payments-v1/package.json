@@ -12,7 +12,8 @@
     "test": "node --experimental-strip-types --test tests/*.test.mjs",
     "build": "next build",
     "start": "next start -H 0.0.0.0",
-    "staging:test": "node scripts/staging-integration-check.mjs"
+    "staging:test": "node scripts/staging-integration-check.mjs",
+    "direct:worker": "node worker/first-party-direct-worker.mjs"
   },
   "dependencies": {
     "bullmq": "5.40.0",
