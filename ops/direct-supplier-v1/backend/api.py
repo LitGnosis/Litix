@@ -234,10 +234,10 @@ async def reconcile_one(con, application, tx):
         digest=hashlib.sha256(key.encode()).hexdigest()
         panel=await con.fetchrow(
           """INSERT INTO growth_ops.child_panels
-             (owner_email,custom_domain,api_key_hash,subscription_status,nmi_subscription_id)
-             VALUES($1,$2,$3,'ACTIVE',$4)
+             (owner_email,custom_domain,api_key_hash,subscription_status,nmi_subscription_id,source_application_id)
+             VALUES($1,$2,$3,'ACTIVE',$4,$5)
              ON CONFLICT(custom_domain) DO NOTHING RETURNING id""",
-          application["owner_email"],application["custom_domain"],digest,tx["subscription_id"])
+          application["owner_email"],application["custom_domain"],digest,tx["subscription_id"],application["id"])
         if not panel:
             raise RuntimeError('panel_provisioning_conflict_requires_review')
         if panel:
@@ -247,11 +247,11 @@ async def reconcile_one(con, application, tx):
     else:
         await con.execute(
           """INSERT INTO growth_ops.agency_retainers
-             (agency_name,owner_email,tier,monitored_handles,subscription_status,nmi_subscription_id,monthly_stream_quota)
-             VALUES($1,$2,$3,'[]'::jsonb,'ACTIVE',$4,$5)
+             (agency_name,owner_email,tier,monitored_handles,subscription_status,nmi_subscription_id,monthly_stream_quota,source_application_id)
+             VALUES($1,$2,$3,'[]'::jsonb,'ACTIVE',$4,$5,$6)
              ON CONFLICT(nmi_subscription_id) DO NOTHING""",
           application["agency_name"],application["owner_email"],tier,tx["subscription_id"],
-          100 if tier=='AGENCY_500_WK' else 400)
+          100 if tier=='AGENCY_500_WK' else 400,application['id'])
     if application["referred_by"]:
         await con.execute(
           """INSERT INTO growth_ops.affiliate_ledger
