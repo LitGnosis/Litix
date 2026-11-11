@@ -1,0 +1,52 @@
+name: Litix Direct Supplier Review
+on:
+  pull_request:
+    paths:
+      - 'ops/direct-supplier-v1/**'
+      - 'src/app/agency/**'
+      - 'src/app/wholesale/**'
+      - 'src/app/ai-content-studio/**'
+      - 'src/components/ContentFarmStudio.jsx'
+      - 'src/components/DirectRevenuePortal.jsx'
+      - 'src/app/api/direct-plans/**'
+      - '.github/workflows/litix-direct-supplier-review.yml'
+  push:
+    branches:
+      - 'feature/litix-wholesale-agency-ai-studio-20261111'
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ops/direct-supplier-v1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Set up Python and run security tests
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r backend/requirements.txt pytest==8.3.5
+          python -m compileall -q backend
+          python -m pytest -q tests
+      - name: Confirm no external SMM reseller order APIs
+        run: |
+          if grep -REni 'smmxpert|boostero|smmglob|smmfollowom|api\.smm' backend/; then
+            echo 'External SMM reseller path found in direct supplier backend.'
+            exit 1
+          fi
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Clean install Next.js frontend and build
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build
