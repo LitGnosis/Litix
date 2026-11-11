@@ -71,6 +71,7 @@ class Application(BaseModel):
     agency_name: str | None = Field(default=None,max_length=160)
     custom_domain: str | None = Field(default=None,max_length=254)
     referred_by: str | None = Field(default=None,max_length=64)
+    handles: list[str] = Field(default_factory=list,max_length=100)
 
     @field_validator("owner_email")
     @classmethod
@@ -86,6 +87,13 @@ class Application(BaseModel):
         if v not in PRICES:
             raise ValueError("unsupported_tier")
         return v
+
+    @field_validator("handles")
+    @classmethod
+    def validate_requested_handles(cls,hs):
+        if len(hs)!=len(set(hs)) or any(not re.fullmatch(r"@[A-Za-z0-9._-]{1,60}",x) for x in hs):
+            raise ValueError("authorized_handle_format_required")
+        return hs
 
     @field_validator("custom_domain")
     @classmethod
@@ -136,14 +144,17 @@ async def apply(request:Request, a:Application):
         raise HTTPException(422,"custom_domain_required")
     if a.tier!="PANEL_149_WK" and not a.agency_name:
         raise HTTPException(422,"agency_name_required")
+    if (a.tier=="PANEL_149_WK" and a.handles) or (a.tier=="AGENCY_500_WK" and len(a.handles)>25):
+        raise HTTPException(422,"tier_handle_limit")
     r=await request.app.state.db.fetchrow(
-      """INSERT INTO growth_ops.revenue_applications(owner_email,agency_name,custom_domain,tier,referred_by)
-         VALUES($1,$2,$3,$4,$5)
+      """INSERT INTO growth_ops.revenue_applications(owner_email,agency_name,custom_domain,tier,referred_by,requested_handles)
+         VALUES($1,$2,$3,$4,$5,$6::jsonb)
          ON CONFLICT(owner_email,tier) DO UPDATE SET
-           agency_name=EXCLUDED.agency_name,custom_domain=EXCLUDED.custom_domain
+           agency_name=EXCLUDED.agency_name,custom_domain=EXCLUDED.custom_domain,
+           requested_handles=EXCLUDED.requested_handles
          WHERE growth_ops.revenue_applications.status='PENDING'
          RETURNING id,status""",
-      a.owner_email,a.agency_name,a.custom_domain,a.tier,a.referred_by)
+      a.owner_email,a.agency_name,a.custom_domain,a.tier,a.referred_by,json.dumps(a.handles))
     if not r:
         raise HTTPException(409,"application_already_processed")
     return {"application_id":str(r["id"]),"status":r["status"],
