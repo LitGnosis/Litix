@@ -4,6 +4,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import hmac
+import httpx
 import json
 import os
 import re
@@ -187,6 +188,10 @@ async def nmi_webhook(request:Request):
     if event_type.startswith("recurring.") and not subscription_id:
         return {"accepted":True,"action":"review_subscription"}
     checksum=hashlib.sha256(raw).hexdigest()
+    try:
+        application_id=UUID(order_id) if order_id else None
+    except ValueError:
+        application_id=None
     async with request.app.state.db.acquire() as con:
         async with con.transaction():
             existing=await con.fetchval("SELECT 1 FROM growth_ops.recurring_payment_events WHERE provider='nmi' AND event_id=$1",event_id)
@@ -195,12 +200,12 @@ async def nmi_webhook(request:Request):
             await con.execute(
               """INSERT INTO growth_ops.recurring_payment_events
                  (provider,event_id,event_type,transaction_id,subscription_id,payload_sha256,
-                  state,owner_email,tier,amount_cents)
-                 VALUES('nmi',$1,$2,$3,$4,$5,'AWAITING_VERIFIED_SETTLEMENT',$6,$7,$8)""",
+                  state,owner_email,tier,amount_cents,application_id)
+                 VALUES('nmi',$1,$2,$3,$4,$5,'AWAITING_VERIFIED_SETTLEMENT',$6,$7,$8,$9)""",
               event_id,event_type,transaction_id or ("subscription:"+subscription_id),
               subscription_id or ("sale:"+transaction_id),checksum,None,None,
               cents(str((details.get("action") or {}).get("amount","0")))
-              if event_type=="transaction.sale.success" else None)
+              if event_type=="transaction.sale.success" else None,application_id)
     # Signed webhooks are notices. Funds require an independent NMI Query API result.
     return {"accepted":True,"action":"awaiting_independent_settlement"}
 
@@ -237,10 +242,11 @@ async def reconcile_one(con, application, tx):
     else:
         await con.execute(
           """INSERT INTO growth_ops.agency_retainers
-             (agency_name,owner_email,tier,monitored_handles,subscription_status,nmi_subscription_id)
-             VALUES($1,$2,$3,'[]'::jsonb,'ACTIVE',$4)
+             (agency_name,owner_email,tier,monitored_handles,subscription_status,nmi_subscription_id,monthly_stream_quota)
+             VALUES($1,$2,$3,'[]'::jsonb,'ACTIVE',$4,$5)
              ON CONFLICT(nmi_subscription_id) DO NOTHING""",
-          application["agency_name"],application["owner_email"],tier,tx["subscription_id"])
+          application["agency_name"],application["owner_email"],tier,tx["subscription_id"],
+          100 if tier=='AGENCY_500_WK' else 400)
     if application["referred_by"]:
         await con.execute(
           """INSERT INTO growth_ops.affiliate_ledger
@@ -261,7 +267,7 @@ async def reconcile(request:Request):
         pending=await con.fetch(
           """SELECT e.transaction_id,e.subscription_id,e.amount_cents,a.*
              FROM growth_ops.recurring_payment_events e
-             JOIN growth_ops.revenue_applications a ON a.id::text=e.subscription_id
+             JOIN growth_ops.revenue_applications a ON a.id=e.application_id
              WHERE e.provider='nmi' AND e.event_type='transaction.sale.success'
                AND e.state='AWAITING_VERIFIED_SETTLEMENT'
                AND e.created_at>NOW()-INTERVAL '30 days'
@@ -272,6 +278,13 @@ async def reconcile(request:Request):
             async with request.app.state.db.acquire() as con:
                 async with con.transaction():
                     application=await con.fetchrow("SELECT * FROM growth_ops.revenue_applications WHERE id=$1 FOR UPDATE",tx["id"])
+                    # Match the subscription notice with the same application ID.
+                    sub=await con.fetchval("""SELECT subscription_id FROM growth_ops.recurring_payment_events
+                        WHERE application_id=$1 AND event_type IN ('recurring.subscription.add','recurring.subscription.update')
+                        ORDER BY created_at DESC LIMIT 1""",application["id"])
+                    if not sub:
+                        outcomes.append('subscription_event_missing');continue
+                    tx=dict(tx);tx['subscription_id']=sub
                     if application["status"]=="CONVERTED":
                         outcomes.append("already_active");continue
                     if tx["amount_cents"]!=PRICES[application["tier"]]:
