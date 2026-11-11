@@ -5,6 +5,8 @@ on:
       - "src/lib/litixNativeGrowthEngine.mjs"
       - "src/components/LitixGrowthStudio.jsx"
       - "src/app/growth-studio/**"
+      - "src/app/api/direct-smm/**"
+      - "src/tests/litix-direct-smm-creative-kit.test.mjs"
       - "src/app/agency-growth/page.jsx"
       - "src/app/sitemap.js"
       - "src/tests/litix-native-growth-engine.test.mjs"
@@ -29,7 +31,7 @@ jobs:
         with:
           node-version: "22"
       - name: Test content engine, tracking and sales-run-rate math
-        run: node --test tests/litix-native-growth-engine.test.mjs
+        run: node --test tests/litix-native-growth-engine.test.mjs tests/litix-direct-smm-creative-kit.test.mjs
       - name: Install locked dependencies
         run: npm ci --no-audit --no-fund
       - name: Build website without external provider credentials
