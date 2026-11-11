@@ -27,7 +27,7 @@ export default function DirectRevenuePortal({mode}){
   try{
    const r=await fetch("/api/direct-plans/apply",{method:"POST",headers:{"content-type":"application/json"},
      body:JSON.stringify({tier,owner_email:email,agency_name:wholesale?null:name,
-       custom_domain:wholesale?domain:null}),cache:"no-store"});
+       custom_domain:wholesale?domain:null,handles:wholesale?[]:selectedHandles}),cache:"no-store"});
    const x=await r.json();if(!r.ok)throw Error(x.error||"applications_unavailable");
    setSubmitted(x.application_id);setMsg("Application recorded. No charge was made.");
   }catch(err){setMsg(err.message==="applications_not_yet_enabled"?
