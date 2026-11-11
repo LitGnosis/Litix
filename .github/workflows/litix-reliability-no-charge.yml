@@ -1,0 +1,26 @@
+name: Litix First-Party Delivery Reliability — No-Charge CI
+on:
+  pull_request:
+    paths:
+      - "ops/litix-reliability/**"
+      - ".github/workflows/litix-reliability-no-charge.yml"
+  push:
+    branches:
+      - "feature/20261110-owned-delivery-reliability"
+permissions:
+  contents: read
+jobs:
+  reliability:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.11"
+      - run: python -m unittest discover -s tests -v
+        working-directory: ops/litix-reliability
+      - run: python -m compileall -q litix_reliability tests
+        working-directory: ops/litix-reliability
