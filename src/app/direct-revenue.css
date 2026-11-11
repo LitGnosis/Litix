@@ -1,0 +1,24 @@
+.litix-revenue{min-height:100vh;background:radial-gradient(ellipse at 13% 6%,#184577 0,transparent 39%),linear-gradient(145deg,#04101e,#071a2f 50%,#050d1b);color:#edf8ff;font:inherit;padding:0 22px 50px}
+.litix-revenue a{color:#96d8ff}.litix-revenue header{max-width:1200px;margin:auto;padding:22px 0;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.litix-revenue nav{display:flex;flex-wrap:wrap;gap:20px}.litix-revenue nav a{text-decoration:none;font-size:14px;font-weight:700}
+.litix-revenue .brand{font-size:23px;letter-spacing:2px;color:#e5f6ff;text-decoration:none;font-weight:900}
+.litix-revenue .brand span{color:#8cd2ff}.litix-revenue .hero{max-width:1200px;margin:24px auto;padding:38px;border:1px solid #3b6287;border-radius:20px;background:linear-gradient(110deg,rgba(19,58,101,.75),rgba(3,13,29,.5))}
+.litix-revenue h1{font-size:clamp(30px,4.6vw,54px);max-width:920px;line-height:1.1;margin:10px 0}
+.litix-revenue .hero p:not(.overline){max-width:820px;line-height:1.7;color:#cddfee}
+.litix-revenue .overline{font-size:12px;letter-spacing:2px;text-transform:uppercase;color:#80c8ff;font-weight:900}
+.litix-revenue .portal{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.litix-revenue .panel{border:1px solid #375b7f;border-radius:18px;background:#0a213a;padding:27px;min-width:0}
+.litix-revenue h2{font-size:24px;margin:9px 0 15px}.litix-revenue .panel p{line-height:1.6;color:#c9dbea}
+.litix-revenue input,.litix-revenue textarea,.litix-revenue select{width:100%;font:inherit;background:#061526;color:#f0faff;border:1px solid #5481a5;border-radius:9px;padding:12px;box-sizing:border-box;margin:7px 0 12px}
+.litix-revenue label{font-size:14px;font-weight:700;display:block;margin:10px 0}
+.litix-revenue .tier-list{display:grid;gap:10px;margin:18px 0}
+.litix-revenue .tier{background:#102c49;border:1px solid #42698d;border-radius:12px;padding:16px;cursor:pointer;color:#eaf7ff;text-align:left;font:inherit;width:100%}
+.litix-revenue .tier[aria-pressed=true]{border-color:#b1e5ff;box-shadow:0 0 0 2px #2387c1 inset}
+.litix-revenue .tier strong{display:block;font-size:18px}.litix-revenue .tier span{display:block;font-size:14px;color:#b9dcf2;margin-top:5px}
+.litix-revenue .money{font-size:34px;font-weight:900;color:#a6e7ff}.litix-revenue .money small{font-size:14px;color:#cddfee;font-weight:500}
+.litix-revenue .btn{border-radius:10px;background:linear-gradient(110deg,#8cdaff,#d0efff);padding:13px 20px;color:#062039;border:0;font:inherit;font-weight:850;cursor:pointer;width:100%;margin:12px 0}
+.litix-revenue .btn:disabled{opacity:.45;cursor:not-allowed}
+.litix-revenue .muted{font-size:13px;color:#bdd3e4!important}.litix-revenue .alert{border:1px solid #597c9b;background:#0c2d4f;padding:12px;border-radius:10px}
+.litix-revenue .error{color:#ffd6db}.litix-revenue .result{color:#c2ffe1}.litix-revenue input:focus-visible,.litix-revenue textarea:focus-visible,.litix-revenue button:focus-visible{outline:3px solid #89d8ff;outline-offset:2px}
+.litix-revenue footer{max-width:1200px;margin:28px auto 0;font-size:12px;line-height:1.6;color:#91adbf}
+@media(max-width:850px){.litix-revenue .portal{grid-template-columns:1fr}.litix-revenue .hero{padding:23px}.litix-revenue .panel{padding:21px}}
