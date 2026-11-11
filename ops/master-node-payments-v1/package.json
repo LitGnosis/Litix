@@ -9,11 +9,23 @@
   "scripts": {
     "relay": "node --experimental-strip-types worker/payment-outbox-relay.ts",
     "assigner": "node --experimental-strip-types worker/queue-assigner.ts",
-    "test": "node --experimental-strip-types --test tests/*.test.mjs"
+    "test": "node --experimental-strip-types --test tests/*.test.mjs",
+    "build": "next build",
+    "start": "next start -H 0.0.0.0"
   },
   "dependencies": {
     "bullmq": "5.40.0",
     "ioredis": "5.4.0",
-    "pg": "8.14.0"
+    "pg": "8.14.0",
+    "next": "15.5.28",
+    "react": "19.1.0",
+    "react-dom": "19.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "22.15.0",
+    "@types/pg": "8.11.0",
+    "@types/react": "19.1.0",
+    "@types/react-dom": "19.1.0",
+    "typescript": "5.8.3"
   }
 }
