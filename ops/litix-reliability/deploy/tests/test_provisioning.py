@@ -43,6 +43,18 @@ class ProvisioningSecurityTests(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             validate_configuration("telemetry", data)
 
+    def test_rejects_remote_redis_without_tls(self) -> None:
+        data = self.good.copy()
+        data["REDIS_URL"] = "redis://default:secret@redis.private.test:6380/0"
+        with self.assertRaises(RuntimeError):
+            validate_configuration("telemetry", data)
+
+    def test_rejects_database_without_explicit_tls(self) -> None:
+        data = self.good.copy()
+        data["DATABASE_URL"] = "postgresql://ops_user:secret@ep-private.neon.tech/neondb"
+        with self.assertRaises(RuntimeError):
+            validate_configuration("telemetry", data)
+
     def test_rejects_short_signing_secret(self) -> None:
         data = self.good.copy()
         data["LITIX_TELEMETRY_SIGNING_SECRET"] = "weak"
