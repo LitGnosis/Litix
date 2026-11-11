@@ -1,0 +1,26 @@
+name: Litix Railway worker release safety
+on:
+  pull_request:
+    paths:
+      - '.railway/railway.ts'
+      - 'ops/partner-ledger/RAILWAY_DEPLOY.md'
+      - 'ops/partner-ledger/tests/test_railway_iac.py'
+      - '.github/workflows/litix-railway-worker-iac.yml'
+  push:
+    branches:
+      - feature/20261111-railway-owned-worker-iac
+permissions:
+  contents: read
+jobs:
+  verify-config:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: '3.11'
+      - name: Test no-charge worker release gates
+        run: python -m unittest discover -s ops/partner-ledger/tests -p 'test_*.py' -v
