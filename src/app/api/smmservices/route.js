@@ -53,16 +53,28 @@ async function loadCatalog() {
   if (!key || endpoint.protocol !== "https:" || endpoint.hostname !== "boostero.com" || endpoint.username || endpoint.password) {
     throw new Error("Boostero server configuration is incomplete");
   }
+  // Boostero's v2 API requires application/x-www-form-urlencoded POST data.
+  // Sending JSON here returns an API error rather than the service array.
+  const body = new URLSearchParams({ key, action: "services" });
   const response = await fetch(endpoint, {
     method: "POST",
-    headers: { accept: "application/json", "content-type": "application/json" },
-    body: JSON.stringify({ key, action: "services" }),
+    headers: { accept: "application/json", "content-type": "application/x-www-form-urlencoded" },
+    body,
     cache: "no-store",
-    signal: AbortSignal.timeout(16000)
+    signal: AbortSignal.timeout(20000)
   });
-  if (!response.ok) throw new Error("Boostero returned HTTP " + response.status);
-  const raw = await response.json();
-  if (!Array.isArray(raw)) throw new Error("Boostero returned an invalid catalog");
+  const responseText = await response.text();
+  let raw;
+  try { raw = JSON.parse(responseText); }
+  catch { throw new Error("Boostero returned non-JSON data (HTTP " + response.status + ")"); }
+  if (!response.ok) {
+    const reason = textOf(raw?.error || raw?.message).slice(0, 100);
+    throw new Error("Boostero returned HTTP " + response.status + (reason ? ": " + reason : ""));
+  }
+  if (!Array.isArray(raw)) {
+    const reason = textOf(raw?.error || raw?.message).slice(0, 100);
+    throw new Error("Boostero catalog response was not an array" + (reason ? ": " + reason : ""));
+  }
   const seen = new Set();
   const items = raw.filter(x => {
     const id = String(x?.service ?? "");
