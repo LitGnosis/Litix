@@ -3,7 +3,7 @@
   "version": "2.0.0",
   "private": true,
   "scripts": {
-    "build": "node ../scripts/litix-supplier-trial-readonly.mjs && next build",
+    "build": "node ../scripts/litix-smmxpert-auth-production-readonly.mjs && next build",
     "start": "next start"
   },
   "dependencies": {
