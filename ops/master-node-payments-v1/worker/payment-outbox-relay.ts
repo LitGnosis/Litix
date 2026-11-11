@@ -1,7 +1,8 @@
 import { setTimeout as sleep } from 'node:timers/promises';
 import { Queue } from 'bullmq';
 import IORedis from 'ioredis';
-import { Pool } from 'pg';
+import pg from 'pg';
+const { Pool } = pg;
 
 const interval = 3000;
 const queueName = 'litix-first-party-dispatch';
