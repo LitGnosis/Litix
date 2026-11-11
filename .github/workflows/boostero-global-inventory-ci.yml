@@ -1,13 +1,17 @@
 name: Boostero global inventory preview safety
 on:
   push:
-    branches: [feature/boostero-global-catalog-stage-20261028, feature/boostero-neon-inventory-completion-20261028]
+    branches: [feature/boostero-global-catalog-stage-20261028, feature/boostero-neon-inventory-completion-20261028, feature/boostero-full-catalog-production-gates-20261029]
   pull_request:
     paths:
       - 'src/lib/boosteroGlobalCatalog.mjs'
       - 'src/lib/boosteroInventorySync.mjs'
       - 'src/lib/boosteroOrderForms.mjs'
       - 'src/app/global-catalog-preview/**'
+      - 'src/app/global-services/**'
+      - 'src/app/api/catalog/global/**'
+      - 'src/lib/boosteroFullOrderContracts.mjs'
+      - 'src/tests/boostero-full-order-contracts.test.mjs'
       - 'src/tests/boostero-order-forms.test.mjs'
       - 'src/app/api/internal/boostero/**'
       - 'src/tests/boostero-global-catalog.test.mjs'
@@ -18,11 +22,16 @@ permissions:
 jobs:
   safety:
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           persist-credentials: false
+          fetch-depth: 0
+      - name: Install locked dependencies before integration regression tests
+        run: |
+          cd src
+          npm ci --no-audit --no-fund
       - name: Node version and syntax validation
         run: |
           set -Eeuo pipefail
@@ -30,14 +39,46 @@ jobs:
           node --check src/lib/boosteroGlobalCatalog.mjs
           node --check src/lib/boosteroInventorySync.mjs
           node --check src/lib/boosteroOrderForms.mjs
+          node --check src/lib/boosteroFullOrderContracts.mjs
+          node --check src/app/api/catalog/global/route.js
           node --check src/app/api/internal/boostero/staging-import/route.js
           node --check src/app/api/internal/boostero/catalog-audit/route.js
           node --check src/app/api/internal/boostero/inventory-sync/route.js
       - name: Pure mocked inventory tests (no supplier add or payment)
-        run: node --test src/tests/boostero-global-catalog.test.mjs src/tests/boostero-order-forms.test.mjs
-      - name: Ensure no existing checkout or production source was edited
+        run: node --test src/tests/boostero-global-catalog.test.mjs src/tests/boostero-order-forms.test.mjs src/tests/boostero-full-order-contracts.test.mjs src/tests/boostero-exclusive-new-orders.test.mjs src/tests/boostero-only-public-catalog-regression.test.mjs
+      - name: Install locked Next.js dependencies and build global catalog
         run: |
           set -Eeuo pipefail
-          if git diff --name-only HEAD~1 HEAD | grep -E '^src/(lib/boosteroOrderHandler\.mjs|lib/boosteroFulfillment\.mjs|app/api/checkout/v1/route\.js|app/page\.jsx)$'; then
-             echo 'Checkout/source modification requires separate review'; exit 1
+          cd src
+          npm run build
+      - name: Mobile and desktop no-charge browse testing
+        run: |
+          set -Eeuo pipefail
+          cd src
+          npm install --no-save --ignore-scripts playwright@1.56.1
+          npm run start -- --port 3100 >/tmp/litix-global-catalog.log 2>&1 &
+          app_pid=$!
+          trap 'kill $app_pid || true' EXIT
+          for i in $(seq 1 40); do
+            if curl --fail --silent --output /dev/null http://localhost:3100/global-services; then break; fi
+            sleep 1
+          done
+          export CHROME_PATH="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
+          if [ -z "$CHROME_PATH" ]; then npx playwright install chromium; fi
+          node tests/boostero-global-catalog-browser.mjs
+      - name: Ensure original checkout and supplier modules are untouched
+        run: |
+          set -Eeuo pipefail
+          if git diff --name-only 8bbdc59f2045198f68e085733c942255317687bd HEAD | grep -E '^src/(lib/boosteroOrderHandler[.]mjs|lib/boosteroFulfillment[.]mjs|app/api/checkout/v1/route[.]js)$'; then
+            echo 'Checkout/fulfillment source modified: release blocked'
+            exit 1
           fi
+          python3 - <<'PY'
+          import pathlib,subprocess
+          source=subprocess.check_output(["git","show","8bbdc59f2045198f68e085733c942255317687bd:src/app/page.jsx"],text=True)
+          current=pathlib.Path("src/app/page.jsx").read_text()
+          anchor='<a href="#services">Services</a><a href="#checkout">Checkout</a>'
+          addition='<a href="#services">Services</a><a href="/global-services">Global Catalog</a><a href="#checkout">Checkout</a>'
+          assert source.count(anchor)==1 and current==source.replace(anchor,addition), "Unreviewed storefront change"
+          print("EXISTING_CHECKOUT_PRESERVED; ONLY_GLOBAL_CATALOG_LINK_ADDED")
+          PY
