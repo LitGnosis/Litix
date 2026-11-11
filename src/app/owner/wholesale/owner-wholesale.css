@@ -1,0 +1,29 @@
+.owner-wholesale{max-width:1320px;margin:0 auto;min-height:100dvh;padding:24px 18px 120px;color:#eff4ff;font-family:system-ui,-apple-system,sans-serif}
+.owner-wholesale *{box-sizing:border-box}.owner-header{display:flex;justify-content:space-between;align-items:flex-start;gap:25px;padding:28px 0;border-bottom:1px solid #9fb4ef44}
+.owner-header h1{font-size:clamp(30px,5vw,52px);letter-spacing:-.045em;line-height:1.1;margin:10px 0 10px}.owner-header p,.owner-help{color:#b9cae8;font-size:14px;line-height:1.55}
+.owner-small{text-transform:uppercase;letter-spacing:.2em;font-weight:750;color:#cfabff;font-size:12px}
+.owner-wholesale button{cursor:pointer;min-height:44px}.owner-outline,.owner-primary{border-radius:10px;border:1px solid #94aaf06e;padding:11px 15px;font-size:14px;font-weight:750}
+.owner-outline{color:#ecf2ff;background:#142440}.owner-primary{color:#160f2f;border:0;background:linear-gradient(125deg,#debfff,#99dcf9)}
+.owner-primary:disabled,.owner-outline:disabled{opacity:.46;cursor:not-allowed}
+.owner-tabs{display:flex;gap:12px;flex-wrap:wrap;padding:22px 0}.owner-tabs button{background:#15213a;color:#dfefff;border:1px solid #829ddc73;border-radius:12px;padding:13px 18px}
+.owner-tabs button[aria-pressed=true]{background:#d7c3ff;color:#1b1840;border-color:#d7c3ff;font-weight:800}
+.owner-summary{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:22px}
+.owner-summary>div{background:#101b31;border:1px solid #9aabf63e;padding:16px 20px;border-radius:14px;min-width:165px;display:grid;gap:5px}
+.owner-summary>div span{font-size:12px;color:#9ec6e6}.owner-panel{border:1px solid #a49bd958;border-radius:18px;background:linear-gradient(135deg,#101c34,#101126);padding:24px;margin:0 0 22px}
+.owner-panel h2{font-size:22px;margin:0 0 20px}.owner-panel h3{font-size:19px;margin:4px 0 17px}
+.owner-filters{display:flex;flex-wrap:wrap;gap:15px;align-items:end;margin:10px 0 20px}.owner-filters>label{flex:1;min-width:160px}
+.owner-wholesale label{font-size:13px;color:#cde0ff;font-weight:650}.owner-wholesale input:not([type=checkbox]):not([type=radio]),.owner-wholesale select{display:block;width:100%;font-size:16px;color:#fff;border-radius:10px;padding:12px;margin-top:6px;background:#091426;border:1px solid #91a4ce7d;max-width:100%}
+.owner-check{display:flex!important;align-items:center;gap:9px;min-width:0!important;flex:auto!important;line-height:1.5}.owner-check input{width:18px;height:18px;flex-shrink:0}
+.owner-table-scroll{overflow-x:auto;max-width:100%;border:1px solid #b1acdf42;border-radius:12px}
+.owner-table-scroll table{border-collapse:collapse;width:100%;min-width:820px;text-align:left}
+.owner-table-scroll th,.owner-table-scroll td{padding:13px 14px;border-bottom:1px solid #ffffff13;font-size:13px;vertical-align:top}
+.owner-table-scroll th{font-size:11px;text-transform:uppercase;letter-spacing:.04em;background:#29344d;color:#cfddfc}
+.owner-table-scroll td div{color:#a5bcd5;margin-top:5px;line-height:1.5;max-width:320px;overflow-wrap:anywhere}
+.owner-order-form{display:grid;gap:17px;max-width:650px}.owner-order-form fieldset{border-radius:12px;border:1px solid #7699d55c;display:grid;gap:10px;padding:17px}
+.owner-order-form legend{font-weight:750}.owner-review{margin-top:25px;max-width:660px;padding:22px;background:#111c35;border-radius:16px;border:1px solid #a1c2e464}
+.owner-review dl{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px 20px;margin:0 0 22px}
+.owner-review dt,.owner-review dd{margin:0;overflow-wrap:anywhere;font-size:14px}.owner-review dt{color:#b3c5e9}.owner-review dd{font-weight:700}
+.owner-submit{width:100%;padding:15px;margin-top:20px}.owner-notice{border-radius:12px;padding:17px;background:#292541;color:#ebddff;border:1px solid #bcacff65;margin:12px 0 22px;overflow-wrap:anywhere}
+.owner-panel-head{display:flex;justify-content:space-between;align-items:center;gap:16px}.owner-footer{border-top:1px solid #d1bbff4e;padding-top:24px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;color:#b7c8e2}
+.owner-cards{border-radius:12px;border:1px solid #8dadf370;padding:14px;display:grid;gap:12px;margin-top:17px}.owner-card-field{height:54px;border:1px solid #a5a9df6e;border-radius:10px;background:#0c1730;margin-top:7px}
+@media(max-width:600px){.owner-wholesale{padding:14px 12px calc(110px + env(safe-area-inset-bottom))}.owner-header{padding:18px 0;align-items:flex-start}.owner-header h1{font-size:32px}.owner-header .owner-outline{font-size:12px;padding:9px}.owner-panel{padding:15px;border-radius:14px}.owner-filters{display:grid;grid-template-columns:1fr;gap:14px}.owner-filters>label{min-width:0}.owner-table-scroll table{min-width:740px}.owner-review{padding:15px}.owner-review dl{grid-template-columns:1fr 1fr;gap:12px}.owner-tabs{gap:7px}.owner-tabs button{flex:1;padding:9px;font-size:12px}}
