@@ -22,6 +22,7 @@ from pydantic import BaseModel, Field, field_validator
 from redis.asyncio import Redis
 
 from nmi import cents, verify_signature, query_completed_transaction, NmiVerificationError
+from node_api import router as node_router
 
 PRICES = {"PANEL_149_WK":14900, "AGENCY_500_WK":50000, "ENTERPRISE_1500_WK":150000}
 MAX_HANDLES = {"AGENCY_500_WK":25, "ENTERPRISE_1500_WK":100}
@@ -108,6 +109,8 @@ class HandleUpdate(BaseModel):
 def require_release(g):
     return bool(g and g["merchant_settlement_verified"] and
        g["fulfillment_capacity_verified"] and g["recurring_checkout_enabled"])
+
+app.include_router(node_router)
 
 @app.get("/healthz")
 async def health(request:Request):
@@ -235,6 +238,8 @@ async def reconcile_one(con, application, tx):
              VALUES($1,$2,$3,'ACTIVE',$4)
              ON CONFLICT(custom_domain) DO NOTHING RETURNING id""",
           application["owner_email"],application["custom_domain"],digest,tx["subscription_id"])
+        if not panel:
+            raise RuntimeError('panel_provisioning_conflict_requires_review')
         if panel:
             await con.execute(
               """INSERT INTO growth_ops.panel_credential_delivery(panel_id,encrypted_key)
