@@ -10,7 +10,7 @@ const required = ['DATABASE_URL', 'REDIS_URL', 'NMI_MERCHANT_WEBHOOK_SECRET', 'N
 for (const key of required) if (!process.env[key]) throw new Error('Missing test variable: '+key);
 const endpoint = new URL(process.env.STAGING_WEBHOOK_URL);
 assert.equal(endpoint.protocol,'https:');
-assert.match(endpoint.hostname,/\\.up\\.railway\\.app$/);
+assert.ok(endpoint.hostname.endsWith('.up.railway.app'),'staging domain must be Railway');
 assert.equal(endpoint.pathname,'/api/billing/paykings-fulfillment');
 const pool = new Pool({ connectionString:process.env.DATABASE_URL, max:1, connectionTimeoutMillis:6000, application_name:'litix_pr183_qa_no_charge' });
 const redis = new IORedis(process.env.REDIS_URL,{maxRetriesPerRequest:null});
