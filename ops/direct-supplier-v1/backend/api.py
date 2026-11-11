@@ -305,6 +305,80 @@ async def reconcile(request:Request):
             outcomes.append(type(exc).__name__)
     return {"examined":len(pending),"results":outcomes,"external_supplier_orders":0}
 
+@app.post("/v1/internal/reconcile/renewals",dependencies=[Depends(internal)])
+async def reconcile_renewals(request:Request):
+    # Payout and subscription renewals remain separate from checkout authorization.
+    # All credits require a previously enrolled subscription and NMI Query proof.
+    async with request.app.state.db.acquire() as con:
+        rows=await con.fetch(
+          """SELECT e.transaction_id,e.subscription_id,e.amount_cents,e.event_id,
+                    a.id AS application_id,a.referred_by,a.tier
+             FROM growth_ops.recurring_payment_events e
+             JOIN growth_ops.child_panels p
+               ON p.nmi_subscription_id=e.subscription_id AND p.subscription_status='ACTIVE'
+             JOIN growth_ops.revenue_applications a ON a.id=p.source_application_id
+             WHERE e.event_type='transaction.sale.success'
+               AND e.state='AWAITING_VERIFIED_SETTLEMENT'
+             UNION ALL
+             SELECT e.transaction_id,e.subscription_id,e.amount_cents,e.event_id,
+                    a.id AS application_id,a.referred_by,a.tier
+             FROM growth_ops.recurring_payment_events e
+             JOIN growth_ops.agency_retainers ag
+               ON ag.nmi_subscription_id=e.subscription_id AND ag.subscription_status='ACTIVE'
+             JOIN growth_ops.revenue_applications a ON a.id=ag.source_application_id
+             WHERE e.event_type='transaction.sale.success'
+               AND e.state='AWAITING_VERIFIED_SETTLEMENT'
+             LIMIT 25""")
+    outcomes=[]
+    for row in rows:
+        try:
+            expected=PRICES[row["tier"]]
+            if row["amount_cents"]!=expected:
+                outcomes.append("incorrect_renewal_amount");continue
+            # Must match the same subscription, in the merchant Query API, as a settled sale/capture.
+            confirmed=await query_completed_transaction(
+                row["transaction_id"],None,expected,subscription_id=row["subscription_id"])
+            async with request.app.state.db.acquire() as con:
+                async with con.transaction():
+                    record=await con.fetchrow(
+                      """SELECT state FROM growth_ops.recurring_payment_events
+                         WHERE provider='nmi' AND event_id=$1 FOR UPDATE""",row["event_id"])
+                    if not record or record["state"]!="AWAITING_VERIFIED_SETTLEMENT":
+                        outcomes.append("already_processed");continue
+                    exists=await con.fetchval(
+                      """SELECT 1 FROM growth_ops.verified_recurring_settlements
+                         WHERE transaction_id=$1""",confirmed["transaction_id"])
+                    if exists:
+                        outcomes.append("settlement_already_recorded");continue
+                    created=await con.fetchval(
+                      """INSERT INTO growth_ops.verified_recurring_settlements
+                         (transaction_id,provider,subscription_id,amount_cents,currency,
+                          settlement_reference,verified_by)
+                         VALUES($1,'nmi',$2,$3,'USD',$4,'nmi-query-api')
+                         ON CONFLICT(transaction_id) DO NOTHING RETURNING transaction_id""",
+                      confirmed["transaction_id"],row["subscription_id"],expected,
+                      confirmed["settlement_ref"])
+                    if not created:
+                        outcomes.append("duplicate_settlement");continue
+                    if row["referred_by"]:
+                        await con.execute(
+                          """INSERT INTO growth_ops.affiliate_ledger
+                             (referrer_code,referred_account_id,source_payment_id,
+                              commission_usd,payout_status)
+                             VALUES($1,$2,$3,$4,'PENDING')
+                             ON CONFLICT(referred_account_id,source_payment_id) DO NOTHING""",
+                          row["referred_by"],row["application_id"],confirmed["transaction_id"],
+                          (Decimal(expected)/Decimal(500)).quantize(Decimal("0.01")))
+                    await con.execute(
+                      """UPDATE growth_ops.recurring_payment_events
+                         SET state='ACTIVATED',processed_at=NOW()
+                         WHERE provider='nmi' AND event_id=$1""",row["event_id"])
+                    outcomes.append("renewal_settled_and_affiliate_accrued")
+        except (NmiVerificationError,ValueError,RuntimeError,httpx.HTTPError,asyncpg.PostgresError):
+            outcomes.append("renewal_requires_review")
+    return {"reviewed":len(rows),"states":outcomes,"affiliate_payouts_sent":0}
+
+
 @app.put("/v1/agencies/{agency_id}/handles",dependencies=[Depends(internal)])
 async def handles(request:Request,agency_id:UUID,body:HandleUpdate):
     await limit(request,"agency_handles")
