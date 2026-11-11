@@ -32,7 +32,7 @@ CREATE TABLE IF NOT EXISTS growth_ops.wholesale_wallet_entries (
   )
 );
 
-CREATE VIEW growth_ops.wholesale_wallet_balances AS
+CREATE OR REPLACE VIEW growth_ops.wholesale_wallet_balances AS
 SELECT p.id AS partner_id,
        COALESCE(SUM(e.amount_cents),0)::bigint AS available_cents
 FROM growth_ops.wholesale_partners p
