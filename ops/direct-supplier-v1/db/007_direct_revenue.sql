@@ -226,7 +226,7 @@ ON CONFLICT(service_kind) DO NOTHING;
 
 ALTER TABLE growth_ops.revenue_applications
  ADD COLUMN IF NOT EXISTS requested_handles JSONB NOT NULL DEFAULT '[]'::jsonb;
-DO $
+DO $litix_schema$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='revenue_requested_handles_limit'
                  AND conrelid='growth_ops.revenue_applications'::regclass) THEN
@@ -234,7 +234,7 @@ BEGIN
       ADD CONSTRAINT revenue_requested_handles_limit
       CHECK(jsonb_typeof(requested_handles)='array' AND jsonb_array_length(requested_handles)<=100);
   END IF;
-END $;
+END $litix_schema$;
 
 -- First-party wholesale order rates must be set by verified operations, not invented retail prices.
 CREATE TABLE IF NOT EXISTS growth_ops.direct_service_rates (
