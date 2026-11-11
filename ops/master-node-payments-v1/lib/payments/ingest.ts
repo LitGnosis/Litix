@@ -1,9 +1,10 @@
 import { createHash } from 'node:crypto';
-import { Pool, type PoolClient } from 'pg';
+import pg, { type Pool as PgPool, type PoolClient } from 'pg';
+const { Pool } = pg;
 import type { MoneyEvent } from './normalize';
 
-const globalPool = globalThis as unknown as { litixPaymentPool?: Pool };
-const getPool = (): Pool => {
+const globalPool = globalThis as unknown as { litixPaymentPool?: PgPool };
+const getPool = (): PgPool => {
   if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL missing');
   if (globalPool.litixPaymentPool) return globalPool.litixPaymentPool;
   const pool = new Pool({ connectionString: process.env.DATABASE_URL, max: 4, connectionTimeoutMillis: 6000,
