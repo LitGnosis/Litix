@@ -1,0 +1,41 @@
+[Unit]
+Description=Litix first-party signed delivery webhook outbox dispatcher
+Wants=network-online.target
+After=network-online.target
+StartLimitIntervalSec=120
+StartLimitBurst=5
+
+[Service]
+Type=exec
+User=litix
+Group=litix
+WorkingDirectory=/opt/litix/reliability
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=/etc/litix/reliability.env
+ExecStartPre=/opt/litix/reliability/.venv/bin/python -m litix_reliability.preflight webhooks
+ExecStart=/opt/litix/reliability/.venv/bin/python -m litix_reliability.webhook_dispatcher
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=30
+KillSignal=SIGTERM
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+RestrictNamespaces=yes
+LockPersonality=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+SystemCallArchitectures=native
+MemoryMax=512M
+TasksMax=128
+
+[Install]
+WantedBy=multi-user.target
