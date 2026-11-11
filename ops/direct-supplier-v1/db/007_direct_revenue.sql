@@ -224,6 +224,18 @@ VALUES
 ('first_party_content_review',FALSE,TRUE,FALSE,'Human-verified content quality review')
 ON CONFLICT(service_kind) DO NOTHING;
 
+ALTER TABLE growth_ops.revenue_applications
+ ADD COLUMN IF NOT EXISTS requested_handles JSONB NOT NULL DEFAULT '[]'::jsonb;
+DO $
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname='revenue_requested_handles_limit'
+                 AND conrelid='growth_ops.revenue_applications'::regclass) THEN
+    ALTER TABLE growth_ops.revenue_applications
+      ADD CONSTRAINT revenue_requested_handles_limit
+      CHECK(jsonb_typeof(requested_handles)='array' AND jsonb_array_length(requested_handles)<=100);
+  END IF;
+END $;
+
 -- First-party wholesale order rates must be set by verified operations, not invented retail prices.
 CREATE TABLE IF NOT EXISTS growth_ops.direct_service_rates (
  service_kind TEXT PRIMARY KEY REFERENCES growth_ops.direct_service_catalog(service_kind),
