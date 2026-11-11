@@ -1,0 +1,24 @@
+{
+  "name": "litix-pr183-payment-workers",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "test": "node --experimental-strip-types --test tests/*.test.mjs",
+    "worker:relay": "node --experimental-strip-types worker/payment-outbox-relay.ts",
+    "worker:assigner": "node --experimental-strip-types worker/queue-assigner.ts"
+  },
+  "dependencies": {
+    "bullmq": "5.40.0",
+    "ioredis": "5.4.0",
+    "pg": "8.14.0"
+  },
+  "devDependencies": {
+    "@types/node": "22.15.0",
+    "@types/pg": "8.11.0",
+    "typescript": "5.8.3"
+  }
+}
