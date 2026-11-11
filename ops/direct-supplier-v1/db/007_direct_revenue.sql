@@ -162,6 +162,73 @@ CREATE TABLE IF NOT EXISTS growth_ops.direct_node_receipts (
  UNIQUE(job_id,event_id)
 );
 
+ALTER TABLE growth_ops.direct_fulfillment_jobs
+ ADD COLUMN IF NOT EXISTS published_at TIMESTAMPTZ;
+CREATE TABLE IF NOT EXISTS growth_ops.direct_job_artifacts (
+ job_id UUID PRIMARY KEY REFERENCES growth_ops.direct_fulfillment_jobs(id) ON DELETE RESTRICT,
+ mime_type TEXT NOT NULL DEFAULT 'application/json',
+ content TEXT NOT NULL CHECK(length(content)<=250000),
+ sha256 CHAR(64) NOT NULL CHECK(sha256 ~ '^[0-9a-f]{64}
+CREATE TABLE IF NOT EXISTS growth_ops.direct_release_gates (
+ id BOOLEAN PRIMARY KEY DEFAULT TRUE CHECK(id=TRUE),
+ merchant_settlement_verified BOOLEAN NOT NULL DEFAULT FALSE,
+ fulfillment_capacity_verified BOOLEAN NOT NULL DEFAULT FALSE,
+ recurring_checkout_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+ updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+INSERT INTO growth_ops.direct_release_gates(id) VALUES(TRUE) ON CONFLICT(id) DO NOTHING;
+-- The revenue migration can bootstrap an empty database as well as upgrade production.
+CREATE TABLE IF NOT EXISTS growth_ops.first_party_nodes (
+ id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+ node_name VARCHAR(64) NOT NULL UNIQUE,
+ endpoint_or_serial VARCHAR(128) NOT NULL,
+ node_type VARCHAR(32) NOT NULL DEFAULT 'FIRST_PARTY_COMPUTE',
+ status VARCHAR(32) NOT NULL DEFAULT 'REGISTERED'
+  CHECK(status IN ('REGISTERED','ONLINE','OFFLINE','SUSPENDED')),
+ max_concurrency INT NOT NULL DEFAULT 1 CHECK(max_concurrency BETWEEN 1 AND 100),
+ last_heartbeat TIMESTAMPTZ,
+ created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+ updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS growth_ops.panel_credential_delivery (
+ panel_id UUID PRIMARY KEY REFERENCES growth_ops.child_panels(id) ON DELETE CASCADE,
+ encrypted_key BYTEA NOT NULL CHECK(octet_length(encrypted_key)>40),
+ created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE growth_ops.recurring_payment_events
+ ADD COLUMN IF NOT EXISTS application_id UUID REFERENCES growth_ops.revenue_applications(id);
+CREATE INDEX IF NOT EXISTS idx_recurring_application ON growth_ops.recurring_payment_events(application_id,state,event_type);
+
+CREATE TABLE IF NOT EXISTS growth_ops.direct_node_nonces (
+ node_name VARCHAR(64) NOT NULL REFERENCES growth_ops.first_party_node_keys(node_name),
+ nonce CHAR(48) NOT NULL,
+ occurred_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+ PRIMARY KEY(node_name,nonce)
+);
+CREATE INDEX IF NOT EXISTS idx_direct_node_nonce_expiration ON growth_ops.direct_node_nonces(occurred_at);
+
+-- Revenue activation only grants the approved creative/monitoring service, never fake reach.
+CREATE TABLE IF NOT EXISTS growth_ops.direct_service_catalog (
+ service_kind TEXT PRIMARY KEY CHECK(service_kind IN ('creative_kit','post_monitoring','first_party_content_review')),
+ billable BOOLEAN NOT NULL DEFAULT FALSE,
+ first_party_only BOOLEAN NOT NULL DEFAULT TRUE,
+ available BOOLEAN NOT NULL DEFAULT FALSE,
+ service_description TEXT NOT NULL
+);
+INSERT INTO growth_ops.direct_service_catalog(service_kind,billable,first_party_only,available,service_description)
+VALUES
+('creative_kit',FALSE,TRUE,TRUE,'12 original editable creative drafts delivered by Litix'),
+('post_monitoring',FALSE,TRUE,FALSE,'Authorized post detection and notification; pending connected owned sources'),
+('first_party_content_review',FALSE,TRUE,FALSE,'Human-verified content quality review')
+ON CONFLICT(service_kind) DO NOTHING;
+
+COMMIT;
+),
+ created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 -- Global gate is OFF until production NMI callback, delivery and rollback are independently verified.
 CREATE TABLE IF NOT EXISTS growth_ops.direct_release_gates (
  id BOOLEAN PRIMARY KEY DEFAULT TRUE CHECK(id=TRUE),
