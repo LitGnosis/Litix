@@ -1,6 +1,7 @@
 import { Worker } from 'bullmq';
 import IORedis from 'ioredis';
-import { Pool } from 'pg';
+import pg from 'pg';
+const { Pool } = pg;
 
 async function main() {
   if(process.env.LITIX_OWNED_DISPATCH_ENABLED!=='true')throw new Error('Dispatch disabled');
