@@ -1,0 +1,2 @@
+import InfoPage from '../InfoPage';
+export default function Privacy(){return <InfoPage kicker="LEGAL" title="Privacy"><p>Litix uses information you provide to process orders, operate accounts, provide receipts, prevent fraud and support customers.</p><p>Payment credentials are handled by the approved hosted payment provider and are not stored by Litix. Order data may include your email, target public URL, service selection and fulfillment status.</p></InfoPage>}

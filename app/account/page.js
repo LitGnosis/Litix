@@ -1,0 +1,2 @@
+import AccountClient from './AccountClient';
+export default function Account(){return <main className="shell"><section className="page"><a className="back" href="/">← Back to Litix</a><span className="kicker">YOUR ACCOUNT</span><h1>Orders in one place.</h1><p>Orders placed with the same receipt email will appear here while you are signed in. Need bulk orders, drip feed or API access? <a href="/panel">Open Litix Pro</a>.</p><AccountClient/></section></main>}

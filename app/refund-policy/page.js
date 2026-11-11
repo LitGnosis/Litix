@@ -1,0 +1,2 @@
+import InfoPage from '../InfoPage';
+export default function RefundPolicy(){return <InfoPage kicker="POLICY" title="Refund policy"><p>If an order cannot be fulfilled, Litix will review the failed or canceled portion and provide the appropriate remedy based on payment status, delivered quantity and supplier outcome.</p><p>Do not submit duplicate orders to the same target while an order is active. Contact support with your Litix Order ID for help.</p></InfoPage>}
