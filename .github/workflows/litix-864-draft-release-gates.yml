@@ -1,0 +1,32 @@
+name: LITIX Boostero 864 candidates — draft-only release guards
+on:
+  push:
+    branches: [feature/litix-boostero-864-release-gates-20261028]
+permissions:
+  contents: read
+jobs:
+  draft-catalog-synthetic:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: src
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: src/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - name: Validate 864 synthetic candidates, public-price fields, no purchase activation
+        run: |
+          node --test \
+            tests/boostero-premium-expansion-release-gates.test.mjs \
+            tests/boostero-premium-preview.test.mjs \
+            tests/boostero-premium-sync.test.mjs \
+            tests/boostero-premium-reviews.test.mjs
+      - name: Ensure draft compiles without touching production
+        run: npm run build
