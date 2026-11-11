@@ -4,7 +4,7 @@ from __future__ import annotations
 import asyncio
 import os
 import sys
-from urllib.parse import urlsplit
+from urllib.parse import urlsplit, parse_qs
 
 REQUIRED_TABLES = (
     "public.master_fulfillment_grants",
@@ -25,6 +25,12 @@ def check_uri(name: str, value: str, schemes: tuple[str, ...]) -> None:
             raise ValueError("scheme or hostname")
         if parsed.hostname.lower() in {"localhost", "127.0.0.1", "::1"}:
             raise ValueError("worker must use explicit approved remote connection")
+        if name == "REDIS_URL" and parsed.scheme != "rediss":
+            raise ValueError("remote redis requires TLS")
+        if name == "DATABASE_URL":
+            mode = parse_qs(parsed.query).get("sslmode", [""])[0]
+            if mode not in ("require", "verify-ca", "verify-full"):
+                raise ValueError("remote database requires TLS")
     except ValueError as exc:
         raise RuntimeError(f"{name}_unusable") from exc
 
