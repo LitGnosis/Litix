@@ -19,6 +19,17 @@ wheelhouse="${LITIX_APPROVED_WHEELHOUSE:-}"
 [[ -z "$(find "$source_dir/litix_reliability" -type l -print -quit)" ]] ||
   { echo "Refusing symbolic links in reviewed source tree." >&2; exit 1; }
 
+for unit in litix-telemetry.service litix-webhooks.service; do
+  if systemctl is-active --quiet "$unit"; then
+    echo "Refusing to replace files while $unit is active; use reviewed rolling-release workflow." >&2
+    exit 1
+  fi
+done
+if [[ -e /opt/litix/reliability/litix_reliability ]]; then
+  echo "Existing release detected. Use a separately reviewed, versioned upgrade and rollback plan." >&2
+  exit 1
+fi
+
 getent group litix >/dev/null || groupadd --system litix
 id -u litix >/dev/null 2>&1 || useradd --system --gid litix --home-dir /var/lib/litix --shell /usr/sbin/nologin litix
 
@@ -27,7 +38,6 @@ install -d -o root -g litix -m 0750 /opt/litix "$dest" /etc/litix
 install -d -o litix -g litix -m 0700 /var/lib/litix
 
 # A reviewable source copy only; do not copy unknown .env or account cookies.
-rm -rf -- "$dest/litix_reliability"
 cp -R -- "$source_dir/litix_reliability" "$dest/litix_reliability"
 find "$dest/litix_reliability" -type d -exec chmod 0750 {} +
 find "$dest/litix_reliability" -type f -exec chmod 0640 {} +
