@@ -60,32 +60,49 @@ try{
   assert.deepEqual([settleFirst.status,settleFirst.state],[200,'batch_recorded_dispatches_1']);
   assert.deepEqual([settleReplay.status,settleReplay.state],[200,'duplicate']);
   let observed=null, state=null;
-  for(let i=0;i<20;i++){
+  for(let i=0;i<50;i++){
     const result=await pool.query(`SELECT
       (SELECT count(*)::integer FROM growth_ops.litix_verified_payment_events WHERE event_id IN($1,$2)) AS verified_events,
       (SELECT count(*)::integer FROM growth_ops.litix_payment_dispatch_outbox WHERE order_id=$3) AS outbox_entries,
       (SELECT delivered_at FROM growth_ops.litix_payment_dispatch_outbox WHERE order_id=$3) AS delivered_at,
       (SELECT job_id FROM growth_ops.litix_payment_dispatch_outbox WHERE order_id=$3) AS job_id,
       (SELECT count(*)::integer FROM public.master_node_jobs WHERE order_id=$3) AS jobs,
-      (SELECT node_id FROM public.master_node_jobs WHERE order_id=$3) AS node_id`,
+      (SELECT node_id FROM public.master_node_jobs WHERE order_id=$3) AS node_id,
+      (SELECT status FROM public.master_node_jobs WHERE order_id=$3) AS job_state,
+      (SELECT result FROM public.master_node_jobs WHERE order_id=$3) AS fulfillment_result,
+      (SELECT content FROM public.master_private_artifacts
+       WHERE job_id=(SELECT id FROM public.master_node_jobs WHERE order_id=$3)) AS artifact,
+      (SELECT status FROM growth_ops.first_party_nodes
+       WHERE node_name='litix-direct-primary-01') AS node_health`,
       [saleEventId,settleEventId,orderId]);
     observed=result.rows[0];
     const job=observed.job_id ? await queue.getJob('litix-'+observed.job_id) : null;
     state=job ? await job.getState() : null;
-    if(observed.delivered_at && state==='completed')break;
+    if(observed.delivered_at && state==='completed' && observed.job_state==='succeeded')break;
     await delay(1000);
   }
   assert.equal(observed.verified_events,2,'one unique sale plus one settlement');
   assert.equal(observed.outbox_entries,1,'one durable outbox entry');
   assert.equal(observed.jobs,1,'one staging job');
   assert.ok(observed.delivered_at,'relay dispatch marker');
-  assert.equal(state,'completed','assigner acknowledged queue job');
+  assert.equal(state,'completed','first-party worker acknowledged queue job');
+  assert.equal(observed.node_id,'litix-direct-primary-01','actual registered executor assigned');
+  assert.equal(observed.node_health,'ONLINE','node heartbeat live');
+  assert.equal(observed.job_state,'succeeded','database job marked succeeded');
+  assert.equal(observed.fulfillment_result?.state,'COMPLETED','first party completed a real deliverable');
+  assert.equal(observed.fulfillment_result?.drafts,12,'twelve Litix original drafts delivered');
+  assert.equal(observed.fulfillment_result?.paidEngagementDelivered,false,'no false Likes/Followers claim');
+  assert.ok(observed.artifact && observed.artifact.length>500,'private artifact stored');
+  assert.equal(createHash('sha256').update(observed.artifact).digest('hex'),
+    observed.fulfillment_result?.sha256,'artifact SHA-256 matches persisted proof');
   console.log('LITIX_PR183_STAGING_NO_CHARGE_PASS',JSON.stringify({
     synthetic:true,realMerchantEvent:false,orderId,
     saleFirst:saleFirst.state,saleReplay:saleReplay.state,
     settlementFirst:settleFirst.state,settlementReplay:settleReplay.state,
     verifiedEvents:observed.verified_events,orders:observed.jobs,outboxEntries:observed.outbox_entries,
-    redisQueueState:state,assignedToRealNode:Boolean(observed.node_id)
+    redisQueueState:state,nodeId:observed.node_id,nodeHealth:observed.node_health,
+    jobState:observed.job_state,actualFirstPartyArtifact:true,drafts:observed.fulfillment_result?.drafts,
+    noExternalSupplierCalls:true,engagementDelivered:false
   }));
   finished=true;
 } catch(error){
