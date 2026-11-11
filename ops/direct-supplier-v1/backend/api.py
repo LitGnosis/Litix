@@ -92,7 +92,7 @@ class Application(BaseModel):
     def validate_domain(cls,v):
         if v is None: return v
         v=v.lower().strip()
-        if not DOMAIN.fullmatch(v) or ".." in v or v.endswith(".local"):
+        if not DOMAIN.fullmatch(v) or ".." in v or "." not in v or v.endswith((".local",".internal",".test",".localhost")) or v=="localhost":
             raise ValueError("valid_public_domain_required")
         return v
 
