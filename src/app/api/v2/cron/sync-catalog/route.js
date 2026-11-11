@@ -24,8 +24,8 @@ function authorized(request) {
 export async function GET(request) {
   if (!authorized(request)) return send({ error: "Unauthorized" }, 401);
 
-  const endpoint = process.env.SMMFOLLOWOM_API_URL;
-  const apiKey = process.env.SMMFOLLOWOM_API_KEY;
+  const endpoint = process.env.SMMGLOB_API_URL || "https://smmglob.com/api/v2";
+  const apiKey = process.env.SMMGLOB_API_KEY;
   if (!endpoint || !apiKey) {
     return send({ error: "Supplier API URL/key are not configured; catalog was not changed." }, 503);
   }
@@ -33,9 +33,9 @@ export async function GET(request) {
   let upstreamUrl;
   try {
     upstreamUrl = new URL(endpoint);
-    if (upstreamUrl.protocol !== "https:" || !["smmfollowom.com", "www.smmfollowom.com", "my.smmfollowom.com"].includes(upstreamUrl.hostname.toLowerCase())) throw new Error("Supplier HTTPS host required");
+    if (upstreamUrl.protocol !== "https:" || !["smmglob.com", "www.smmglob.com"].includes(upstreamUrl.hostname.toLowerCase())) throw new Error("Supplier HTTPS host required");
   } catch {
-    return send({ error: "SMMFOLLOWOM_API_URL must be a valid HTTPS API endpoint." }, 503);
+    return send({ error: "SMMGLOB_API_URL must be a valid HTTPS API endpoint." }, 503);
   }
 
   try {

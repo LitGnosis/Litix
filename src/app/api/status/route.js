@@ -10,13 +10,13 @@ export async function GET() {
     process.env.POSTGRES_URL ||
     process.env.POSTGRES_PRISMA_URL;
   const databaseConfigured = Boolean(databaseUrl);
-  const supplierConfigured = Boolean(process.env.SMMFOLLOWOM_API_KEY);
-  const supplierUrl = process.env.SMMFOLLOWOM_API_URL || "https://smmfollowom.com/api/v2";
+  const supplierConfigured = Boolean(process.env.SMMGLOB_API_KEY);
+  const supplierUrl = process.env.SMMGLOB_API_URL || "https://smmglob.com/api/v2";
   let supplierHostValid = false;
   try {
     const url = new URL(supplierUrl);
     supplierHostValid = url.protocol === "https:" &&
-      ["smmfollowom.com", "www.smmfollowom.com", "my.smmfollowom.com"].includes(url.hostname);
+      ["smmglob.com", "www.smmglob.com"].includes(url.hostname);
   } catch {}
 
   // Deliberately do not contact the supplier or payment gateway from a health check.

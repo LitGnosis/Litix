@@ -9,13 +9,13 @@ const hash = v => createHash("sha256").update(String(v)).digest("hex");
 const conn = () => process.env.LITIX_V2_DATABASE_URL || process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.POSTGRES_PRISMA_URL;
 const db = () => neon(conn());
 const publicCollectKey = () => process.env.NEXT_PUBLIC_PAYKINGS_NMI_COLLECT_PUBLIC_KEY || process.env.PAYKINGS_NMI_COLLECT_PUBLIC_KEY;
-const conf = () => ({database:!!conn(),supplier:!!process.env.SMMFOLLOWOM_API_KEY,payment:!!(process.env.NMI_SECURITY_KEY&&publicCollectKey())});
+const conf = () => ({database:!!conn(),supplier:!!process.env.SMMGLOB_API_KEY,payment:!!(process.env.NMI_SECURITY_KEY&&publicCollectKey())});
 const name = req => new URL(req.url).pathname.split("/").pop();
 const bounded = (v,n=120) => String(v??"").trim().slice(0,n);
 async function smm(action,params={}) {
- const u = new URL(process.env.SMMFOLLOWOM_API_URL || "https://my.smmfollowom.com/api/v2");
- if (!process.env.SMMFOLLOWOM_API_KEY || u.protocol!=="https:" || !["my.smmfollowom.com","smmfollowom.com","www.smmfollowom.com"].includes(u.hostname)) throw Error("SMMFOLLOWOM supplier configuration invalid");
- const r = await fetch(u,{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded"},body:new URLSearchParams({key:process.env.SMMFOLLOWOM_API_KEY,action,...params}),cache:"no-store",signal:AbortSignal.timeout(16000)});
+ const u = new URL(process.env.SMMGLOB_API_URL || "https://smmglob.com/api/v2");
+ if (!process.env.SMMGLOB_API_KEY || u.protocol!=="https:" || !["smmglob.com","www.smmglob.com"].includes(u.hostname)) throw Error("SMMGLOB supplier configuration invalid");
+ const r = await fetch(u,{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded"},body:new URLSearchParams({key:process.env.SMMGLOB_API_KEY,action,...params}),cache:"no-store",signal:AbortSignal.timeout(16000)});
  if(!r.ok) throw Error("Supplier returned HTTP "+r.status);
  const obj=await r.json(); if(obj?.error) throw Error(String(obj.error).slice(0,160)); return obj;
 }
@@ -56,7 +56,7 @@ export async function GET(req){
  if(op==="smmservices"){
   const cat=bounded(p.get("category"),100),term=bounded(p.get("q"),120).toLowerCase(),page=Math.max(1,Math.min(10000,Number(p.get("page"))||1));
   try{const all=await getServices(),filtered=all.filter(x=>(!cat||String(x.category||"Other")===cat)&&(!term||[x.service,x.name,x.category].some(z=>String(z||"").toLowerCase().includes(term))));return send({items:filtered.slice((page-1)*24,page*24).map(shape),categories:[...new Set(all.map(x=>String(x.category||"Other")))].sort(),total:filtered.length,allCount:all.length,page})}
-  catch(e){console.error("SMMFOLLOWOM catalog unavailable",String(e?.message||"").slice(0,100));return send({error:"Live supplier catalog unavailable",items:[],categories:[],total:0},503)}
+  catch(e){console.error("SMMGLOB catalog unavailable",String(e?.message||"").slice(0,100));return send({error:"Live supplier catalog unavailable",items:[],categories:[],total:0},503)}
  }
  if(op==="track"){
   const id=bounded(p.get("id"),80),secret=bounded(p.get("token"),150);
@@ -80,7 +80,7 @@ export async function POST(req){
  let x;try{x=await req.json()}catch{return send({error:"Invalid JSON"},400)}
  const id=bounded(x.serviceId,32),qty=Number(x.quantity),email=bounded(x.email,250).toLowerCase(),link=bounded(x.link,1200),token=bounded(x.paymentToken,500),idem=bounded(x.idempotencyKey,36);let target;try{target=new URL(link)}catch{}
  if(!/^[0-9]+$/.test(id)||!Number.isSafeInteger(qty)||qty<1||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||!target||target.protocol!=="https:"||!target.hostname.includes(".")||token.length<10||!/^[a-f0-9-]{36}$/.test(idem))return send({error:"Invalid service, quantity, public URL, email or payment information"},400);
- let service;try{service=(await getServices()).find(s=>String(s.service)===id)}catch{return send({error:"SMMFOLLOWOM prices unavailable; no charge submitted"},503)}
+ let service;try{service=(await getServices()).find(s=>String(s.service)===id)}catch{return send({error:"SMMGLOB prices unavailable; no charge submitted"},503)}
  if(!service||!/^default$/i.test(String(service.type||"Default"))||qty<Number(service.min)||qty>Number(service.max))return send({error:"This service needs additional order information or a different quantity"},422);
  const cents=Math.max(100,Math.ceil(Number(service.rate)*qty/1000*500));if(!Number.isSafeInteger(cents)||cents>100000000)return send({error:"Order total is outside supported limits"},422);
  if(!Number.isSafeInteger(x.expectedAmountCents)||x.expectedAmountCents!==cents)return send({error:"The price has changed. Refresh the catalog and confirm the new total before paying."},409);
@@ -91,5 +91,5 @@ export async function POST(req){
  const transactionId=String(payment.transactionid||"").trim();if(!transactionId){await sql.query("update litix_v2_orders set payment_state='review' where id=$1",[orderId]).catch(()=>{});return send({orderId,secret,payment:"review",message:"Gateway reported approval without a transaction ID. Payment requires reconciliation; do not retry or place a second order."},202)}
  try{await sql.query("update litix_v2_orders set payment_state='paid',payment_transaction_id=$2 where id=$1",[orderId,transactionId]);await sql.query("update litix_v2_orders set fulfillment_state='dispatching',supplier_attempted_at=now() where id=$1 and supplier_attempted_at is null",[orderId])}catch{return send({orderId,secret,payment:"paid",fulfillment:"review",message:"Paid; supplier reconciliation required"},202)}
  try{const supplierResult=await smm("add",{service:id,link,quantity:String(qty)});if(!supplierResult?.order)throw Error("No supplier order ID");await sql.query("update litix_v2_orders set supplier_order_id=$2,fulfillment_state='submitted',last_supplier_status=$3::jsonb where id=$1",[orderId,String(supplierResult.order),JSON.stringify(supplierResult)]);return send({orderId,secret,payment:"paid",fulfillment:"submitted",message:"Payment approved and supplier order submitted"})}
- catch{await sql.query("update litix_v2_orders set fulfillment_state='manual_review' where id=$1",[orderId]).catch(()=>{});return send({orderId,secret,payment:"paid",fulfillment:"review",message:"Payment approved, but supplier outcome requires review. Do not reorder."},202)}
+ catch{await sql.query("update litix_v2_orders set fulfillment_state='manual_review' where id=$1",[orderId]).catch(()=>{});return send({orderId,secret,payment:"paid",fulfillment:"manual_review",message:"Payment approved, but supplier outcome requires review. Do not reorder."},202)}
 }
