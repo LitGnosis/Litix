@@ -97,7 +97,7 @@ CREATE TABLE IF NOT EXISTS growth_ops.verified_recurring_settlements (
 );
 CREATE INDEX IF NOT EXISTS idx_recurring_events_pending ON growth_ops.recurring_payment_events(state,created_at);
 
-CREATE TABLE IF NOT EXISTS growth_ops.wholesale_wallet_entries (
+CREATE TABLE IF NOT EXISTS growth_ops.child_panel_wallet_entries (
  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
  panel_id UUID NOT NULL REFERENCES growth_ops.child_panels(id),
  source_payment_id TEXT NOT NULL UNIQUE,
