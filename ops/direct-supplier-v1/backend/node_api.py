@@ -110,6 +110,30 @@ async def register_node(request:Request,data:RegisterNode):
     return {"node":data.node_name,"status":"REGISTERED","enabled":False,
             "activation":"requires_owner_review_of_physical_node_and_signature"}
 
+class EnableNode(BaseModel):
+    node_name:str
+    public_key_sha256:str=Field(min_length=64,max_length=64)
+
+@router.post("/internal/nodes/enable",dependencies=[Depends(trusted_backend)])
+async def enable_owned_node(request:Request,body:EnableNode):
+    # Explicit trust decision requires an independently checked public-key fingerprint.
+    async with request.app.state.db.acquire() as con:
+        async with con.transaction():
+            node=await con.fetchrow(
+              """SELECT k.ed25519_public_key_b64,n.status,n.endpoint_or_serial
+                 FROM growth_ops.first_party_node_keys k
+                 JOIN growth_ops.first_party_nodes n ON n.node_name=k.node_name
+                 WHERE k.node_name=$1 FOR UPDATE OF k""",body.node_name)
+            if not node or node["status"]=="SUSPENDED":
+                raise HTTPException(404,"registered_healthy_node_required")
+            digest=hashlib.sha256(base64.b64decode(node["ed25519_public_key_b64"])).hexdigest()
+            if digest!=body.public_key_sha256.lower():
+                raise HTTPException(409,"node_key_fingerprint_mismatch")
+            await con.execute(
+              """UPDATE growth_ops.first_party_node_keys SET enabled=TRUE,updated_at=NOW()
+                 WHERE node_name=$1""",body.node_name)
+    return {"node":body.node_name,"enabled":True,"requires_signed_heartbeat":True}
+
 @router.post("/nodes/heartbeat")
 async def heartbeat(request:Request,payload:SignedNodeMessage):
     await verified_node(request,payload,"heartbeat")
