@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { createHmac, randomBytes } from 'node:crypto';
+import { createHmac, createHash, randomBytes } from 'node:crypto';
 import pg from 'pg';
 import { Queue } from 'bullmq';
 import IORedis from 'ioredis';
@@ -24,7 +24,7 @@ const merchantId = process.env.NMI_MERCHANT_ID;
 const delay = ms => new Promise(resolve => setTimeout(resolve,ms));
 const webhook = async (payload) => {
   const raw = JSON.stringify(payload);
-  const nonce=randomBytes(12).toString('hex');
+  const nonce=createHash('sha256').update(raw).digest('hex').slice(0,24);
   const digest=createHmac('sha256',process.env.NMI_MERCHANT_WEBHOOK_SECRET).update(nonce+'.'+raw).digest('hex');
   const response=await fetch(endpoint,{method:'POST',headers:{'content-type':'application/json','webhook-signature':'t='+nonce+',s='+digest},body:raw,redirect:'error',signal:AbortSignal.timeout(18000)});
   const json=await response.json().catch(()=>({error:'non_json_response'}));
