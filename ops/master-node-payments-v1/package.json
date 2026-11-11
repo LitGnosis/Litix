@@ -11,7 +11,8 @@
     "assigner": "node --experimental-strip-types worker/queue-assigner.ts",
     "test": "node --experimental-strip-types --test tests/*.test.mjs",
     "build": "next build",
-    "start": "next start -H 0.0.0.0"
+    "start": "next start -H 0.0.0.0",
+    "staging:test": "node scripts/staging-integration-check.mjs"
   },
   "dependencies": {
     "bullmq": "5.40.0",
