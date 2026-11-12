@@ -169,8 +169,17 @@ export async function POST(request){
   const result=await handleBoosteroOrder(ownerProxy(request,admin,payload),{adminOnly:true});
   const answer=await result.json().catch(()=>({error:"owner_order_status_unavailable"}));
   // Owner card payments and wallet debits are distinguished from ordinary retail sales.
+  const cardChargeStatus=paymentMethod==="paykings"?
+    answer.payment==="paid"?"gateway_approved":
+    answer.payment==="declined"?"declined":
+    answer.orderId?"unknown_review_required":"not_attempted":"not_applicable";
   return reply({...answer,wholesaleCents,chargeAmountCents,
    paymentMethod:paymentMethod==="paykings"?"paykings":"boostero_prepaid_wallet",
-   cardCharged:paymentMethod==="paykings"?answer.payment==="paid":false},result.status);
- }catch(error){return reply({error:whitelistError(error),chargeAttempted:false},422)}
+   cardChargeStatus,...(paymentMethod==="supplier_balance"?{cardCharged:false}:{})},result.status);
+ }catch(error){
+  // Never report "no charge" after an exception whose timing is unknown.
+  return reply({error:whitelistError(error),
+   ...(body.action==="quote"?{chargeAttempted:false}:{cardChargeStatus:"unknown_review_required",doNotRetry:true})},
+   503);
+ }
 }
