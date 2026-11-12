@@ -384,6 +384,13 @@ export default function Home(){
  return <main className="wrap"><nav className="nav litix-home-nav"><a className="brand" href="/" aria-label="Litix home"><img src="/assets/brand/litix-logo.webp" alt="Litix — Innovation, Ignited." className="litix-new-logo" /></a><div><a href="/shop">Shop</a><a href="/partners">Partners</a><a href="/agency-growth">Business Growth</a><a href="/direct-services">Litix Direct</a><a href="/custom-likes">Custom Likes &amp; Followers</a><a href="#growth-bundles">Bundles</a><a href="/services">All Services</a><a href="#checkout">Checkout</a><a href="/track">Track Order</a></div></nav>
  <LitixAutoLikesHomeNotice/>
  <LitixQuickShop/>
+ <section id="litix-owned-checkout" className="panel" aria-labelledby="litix-owned-product-title" style={{border:"1px solid #477da6",background:"linear-gradient(145deg,#0b233a,#102f50)"}}>
+  <p className="kicker">LITIX DIRECT · PAYKINGS CARD CHECKOUT</p>
+  <h2 id="litix-owned-product-title">Original Marketing Drafts — $1.00</h2>
+  <p>Get 12 original, editable marketing drafts from Litix's first-party production worker. One-time purchase, secure PayKings card fields, private tracking, and fulfillment after confirmed payment settlement.</p>
+  <p style={{opacity:.82,fontSize:14}}>This is Litix-created marketing content, not a purchase of Instagram Followers, Likes, Views, or simulated engagement.</p>
+  <a className="primary" href="/shop/marketing-drafts" style={{display:"inline-block",textDecoration:"none",padding:"12px 20px",borderRadius:10}}>Buy Marketing Drafts · $1.00</a>
+ </section>
  <section className="panel" aria-label="Business and agency proposals">
   <p className="kicker">BUSINESSES & AGENCIES</p><h2>Need a measurable marketing plan for your business?</h2>
   <p>Discuss qualified leads, content workflow, local visibility and client reporting before paying for any work. Every proposal is manually scoped and subject to delivery capacity.</p>
