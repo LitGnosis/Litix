@@ -47,19 +47,18 @@ const firstPartyProof = async sql => {
       JOIN growth_ops.litix_nmi_settled_transactions s ON s.transaction_id=i.provider_transaction_id
       WHERE i.execution_approved=true AND i.live_mode=true
         AND j.status IN ('running','succeeded')) AS settled_job_accepted,
-    EXISTS(SELECT 1 FROM public.master_node_jobs j
-      JOIN growth_ops.litix_owned_payment_intents i ON i.order_id=j.order_id
-      JOIN growth_ops.litix_nmi_settled_transactions s ON s.transaction_id=i.provider_transaction_id
-      JOIN public.master_private_artifacts a ON a.job_id=j.id
-      WHERE i.execution_approved=true AND i.live_mode=true
-        AND j.status='succeeded') AS paid_delivery_verified`,[]);
+`,[]);
   const x=rows?.[0]||{};
   return {firstPartyWorkerOnline:x.worker_online===true,
     firstPartySignedNodeReady:x.signed_node_ready===true,
     settledFirstPartyJobAccepted:x.settled_job_accepted===true,
-    paidOrderFulfillmentVerified:x.paid_delivery_verified===true};
+    paidOrderFulfillmentVerified:x.paid_delivery_verified===true,
+    ownedBillableServiceKinds:Number(x.owned_billable_kinds)||0,
+    ownedActiveServiceRates:Number(x.owned_active_rates)||0,
+    verifiedSocialServiceKinds:Number(x.verified_social_kinds)||0};
  }catch{return {firstPartyWorkerOnline:false,firstPartySignedNodeReady:false,
-  settledFirstPartyJobAccepted:false,paidOrderFulfillmentVerified:false};}
+  settledFirstPartyJobAccepted:false,paidOrderFulfillmentVerified:false,
+  ownedBillableServiceKinds:0,ownedActiveServiceRates:0,verifiedSocialServiceKinds:0};}
 };
 const name = req => new URL(req.url).pathname.split("/").pop();
 const bounded = (v,n=120) => String(v??"").trim().slice(0,n);
@@ -206,8 +205,47 @@ function shape(x){const first=servicePurchaseMinimum(x,retailPer1000(x));return 
 export async function GET(req){
  const op=name(req),flags=conf(),p=new URL(req.url).searchParams;
  if(!["config","health","smmservices","track"].includes(op))return send({error:"Unknown route"},404);
- if(op==="config")return send({ready:flags.database&&flags.supplier&&flags.payment,publicKey:publicCollectKey()||null});
- if(op==="health"){let database=false,liveTransactionVerified=false;let direct={firstPartyWorkerOnline:false,firstPartySignedNodeReady:false,settledFirstPartyJobAccepted:false,paidOrderFulfillmentVerified:false};if(flags.database)try{const sql=db();await sql.query("select 1",[]);database=true;[liveTransactionVerified,direct]=await Promise.all([verifiedLiveNmiSettlement(sql),firstPartyProof(sql)])}catch{}const gatewayMode=selectedGatewayMode();const gatewayConfigured=gatewayMode==="TEST"?!!(process.env.NMI_TEST_SECURITY_KEY&&process.env.NMI_TEST_GATEWAY_URL):!!process.env.NMI_SECURITY_KEY;return send({service:"litix-v2",database,supplierConfigured:flags.supplier,paykingsConfigured:flags.payment,orderEmailConfigured:notificationsConfigured(),gatewayMode,testGatewayConfigured:gatewayMode==="TEST"?gatewayConfigured:undefined,liveTransactionVerified,...direct,paidCatalogCheckoutReady:false,ready:database&&flags.supplier&&flags.payment},database?200:503)}
+ if(op==="config")return send({
+  // First-party card tokenization is independent of a legacy reseller connection.
+  ready:flags.database&&flags.payment,
+  publicKey:publicCollectKey()||null
+ });
+ if(op==="health"){
+  let database=false,liveTransactionVerified=false;
+  let direct={firstPartyWorkerOnline:false,firstPartySignedNodeReady:false,
+   settledFirstPartyJobAccepted:false,paidOrderFulfillmentVerified:false,
+   ownedBillableServiceKinds:0,ownedActiveServiceRates:0,verifiedSocialServiceKinds:0};
+  if(flags.database)try{
+   const sql=db();await sql.query("select 1",[]);database=true;
+   [liveTransactionVerified,direct]=await Promise.all([verifiedLiveNmiSettlement(sql),firstPartyProof(sql)]);
+  }catch{}
+  const gatewayMode=selectedGatewayMode();
+  const gatewayConfigured=gatewayMode==="TEST"
+   ?!!(process.env.NMI_TEST_SECURITY_KEY&&process.env.NMI_TEST_GATEWAY_URL)
+   :!!process.env.NMI_SECURITY_KEY;
+  // The public social catalog is disabled until per-SKU owned delivery,
+  // signed capacity and retail prices are independently verified.
+  const socialCapacityVerified=direct.firstPartySignedNodeReady
+   &&direct.ownedBillableServiceKinds>0&&direct.ownedActiveServiceRates>0
+   &&direct.verifiedSocialServiceKinds>0&&direct.paidOrderFulfillmentVerified;
+  const paidCatalogCheckoutReady=false; // must match /api/catalog/v1 until a verified paid route is deployed
+  const ready=database&&flags.payment&&paidCatalogCheckoutReady&&socialCapacityVerified;
+  const blockedBy=[
+   ...(!database?["database_unavailable"]:[]),
+   ...(!flags.payment?["paykings_configuration_incomplete"]:[]),
+   ...(!direct.firstPartySignedNodeReady?["signed_first_party_node_not_verified"]:[]),
+   ...(!direct.ownedBillableServiceKinds?["no_owned_billable_services"]:[]),
+   ...(!direct.ownedActiveServiceRates?["no_approved_first_party_rates"]:[]),
+   ...(!direct.verifiedSocialServiceKinds?["no_verified_social_service_capacity"]:[]),
+   ...(!paidCatalogCheckoutReady?["paid_social_checkout_route_disabled"]:[])
+  ];
+  return send({service:"litix-v2",database,supplierConfigured:flags.supplier,
+   paykingsConfigured:flags.payment,orderEmailConfigured:notificationsConfigured(),
+   gatewayMode,testGatewayConfigured:gatewayMode==="TEST"?gatewayConfigured:undefined,
+   liveTransactionVerified,...direct,paidCatalogCheckoutReady,
+   firstPartyPaymentPilotConfigured:database&&flags.payment&&process.env.LITIX_DOLLAR_PILOT_ENABLED==="true",
+   ready,blockedBy},database?200:503);
+ }
  if(op==="smmservices"){
   // Deprecated legacy API. The public catalog is /api/catalog/v1, Boostero only.
   return send({error:"Retired catalog disabled. Use the verified public catalog.",items:[],total:0},410);
