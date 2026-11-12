@@ -57,7 +57,22 @@ export async function GET(request){
    currency:"USD",minChargeCents:100,checkoutEnabled:true,trackingPath:"/track",
    providerDeliveryVerifiedPreviously:platform==="instagram",actualDeliveryStatus:"not_yet_ordered",
    note:"Live supplier availability and funding checked. Delivery is tracked separately from payment authorization."});
- }catch(error){return send({available:false,checkoutEnabled:false,error:externalMessage(error),chargeAttempted:false},503)}
+ }catch(error){
+  // Diagnostic codes are fixed strings; never print supplier credentials,
+  // payment tokens, raw provider responses, or untrusted user input.
+  const known=new Set(["supplier_not_connected","follower_service_not_approved",
+   "live_follower_service_not_found","follower_quantity_unavailable",
+   "supplier_wallet_unavailable","follower_quote_not_approved",
+   "boostero_network_unknown_outcome","boostero_provider_rejected",
+   "boostero_authentication_rejected","boostero_url_unconfigured",
+   "boostero_url_not_allowlisted","boostero_services_invalid_shape",
+   "boostero_http_403","boostero_http_500","boostero_http_502"]);
+  const raw=String(error?.message||"");
+  const code=known.has(raw)?raw:raw.startsWith("boostero_")?"boostero_request_failed":"qualification_error";
+  console.error("LITIX_FOLLOWERS_READINESS_BLOCK",{code});
+  return send({available:false,checkoutEnabled:false,
+   error:externalMessage(error),availabilityCode:code,chargeAttempted:false},503)
+ }
 }
 export async function POST(request){
  if(request.headers.get("origin")!==new URL(request.url).origin)
