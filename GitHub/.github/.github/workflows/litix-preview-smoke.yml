@@ -1,0 +1,32 @@
+name: Litix protected Preview smoke
+on:
+  workflow_dispatch:
+    inputs:
+      preview_url:
+        description: Exact deployment URL for the specified commit
+        required: true
+      commit_sha:
+        description: Full deployed commit SHA
+        required: true
+permissions:
+  contents: read
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    environment: preview-testing
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.commit_sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify checkout identity
+        env:
+          EXPECTED_SHA: ${{ inputs.commit_sha }}
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+      - name: Protected Preview HTTP tests (disabled billing expected)
+        env:
+          PREVIEW_URL: ${{ inputs.preview_url }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+        run: node src/scripts/preview-smoke.mjs

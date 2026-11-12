@@ -1,0 +1,72 @@
+name: Litix manual R2 recovery — synthetic checks only
+on:
+  push:
+    branches: [feature/litix-manual-r2-recovery-runner-20261028]
+permissions:
+  contents: read
+jobs:
+  no-secret-regression:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Install age for synthetic probe without real owner keys
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq age
+      - name: Validate manual-only workflow, shell and Python static syntax
+        run: |
+          set -Eeuo pipefail
+          bash -n scripts/litix-r2-github-manual-verify.sh
+          python3 -m py_compile scripts/litix-r2-readonly-pgdump.py
+          grep -q 'workflow_dispatch' .github/workflows/litix-r2-manual-production-verify.yml
+          if grep -Eq '^  schedule:|^  push:|^  pull_request:' .github/workflows/litix-r2-manual-production-verify.yml;then exit 1;fi
+          grep -F "github.ref == 'refs/heads/main'" .github/workflows/litix-r2-manual-production-verify.yml
+          grep -F 'environment: litix-private-backup' .github/workflows/litix-r2-manual-production-verify.yml
+          if env -i PATH="$PATH" HOME="$HOME" bash scripts/litix-r2-github-manual-verify.sh >/dev/null 2>&1;then exit 1;fi
+          echo 'MANUAL_ONLY_FAIL_CLOSED_NO_CREDENTIALS_PASS'
+      - name: Mock-only real R2 probe shape with no network or customer data
+        run: |
+          set -Eeuo pipefail
+          work="$(mktemp -d)"
+          trap 'rm -rf -- "$work"' EXIT
+          mkdir -p "$work/bin" "$work/mock"
+          cat > "$work/bin/aws" <<'MOCK'
+          #!/usr/bin/env python3
+          import os,sys,pathlib,shutil
+          a=sys.argv[1:]
+          if len(a)<4 or a[0]!='--endpoint-url' or a[1]!='https://0123456789abcdef0123456789abcdef.r2.cloudflarestorage.com' or a[2]!='s3api':sys.exit(25)
+          action=a[3]
+          def argument(key):return a[a.index(key)+1] if key in a else ''
+          bucket,key=argument('--bucket'),argument('--key')
+          if bucket!='litix-private-backups' or not key.startswith('litix-backup-probes/probe-'):sys.exit(26)
+          target=pathlib.Path(os.environ['R2_MOCK_DIR'])/key.rsplit('/',1)[-1]
+          if action=='put-object':shutil.copyfile(argument('--body'),target)
+          elif action=='head-object':print(target.stat().st_size)
+          elif action=='get-object':shutil.copyfile(target, a[-3] if '--output' in a else a[-1])
+          elif action=='delete-object':target.unlink()
+          else:sys.exit(28)
+          MOCK
+          chmod 700 "$work/bin/aws"
+          export PATH="$work/bin:$PATH" R2_MOCK_DIR="$work/mock"
+          export R2_ACCESS_KEY_ID=synthetic-only
+          export R2_SECRET_ACCESS_KEY=synthetic-only
+          export R2_ENDPOINT=https://0123456789abcdef0123456789abcdef.r2.cloudflarestorage.com
+          export R2_BUCKET=litix-private-backups
+          export LITIX_RECOVERY_MODE=probe_only
+          out="$(bash scripts/litix-r2-github-manual-verify.sh)"
+          grep -qx ACTUAL_R2_CONNECTIVITY_PASS <<< "$out"
+          grep -qx BACKUP_NOT_ATTEMPTED_PROBE_ONLY <<< "$out"
+          test -z "$(find "$work/mock" -type f -print -quit)"
+          export R2_BUCKET=unapproved-bucket
+          if bash scripts/litix-r2-github-manual-verify.sh >/dev/null 2>&1;then exit 1;fi
+          export R2_BUCKET=litix-private-backups R2_ENDPOINT=https://untrusted.invalid
+          if bash scripts/litix-r2-github-manual-verify.sh >/dev/null 2>&1;then exit 1;fi
+          echo 'SYNTHETIC_R2_PUT_HEAD_GET_DELETE_NO_NETWORK_PASS'
+      - name: Ensure backup refuses missing explicit confirmation after harmless test
+        run: |
+          grep -F 'BACKUP_BOTH_DBS_READ_ONLY' scripts/litix-r2-github-manual-verify.sh
+          grep -F 'age --recipient "$AGE_PUBLIC_RECIPIENT" --recipient "$test_public"' scripts/litix-r2-github-manual-verify.sh
+          grep -F -- '--network none' scripts/litix-r2-github-manual-verify.sh
+          grep -F 'scripts/litix-r2-readonly-pgdump.py' scripts/litix-r2-github-manual-verify.sh
+          echo 'NO_REAL_KEYS_CLOUDFLARE_OR_NEON_USED'

@@ -1,0 +1,82 @@
+name: Litix R2 — Daily encrypted dual-Neon backup and isolated restore
+run-name: Litix R2 backup / ${{ github.run_id }}
+on:
+  # One harmless R2 probe on an explicitly reviewed kickoff commit; scheduled dual backups remain separate.
+  # The scoped probe now records a safe XML error category if R2 rejects both PUT transports.
+  # Restrict the push event to a change to this workflow file only.
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/litix-r2-manual-production-verify.yml"
+  schedule:
+    - cron: "0 8 * * *"
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: Choose harmless R2 probe first, then backup_and_restore after secrets and owner public key are ready
+        type: choice
+        required: true
+        default: probe_only
+        options:
+          - probe_only
+          - backup_and_restore
+      confirm_backup:
+        description: For backup_and_restore only, type BACKUP_BOTH_DBS_READ_ONLY
+        type: string
+        required: false
+        default: ''
+permissions:
+  contents: read
+concurrency:
+  group: litix-r2-production-recovery
+  cancel-in-progress: false
+jobs:
+  owner-approved-recovery:
+    if: github.repository == 'LitGnosis/Litix' && github.ref == 'refs/heads/main' && (github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' || (github.event_name == 'push' && startsWith(github.event.head_commit.message, 'Litix R2 one-time kickoff')))
+    runs-on: ubuntu-24.04
+    environment: litix-private-backup
+    timeout-minutes: 45
+    steps:
+      - name: Check out trusted reviewed recovery source only
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+          fetch-depth: 1
+      - name: Install age and verify isolated runner utilities
+        run: |
+          set -Eeuo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq age
+          command -v age
+          command -v age-keygen
+          # Use an isolated, pinned Python AWS SDK; no credentials are present
+          # in this install step or logged by the transport.
+          python3 -m venv "$RUNNER_TEMP/litix-r2-boto3"
+          "$RUNNER_TEMP/litix-r2-boto3/bin/python" -m pip install --quiet --disable-pip-version-check "boto3==1.40.60"
+          echo "$RUNNER_TEMP/litix-r2-boto3/bin" >> "$GITHUB_PATH"
+          command -v docker
+          docker info >/dev/null
+          bash -n scripts/litix-r2-github-manual-verify.sh
+          python3 -m py_compile scripts/litix-r2-boto3-transfer.py
+      - name: Real private R2 probe and optionally two encrypted production backups/restores
+        env:
+          LITIX_RECOVERY_MODE: ${{ github.event_name == 'schedule' && 'backup_and_restore' || github.event_name == 'push' && 'probe_only' || inputs.operation }}
+          LITIX_CONFIRM_BACKUP: ${{ github.event_name == 'schedule' && 'SCHEDULED_BOTH_DBS_READ_ONLY' || github.event_name == 'push' && '' || inputs.confirm_backup }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          AGE_PUBLIC_RECIPIENT: ${{ secrets.AGE_PUBLIC_RECIPIENT }}
+          NEON_DIRECT_URL_NEONDB: ${{ secrets.NEON_DIRECT_URL_NEONDB }}
+          NEON_DIRECT_URL_LITIXAPI: ${{ secrets.NEON_DIRECT_URL_LITIXAPI }}
+          NEON_EXPECTED_SOURCE_HOST: ${{ secrets.NEON_EXPECTED_SOURCE_HOST }}
+        run: |
+          set -Eeuo pipefail
+          test "${{ github.ref }}" = refs/heads/main
+          if [[ "$LITIX_RECOVERY_MODE" == backup_and_restore && "$LITIX_CONFIRM_BACKUP" != BACKUP_BOTH_DBS_READ_ONLY && "$LITIX_CONFIRM_BACKUP" != SCHEDULED_BOTH_DBS_READ_ONLY ]];then
+            echo 'Backup confirmation mismatch. No DB reads, payment or supplier actions executed.' >&2
+            exit 2
+          fi
+          bash scripts/litix-r2-github-manual-verify.sh
+      # No artifacts, plaintext database dumps, or customer data in logs.
+      # The ephemeral runner destroys its temporary age key and restore DB.

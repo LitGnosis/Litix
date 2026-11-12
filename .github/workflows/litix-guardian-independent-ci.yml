@@ -1,0 +1,23 @@
+name: Litix independent Guardian watchdog no-charge tests
+on:
+  pull_request:
+    paths:
+      - "src/scripts/guardian-external-monitor.mjs"
+      - "src/scripts/guardian-external-backup-signal.mjs"
+      - "src/tests/guardian-external-backup.test.mjs"
+      - ".github/workflows/litix-guardian-external.yml"
+      - ".github/workflows/litix-guardian-independent-ci.yml"
+permissions:
+  contents: read
+jobs:
+  watchdog-syntax-and-synthetic:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "24"
+      - run: node --check src/scripts/guardian-external-monitor.mjs
+      - run: node --test src/tests/guardian-external-backup.test.mjs
