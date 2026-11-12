@@ -186,9 +186,9 @@ export async function dispatchBoostero(orderId,{sql=boosteroSQL(),operation=boos
   // Retail customer orders must preserve their original 60% markup.
   // Owner-funded PayKings orders are intentionally wholesale-only but must
   // keep the *exact* supplier price locked at payment to avoid underfunding.
-  const ownerCard=orders[0].metadata?.ownerWholesale===true&&
-   orders[0].metadata?.ownerPaymentMethod==="paykings";
-  if(ownerCard){
+  const ownerWholesale=orders[0].metadata?.ownerWholesale===true&&
+   ["paykings","supplier_balance"].includes(orders[0].metadata?.ownerPaymentMethod);
+  if(ownerWholesale){
    if(Number(orders[0].supplier_cost_cents)!==quote.wholesaleCents||
       Number(orders[0].amount_cents)<quote.wholesaleCents)
     throw Error("boostero_wholesale_changed_after_payment");
