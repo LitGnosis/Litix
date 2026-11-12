@@ -19,11 +19,13 @@ export async function handleBoosteroOrder(request,{adminOnly=true}={}){
  catch{return send({error:"Invalid JSON"},400)}
  const action=String(data?.action||(adminOnly?"":"card_purchase"));
  if(!adminOnly&&action!=="card_purchase")return send({error:"Customer actions must use verified card checkout"},403);
+ const ownerCard=adminOnly&&action==="owner_card_purchase"&&data?.ownerWholesale===true;
+ if(action==="owner_card_purchase"&&!ownerCard)return send({error:"Owner authorization required"},403);
  const sql=boosteroSQL();
  if(action==="refill"){
   const orderId=String(data.orderId||"");
   if(!validId(orderId))return send({error:"Invalid order ID"},400);
-  const rows=await sql.query("select o.id,f.supplier_order_id,f.supplier_service_id,f.state from public.litix_v2_orders o join public.litix_boostero_fulfillment f on f.litix_order_id=o.id where o.id=$1 and f.state in('SUBMITTED','COMPLETED')",[orderId]);
+  const rows=await sql.query("select o.id,f.supplier_order_id,f.supplier_service_id,f.state from public.litix_v2_orders o join public.litix_boostero_fulfillment f on f.litix_order_id=o.id where o.id=$1 and o.payment_state in('paid','admin_authorized') and f.state in('SUBMITTED','COMPLETED')",[orderId]);
   if(rows.length!==1||!rows[0].supplier_order_id)return send({error:"No eligible confirmed Boostero order"},409);
   let service;
   try{service=boosteroCompatibleServices(await boosteroProduction("services")).find(s=>s.id===rows[0].supplier_service_id)}
@@ -41,7 +43,7 @@ export async function handleBoosteroOrder(request,{adminOnly=true}={}){
    return send({orderId,refillRequested:false,requiresReview:true},202);
   }
  }
- if(!["quote","card_purchase","admin_purchase"].includes(action))return send({error:"Unknown action"},404);
+ if(!["quote","card_purchase","admin_purchase","owner_card_purchase"].includes(action))return send({error:"Unknown action"},404);
  const id=String(data?.serviceId||""),email=String(data?.email||"").trim().toLowerCase(),quantity=Number(data?.quantity);
  if(!/^\d{1,12}$/.test(id)||!Number.isSafeInteger(quantity)||quantity<1||quantity>1000000||
     !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||email.length>254)return send({error:"Invalid service/quantity/contact"},422);
@@ -53,7 +55,7 @@ export async function handleBoosteroOrder(request,{adminOnly=true}={}){
  catch(e){return send({error:"Unable to verify this Litix service. No charge attempted."},409)}
  // AutoLikes and future-post subscriptions are retired from all NEW purchases.
  // Keep historical orders, status checks and refunds unchanged.
- if(!adminOnly&&retiredAutoLikesService(supplierService))
+ if(retiredAutoLikesService(supplierService))
   return send({error:"AutoLikes is not available. No payment attempted.",chargeAttempted:false},409);
  const autoMulti=multiple&&process.env.LITIX_MULTIPOST_AUTO_FULFILL_ENABLED==="true";
  let verifiedPosts=[];
@@ -95,10 +97,29 @@ export async function handleBoosteroOrder(request,{adminOnly=true}={}){
  if(!destination)return send({error:"Enter a valid public service destination URL. Followers need a public profile; Likes need a post/video link."},422);
  if(action==="quote")return send({approved:true,serviceId:id,serviceName:quote.serviceName,quantity,
   amountCents:quote.amountCents,supplierCostCents:quote.wholesaleCents,destination,minimumCheckoutCents:100});
- if(Number(data?.expectedAmountCents)!==quote.amountCents)return send({error:"Live price changed; no payment attempted"},409);
+ const purpose=ownerCard?String(data?.ownerPurpose||"personal"):"";
+ if(ownerCard&&!["personal","promotion","giveaway","replacement"].includes(purpose))
+  return send({error:"Invalid owner order purpose"},422);
+ const replacementOf=ownerCard&&purpose==="replacement"?String(data?.replacementOf||""):"";
+ if(ownerCard&&purpose==="replacement"){
+  if(!validId(replacementOf))return send({error:"Choose an eligible original order before reordering"},422);
+  let prior;
+  try{prior=await sql.query(
+    "select o.id,o.payment_state,f.state,f.supplier_order_id from public.litix_v2_orders o join public.litix_boostero_fulfillment f on f.litix_order_id=o.id where o.id=$1",[replacementOf]);}
+  catch{return send({error:"Cannot verify original order; no payment attempted"},503)}
+  if(prior.length!==1||!["FAILED","REJECTED"].includes(prior[0].state)||
+     prior[0].supplier_order_id||prior[0].payment_state==="review")
+   return send({error:"Original order is not confirmed failed without supplier submission. Review manually before a replacement; no card charge."},409);
+ }
+ // NMI card sales use at least $1. Owner sale is at live wholesale cost,
+ // with a transparent $1 gateway minimum when the wholesale amount is lower.
+ const chargeCents=ownerCard?Math.max(100,quote.wholesaleCents):quote.amountCents;
+ if(!Number.isSafeInteger(chargeCents)||chargeCents<1||chargeCents>100000000)
+  return send({error:"Invalid confirmed charge total"},422);
+ if(Number(data?.expectedAmountCents)!==chargeCents)return send({error:"Live price changed; no payment attempted"},409);
  const idem=String(data?.idempotencyKey||"");
  if(!/^[a-f0-9-]{36}$/.test(idem))return send({error:"Idempotency key required"},422);
- const paymentMode=action==="card_purchase"?"card":"admin";
+ const paymentMode=action==="card_purchase"||ownerCard?"card":"admin";
  const gatewayToken=String(data?.paymentToken||"");
  if(paymentMode==="card"&&(gatewayToken.length<10||gatewayToken.length>500))return send({error:"Collect.js token required"},422);
  if(paymentMode==="card"&&!process.env.NMI_SECURITY_KEY)return send({error:"Production gateway unavailable"},503);
@@ -108,7 +129,7 @@ export async function handleBoosteroOrder(request,{adminOnly=true}={}){
  // re-inserted. The legacy table still enforces a $6/1K stored rate while the
  // live 60%-markup retail quote can be lower. Duplicate INSERT would fail
  // CHECK validation before PayKings and prevent any real multi-post purchase.
- if(paymentMode==="card"&&["instagram","tiktok"].includes(String(quote.platform).toLowerCase())&&quote.kind==="likes"){
+ if(paymentMode==="card"&&!ownerCard&&["instagram","tiktok"].includes(String(quote.platform).toLowerCase())&&quote.kind==="likes"){
   const platform=String(quote.platform).toLowerCase();
   try{
    const approved=await sql.query(
@@ -141,8 +162,8 @@ export async function handleBoosteroOrder(request,{adminOnly=true}={}){
  try{
   const rows=await sql.query(
    "with new_order as (insert into public.litix_v2_orders(id,email,service_id,service_name,category,destination,quantity,amount_cents,supplier_cost_cents,idempotency_key,tracking_token_hash,metadata,payment_state,fulfillment_state) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12::jsonb,$13,'pending') on conflict(idempotency_key) do nothing returning id), selected as (insert into public.litix_boostero_fulfillment(litix_order_id,supplier_service_id,payment_mode,state,approved_admin_id) select id,$3,$14,$15,$16 from new_order returning litix_order_id) select litix_order_id from selected",
-   [orderId,email,id,quote.serviceName,"Boostero "+quote.platform+" "+quote.kind,destination,quantity,quote.amountCents,
-    quote.wholesaleCents,idem,hashBoostero(secret),JSON.stringify({supplier:"boostero",adminOnly:true,ownerWholesale:adminOnly&&data?.ownerWholesale===true,...(multiple?{postAllocations:verifiedPosts,postPlatform:String(quote.platform).toLowerCase(),fulfillmentMode:autoMulti?"boostero_child_order_dispatch":"litix_assisted_multi_post"}:{})}),paymentMode==="admin"?"admin_authorized":"processing",
+   [orderId,email,id,quote.serviceName,"Boostero "+quote.platform+" "+quote.kind,destination,quantity,chargeCents,
+    quote.wholesaleCents,idem,hashBoostero(secret),JSON.stringify({supplier:"boostero",adminOnly:true,ownerWholesale:adminOnly&&data?.ownerWholesale===true,...(ownerCard?{ownerPaymentMethod:"paykings",ownerPurpose:purpose,...(replacementOf?{replacementOf}:{})}:{}),...(multiple?{postAllocations:verifiedPosts,postPlatform:String(quote.platform).toLowerCase(),fulfillmentMode:autoMulti?"boostero_child_order_dispatch":"litix_assisted_multi_post"}:{})}),paymentMode==="admin"?"admin_authorized":"processing",
     paymentMode,paymentMode==="admin"?"QUEUED":"PENDING_PAYMENT",paymentMode==="admin"?"owner":null]);
   inserted=rows.length===1;
  }catch{return send({error:"Cannot create safe order ledger; no charge attempted"},503)}
@@ -160,7 +181,7 @@ export async function handleBoosteroOrder(request,{adminOnly=true}={}){
    const r=await fetch("https://paykings.transactiongateway.com/api/transact.php",{
     method:"POST",headers:{"content-type":"application/x-www-form-urlencoded"},cache:"no-store",signal:AbortSignal.timeout(18000),
     body:new URLSearchParams({security_key:process.env.NMI_SECURITY_KEY,type:"sale",payment_token:gatewayToken,
-     amount:(quote.amountCents/100).toFixed(2),orderid:orderId,email})});
+     amount:(chargeCents/100).toFixed(2),orderid:orderId,email})});
    if(!r.ok)throw Error("gateway_unavailable");
    response=Object.fromEntries(new URLSearchParams(await r.text()));
   }catch{
