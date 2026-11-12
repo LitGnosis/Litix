@@ -34,7 +34,10 @@ export default function OwnerWholesaleUI(){
   try{
    const response=await request("/api/owner/wholesale?view=catalog");
    setCatalog(response);
-   setMessage("Live supplier prices are available only in this owner session.");
+   if(!response.paykingsEnabled)setPaymentMethod("supplier_balance");
+   setMessage(response.paykingsEnabled?
+    "Owner PayKings and wallet methods are available for eligible orders.":
+    "Private supplier-cost shopping is available. Owner-funded PayKings card charges need merchant approval; the Boostero wallet method remains available.");
   }catch(e){setError(String(e.message||e));if(/login_required/.test(String(e.message)))setAccess("login")}
   finally{setLoading(false)}
  }
@@ -215,7 +218,7 @@ export default function OwnerWholesaleUI(){
     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,230px),1fr))",gap:14,marginTop:16}}>
      <label style={{display:"grid",gap:7}}>Payment method
       <select style={field} value={paymentMethod} onChange={e=>{setPaymentMethod(e.target.value);resetQuote()}}>
-       <option value="paykings">PayKings secure card — owner pays</option>
+       <option value="paykings" disabled={!catalog?.paykingsEnabled}>PayKings secure card — {catalog?.paykingsEnabled?"owner pays":"pending processor approval"}</option>
        <option value="supplier_balance">Boostero prepaid wallet</option>
       </select>
      </label>
@@ -279,6 +282,7 @@ export default function OwnerWholesaleUI(){
      setUsaOnly(false);setServiceId(found.id)}
     setQuantity(String(original.quantity));
     setDestination(String(original.destination||""));
+    if(!found)setServiceId("");
     resetQuote();
     setMessage("Confirmed failed order loaded. Review the new wholesale quote and authorize a separate PayKings payment only if you want a replacement.");
     window.scrollTo({top:0,behavior:"smooth"});
