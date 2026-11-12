@@ -1,0 +1,16 @@
+flowchart TB
+  A[PayKings NMI merchant webhook] --> B{Verify raw-body HMAC, merchant and event ID}
+  S[Optional Stripe merchant webhook] --> C{Verify timestamped Stripe signature}
+  B --> D[Neon preregistered trusted first-party checkout intents]
+  C --> D
+  D --> E{Captured or settled, amount/transaction match, approved?}
+  E -->|No| R[Reconciliation and manual review]
+  E -->|Yes| F[Transaction: grant + Postgres job + durable outbox]
+  F --> G[Persistent outbox relay to BullMQ]
+  G --> H[Owned node scheduler]
+  H --> I[Existing first-party worker: original previews and owned QA only]
+  I --> J[Delivery verification and customer acceptance]
+  P[Authorized owned SOCKS5 health paths] --> Q[Probe Litix-owned HTTPS health endpoint]
+  Q --> T[Neon signed-in owner telemetry]
+  H --> T
+  T --> U[Owner-only React terminal]
