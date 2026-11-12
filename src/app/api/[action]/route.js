@@ -25,6 +25,11 @@ const paymentConfigured = () => selectedGatewayMode()==="TEST"
   ? Boolean(process.env.NMI_TEST_SECURITY_KEY && sandboxGatewayValid() && publicCollectKey())
   : Boolean(process.env.NMI_SECURITY_KEY && publicCollectKey());
 const conf = () => ({database:!!conn(),supplier:process.env.LITIX_BOOSTERO_ENABLED==="true"&&!!process.env.BOOSTERO_API_KEY,payment:paymentConfigured()});
+// Report a live transaction only after a recorded NMI sale and settlement, or a verified recurring settlement.
+const verifiedLiveNmiSettlement = async sql => {
+ try { const rows = await sql.query("SELECT (EXISTS(SELECT 1 FROM growth_ops.litix_nmi_sale_receipts r JOIN growth_ops.litix_nmi_settled_transactions s ON s.transaction_id=r.transaction_id WHERE r.amount_cents>0 AND lower(r.currency)='usd') OR EXISTS(SELECT 1 FROM growth_ops.verified_recurring_settlements v WHERE lower(v.provider)='nmi' AND v.amount_cents>0 AND lower(v.currency)='usd' AND nullif(v.settlement_reference,'') IS NOT NULL)) AS verified",[]); return rows?.[0]?.verified === true; }
+ catch { return false; }
+};
 const name = req => new URL(req.url).pathname.split("/").pop();
 const bounded = (v,n=120) => String(v??"").trim().slice(0,n);
 // Retired supplier integration: no outbound legacy provider API calls, ever.
@@ -171,7 +176,7 @@ export async function GET(req){
  const op=name(req),flags=conf(),p=new URL(req.url).searchParams;
  if(!["config","health","smmservices","track"].includes(op))return send({error:"Unknown route"},404);
  if(op==="config")return send({ready:flags.database&&flags.supplier&&flags.payment,publicKey:publicCollectKey()||null});
- if(op==="health"){let database=false;if(flags.database)try{await db().query("select 1",[]);database=true}catch{}const gatewayMode=selectedGatewayMode();const gatewayConfigured=gatewayMode==="TEST"?!!(process.env.NMI_TEST_SECURITY_KEY&&process.env.NMI_TEST_GATEWAY_URL):!!process.env.NMI_SECURITY_KEY;return send({service:"litix-v2",database,supplierConfigured:flags.supplier,paykingsConfigured:flags.payment,orderEmailConfigured:notificationsConfigured(),gatewayMode,testGatewayConfigured:gatewayMode==="TEST"?gatewayConfigured:undefined,liveTransactionVerified:false,ready:database&&flags.supplier&&flags.payment},database?200:503)}
+ if(op==="health"){let database=false,liveTransactionVerified=false;if(flags.database)try{const sql=db();await sql.query("select 1",[]);database=true;liveTransactionVerified=await verifiedLiveNmiSettlement(sql)}catch{}const gatewayMode=selectedGatewayMode();const gatewayConfigured=gatewayMode==="TEST"?!!(process.env.NMI_TEST_SECURITY_KEY&&process.env.NMI_TEST_GATEWAY_URL):!!process.env.NMI_SECURITY_KEY;return send({service:"litix-v2",database,supplierConfigured:flags.supplier,paykingsConfigured:flags.payment,orderEmailConfigured:notificationsConfigured(),gatewayMode,testGatewayConfigured:gatewayMode==="TEST"?gatewayConfigured:undefined,liveTransactionVerified,ready:database&&flags.supplier&&flags.payment},database?200:503)}
  if(op==="smmservices"){
   // Deprecated legacy API. The public catalog is /api/catalog/v1, Boostero only.
   return send({error:"Retired catalog disabled. Use the verified public catalog.",items:[],total:0},410);
