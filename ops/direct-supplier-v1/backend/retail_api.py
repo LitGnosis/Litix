@@ -197,12 +197,11 @@ async def checkout(request:Request,body:RetailOrder):
             "chargeAttempted":True,"fulfillment":"AWAITING_SETTLEMENT",
             "message":"Card approved. Direct fulfillment waits for confirmed settlement."}
 
-@router.post("/reconcile")
-async def reconcile(request:Request):
-    authorize(request)
+async def reconcile_pending(db):
+    """Background-safe read-only merchant check; DB writes are idempotent."""
     if not os.environ.get("LITIX_NMI_QUERY_SECURITY_KEY"):
-        raise HTTPException(503,"nmi_query_api_key_required")
-    rows=await request.app.state.db.fetch(
+        raise RuntimeError("nmi_query_api_key_required")
+    rows=await db.fetch(
       """SELECT id,service_kind,brief,customer_email,amount_cents,gateway_transaction_id
          FROM growth_ops.direct_retail_orders
          WHERE payment_state='APPROVED_PENDING_SETTLEMENT'
@@ -215,7 +214,7 @@ async def reconcile(request:Request):
                                                str(row["id"]),row["amount_cents"])
         except (NmiVerificationError,httpx.HTTPError,ValueError):
             states.append("not_yet_verified");continue
-        async with request.app.state.db.acquire() as con:
+        async with db.acquire() as con:
             async with con.transaction():
                 locked=await con.fetchrow(
                   """SELECT id,payment_state FROM growth_ops.direct_retail_orders
@@ -238,3 +237,8 @@ async def reconcile(request:Request):
                 states.append("settled_and_queued_for_owned_node")
     return {"reviewed":len(rows),"states":states,
             "queue":"litix:fulfillment:queue","supplierApiCalls":0}
+
+@router.post("/reconcile")
+async def reconcile(request:Request):
+    authorize(request)
+    return await reconcile_pending(request.app.state.db)
