@@ -114,7 +114,7 @@ export async function GET(request){
     FROM growth_ops.litix_owned_payment_intents WHERE order_id=$1 LIMIT 1`,[orderId]))[0];
  }catch{return res({error:"tracking_unavailable"},503)}
  if(!order||!tokenOk(orderId,String(order.payload?.email||""),access))return res({error:"order_not_found"},404);
- if(order.state==="awaiting_settlement"&&enabled()&&/^\d{5,32}$/.test(order.provider_transaction_id)){
+ if(order.state==="awaiting_settlement"&&process.env.VERCEL_ENV==="production"&&secret().length>=16&&/^\d{5,32}$/.test(order.provider_transaction_id)){
   if(await nmiSettled(orderId,order.provider_transaction_id)){
    try{await releaseAfterSettlement(sql,order);order.state="dispatch_pending"}
    catch{order.state="awaiting_settlement"}
