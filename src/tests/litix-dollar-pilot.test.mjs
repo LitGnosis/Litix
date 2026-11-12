@@ -7,7 +7,7 @@ const catalog=readFileSync(new URL("../app/api/catalog/v1/route.js",import.meta.
 
 test("pilot is a fixed-price first-party creative order, never an engagement resale",()=>{
  assert.match(route,/const USD_CENTS=100/);
- assert.match(route,/d\.product!=="website_preview"/);
+ assert.match(route,/d\?\.product!=="website_preview"/);
  assert.match(page,/This is not a Likes, Followers, or Views purchase/);
  assert.doesNotMatch(route,/boostero|smmglob|smmxpert|supplierApiCalled|\/api\/v2\/order/i);
 });
@@ -27,7 +27,7 @@ test("idempotency reservation precedes NMI call and blocks all retries",()=>{
  assert.match(page,/Never retry the same payment/);
 });
 test("payment does not dispatch until independent merchant settlement query",()=>{
- assert.match(route,/fetch\(GATEWAY+"\/api\/query.php"/);
+ assert.match(route,/fetch\(GATEWAY\+"\/api\/query\.php"/);
  assert.match(route,/parseTag\(t,"condition"\)!=="complete"/);
  assert.match(route,/parseTag\(a,"action_type"\)==="settle"/);
  assert.match(route,/master_fulfillment_grants/);
