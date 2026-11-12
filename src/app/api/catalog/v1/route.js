@@ -13,7 +13,14 @@ export async function GET(request){
  }catch{
   // No backup supplier, no unlimited stale data. Checkout remains authoritative.
  }
- const data=buildActiveStorefrontCatalog(snapshot.items,params,{sourceStatus:snapshot.status});
+ const listed=buildActiveStorefrontCatalog(snapshot.items,params,{sourceStatus:snapshot.status});
+ const data={
+  ...listed,
+  // The homepage checks this field before mounting PayKings card checkout.
+  // Never advertise enabled checkout for an unavailable, empty supplier snapshot.
+  checkoutEnabled:listed.allCount>0&&snapshot.items.some(item=>item.purchasable===true),
+  currency:"USD"
+ };
  // Public pricing and categories only: never cache payment, user or tracking data.
  // The checkout handler independently obtains a fresh quote before charging.
  // An empty or unavailable catalog is never stored at the edge.
