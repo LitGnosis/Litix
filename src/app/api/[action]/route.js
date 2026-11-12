@@ -4,6 +4,7 @@ import { neon } from "@neondatabase/serverless";
 import { randomUUID, createHash } from "node:crypto";
 import { after } from "next/server";
 import { sendOrderEmails, notificationsConfigured } from "../../../lib/orderNotifications.mjs";
+import {allBoosteroCardsSnapshot} from "../../../lib/boosteroCatalog.mjs";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -219,32 +220,32 @@ export async function GET(req){
    const sql=db();await sql.query("select 1",[]);database=true;
    [liveTransactionVerified,direct]=await Promise.all([verifiedLiveNmiSettlement(sql),firstPartyProof(sql)]);
   }catch{}
+  // Main storefront is restored to current Boostero-backed Default services.
+  // Do not conflate this supplier-backed checkout with first-party node capacity.
+  let supplierCatalogLive=false,supplierCatalogItemCount=0;
+  if(database&&flags.supplier)try{
+   const snapshot=await allBoosteroCardsSnapshot();
+   supplierCatalogLive=snapshot.status==="live"&&snapshot.items.some(x=>x.purchasable===true);
+   supplierCatalogItemCount=Array.isArray(snapshot.items)?snapshot.items.length:0;
+  }catch{}
   const gatewayMode=selectedGatewayMode();
   const gatewayConfigured=gatewayMode==="TEST"
    ?!!(process.env.NMI_TEST_SECURITY_KEY&&process.env.NMI_TEST_GATEWAY_URL)
    :!!process.env.NMI_SECURITY_KEY;
-  // The public social catalog is disabled until per-SKU owned delivery,
-  // signed capacity and retail prices are independently verified.
-  const socialCapacityVerified=direct.firstPartySignedNodeReady
-   &&direct.ownedBillableServiceKinds>0&&direct.ownedActiveServiceRates>0
-   &&direct.verifiedSocialServiceKinds>0&&direct.paidOrderFulfillmentVerified;
-  const paidCatalogCheckoutReady=false; // must match /api/catalog/v1 until a verified paid route is deployed
-  const ready=database&&flags.payment&&paidCatalogCheckoutReady&&socialCapacityVerified;
+  const paidCatalogCheckoutReady=database&&flags.payment&&flags.supplier&&supplierCatalogLive;
   const blockedBy=[
    ...(!database?["database_unavailable"]:[]),
    ...(!flags.payment?["paykings_configuration_incomplete"]:[]),
-   ...(!direct.firstPartySignedNodeReady?["signed_first_party_node_not_verified"]:[]),
-   ...(!direct.ownedBillableServiceKinds?["no_owned_billable_services"]:[]),
-   ...(!direct.ownedActiveServiceRates?["no_approved_first_party_rates"]:[]),
-   ...(!direct.verifiedSocialServiceKinds?["no_verified_social_service_capacity"]:[]),
-   ...(!paidCatalogCheckoutReady?["paid_social_checkout_route_disabled"]:[])
+   ...(!flags.supplier?["supplier_configuration_missing"]:[]),
+   ...(!supplierCatalogLive?["live_supplier_catalog_unavailable"]:[])
   ];
   return send({service:"litix-v2",database,supplierConfigured:flags.supplier,
+   supplierCatalogLive,supplierCatalogItemCount,
    paykingsConfigured:flags.payment,orderEmailConfigured:notificationsConfigured(),
    gatewayMode,testGatewayConfigured:gatewayMode==="TEST"?gatewayConfigured:undefined,
    liveTransactionVerified,...direct,paidCatalogCheckoutReady,
    firstPartyPaymentPilotConfigured:database&&flags.payment&&process.env.LITIX_DOLLAR_PILOT_ENABLED==="true",
-   ready,blockedBy},database?200:503);
+   ready:paidCatalogCheckoutReady,blockedBy},database?200:503);
  }
  if(op==="smmservices"){
   // Deprecated legacy API. The public catalog is /api/catalog/v1, Boostero only.
