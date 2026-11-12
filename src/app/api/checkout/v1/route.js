@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { POST as runDollarPilot } from "../pilot/route.js";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -30,6 +31,23 @@ export async function POST(request) {
     return reply({ error: "invalid_json", chargeAttempted: false }, 400);
   }
 
+  // The actual $1 paid first-party product is handled by the dedicated
+  // NMI merchant-settlement ledger. Reuse that same implementation rather
+  // than leaving /api/checkout/v1 as a blanket paid-card rejection.
+  // Critically, a reseller catalog ID can NEVER be silently substituted
+  // with the creative pilot product.
+  if (data?.product === "website_preview") {
+    if (data.serviceId != null || data.link != null || data.postAllocations != null ||
+        data.serviceKind != null || data.amountCents !== 100) {
+      return reply({ error: "pilot_product_mismatch", chargeAttempted: false }, 422);
+    }
+    const headers = new Headers(request.headers);
+    headers.delete("content-length");
+    return runDollarPilot(new Request(request.url, {
+      method: "POST", headers, body: JSON.stringify(data),
+    }));
+  }
+
   if (data?.serviceKind !== "creative_kit") {
     return reply({
       error: "This service has no verified Litix-owned fulfillment capacity. No payment was attempted.",
@@ -37,6 +55,8 @@ export async function POST(request) {
       chargeAttempted: false,
       supplierApiCalled: false,
       directServicesUrl: "/direct-services",
+      paidFirstPartyTestUrl: "/pilot",
+      note: "Catalog IDs cannot be charged until their matching Litix-owned signed delivery node is independently verified.",
     }, 409);
   }
 
