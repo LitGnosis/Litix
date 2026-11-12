@@ -1,5 +1,7 @@
 "use client";
 import {useEffect,useMemo,useState} from "react";
+import OwnerPayKingsFields from "./OwnerPayKingsFields.jsx";
+import OwnerRecoveryPanel from "./OwnerRecoveryPanel.jsx";
 const panel={background:"#091d35",border:"1px solid #365f87",borderRadius:18,padding:22};
 const field={width:"100%",boxSizing:"border-box",padding:"12px 14px",background:"#102b49",
  color:"#ecf6ff",border:"1px solid #5b88b0",borderRadius:10,fontSize:16};
@@ -24,6 +26,9 @@ export default function OwnerWholesaleUI(){
  const [destination,setDestination]=useState(""),[quote,setQuote]=useState(null),[confirmed,setConfirmed]=useState(false);
  const [quoting,setQuoting]=useState(false),[buying,setBuying]=useState(false),[order,setOrder]=useState(null);
  const [refreshing,setRefreshing]=useState(false);
+ const [paymentMethod,setPaymentMethod]=useState("paykings");
+ const [ownerPurpose,setOwnerPurpose]=useState("personal");
+ const [replacementOf,setReplacementOf]=useState("");
  async function loadCatalog(){
   setLoading(true);setError("");
   try{
@@ -51,7 +56,7 @@ export default function OwnerWholesaleUI(){
   return [...american,...international];
  },[catalog,platform,kind,usaOnly,search]);
  const selected=useMemo(()=>catalog?.items?.find(x=>x.id===serviceId)||null,[catalog,serviceId]);
- function resetQuote(){setQuote(null);setConfirmed(false);setOrder(null);setError("");}
+ function resetQuote(){setQuote(null);setConfirmed(false);setError("");}
  async function signIn(action){
   setAuthBusy(true);setError("");setMessage("");
   try{
@@ -70,24 +75,34 @@ export default function OwnerWholesaleUI(){
   setQuoting(true);setError("");setMessage("");setQuote(null);setConfirmed(false);
   try{
    const data=await post("/api/owner/wholesale",
-    {action:"quote",serviceId,quantity:Number(quantity),destination:destination.trim()});
-   setQuote(data);setMessage("Wholesale price confirmed against Boostero. Your wallet will be charged only if you approve the purchase.");
+    {action:"quote",serviceId,quantity:Number(quantity),destination:destination.trim(),paymentMethod});
+   setQuote(data);setMessage(paymentMethod==="paykings"?
+    "Live wholesale amount confirmed. Your card is charged only after you authorize PayKings secure checkout.":
+    "Wholesale price confirmed against Boostero. Your wallet is debited only after you approve.");
   }catch(e){setError(String(e.message||e))}finally{setQuoting(false)}
  }
- async function purchase(){
-  if(!quote||!confirmed||buying)return;
+ async function purchase(paymentToken=""){
+  if(!quote||!confirmed||buying||!!order)return;
+  if(paymentMethod==="paykings"&&!paymentToken)return;
   setBuying(true);setError("");setMessage("");
-  // One request per owner confirmation. Do not retry uncertain supplier outcomes.
+  // Unique key; never retry an uncertain PayKings transaction under a new key.
   const key=crypto.randomUUID();
   try{
    const data=await post("/api/owner/wholesale",{
-    action:"purchase",serviceId,quantity:Number(quantity),destination:destination.trim(),
-    expectedWholesaleCents:quote.wholesaleCents,idempotencyKey:key,confirmed:true
+    action:"purchase",paymentMethod,ownerPurpose,
+    ...(ownerPurpose==="replacement"?{replacementOf}:{}),
+    ...(paymentMethod==="paykings"?{paymentToken}:{}),
+    serviceId,quantity:Number(quantity),destination:destination.trim(),
+    expectedWholesaleCents:quote.wholesaleCents,
+    expectedChargeCents:quote.chargeAmountCents,
+    idempotencyKey:key,confirmed:true
    });
    setOrder(data);setQuote(null);setConfirmed(false);
-   setMessage("The supplier order has been recorded. Review its status below; do not submit the same order again.");
+   setMessage(data.payment==="review"?
+    "PayKings outcome requires review. Do not retry this order or card payment.":
+    "Owner order recorded. Check supplier fulfillment before placing another order.");
   }catch(e){
-   setError(String(e.message||e)+" If an order may have been submitted, check existing orders before trying again.");
+   setError(String(e.message||e)+". Card or supplier outcome may be unknown. Check order records before any retry.");
    setOrder({orderId:null,fulfillment:"REVIEW_REQUIRED"});
    setQuote(null);setConfirmed(false);
   }finally{setBuying(false)}
@@ -115,7 +130,7 @@ export default function OwnerWholesaleUI(){
    <section style={panel}>
     <p style={{color:"#80c9ff",letterSpacing:2,fontSize:12,fontWeight:800}}>PRIVATE OWNER ACCESS</p>
     <h1 style={{fontSize:"clamp(26px,5vw,42px)",margin:"8px 0"}}>Wholesale Purchase Center</h1>
-    <p style={note}>Your private supplier-cost shopping area. Customer storefront prices remain unchanged. Owner orders spend your existing Boostero wallet directly—there is no PayKings card charge or extra markup.</p>
+    <p style={note}>Private supplier-cost shopping for your account, customer giveaways, drawing winners, and promotions. Choose PayKings card checkout or your Boostero prepaid wallet. Retail prices and customer cards remain unchanged.</p>
    </section>
    {!accessible&&<section style={panel}>
     <h2>{access==="code"?"Enter your 8-digit access code":"Verify owner access"}</h2>
@@ -137,7 +152,7 @@ export default function OwnerWholesaleUI(){
    {accessible&&<section style={panel}>
     <div style={{display:"flex",gap:20,justifyContent:"space-between",alignItems:"center",flexWrap:"wrap"}}>
      <div><h2 style={{marginBottom:5}}>Boostero wholesale catalog</h2>
-      <p style={note}>{catalog?.count?.toLocaleString()||"—"} available standard services · Prepaid supplier wallet</p></div>
+      <p style={note}>{catalog?.count?.toLocaleString()||"—"} available standard services · PayKings or supplier wallet</p></div>
      <div style={{textAlign:"right"}}><span style={note}>Boostero wallet balance</span>
       <h2 style={{margin:"3px 0"}}>{catalog?usd(catalog.walletUSD):"—"}</h2></div>
     </div>
@@ -197,19 +212,50 @@ export default function OwnerWholesaleUI(){
        placeholder="@username or https://…" onChange={e=>{setDestination(e.target.value);resetQuote()}}/></label>
     </div>
     <p style={{...note,marginTop:12}}>For Instagram or TikTok Followers you can enter @username or a profile link. Other services need an eligible public post or destination URL. Never enter an account password.</p>
-    <button type="button" style={{...btn,marginTop:6}} disabled={!selected||!destination||quoting||buying||!!order}
+    <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,230px),1fr))",gap:14,marginTop:16}}>
+     <label style={{display:"grid",gap:7}}>Payment method
+      <select style={field} value={paymentMethod} onChange={e=>{setPaymentMethod(e.target.value);resetQuote()}}>
+       <option value="paykings">PayKings secure card — owner pays</option>
+       <option value="supplier_balance">Boostero prepaid wallet</option>
+      </select>
+     </label>
+     <label style={{display:"grid",gap:7}}>Reason for owner purchase
+      <select style={field} value={ownerPurpose} onChange={e=>{setOwnerPurpose(e.target.value);resetQuote()}}>
+       <option value="personal">Personal service</option>
+       <option value="giveaway">Drawing / giveaway winner</option>
+       <option value="promotion">Customer promotional reward</option>
+       <option value="replacement">Replacement for confirmed failed order</option>
+      </select>
+     </label>
+    </div>
+    {ownerPurpose==="replacement"&&<label style={{display:"grid",gap:7,marginTop:15}}>
+     Confirmed failed original Litix order ID
+     <input style={field} value={replacementOf}
+      onChange={e=>{setReplacementOf(e.target.value);resetQuote()}}
+      placeholder="ltx2_..." spellCheck={false}/>
+     <span style={note}>Use the order-recovery panel below to verify failure and absence of a supplier order ID. New card payment is separate; no repeat charge is automatic.</span>
+    </label>}
+    <button type="button" style={{...btn,marginTop:6}} disabled={!selected||!destination||quoting||buying||!!order||
+     (ownerPurpose==="replacement"&&!/^ltx2_[0-9a-f-]{36}$/.test(replacementOf))}
      onClick={getQuote}>{quoting?"Checking live cost…":"Check current wholesale cost"}</button>
     {quote&&<div style={{marginTop:20,padding:18,background:"#12365a",border:"1px solid #498ec5",borderRadius:13}}>
-     <p style={{...note,margin:0}}>Your supplier-wallet debit (no markup)</p>
-     <div style={{fontSize:37,fontWeight:900,margin:"7px 0"}}>{usd(quote.wholesaleCents/100)}</div>
-     <p style={note}>Boostero's current cost: {usd(quote.wholesaleUSD)} · Available wallet: {usd(quote.supplierBalanceUSD)}</p>
+     <p style={{...note,margin:0}}>{paymentMethod==="paykings"?"Your confirmed PayKings owner card amount":"Your Boostero prepaid wallet debit"} (no retail markup)</p>
+     <div style={{fontSize:37,fontWeight:900,margin:"7px 0"}}>{usd(quote.chargeAmountCents/100)}</div>
+     <p style={note}>Boostero supplier cost: {usd(quote.wholesaleCents/100)} · Available Boostero wallet: {usd(quote.supplierBalanceUSD)}</p>
+     {quote.cardMinimumApplied&&<p style={{...note,color:"#ffd6a4"}}>The PayKings checkout minimum is $1.00 even when the supplier amount is lower. The difference covers processing costs.</p>}
      {!quote.balanceEnough?<p role="alert" style={{color:"#ffb7ba"}}>Not enough prepaid Boostero balance. No order can be submitted.</p>:<>
       <label style={{display:"flex",gap:10,alignItems:"start",margin:"16px 0"}}>
        <input type="checkbox" checked={confirmed} onChange={e=>setConfirmed(e.target.checked)}/>
-       <span>I authorize this real Boostero-wallet purchase at the displayed wholesale cost.</span>
+       <span>I authorize one {paymentMethod==="paykings"?"PayKings card payment":"Boostero wallet debit"} of {usd(quote.chargeAmountCents/100)} for this {ownerPurpose.replaceAll("_"," ")} order. I will not repeat a payment with an unknown outcome.</span>
       </label>
-      <button type="button" style={{...btn,background:"#196b68"}} disabled={!confirmed||buying||!!order}
-       onClick={purchase}>{buying?"Submitting once — do not retry":"Buy with Boostero wallet · "+usd(quote.wholesaleCents/100)}</button>
+      {paymentMethod==="paykings"?
+       catalog?.paykingsEnabled?
+        <OwnerPayKingsFields key={quote.serviceId+":"+quote.quantity+":"+quote.chargeAmountCents}
+         publicKey={catalog.cardPublicKey} amountCents={quote.chargeAmountCents}
+         disabled={!confirmed||!!order} busy={buying} onToken={token=>void purchase(token)}/>:
+        <p role="alert" style={{color:"#ffbfc3"}}>PayKings secure card checkout is unavailable. No card payment can be submitted. Choose wallet or contact support.</p>:
+       <button type="button" style={{...btn,background:"#196b68"}} disabled={!confirmed||buying||!!order}
+        onClick={()=>void purchase()}>{buying?"Submitting once — do not retry":"Buy with Boostero wallet · "+usd(quote.chargeAmountCents/100)}</button>}
      </>}
     </div>}
    </section>}
@@ -217,7 +263,7 @@ export default function OwnerWholesaleUI(){
    {error&&<section role="alert" style={{...panel,borderColor:"#bf6170",color:"#ffc5c6"}}>{error}</section>}
    {order&&<section style={panel}>
     <h2>Owner order status</h2>
-    <p style={note}>No card charged. The supplier order is recorded in Litix. Check the current status before making another purchase.</p>
+    <p style={note}>{order.paymentMethod==="paykings"?"A PayKings payment request was submitted; verify its outcome below.":"Boostero wallet order recorded; no card charged."} Do not submit a duplicate payment or fulfillment order.</p>
     {order.orderId&&<p><strong>Litix order:</strong> <code>{order.orderId}</code></p>}
     <p><strong>Fulfillment:</strong> {order.current?.delivery_state||order.fulfillment||"Awaiting review"}</p>
     {order.supplierOrderId&&<p><strong>Supplier order:</strong> {order.supplierOrderId}</p>}
@@ -225,6 +271,18 @@ export default function OwnerWholesaleUI(){
     {order.orderId&&<button type="button" style={btn} disabled={refreshing} onClick={refreshOrder}>
      {refreshing?"Refreshing…":"Refresh order status"}</button>}
    </section>}
+   {accessible&&<OwnerRecoveryPanel onReplacement={original=>{
+    setOwnerPurpose("replacement");setPaymentMethod("paykings");
+    setReplacementOf(original.id);
+    const found=catalog?.items?.find(x=>x.id===String(original.service_id));
+    if(found){setPlatform(found.platform);setKind(found.kind);setSearch("");
+     setUsaOnly(false);setServiceId(found.id)}
+    setQuantity(String(original.quantity));
+    setDestination(String(original.destination||""));
+    resetQuote();
+    setMessage("Confirmed failed order loaded. Review the new wholesale quote and authorize a separate PayKings payment only if you want a replacement.");
+    window.scrollTo({top:0,behavior:"smooth"});
+   }}/>}
    <footer style={{...note,padding:"18px 4px 30px"}}>Private access only. Public Litix customer pricing, bundles and existing paid orders are not changed.</footer>
   </div>
  </main>;
