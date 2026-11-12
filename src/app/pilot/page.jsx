@@ -65,7 +65,8 @@ export default function LitixDollarPilot(){
    const r=await fetch("/api/checkout/v1",{
     method:"POST",headers:{"content-type":"application/json"},
     body:JSON.stringify({product:"website_preview",amountCents:100,
-      brief,email,paymentToken:token,idempotencyKey:key})
+      brief,email,paymentToken:token,idempotencyKey:key}),
+    signal:AbortSignal.timeout(60000)
    });
    const body=await r.json();
    if(body.orderId&&body.token){
