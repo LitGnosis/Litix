@@ -149,7 +149,7 @@ export default function LitixDollarPilot(){
    </section>:<>
     <section style={{...color,marginBottom:16}}>
      <h2 style={{marginTop:0}}>Your delivery information</h2>
-     <label style={{display:"grid",gap:6,fontWeight:600}}>Receipt / tracking email
+     <label style={{display:"grid",gap:6,fontWeight:600}}>Contact email (tracking appears on this page)
       <input style={color} type="email" autoComplete="email" required value={email}
        onChange={e=>setEmail(e.target.value)} placeholder="you@example.com"/></label>
      <details style={{marginTop:14}}><summary style={{cursor:"pointer"}}>Customize your creative brief</summary>
