@@ -117,7 +117,8 @@ export async function handleBoosteroOrder(request,{adminOnly=true}={}){
  }
  // NMI card sales use at least $1. Owner sale is at live wholesale cost,
  // with a transparent $1 gateway minimum when the wholesale amount is lower.
- const chargeCents=ownerCard?Math.max(100,quote.wholesaleCents):quote.amountCents;
+ const chargeCents=ownerCard?Math.max(100,quote.wholesaleCents):
+  ownerPurchase&&action==="admin_purchase"?quote.wholesaleCents:quote.amountCents;
  if(!Number.isSafeInteger(chargeCents)||chargeCents<1||chargeCents>100000000)
   return send({error:"Invalid confirmed charge total"},422);
  if(Number(data?.expectedAmountCents)!==chargeCents)return send({error:"Live price changed; no payment attempted"},409);
