@@ -3,6 +3,7 @@ import {randomUUID} from "node:crypto";
 import {resolveTikTokVideoLink} from "./tiktokVideoLinks.mjs";
 import {stageBoosteroPostChildren,releasePaidBoosteroPosts,dispatchBoosteroMultiPosts} from "./boosteroMultiPostFulfillment.mjs";
 import {boosteroProduction,boosteroCompatibleServices} from "./boosteroReadOnly.mjs";
+import {retiredAutoLikesService} from "./retiredAutolikes.mjs";
 import {boosteroAdminAuthorized,boosteroProductionReady,boosteroSQL,boosteroDestination,verifyBoosteroQuote,
  boosteroOrderId,boosteroToken,hashBoostero,dispatchBoostero,boosteroNotice,boosteroQuote} from "./boosteroFulfillment.mjs";
 const send=(body,status=200)=>Response.json(body,{status,headers:{"cache-control":"no-store","referrer-policy":"no-referrer","x-content-type-options":"nosniff"}});
@@ -50,6 +51,10 @@ export async function handleBoosteroOrder(request,{adminOnly=true}={}){
  let quote,supplierService;
  try{({quote,service:supplierService}=await verifyBoosteroQuote(id,quoteQuantity,sql))}
  catch(e){return send({error:"Unable to verify this Litix service. No charge attempted."},409)}
+ // AutoLikes and future-post subscriptions are retired from all NEW purchases.
+ // Keep historical orders, status checks and refunds unchanged.
+ if(!adminOnly&&retiredAutoLikesService(supplierService))
+  return send({error:"AutoLikes is not available. No payment attempted.",chargeAttempted:false},409);
  const autoMulti=multiple&&process.env.LITIX_MULTIPOST_AUTO_FULFILL_ENABLED==="true";
  let verifiedPosts=[];
  if(multiple){
