@@ -97,11 +97,12 @@ export async function handleBoosteroOrder(request,{adminOnly=true}={}){
  if(!destination)return send({error:"Enter a valid public service destination URL. Followers need a public profile; Likes need a post/video link."},422);
  if(action==="quote")return send({approved:true,serviceId:id,serviceName:quote.serviceName,quantity,
   amountCents:quote.amountCents,supplierCostCents:quote.wholesaleCents,destination,minimumCheckoutCents:100});
- const purpose=ownerCard?String(data?.ownerPurpose||"personal"):"";
- if(ownerCard&&!["personal","promotion","giveaway","replacement"].includes(purpose))
+ const ownerPurchase=adminOnly&&data?.ownerWholesale===true;
+ const purpose=ownerPurchase?String(data?.ownerPurpose||"personal"):"";
+ if(ownerPurchase&&!["personal","promotion","giveaway","replacement"].includes(purpose))
   return send({error:"Invalid owner order purpose"},422);
- const replacementOf=ownerCard&&purpose==="replacement"?String(data?.replacementOf||""):"";
- if(ownerCard&&purpose==="replacement"){
+ const replacementOf=ownerPurchase&&purpose==="replacement"?String(data?.replacementOf||""):"";
+ if(ownerPurchase&&purpose==="replacement"){
   if(!validId(replacementOf))return send({error:"Choose an eligible original order before reordering"},422);
   let prior;
   try{prior=await sql.query(
@@ -163,7 +164,7 @@ export async function handleBoosteroOrder(request,{adminOnly=true}={}){
   const rows=await sql.query(
    "with new_order as (insert into public.litix_v2_orders(id,email,service_id,service_name,category,destination,quantity,amount_cents,supplier_cost_cents,idempotency_key,tracking_token_hash,metadata,payment_state,fulfillment_state) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12::jsonb,$13,'pending') on conflict(idempotency_key) do nothing returning id), selected as (insert into public.litix_boostero_fulfillment(litix_order_id,supplier_service_id,payment_mode,state,approved_admin_id) select id,$3,$14,$15,$16 from new_order returning litix_order_id) select litix_order_id from selected",
    [orderId,email,id,quote.serviceName,"Boostero "+quote.platform+" "+quote.kind,destination,quantity,chargeCents,
-    quote.wholesaleCents,idem,hashBoostero(secret),JSON.stringify({supplier:"boostero",adminOnly:true,ownerWholesale:adminOnly&&data?.ownerWholesale===true,...(ownerCard?{ownerPaymentMethod:"paykings",ownerPurpose:purpose,...(replacementOf?{replacementOf}:{})}:{}),...(multiple?{postAllocations:verifiedPosts,postPlatform:String(quote.platform).toLowerCase(),fulfillmentMode:autoMulti?"boostero_child_order_dispatch":"litix_assisted_multi_post"}:{})}),paymentMode==="admin"?"admin_authorized":"processing",
+    quote.wholesaleCents,idem,hashBoostero(secret),JSON.stringify({supplier:"boostero",adminOnly:true,ownerWholesale:adminOnly&&data?.ownerWholesale===true,...(ownerPurchase?{ownerPaymentMethod:ownerCard?"paykings":"supplier_balance",ownerPurpose:purpose,...(replacementOf?{replacementOf}:{})}:{}),...(multiple?{postAllocations:verifiedPosts,postPlatform:String(quote.platform).toLowerCase(),fulfillmentMode:autoMulti?"boostero_child_order_dispatch":"litix_assisted_multi_post"}:{})}),paymentMode==="admin"?"admin_authorized":"processing",
     paymentMode,paymentMode==="admin"?"QUEUED":"PENDING_PAYMENT",paymentMode==="admin"?"owner":null]);
   inserted=rows.length===1;
  }catch{return send({error:"Cannot create safe order ledger; no charge attempted"},503)}
