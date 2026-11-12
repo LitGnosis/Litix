@@ -166,7 +166,7 @@ export async function POST(request){
    serviceId:quote.serviceId,quantity:quote.quantity,
    destination,email:ownerEmail(),
    ...(paymentMethod==="paykings"?{paymentToken:token}:{approvedCostCents:wholesaleCents}),
-   expectedAmountCents:paymentMethod==="paykings"?chargeAmountCents:quote.amountCents,
+   expectedAmountCents:chargeAmountCents,
    idempotencyKey:idem
   };
   const result=await handleBoosteroOrder(ownerProxy(request,admin,payload),{adminOnly:true});
