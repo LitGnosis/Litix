@@ -5,6 +5,7 @@ import {createHash} from 'node:crypto';
 import {Worker} from 'bullmq';
 import Redis from 'ioredis';
 import pg from 'pg';
+import {startDirectStreamRouter} from './direct-stream-router.mjs';
 
 const {Pool}=pg;
 const NODE_ID='litix-direct-primary-01';
@@ -98,12 +99,14 @@ async function main(){
       if(owned.rowCount!==1)throw Error('direct_node_registry_conflict');
     }finally{busyHeartbeat=false;}
   };
-  let worker;
+  let worker, routerTask;
   try{
     await redis.ping();
     await db.query('SELECT 1');
     await heartbeat();
     console.log('LITIX_DIRECT_NODE_HEARTBEAT_VERIFIED',{node:NODE_ID,mode:isTest?'STAGING_NO_CHARGE':'LIVE'});
+    routerTask=startDirectStreamRouter(db,redis,()=>stopping).catch(error=>
+      console.error('LITIX_DIRECT_STREAM_ROUTER_STOPPED',{reason:String(error?.message||'unknown').slice(0,100)}));
     worker=new Worker(QUEUE,async queueJob=>{
       const jobId=String(queueJob.data?.jobId||'');
       if(!UUID.test(jobId))throw Error('direct_invalid_job_id');
@@ -177,6 +180,7 @@ async function main(){
       if(stopping)return;
       stopping=true;clearInterval(ticker);
       await worker.close().catch(()=>{});
+      if(routerTask)await routerTask;
       await db.query(
         "UPDATE growth_ops.first_party_nodes SET status='OFFLINE',updated_at=NOW() WHERE node_name=$1",
         [NODE_ID]).catch(()=>{});
