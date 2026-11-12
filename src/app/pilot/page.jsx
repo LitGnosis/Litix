@@ -45,8 +45,10 @@ export default function LitixDollarPilot(){
    if(!active)return;
    setData(pilot);
    setPublicKey(config?.publicKey||"");
-   setReady(pilot?.enabled===true&&config?.ready===true&&!!config?.publicKey);
-   if(!pilot?.enabled||!config?.ready||!config?.publicKey)
+   // The owned $1 product is validated by the dedicated pilot endpoint,
+   // not by reseller-catalog or Boostero readiness from /api/config.
+   setReady(pilot?.enabled===true&&!!config?.publicKey);
+   if(!pilot?.enabled||!config?.publicKey)
     setCardState("unavailable");
   }).catch(()=>{if(active)setCardState("unavailable")});
   return()=>{active=false};
