@@ -2,7 +2,9 @@
 // raw card numbers, or user-supplied amounts; never marks a sale "settled"
 // from a gateway approval response. A unique ID authorizes at most one sale.
 import {neon} from "@neondatabase/serverless";
-import {createHmac,createHash,timingSafeEqual} from "node:crypto";
+import {createHmac,timingSafeEqual} from "node:crypto";
+import {verifyNmiCapturedSale} from "../../../../lib/litixVerifiedSale.mjs";
+import {queueCapturedOwnedJob,recordOwnedSettlement} from "../../../../lib/litixCapturedFulfillment.mjs";
 
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
@@ -16,7 +18,6 @@ const db=()=>neon(dsn());
 const secret=()=>String(process.env.NMI_SECURITY_KEY||"");
 const enabled=()=>process.env.VERCEL_ENV==="production"&&process.env.LITIX_DOLLAR_PILOT_ENABLED==="true"&&
  !!dsn()&&secret().length>=16&&process.env.NMI_GATEWAY_MODE!=="TEST";
-const sha=s=>createHash("sha256").update(s).digest("hex");
 const hmac=s=>createHmac("sha256",secret()).update(s).digest("hex");
 const sameOrigin=req=>{try{return new URL(req.headers.get("origin")).origin===new URL(req.url).origin}catch{return false}};
 const tokenOk=(order,email,presented)=>{
@@ -24,7 +25,6 @@ const tokenOk=(order,email,presented)=>{
  const actual=Buffer.from(hmac("pilot-access:"+order+":"+email),"hex");
  return timingSafeEqual(actual,Buffer.from(presented,"hex"));
 };
-const parseTag=(xml,tag)=>new RegExp("<"+tag+">([^<]{0,300})</"+tag+">","i").exec(xml)?.[1]?.trim()||"";
 
 async function nodeReady(sql){
  const rows=await sql.query(`SELECT 1 FROM public.master_execution_nodes
@@ -45,57 +45,6 @@ async function validateBrief(brief){
  }catch{return null}
  return safe;
 }
-async function nmiSettled(orderId,transactionId){
- // A read-only gateway query; merchant authorization alone is not settlement.
- if(!/^\d{5,32}$/.test(transactionId))return false;
- let xml;
- try{
-  const response=await fetch(GATEWAY+"/api/query.php",{
-   method:"POST",cache:"no-store",redirect:"error",
-   headers:{"content-type":"application/x-www-form-urlencoded"},
-   body:new URLSearchParams({security_key:secret(),report_type:"transaction",transaction_id:transactionId}),
-   signal:AbortSignal.timeout(11000)
-  });
-  if(!response.ok)return false;
-  xml=await response.text();
- }catch{return false}
- if(!xml||xml.length>150000)return false;
- const t=/<transaction(?:\s[^>]*)?>([\s\S]*?)<\/transaction>/i.exec(xml)?.[1]||"";
- if(parseTag(t,"transaction_id")!==transactionId||parseTag(t,"order_id")!==orderId||parseTag(t,"condition")!=="complete")return false;
- if(parseTag(t,"currency")&&parseTag(t,"currency")!=="USD")return false;
- const actions=[...t.matchAll(/<action(?:\s[^>]*)?>([\s\S]*?)<\/action>/gi)].map(m=>m[1]);
- const sale=actions.some(a=>parseTag(a,"action_type")==="sale"&&parseTag(a,"success")==="1"&&
-  parseTag(a,"response_code")==="100"&&Math.round(Number(parseTag(a,"amount"))*100)===USD_CENTS);
- const settled=actions.some(a=>parseTag(a,"action_type")==="settle"&&parseTag(a,"success")==="1");
- return sale&&settled;
-}
-async function releaseAfterSettlement(sql,order){
- const body=JSON.stringify({brief:order.payload.brief,isSyntheticTest:false});
- const hash=sha(body);
- const stmt=`WITH settled AS (
-  INSERT INTO growth_ops.litix_nmi_settled_transactions(transaction_id,event_id)
-  VALUES ($1,$2) ON CONFLICT(transaction_id) DO NOTHING RETURNING transaction_id
- ), authorized AS (
-  INSERT INTO public.master_fulfillment_grants(order_id,kind,verification_source,verified_at)
-  SELECT $3,'website_preview','nmi_query_settled',NOW() FROM settled
-  ON CONFLICT(order_id) DO NOTHING RETURNING order_id
- ), approved AS (
-  UPDATE growth_ops.litix_owned_payment_intents
-  SET execution_approved=true,state='dispatch_pending',updated_at=NOW()
-  WHERE order_id=$3 AND state='awaiting_settlement'
-    AND EXISTS (SELECT 1 FROM authorized) RETURNING order_id,tenant_key
- ), created_job AS (
-  INSERT INTO public.master_node_jobs(order_id,tenant_key,kind,payload,payload_hash,status)
-  SELECT order_id,tenant_key,'website_preview',$4::jsonb,$5,'queued' FROM approved
-  ON CONFLICT(order_id) DO NOTHING RETURNING id,order_id
- ), dispatched AS (
-  INSERT INTO growth_ops.litix_payment_dispatch_outbox(order_id,job_id)
-  SELECT order_id,id FROM created_job ON CONFLICT(order_id) DO NOTHING RETURNING order_id
- ) SELECT (SELECT COUNT(*) FROM dispatched)::int AS queued`;
- return (await sql.query(stmt,[order.provider_transaction_id,
-  "nmi-query-"+order.order_id,order.order_id,body,hash]))[0]?.queued===1;
-}
-
 export async function GET(request){
  const url=new URL(request.url),orderId=url.searchParams.get("order"),access=url.searchParams.get("token")||"";
  if(!orderId){
@@ -114,11 +63,17 @@ export async function GET(request){
     FROM growth_ops.litix_owned_payment_intents WHERE order_id=$1 LIMIT 1`,[orderId]))[0];
  }catch{return res({error:"tracking_unavailable"},503)}
  if(!order||!tokenOk(orderId,String(order.payload?.email||""),access))return res({error:"order_not_found"},404);
- if(order.state==="awaiting_settlement"&&process.env.VERCEL_ENV==="production"&&secret().length>=16&&/^\d{5,32}$/.test(order.provider_transaction_id)){
-  if(await nmiSettled(orderId,order.provider_transaction_id)){
-   try{await releaseAfterSettlement(sql,order);order.state="dispatch_pending"}
-   catch{order.state="awaiting_settlement"}
-  }
+ if(order.state==="awaiting_settlement"&&process.env.VERCEL_ENV==="production"
+    &&secret().length>=16&&/^\d{5,32}$/.test(order.provider_transaction_id)){
+  // Only an independently queried captured sale may start the owned job.
+  try{
+   const evidence=await verifyNmiCapturedSale({orderId,transactionId:order.provider_transaction_id,
+    securityKey:secret(),amountCents:USD_CENTS});
+   if(evidence.captured){
+    await queueCapturedOwnedJob(sql,order);
+    if(evidence.settled&&await recordOwnedSettlement(sql,order))order.state="dispatch_pending";
+   }
+  }catch{/* Keep the actual payment and queue state for the next reconciliation. */}
  }
  let job;
  try{
@@ -199,8 +154,8 @@ export async function POST(request){
    chargeAttempted:true},402);
  }
  try{
-  // Only an approved sale is recorded here. Fulfillment remains gated on an
-  // independently queried, genuinely settled merchant transaction.
+  // Record an approved NMI sale, but do not mark it settled.
+  // Independent captured-sale query governs first-party dispatch.
   await sql.transaction([
    sql`UPDATE growth_ops.litix_owned_payment_intents
     SET provider_transaction_id=${txn},state='awaiting_settlement',updated_at=NOW()
@@ -210,7 +165,20 @@ export async function POST(request){
   ]);
  }catch{return res({error:"approved_sale_needs_ledger_reconciliation_do_not_retry",
    orderId,token:access,chargeAttempted:true},202)}
- return res({orderId,token:access,payment:"approved_awaiting_settlement",
-  fulfillment:"not_dispatched",amountCents:USD_CENTS,chargeAttempted:true,
+ let fulfillment="not_dispatched",settled=false;
+ try{
+  const evidence=await verifyNmiCapturedSale({orderId,transactionId:txn,
+   securityKey:secret(),amountCents:USD_CENTS});
+  if(evidence.captured){
+   fulfillment=await queueCapturedOwnedJob(sql,{
+    order_id:orderId,provider_transaction_id:txn,payload:{brief}})
+     ?"queued":"not_dispatched";
+   if(evidence.settled)settled=await recordOwnedSettlement(sql,{
+    order_id:orderId,provider_transaction_id:txn});
+  }
+ }catch{/* The merchant query can lag; cron/tracking will reconcile without a second charge. */}
+ return res({orderId,token:access,
+  payment:settled?"settled":"approved_awaiting_settlement",
+  fulfillment,amountCents:USD_CENTS,chargeAttempted:true,
   trackingUrl:"/pilot?order="+encodeURIComponent(orderId)+"&token="+access},202);
 }

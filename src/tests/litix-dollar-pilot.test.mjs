@@ -26,15 +26,21 @@ test("idempotency reservation precedes NMI call and blocks all retries",()=>{
  assert.match(route,/gateway_result_unknown_do_not_retry/);
  assert.match(page,/Never retry the same payment/);
 });
-test("payment does not dispatch until independent merchant settlement query",()=>{
- assert.match(route,/fetch\(GATEWAY\+"\/api\/query\.php"/);
- assert.match(route,/parseTag\(t,"condition"\)!=="complete"/);
- assert.match(route,/parseTag\(a,"action_type"\)==="settle"/);
- assert.match(route,/master_fulfillment_grants/);
- assert.match(route,/litix_nmi_settled_transactions/);
- assert.match(route,/litix_payment_dispatch_outbox/);
- assert.match(route,/state='awaiting_settlement'/);
+test("NMI captured-sale verification is required, settlement is tracked separately",()=>{
+ const proof=readFileSync(new URL("../lib/litixVerifiedSale.mjs",import.meta.url),"utf8");
+ const dispatch=readFileSync(new URL("../lib/litixCapturedFulfillment.mjs",import.meta.url),"utf8");
+ const workerGrant="nmi_query_captured_sale";
+ assert.match(route,/verifyNmiCapturedSale/);
+ assert.match(route,/queueCapturedOwnedJob/);
+ assert.match(proof,/pendingsettlement/);
+ assert.match(proof,/action_type/);
+ assert.match(proof,/response_code/);
+ assert.match(dispatch,/master_fulfillment_grants/);
+ assert.match(dispatch,/litix_payment_dispatch_outbox/);
+ assert.match(dispatch,new RegExp(workerGrant));
+ assert.match(dispatch,/service_kind='website_preview'/);
 });
+
 test("cards are hosted by NMI, and legacy unfulfillable cards aren't charged",()=>{
  assert.match(page,/secure\.nmi\.com\/token\/Collect\.js/);
  assert.match(page,/CollectJS\.startPaymentRequest/);
