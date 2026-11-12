@@ -14,8 +14,11 @@ export const maxDuration=60;
 const reply=(body,status=200)=>Response.json(body,{status,headers:ownerHeaders});
 const ownerCardPublicKey=()=>process.env.NEXT_PUBLIC_PAYKINGS_NMI_COLLECT_PUBLIC_KEY||
  process.env.PAYKINGS_NMI_COLLECT_PUBLIC_KEY||"";
-const ownerPayKingsReady=()=>process.env.VERCEL_ENV==="production"&&
- process.env.NMI_GATEWAY_MODE!=="TEST"&&!!process.env.NMI_SECURITY_KEY&&
+// Do not self-process owner-funded charges until the acquiring processor
+// has explicitly confirmed this merchant-account use is permitted.
+const ownerPayKingsReady=()=>process.env.LITIX_OWNER_PAYKINGS_ENABLED==="true"&&
+ process.env.VERCEL_ENV==="production"&&process.env.NMI_GATEWAY_MODE!=="TEST"&&
+ !!process.env.NMI_SECURITY_KEY&&
  !!ownerCardPublicKey();
 const validOrderId=id=>/^ltx2_[0-9a-f-]{36}$/.test(String(id||""));
 const ownerProxy=(request,adminToken,body)=>new Request(request.url,{
