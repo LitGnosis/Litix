@@ -24,6 +24,7 @@ from redis.asyncio import Redis
 from nmi import cents, verify_signature, query_completed_transaction, NmiVerificationError
 from node_api import router as node_router
 from panel_api import router as panel_router
+from retail_api import router as retail_router
 
 PRICES = {"PANEL_149_WK":14900, "AGENCY_500_WK":50000, "ENTERPRISE_1500_WK":150000}
 MAX_HANDLES = {"AGENCY_500_WK":25, "ENTERPRISE_1500_WK":100}
@@ -121,6 +122,7 @@ def require_release(g):
 
 app.include_router(node_router)
 app.include_router(panel_router)
+app.include_router(retail_router)
 
 @app.get("/healthz")
 async def health(request:Request):
