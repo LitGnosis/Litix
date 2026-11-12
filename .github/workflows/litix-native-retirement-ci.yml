@@ -1,0 +1,29 @@
+name: Litix retired digital-product removal safety
+on:
+  pull_request:
+    paths:
+      - "src/app/native/**"
+      - "src/app/api/native/**"
+      - "src/app/tools/caption-builder/**"
+      - "src/app/tools/link-page-builder/**"
+      - "src/app/sitemap.js"
+      - "src/app/solutions/**"
+      - "src/app/shop/**"
+      - "src/lib/litixSolutions.mjs"
+      - "src/tests/nativeRetirementSafety.test.mjs"
+      - ".github/workflows/litix-native-retirement-ci.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  preserve-checkout:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Checkout reviewed code without persisted secrets
+        uses: actions/checkout@v4.2.2
+        with:
+          persist-credentials: false
+      - name: Verify removal and unchanged payment/supplier dependencies
+        working-directory: src
+        run: node --test tests/nativeRetirementSafety.test.mjs

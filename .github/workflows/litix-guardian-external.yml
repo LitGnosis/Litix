@@ -1,25 +1,21 @@
-name: Litix Guardian — Independent uptime and encrypted-backup watchdog
-# This workflow must be on DEFAULT main for GitHub's scheduler to run.
+name: LITIX Guardian external uptime checks
+# NOTE: GitHub scheduled events run ONLY on the repository's default branch.
+# This workflow is staged on the production feature branch, but the schedule is
+# INACTIVE until this exact workflow is installed on default/main.
 on:
-  # Single kick-off on installation, then independent default-branch schedule.
-  push:
-    branches: [main]
-    paths:
-      - ".github/workflows/litix-guardian-external.yml"
   schedule:
-    - cron: "*/15 * * * *"
+    - cron: "*/5 * * * *"
   workflow_dispatch:
 permissions:
   contents: read
-  actions: read
   issues: write
 concurrency:
-  group: litix-guardian-independent-watchdog
+  group: litix-guardian-external
   cancel-in-progress: false
 jobs:
-  external-health:
+  independent-health:
     runs-on: ubuntu-24.04
-    timeout-minutes: 6
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
@@ -27,10 +23,9 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: "24"
-      - name: Verify safe watchdog logic without hitting real databases
-        run: node --test src/tests/guardian-external-backup.test.mjs
-      - name: Independent website/catalog and encrypted R2 backup checks
+      - name: Check Vercel AND functional TikTok catalog from GitHub infrastructure
+        working-directory: src
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           LITIX_GUARDIAN_EXTERNAL_RESEND_KEY: ${{ secrets.LITIX_GUARDIAN_EXTERNAL_RESEND_KEY }}
-        run: node src/scripts/guardian-external-monitor.mjs
+        run: node scripts/guardian-external-monitor.mjs

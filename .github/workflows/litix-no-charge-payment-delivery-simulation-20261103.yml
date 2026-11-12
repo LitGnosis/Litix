@@ -1,0 +1,21 @@
+name: Litix no-charge payment to delivery simulation
+on:
+  push:
+    branches: [fix/litix-verified-fulfillment-health-20261103]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  mock-payment-and-fulfillment:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout reviewed source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Install pinned application dependencies (no production credentials)
+        working-directory: src
+        run: npm ci --no-audit --no-fund
+      - name: Mock payment, supplier dispatch, Bluevine links and AutoLikes
+        run: node --test src/tests/boostero-multi-post-ledger.test.mjs src/tests/growth-bundles-paid-mock.test.mjs src/tests/social-multi-post-live-checkout.test.mjs src/tests/bluevine-bundles.test.mjs src/tests/boostero-native-autolikes.test.mjs

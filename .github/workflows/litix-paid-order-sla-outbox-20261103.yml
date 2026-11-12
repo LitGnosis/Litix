@@ -1,0 +1,19 @@
+name: Litix paid-order SLA and PayKings outbox — read-only
+on:
+  push:
+    branches:
+      - fix/litix-paid-order-sla-and-outbox-20261103
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  safe-operations-validation:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - name: Checkout reviewed source without stored credentials
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Check paid order SLA, supplier idempotency and read-only payment reconciliation signals
+        run: node --test src/tests/guardian-paid-sla-outbox-20261103.test.mjs src/tests/guardian-signals.test.mjs src/tests/guardian-paid-order-health-20261103.test.mjs

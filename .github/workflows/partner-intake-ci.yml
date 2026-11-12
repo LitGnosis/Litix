@@ -1,0 +1,39 @@
+name: Litix Partner Intake — No Payment Regression
+on:
+  push:
+    branches:
+      - "feature/partner-revenue-pilot-20261104"
+    paths:
+      - "src/app/api/partners/**"
+      - "src/components/PartnerApplication.jsx"
+      - "src/app/partners/**"
+      - "src/lib/partnerApplications.mjs"
+      - "src/tests/partnerApplications.test.mjs"
+      - ".github/workflows/partner-intake-ci.yml"
+  pull_request:
+    paths:
+      - "src/app/api/partners/**"
+      - "src/components/PartnerApplication.jsx"
+      - "src/app/partners/**"
+      - "src/lib/partnerApplications.mjs"
+      - "src/tests/partnerApplications.test.mjs"
+      - ".github/workflows/partner-intake-ci.yml"
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out reviewed source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Verify Node availability
+        run: node --version
+      - name: Validate server-side JavaScript syntax
+        run: |
+          node --check src/lib/partnerApplications.mjs
+          node --check src/app/api/partners/route.js
+      - name: Run isolated intake validation tests (no payments or supplier API)
+        run: node --test src/tests/partnerApplications.test.mjs

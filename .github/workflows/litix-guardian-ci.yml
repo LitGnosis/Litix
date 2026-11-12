@@ -1,0 +1,48 @@
+name: Litix Guardian simulated outages and no-charge build
+on:
+  push:
+    branches: [feature/litix-guardian-monitoring-20261027]
+  pull_request:
+    paths:
+      - "src/lib/guardian*.mjs"
+      - "src/app/api/guardian/**"
+      - "src/app/guardian/**"
+      - "src/tests/guardian.test.mjs"
+      - "src/vercel.json"
+      - ".github/workflows/litix-guardian-ci.yml"
+permissions:
+  contents: read
+jobs:
+  guardian-simulation:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 16
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: src/package-lock.json
+      - name: Install locked dependencies
+        working-directory: src
+        run: npm ci --no-audit --no-fund
+      - name: Simulate failing and recovering components and mocked Resend alerts
+        working-directory: src
+        env:
+          VERCEL_ENV: preview
+        run: node --test tests/guardian.test.mjs tests/owner-purchase-notifications.test.mjs tests/growth-bundles-route-negative.test.mjs
+      - name: Verify unchanged Next.js production build
+        working-directory: src
+        run: npm run build
+      - name: Archive tested Guardian source (never includes Vercel secrets)
+        run: |
+          git archive --format=zip --output=Litix-Guardian-2026-10-27.zip HEAD
+          unzip -t Litix-Guardian-2026-10-27.zip | tail -n 1
+      - name: Upload verified source
+        uses: actions/upload-artifact@v4
+        with:
+          name: litix-guardian-verified-source
+          path: Litix-Guardian-2026-10-27.zip
+          retention-days: 30

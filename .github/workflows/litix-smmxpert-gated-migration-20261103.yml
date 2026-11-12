@@ -1,0 +1,21 @@
+name: Litix SMMXPERT gated migration — no-charge
+on:
+  push:
+    branches:
+      - migration/litix-smmxpert-next-20261103
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  safety-gates:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 7
+    steps:
+      - name: Check out isolated migration branch
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Verify read-only vendor API, USD/INR pricing, and safe activation gate
+        run: node --test src/tests/supplier-trial-readonly-20261103.test.mjs src/tests/smmxpert-migration-quote-20261103.test.mjs src/tests/guardian-paid-sla-outbox-20261103.test.mjs src/tests/smmxpert-live-api-safety-20261103.test.mjs src/tests/smmxpert-service-accuracy-20261103.test.mjs
+      - name: Verify test runner has no SMMXPERT credentials and cannot place orders
+        run: node scripts/litix-supplier-trial-readonly.mjs

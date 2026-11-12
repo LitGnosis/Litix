@@ -1,0 +1,9 @@
+FROM python:3.12.8-slim
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1
+WORKDIR /srv/litix
+COPY backend/requirements.txt /srv/litix/requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+COPY backend/ /srv/litix/
+RUN useradd -r -s /usr/sbin/nologin -u 10001 litix && chown -R litix:litix /srv/litix
+USER litix
+CMD ["python","-u","fulfillment_worker.py"]

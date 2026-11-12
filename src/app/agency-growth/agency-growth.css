@@ -1,0 +1,20 @@
+.agency-growth{max-width:1180px}
+.agency-growth-hero{padding:clamp(22px,5vw,46px);background:linear-gradient(138deg,rgba(13,57,96,.86),rgba(9,17,41,.85))}
+.agency-growth-hero h1{font-size:clamp(2.1rem,5.8vw,3.9rem);line-height:1.1;max-width:850px;margin:.25em 0}
+.agency-growth-hero p:not(.kicker){max-width:760px}
+.agency-growth-grid{display:grid;grid-template-columns:.85fr 1.15fr;gap:clamp(20px,3vw,46px);align-items:start}
+.agency-growth-form{border:1px solid rgba(170,190,235,.25);background:rgba(5,20,43,.35);border-radius:16px;padding:clamp(16px,3vw,25px);scroll-margin-top:16px}
+.agency-growth-form h2{margin-top:0}
+.agency-growth-form .partner-fields{grid-template-columns:repeat(2,minmax(0,1fr))}
+.agency-growth .partner-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media(max-width:860px){.agency-growth-grid{grid-template-columns:1fr}}
+@media(max-width:620px){.agency-growth-form .partner-fields,.agency-growth .partner-grid{grid-template-columns:1fr}}
+
+.agency-sales-offers{align-items:stretch}
+.agency-sales-offer{display:flex;flex-direction:column;gap:9px}
+.agency-sales-price{font-size:clamp(1.1rem,2vw,1.4rem);font-weight:800;color:#b8dfff}
+.agency-sales-offer ul{padding-left:18px;margin:0 0 10px;line-height:1.5}
+.agency-sales-offer li{margin-bottom:6px}
+.agency-sales-offer h4{margin:6px 0 0}
+.agency-sales-link{margin-top:auto;display:inline-flex;align-items:center;justify-content:center;max-width:100%}
+@media(max-width:620px){.agency-sales-offer{gap:7px}}

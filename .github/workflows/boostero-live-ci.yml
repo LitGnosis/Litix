@@ -1,0 +1,42 @@
+name: Boostero live fulfillment — gated no-charge security verification
+on:
+  push:
+    branches: [feature/boostero-preview-readonly-20261027, fix/boostero-customer-rollout-20261027, fix/boostero-only-four-cards-20261027, fix/boostero-only-legacy-like-gaps-20261027]
+  pull_request:
+    paths:
+      - "src/lib/boostero*.mjs"
+      - "src/lib/publicBoosteroOnly.mjs"
+      - "src/app/api/[action]/route.js"
+      - "src/app/page.jsx"
+      - "src/db/migrations/20261027-boostero-four-kinds.sql"
+      - "src/app/api/checkout/v1/route.js"
+      - "src/app/api/catalog/v1/route.js"
+      - "src/app/api/track/route.js"
+      - "src/app/api/internal/boostero/**"
+      - "src/db/migrations/20261027-boostero-fulfillment.sql"
+      - "src/tests/boostero*.test.mjs"
+      - "src/vercel.json"
+      - ".github/workflows/boostero-live-ci.yml"
+permissions:
+  contents: read
+jobs:
+  production-safety-regression:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: src
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: src/package-lock.json
+      - name: Install locked packages without audit
+        run: npm ci --no-audit --no-fund
+      - name: Test Boostero guards and existing Litix payment, pricing, email and supplier functionality with mocks
+        run: node --test tests/boostero-readonly.test.mjs tests/boostero-live-fulfillment.test.mjs tests/boostero-integration.test.mjs tests/boostero-public-routing.test.mjs tests/boostero-four-kinds.test.mjs tests/checkout.test.mjs tests/preview-checkout.test.mjs tests/five-dollar-floor.test.mjs tests/pricing-rules.test.mjs tests/owner-purchase-notifications.test.mjs tests/guardian.test.mjs tests/growth-bundles-manual.test.mjs tests/autolikes-coming-soon.test.mjs tests/litix-ai.test.mjs
+      - name: Build Next.js with no live payment or supplier calls
+        run: npm run build

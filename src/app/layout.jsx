@@ -1,22 +1,28 @@
 import "./style.css";
 import "./metallic.css";
-import { LITIX_BRAND_MANIFEST } from "../config/brandEngine";
+import "./growthBundles.css";
+import "./litix-ai.css";
+import "./catalog.css";
+import "./quick-checkout.css";
+import "./litix-flow.css";
+import "./litix-custom-calculator.css";
+import LitixAI from "../components/LitixAI";
+import {LITIX_SITE_URL,LITIX_DISCOVERY_TITLE,LITIX_DISCOVERY_DESCRIPTION,LITIX_DISCOVERY_SCHEMA} from "../lib/litixBrandDiscovery.mjs";
 
 const keywords = [
-  "SaaS",
-  "digital marketing",
-  "social engagement",
-  "marketing",
-  "promotions",
-  "social media growth",
+  "Litix.net",
+  "digital social media services",
+  "business marketing workflows",
+  "creator tools",
+  "marketing operations",
+  "order tracking",
 ];
-const siteUrl = "https://litix.net/";
-const description =
-  "Litix provides social media promotion services with a live service catalog, secure tokenized checkout, and order tracking.";
+const siteUrl = LITIX_SITE_URL;
+const description = LITIX_DISCOVERY_DESCRIPTION;
 
 export const metadata = {
   metadataBase: new URL(siteUrl),
-  title: LITIX_BRAND_MANIFEST.metadata.title,
+  title: LITIX_DISCOVERY_TITLE,
   description,
   keywords,
   applicationName: "Litix",
@@ -26,7 +32,7 @@ export const metadata = {
   authors: [{ name: "Litix" }],
   alternates: { canonical: siteUrl },
   openGraph: {
-    title: LITIX_BRAND_MANIFEST.metadata.title,
+    title: LITIX_DISCOVERY_TITLE,
     description,
     url: siteUrl,
     siteName: "Litix",
@@ -35,7 +41,7 @@ export const metadata = {
   },
   twitter: {
     card: "summary",
-    title: LITIX_BRAND_MANIFEST.metadata.title,
+    title: LITIX_DISCOVERY_TITLE,
     description,
   },
   robots: {
@@ -51,27 +57,7 @@ export const metadata = {
   },
 };
 
-const schema = {
-  "@context": "https://schema.org",
-  "@graph": [
-    {
-      "@type": "Organization",
-      "@id": siteUrl + "#organization",
-      name: "Litix",
-      url: siteUrl,
-    },
-    {
-      "@type": "SoftwareApplication",
-      "@id": siteUrl + "#application",
-      name: "Litix",
-      url: siteUrl,
-      applicationCategory: "BusinessApplication",
-      operatingSystem: "Web",
-      description,
-      publisher: { "@id": siteUrl + "#organization" },
-    },
-  ],
-};
+const schema = LITIX_DISCOVERY_SCHEMA;
 
 export default function RootLayout({ children }) {
   return (
@@ -82,6 +68,7 @@ export default function RootLayout({ children }) {
           dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
         />
         {children}
+        <LitixAI />
       </body>
     </html>
   );

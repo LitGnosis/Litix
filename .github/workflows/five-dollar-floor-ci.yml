@@ -1,0 +1,23 @@
+name: Retail Five Dollar Pricing Floor
+on:
+  push:
+    branches: [fix/litix-five-dollar-retail-floor-20261026]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Install dependencies
+        working-directory: src
+        run: npm ci --no-audit --no-fund
+      - name: Run all pricing, checkout and regression tests
+        working-directory: src
+        run: node --test tests/*.test.mjs
+      - name: Next.js production build
+        working-directory: src
+        run: npm run build

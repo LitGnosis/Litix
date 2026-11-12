@@ -1,0 +1,50 @@
+name: LITIX floating buttons — mobile/desktop no-charge layout checks
+on:
+  push:
+    branches:
+      - fix/litix-ai-whatsapp-floats-20261027
+  pull_request:
+    paths:
+      - "src/app/litix-ai.css"
+      - "src/tests/litix-floating-buttons-mobile.mjs"
+      - ".github/workflows/litix-floating-buttons-ci.yml"
+permissions:
+  contents: read
+jobs:
+  layout-and-preservation:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    defaults:
+      run:
+        working-directory: src
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: src/package-lock.json
+      - name: Install existing locked dependencies
+        run: npm ci --no-audit --no-fund
+      - name: AI, guardian, checkout, bundle, and Boostero no-charge regression
+        run: node --test tests/litix-ai.test.mjs tests/checkout.test.mjs tests/guardian.test.mjs tests/owner-purchase-notifications.test.mjs tests/growth-bundles-manual.test.mjs tests/boostero-integration.test.mjs
+      - name: Build real Next.js production bundle without supplier or payment requests
+        run: npm run build
+      - name: Install browser test runner without changing package lock
+        run: npm install --no-save --ignore-scripts playwright@1.56.1
+      - name: Test actual 320/375/390/430/1280 pixel layouts with mocked API calls
+        run: |
+          npm run start -- --port 3100 >/tmp/litix-floating-buttons.log 2>&1 &
+          app_pid=$!
+          trap 'kill $app_pid || true' EXIT
+          for i in $(seq 1 35); do
+            if curl --fail --silent --output /dev/null http://localhost:3100/; then break; fi
+            sleep 1
+          done
+          export CHROME_PATH="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
+          if [ -z "$CHROME_PATH" ]; then
+            npx playwright install chromium
+          fi
+          node tests/litix-floating-buttons-mobile.mjs

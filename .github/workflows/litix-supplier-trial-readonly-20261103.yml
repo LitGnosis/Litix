@@ -1,0 +1,20 @@
+name: Litix alternative-supplier trial adapter (mock-only)
+on:
+  push:
+    branches: [trial/read-only-supplier-evaluation-20261103]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  trial-readonly-safety:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6
+    steps:
+      - name: Check out reviewed branch
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Verify API endpoints and non-purchase action allowlist (no secrets)
+        run: node --test src/tests/supplier-trial-readonly-20261103.test.mjs
+      - name: Confirm vendors are not connected without keys (no network)
+        run: node scripts/litix-supplier-trial-readonly.mjs

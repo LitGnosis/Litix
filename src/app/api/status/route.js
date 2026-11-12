@@ -10,13 +10,17 @@ export async function GET() {
     process.env.POSTGRES_URL ||
     process.env.POSTGRES_PRISMA_URL;
   const databaseConfigured = Boolean(databaseUrl);
-  const supplierConfigured = Boolean(process.env.SMMFOLLOWOM_API_KEY);
-  const supplierUrl = process.env.SMMFOLLOWOM_API_URL || "https://smmfollowom.com/api/v2";
+  // Boostero is the only active NEW-order supplier. Do not probe retired APIs.
+  const supplierConfigured = process.env.LITIX_BOOSTERO_ENABLED === "true" &&
+    Boolean(process.env.BOOSTERO_API_KEY);
+  const supplierUrl = process.env.BOOSTERO_API_URL || "https://boostero.com/api/v2";
   let supplierHostValid = false;
   try {
     const url = new URL(supplierUrl);
     supplierHostValid = url.protocol === "https:" &&
-      ["smmfollowom.com", "www.smmfollowom.com", "my.smmfollowom.com"].includes(url.hostname);
+      url.hostname === "boostero.com" &&
+      url.pathname.replace(new RegExp("/+$"), "") === "/api/v2" &&
+      !url.port && !url.username && !url.password && !url.search && !url.hash;
   } catch {}
 
   // Deliberately do not contact the supplier or payment gateway from a health check.
@@ -33,6 +37,7 @@ export async function GET() {
   return NextResponse.json({
     service: "Litix",
     status: healthy ? "healthy" : "degraded",
+    supplier: "Boostero",
     components: {
       database: !databaseConfigured ? "missing" : databaseReachable ? "reachable" : "unreachable",
       supplierApiKey: supplierConfigured ? "configured-not-tested" : "missing",

@@ -1,0 +1,151 @@
+/* Litix November 2026: streamlined storefront. Presentation only.
+   Keep the established Litix logo, deep-blue metallic identity and checkout.
+   No third-party brand assets or copied CSS. */
+:root{--lx-ink:#061728;--lx-sea:#0b293d;--lx-outline:#66c8fa6a;--lx-silver:#e4f5ff;--lx-cyan:#86dbff}
+html{scroll-padding-top:22px}
+body{background:radial-gradient(circle at 18% 0%,#125ea04a,transparent 36%),radial-gradient(circle at 85% 38%,#19a4da13,transparent 32%),linear-gradient(160deg,#050d19,#061a2b 62%,#030a14);color:#e9f5ff}
+.wrap{max-width:1220px}
+.panel{border-color:#63b5e05c;background:linear-gradient(145deg,#0c2031f2,#061321f4 65%,#081d2eeb);border-radius:21px}
+.panel h1,.panel h2,.panel h3{line-height:1.17;text-wrap:balance}
+.panel p{line-height:1.58}
+.primary,.alt,.pay{min-height:46px}
+.primary,.pay,.litix-metal-cta{background:linear-gradient(120deg,#e9fcff 0%,#a6e7ff 34%,#54bafd 75%,#268fe2 100%);color:#052037;border:1px solid #a9eafa;box-shadow:0 8px 28px #22a2ef2e,inset 0 1px #ffffff8c}
+.primary:hover,.pay:hover,.litix-metal-cta:hover{filter:brightness(1.08);box-shadow:0 12px 31px #1ca8f44d}
+.kicker,.eyebrow{color:#8fdcff}
+.nav{align-items:center;gap:18px;padding:11px 15px!important;border-radius:16px!important;z-index:40}
+.nav>.brand{flex:0 0 auto;margin:0!important;line-height:1}
+.nav .litix-new-logo{width:112px;max-width:112px;height:auto;max-height:72px;object-fit:contain}
+.nav>div{display:flex;justify-content:flex-end;align-items:center;gap:5px;flex-wrap:wrap;min-width:0}
+.nav>div a{display:inline-flex;align-items:center;min-height:40px;border-radius:11px;padding:8px 11px;margin:0!important;font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap}
+.nav>div a:hover{background:#204e6f70}
+.nav>div a[aria-current="page"]{background:#2487c533;color:#fff}
+@media(max-width:750px){
+ .nav,.nav.litix-home-nav,.nav.litix-streamlined-nav{
+  position:relative!important;top:auto!important;
+  display:flex!important;flex-direction:column!important;align-items:stretch!important;
+  gap:4px!important;padding:9px 10px!important;
+  margin-bottom:13px;border-radius:15px!important;
+  backdrop-filter:none;
+ }
+ .nav>.brand,.nav.litix-home-nav>.brand{min-height:48px;align-self:flex-start}
+ .nav .litix-new-logo,.nav.litix-home-nav .litix-new-logo{
+  width:92px!important;max-width:92px;max-height:59px;object-fit:contain
+ }
+ .nav>div,.nav.litix-home-nav>div{
+  display:flex!important;flex-wrap:nowrap!important;gap:6px!important;
+  overflow-x:auto!important;overflow-y:hidden!important;
+  width:100%;max-width:100%;padding:5px 0 7px!important;
+  scrollbar-width:none;-webkit-overflow-scrolling:touch;justify-content:flex-start!important
+ }
+ .nav>div::-webkit-scrollbar{display:none}
+ .nav>div a,.nav.litix-home-nav>div a{
+  flex:0 0 auto!important;display:inline-flex!important;align-items:center;
+  min-height:40px!important;white-space:nowrap!important;
+  background:#11344b;border:1px solid #6dbde365;
+  color:#dff5ff!important;border-radius:10px;
+  padding:9px 12px!important;margin:0!important;
+  font-size:13px!important
+ }
+ .wrap{padding:12px!important}
+ .panel{padding:17px;border-radius:17px}
+ .panel h1{font-size:clamp(26px,7vw,36px);line-height:1.13}
+ #checkout,.litix-service-results-anchor,#growth-bundles{scroll-margin-top:20px!important}
+}
+
+/* Fast platform-first discovery, with compact services instead of nine tall cards. */
+.litix-hero-shop{position:relative;isolation:isolate;overflow:hidden;padding:clamp(22px,4vw,40px)}
+.litix-hero-shop:after{content:"";position:absolute;right:-65px;top:-120px;width:300px;height:300px;border:1px solid #55c6ff43;border-radius:50%;box-shadow:0 0 80px #2e9bec24;pointer-events:none;z-index:-1;animation:litix-flow-orbit 14s linear infinite}
+.litix-hero-topline{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.litix-live-label{font-size:10px;letter-spacing:.14em;color:#9bd8f6;border:1px solid #73caff5c;padding:5px 9px;border-radius:999px}
+.litix-hero-shop h1{font-size:clamp(30px,5vw,59px);letter-spacing:-.045em;line-height:1.07;margin:13px 0 12px;max-width:770px;color:#f3fbff}
+.litix-hero-subtitle{font-size:clamp(15px,1.7vw,19px);color:#bbdaee;max-width:770px;margin-bottom:18px}
+.litix-hero-steps{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0}
+.litix-hero-steps span{padding:8px 11px;border:1px solid #7bcfff40;border-radius:9px;background:#11304980;color:#dbf1ff;font-size:12px}
+.litix-hero-steps b{color:#84d8ff;margin-right:5px}
+.litix-platform-tabs,.litix-segments{display:flex;gap:9px;flex-wrap:wrap}
+.litix-platform-tabs{padding:8px;background:#041522;border:1px solid #63b5e05c;border-radius:15px;margin:19px 0 14px}
+.litix-platform-tabs button,.litix-segments button{flex:1 1 110px;min-height:46px;border:1px solid transparent;border-radius:11px;padding:10px 14px;background:#12334b;color:#c3e4f7;font-weight:850}
+.litix-platform-tabs button.selected,.litix-segments button.active{background:linear-gradient(120deg,#d4f5ff,#77caff);color:#042039;border-color:#a4e2ff;box-shadow:0 5px 18px #33a9ef2c}
+.litix-platform-choices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:15px 0}
+.litix-choice-link{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:68px;padding:15px 17px;background:linear-gradient(145deg,#0d2d46,#0b1b2d);border:1px solid #5dafe276;border-radius:13px;color:#ecf9ff;text-decoration:none;font-weight:850}
+.litix-choice-link span:last-child{font-size:26px;color:#89d9ff}
+.litix-choice-link:hover{border-color:#b6edff;background:#194363}
+.litix-shop-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:15px}
+.litix-shop-actions a{display:inline-flex;align-items:center;justify-content:center;text-align:center;min-height:46px;padding:10px 16px;border-radius:11px;font-size:13px;font-weight:850;text-decoration:none}
+.litix-metal-cta{display:inline-flex!important;align-items:center;justify-content:space-between!important;gap:16px;min-height:52px;padding:13px 18px!important;font-weight:900;text-decoration:none;border-radius:13px}
+.litix-shop-secondary{border:1px solid #65c0ee69;color:#d7f3ff;background:#103049}
+.litix-hero-footnote{font-size:12px;color:#99bdd3;margin:17px 0 0}
+@media(max-width:650px){
+ .litix-platform-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+ .litix-platform-tabs button{min-height:42px;padding:9px}
+ .litix-platform-choices{grid-template-columns:1fr}
+ .litix-choice-link{min-height:50px;padding:11px 15px}
+ .litix-hero-steps{gap:5px}.litix-hero-steps span{font-size:11px;padding:7px 8px}
+ .litix-shop-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+ .litix-shop-actions .litix-metal-cta{grid-column:1 / -1}
+ .litix-shop-actions a{font-size:12px;padding:10px}
+}
+
+/* The single-card Likes & Followers hub replaces the old two massive panels. */
+.litix-custom-hub{margin-top:12px}
+.litix-custom-intro{padding:clamp(15px,3vw,25px) 2px 12px}
+.litix-custom-intro h1{margin:6px 0 10px;font-size:clamp(29px,5vw,54px);letter-spacing:-.04em}
+.litix-custom-intro p{max-width:740px;color:#b9d8ed;font-size:clamp(14px,1.7vw,18px);line-height:1.55}
+.litix-choice-panel{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:10px 0 14px}
+.litix-choice-row{padding:15px;border:1px solid #6ec7f669;border-radius:15px;background:linear-gradient(135deg,#09243a,#061c2c)}
+.litix-choice-row>strong{display:block;margin-bottom:10px;font-size:13px;color:#e2f5ff}
+.litix-choice-row .litix-segments{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.litix-choice-row .litix-segments button{min-width:0;flex:none;font-size:14px;padding:9px 5px}
+.litix-custom-result{padding:clamp(19px,4vw,32px);border:1px solid #75cfff84;border-radius:18px;background:radial-gradient(circle at 100% 0%,#1c98d833,transparent 39%),linear-gradient(145deg,#0e2d46,#071726);box-shadow:inset 0 1px #ffffff26,0 18px 45px #0006;overflow:hidden}
+.litix-custom-result-top{display:flex;gap:9px;justify-content:space-between;align-items:center;flex-wrap:wrap}
+.litix-result-status{border:1px solid #79d3ff61;border-radius:999px;padding:5px 10px;color:#abdfff;font-size:11px}
+.litix-custom-result h2{font-size:clamp(26px,4vw,40px);letter-spacing:-.045em;margin:12px 0}
+.litix-custom-result>p{color:#d0e7f6;font-size:clamp(14px,1.7vw,17px);line-height:1.6}
+.litix-custom-facts{padding:10px 13px;background:#06355070;border:1px solid #3eaccb53;border-radius:10px;font-size:13px!important;color:#addff7!important}
+.litix-custom-result .litix-metal-cta{width:100%;max-width:520px;margin:7px 0}
+.litix-custom-result .litix-metal-cta span{font-size:24px}
+.litix-custom-fine{font-size:12px!important;color:#9dc4de!important;margin:8px 0 0}
+.litix-custom-support-links{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0}
+.litix-custom-support-links a{flex:1 1 150px;min-height:43px;display:flex;justify-content:center;align-items:center;padding:9px 12px;border:1px solid #69c9fa57;border-radius:11px;background:#0b2840;color:#d7f3ff;font-size:13px;text-decoration:none;font-weight:700}
+.litix-compact-details{border:1px solid #6fc0e74c;border-radius:14px;padding:12px 15px;background:#09243a;color:#bfdbef;margin-bottom:22px}
+.litix-compact-details summary{cursor:pointer;font-size:14px;color:#e8f8ff;font-weight:800;min-height:30px}
+.litix-compact-details ol{line-height:1.65;padding-left:23px}
+@media(max-width:650px){.litix-choice-panel{grid-template-columns:1fr;gap:8px}.litix-choice-row{padding:12px}.litix-choice-row .litix-segments button{min-height:44px}.litix-custom-result{padding:18px}.litix-custom-result .litix-metal-cta{max-width:none}}
+
+/* Compact bundle picker: exactly one tier displayed at any time. */
+.lg-bundles-compact{margin:18px 0;padding:clamp(17px,3vw,28px)}
+.lg-bundles-compact .lg-bundles-heading h2{font-size:clamp(25px,3vw,37px)}
+.lg-bundles-picker{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:end;margin:14px 0}
+.lg-bundles-picker .lg-bundles-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0}
+.lg-bundles-picker .lg-tab{min-height:52px;padding:10px 12px}
+.lg-bundles-picker label{font-size:13px;font-weight:800;color:#d7f1ff}
+.lg-bundles-picker select{display:block;width:100%;min-height:52px;margin-top:7px;padding:11px 14px;font-size:16px;background:#081c2e;border:1px solid #7ad1f977;border-radius:12px}
+.lg-bundles-selected{max-width:840px;margin:15px auto 0;padding:clamp(16px,2.6vw,27px);border:1px solid #71c9f77a;border-radius:16px;background:radial-gradient(circle at 100% 0%,#228bc02c,transparent 35%),linear-gradient(145deg,#0c2b43,#071b2e);box-shadow:0 16px 44px #0005}
+.lg-bundle-summary{display:flex;align-items:center;justify-content:space-between;gap:18px}
+.lg-bundle-summary h3{font-size:clamp(19px,2.6vw,28px);margin:6px 0 8px}
+.lg-bundle-summary p{font-size:13px;color:#b4d0e4;margin:5px 0}
+.lg-bundle-summary .lg-price{white-space:nowrap;font-size:clamp(28px,4vw,41px);color:#dff8ff;letter-spacing:-.04em}
+.lg-bundles-selected .lg-bundle-items{grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 18px;margin:15px 0}
+.lg-bundle-details-toggle{display:flex;align-items:center;justify-content:space-between;width:100%;padding:12px 14px;background:#102d43;border:1px solid #78bde65c;color:#d7f1ff;border-radius:11px;font-size:13px;font-weight:800}
+.lg-bundle-warning p{margin:5px 0;line-height:1.55}
+.lg-bundles-compact .lg-bundle-actions{display:flex;flex-wrap:wrap;gap:9px}
+.lg-bundles-compact .lg-bundle-actions a,.lg-bundles-compact .lg-bundle-actions span{flex:1 1 170px;min-height:47px;margin:0;padding:10px 13px;line-height:1.3;text-align:center}
+.lg-bundle-support{border-top:1px solid #68c5e350;padding-top:12px}
+@media(max-width:650px){
+ .lg-bundles-picker{grid-template-columns:1fr;gap:11px}
+ .lg-bundles-heading{display:block}
+ .lg-bundles-seal{display:inline-block;margin:6px 0!important}
+ .lg-bundle-summary{align-items:flex-start;flex-direction:column;gap:5px}
+ .lg-bundle-summary .lg-price{margin:1px 0}
+ .lg-bundles-selected .lg-bundle-items{grid-template-columns:1fr 1fr}
+ .lg-bundles-compact .lg-bundle-actions{display:grid;grid-template-columns:1fr}
+ .lg-bundles-compact .lg-bundle-actions a,.lg-bundles-compact .lg-bundle-actions span{width:100%}
+}
+/* Let the mobile AI remain usable without masking a custom-order CTA. */
+@media(max-width:575px){
+ body:has(.litix-custom-hub) .lxai-launcher{width:54px;max-width:54px;min-width:54px;height:54px;min-height:54px;padding:10px;justify-content:center;gap:0;overflow:hidden}
+ body:has(.litix-custom-hub) .lxai-launcher > span:not(.lxai-orb){display:none}
+ body:has(.litix-custom-hub) .lxai-orb{width:30px;height:30px;flex-basis:30px}
+}
+@keyframes litix-flow-orbit{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.litix-hero-shop:after{animation:none}}

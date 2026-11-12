@@ -1,0 +1,65 @@
+name: Litix Recovery Source Archives
+on:
+  push:
+    branches: [fix/litix-five-dollar-retail-floor-20261026]
+permissions:
+  contents: read
+jobs:
+  save-source-archives:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout exact Git history
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Build pre-change and candidate sanitized backups
+        run: |
+          python - <<'PY'
+          import os, subprocess, pathlib, zipfile
+          before="7b028f8ad5053a5d9219f959627a8dfc68da7188"
+          after=os.environ["GITHUB_SHA"]
+          excluded={".git",".next","node_modules","coverage","dist","build","__pycache__",".vercel"}
+          names={".env",".env.local",".env.production",".env.preview",".npmrc",".netrc","credentials.json","secrets.json"}
+          for sha,filename,label in [
+            (before,"LITIX-PRE-PRICE-FLOOR-2026-10-26.zip","pre-price-floor"),
+            (after,"LITIX-STABLE-MASTER-5-DOLLAR-MINIMUM-2026-10-26.zip","candidate-five-dollar-floor"),
+          ]:
+            raw=subprocess.check_output(["git","ls-tree","-r","--name-only","-z",sha])
+            paths=[p.decode() for p in raw.split(b"\0") if p]
+            count=0
+            with zipfile.ZipFile(filename,"w",compression=zipfile.ZIP_DEFLATED,compresslevel=9) as z:
+              for name in paths:
+                p=pathlib.PurePosixPath(name)
+                if any(x in excluded for x in p.parts) or p.name in names or p.name.startswith(".env.") or p.suffix.lower() in {".pem",".key",".p12",".pfx"}:continue
+                data=subprocess.check_output(["git","show",sha+":"+name])
+                if len(data)>15000000:continue
+                z.writestr(name,data);count+=1
+              instructions=("# LITIX recovery\n\n"
+                "Repository: LitGnosis/Litix\n"
+                "Exact source commit: "+sha+"\n"
+                "Snapshot: "+label+"\n"
+                "Vercel project: litix_final_logo_corrected_vercel_ready\n"
+                "Project ID: prj_ATrABQBmZbBlw3mpz04Pvnu7AxXv\n"
+                "Previous READY Vercel deployment: dpl_CG9YzDuVj3AjDV68wvuf8CDMDNzh\n"
+                "Main project root: src/ ; install with npm ci; build with npm run build.\n"
+                "Recover by creating a protected branch at the exact SHA, validating build/tests, "
+                "then redeploying THAT commit to the existing Vercel project. Never overwrite newer stable work.\n"
+                "Pricing: retail >= $5 per 1,000 for eligible services without reducing higher prices. "
+                "Minimum checkout $5 per service, with supplier-supported min/max/step.\n"
+                "Review supplier pricing, product catalog, Bundles, PayKings, SMMGLOB, Auth0, receipts, order tracking.\n"
+                "Required environment variable NAMES: NMI_SECURITY_KEY, NEXT_PUBLIC_PAYKINGS_NMI_COLLECT_PUBLIC_KEY, "
+                "SMMGLOB_API_KEY, SMMGLOB_API_URL, DATABASE_URL or LITIX_V2_DATABASE_URL, "
+                "NEXT_PUBLIC_WHATSAPP_NUMBER, RESEND_API_KEY.\n"
+                "No environment VALUES or customer records are included.\n")
+              z.writestr("RECOVERY-INSTRUCTIONS.md",instructions)
+            print("Archive",filename,"source file count",count,"bytes",os.stat(filename).st_size)
+          PY
+      - name: Upload source backups as downloadable artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: litix-source-backups-2026-10-26
+          path: LITIX-*.zip
+          if-no-files-found: error
+          retention-days: 90

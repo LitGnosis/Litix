@@ -1,0 +1,28 @@
+name: Litix multi-post customer progress email tests
+on:
+  pull_request:
+    paths:
+      - "src/lib/litixCustomerUpdates.mjs"
+      - "src/lib/litixMultiPostMilestones.mjs"
+      - "src/lib/boosteroMultiPostFulfillment.mjs"
+      - "src/tests/litix-multipost-milestones.test.mjs"
+      - ".github/workflows/litix-multipost-email-ci.yml"
+permissions:
+  contents: read
+jobs:
+  no-charge-email:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: src/package-lock.json
+      - run: npm ci --no-audit --no-fund
+        working-directory: src
+      - run: node --test tests/litix-multipost-milestones.test.mjs tests/boostero-batch-status.test.mjs
+        working-directory: src
