@@ -7,8 +7,15 @@ export const dynamic="force-dynamic";
 export const maxDuration=30;
 const reply=(body,status=200)=>NextResponse.json(body,{status,headers:ownerHeaders});
 export async function GET(request){
- return ownerOrigin(request)?reply({authenticated:!!authenticatedOwner(request)}):
-  reply({authenticated:false},403);
+ if(!ownerOrigin(request))return reply({authenticated:false},403);
+ // Boolean readiness only; never expose the private owner address or keys.
+ let ready=false;
+ try{
+  ownerEmail();seal("readiness",{ok:true});
+  ready=!!(process.env.RESEND_API_KEY||process.env.LITIX_RESEND_API_KEY)&&
+   !!(process.env.LITIX_BOOSTERO_DATABASE_URL||process.env.LITIX_V2_DATABASE_URL||process.env.DATABASE_URL);
+ }catch{}
+ return reply({authenticated:!!authenticatedOwner(request),ready});
 }
 export async function POST(request){
  if(!ownerPostOrigin(request))return reply({error:"same_origin_required"},403);
