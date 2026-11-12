@@ -28,10 +28,11 @@ export async function queueCapturedOwnedJob(sql,order){
   UPDATE growth_ops.litix_owned_payment_intents i
   SET execution_approved=true,updated_at=NOW()
   WHERE i.order_id IN (SELECT order_id FROM qualified)
-    AND EXISTS(SELECT 1 FROM public.master_fulfillment_grants g
-     WHERE g.order_id=i.order_id AND g.kind='website_preview'
-       AND g.verification_source IN('nmi_query_captured_sale','nmi_query_settled')
-       AND g.revoked_at IS NULL AND (g.expires_at IS NULL OR g.expires_at>NOW()))
+    AND (EXISTS(SELECT 1 FROM grant_once g WHERE g.order_id=i.order_id)
+      OR EXISTS(SELECT 1 FROM public.master_fulfillment_grants g
+       WHERE g.order_id=i.order_id AND g.kind='website_preview'
+         AND g.verification_source IN('nmi_query_captured_sale','nmi_query_settled')
+         AND g.revoked_at IS NULL AND (g.expires_at IS NULL OR g.expires_at>NOW())))
   RETURNING i.order_id,i.tenant_key
  ), created AS (
   INSERT INTO public.master_node_jobs(order_id,tenant_key,kind,payload,payload_hash,status)
@@ -65,15 +66,20 @@ export async function recordOwnedSettlement(sql,order){
   INSERT INTO growth_ops.litix_nmi_settled_transactions(transaction_id,event_id)
   SELECT provider_transaction_id,'nmi-query-'||order_id FROM matched
   ON CONFLICT(transaction_id) DO NOTHING RETURNING transaction_id
+ ), verified_txn AS (
+  SELECT transaction_id FROM recorded
+  UNION
+  SELECT transaction_id FROM growth_ops.litix_nmi_settled_transactions
+   WHERE transaction_id=$2
  ), finalized AS (
   UPDATE growth_ops.litix_owned_payment_intents i
   SET state='dispatch_pending',updated_at=NOW()
   WHERE i.order_id=$1 AND i.provider_transaction_id=$2
     AND i.state='awaiting_settlement'
-    AND EXISTS(SELECT 1 FROM growth_ops.litix_nmi_settled_transactions s
+    AND EXISTS(SELECT 1 FROM verified_txn s
       WHERE s.transaction_id=i.provider_transaction_id)
   RETURNING order_id
- ) SELECT EXISTS(SELECT 1 FROM growth_ops.litix_nmi_settled_transactions
+ ) SELECT EXISTS(SELECT 1 FROM verified_txn
       WHERE transaction_id=$2) AS verified`;
  const x=(await sql.query(statement,[order.order_id,order.provider_transaction_id]))[0]||{};
  return x.verified===true;
