@@ -65,7 +65,7 @@ async function nmiSettled(orderId,transactionId){
  if(parseTag(t,"currency")&&parseTag(t,"currency")!=="USD")return false;
  const actions=[...t.matchAll(/<action(?:\s[^>]*)?>([\s\S]*?)<\/action>/gi)].map(m=>m[1]);
  const sale=actions.some(a=>parseTag(a,"action_type")==="sale"&&parseTag(a,"success")==="1"&&
-  parseTag(a,"response_code")==="100"&&parseTag(a,"amount")==="1.00");
+  parseTag(a,"response_code")==="100"&&Math.round(Number(parseTag(a,"amount"))*100)===USD_CENTS);
  const settled=actions.some(a=>parseTag(a,"action_type")==="settle"&&parseTag(a,"success")==="1");
  return sale&&settled;
 }
