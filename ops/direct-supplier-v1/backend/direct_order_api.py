@@ -64,7 +64,7 @@ async def submit_direct_order(request: Request, payload: DirectCreativeOrder):
     async with request.app.state.db.acquire() as conn:
         async with conn.transaction():
             previous = await conn.fetchrow(
-                "SELECT id, status, request FROM growth_ops.direct_fulfillment_jobs WHERE id=$1 FOR UPDATE",
+                "SELECT id, status, service_kind, request FROM growth_ops.direct_fulfillment_jobs WHERE id=$1 FOR UPDATE",
                 job_id,
             )
             if previous:
