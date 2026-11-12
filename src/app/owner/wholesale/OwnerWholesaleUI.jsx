@@ -19,7 +19,7 @@ export default function OwnerWholesaleUI(){
  const [catalog,setCatalog]=useState(null),[loading,setLoading]=useState(false);
  const [error,setError]=useState(""),[message,setMessage]=useState("");
  const [platform,setPlatform]=useState("Instagram"),[kind,setKind]=useState("followers");
- const [usaOnly,setUsaOnly]=useState(true),[search,setSearch]=useState("");
+ const [usaOnly,setUsaOnly]=useState(false),[search,setSearch]=useState("");
  const [serviceId,setServiceId]=useState(""),[quantity,setQuantity]=useState("");
  const [destination,setDestination]=useState(""),[quote,setQuote]=useState(null),[confirmed,setConfirmed]=useState(false);
  const [quoting,setQuoting]=useState(false),[buying,setBuying]=useState(false),[order,setOrder]=useState(null);
@@ -42,10 +42,13 @@ export default function OwnerWholesaleUI(){
  },[]);
  const matches=useMemo(()=>{
   const all=Array.isArray(catalog?.items)?catalog.items:[];
-  return all.filter(x=>(platform==="All"||x.platform===platform)&&
+  const qualified=all.filter(x=>(platform==="All"||x.platform===platform)&&
    (kind==="All"||x.kind===kind)&&(!usaOnly||x.usa)&&
-   (!search.trim()||[x.name,x.category,x.id].join(" ").toLowerCase().includes(search.trim().toLowerCase())))
-   .slice(0,140);
+   (!search.trim()||[x.name,x.category,x.id].join(" ").toLowerCase().includes(search.trim().toLowerCase())));
+  // Keep both USA and international options accessible in longer catalogs.
+  const american=qualified.filter(x=>x.usa).slice(0,120);
+  const international=usaOnly?[]:qualified.filter(x=>!x.usa).slice(0,120);
+  return [...american,...international];
  },[catalog,platform,kind,usaOnly,search]);
  const selected=useMemo(()=>catalog?.items?.find(x=>x.id===serviceId)||null,[catalog,serviceId]);
  function resetQuote(){setQuote(null);setConfirmed(false);setOrder(null);setError("");}
@@ -144,11 +147,11 @@ export default function OwnerWholesaleUI(){
    </section>}
    {accessible&&catalog&&<section style={panel}>
     <h2 style={{marginTop:0}}>Choose a service</h2>
-    <p style={note}>Instagram USA Followers are shown first. You can switch platforms and service types to buy other eligible services at their live Boostero cost.</p>
+    <p style={note}><strong>American / USA packages appear first</strong>, starting with Instagram USA Followers. International services follow, all at your private Boostero supplier cost.</p>
     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,200px),1fr))",gap:12}}>
      <label style={{display:"grid",gap:7}}>Platform
       <select style={field} value={platform} onChange={e=>{
-       setPlatform(e.target.value);setUsaOnly(e.target.value==="Instagram");setServiceId("");resetQuote()}}>
+       setPlatform(e.target.value);setServiceId("");resetQuote()}}>
        {["Instagram","TikTok","YouTube","Twitter (X)","Facebook","Spotify","Telegram","Other","All"].map(s=><option key={s}>{s}</option>)}
       </select></label>
      <label style={{display:"grid",gap:7}}>Service
@@ -162,16 +165,23 @@ export default function OwnerWholesaleUI(){
     <label style={{display:"flex",alignItems:"center",gap:10,margin:"16px 0"}}>
      <input type="checkbox" checked={usaOnly}
       onChange={e=>{setUsaOnly(e.target.checked);setServiceId("");resetQuote()}}/>
-     <span>American / USA services only</span>
+     <span>Show American / USA services only (otherwise USA first, then all other locations)</span>
     </label>
     <label style={{display:"grid",gap:7,marginTop:14}}>Wholesale service ({matches.length} matches shown)
      <select style={field} value={matches.some(s=>s.id===serviceId)?serviceId:""} onChange={e=>{
       const id=e.target.value,service=catalog.items.find(x=>x.id===id);
       setServiceId(id);setQuantity(service?String(service.min):"");resetQuote()}}>
       <option value="">Select a supplier service</option>
-      {matches.map(s=><option key={s.id} value={s.id}>
-       {s.name} · {usd(s.rateUSDPer1000)}/1,000 · Min {s.min}
-      </option>)}
+      {matches.some(s=>s.usa)&&<optgroup label="USA / AMERICAN · FIRST">
+       {matches.filter(s=>s.usa).map(s=><option key={s.id} value={s.id}>
+        {s.name} · {usd(s.rateUSDPer1000)}/1,000 · Min {s.min}
+       </option>)}
+      </optgroup>}
+      {matches.some(s=>!s.usa)&&<optgroup label="ALL OTHER LOCATIONS">
+       {matches.filter(s=>!s.usa).map(s=><option key={s.id} value={s.id}>
+        {s.name} · {usd(s.rateUSDPer1000)}/1,000 · Min {s.min}
+       </option>)}
+      </optgroup>}
      </select></label>
     {selected&&<div style={{border:"1px solid #2c5e85",borderRadius:12,padding:15,marginTop:15}}>
      <strong>{selected.name}</strong>
