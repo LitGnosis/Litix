@@ -156,6 +156,20 @@ export async function handleBoosteroOrder(request,{adminOnly=true}={}){
   }
  }
 
+ // A live-verified Boostero service must be registered in the general supplier ID
+ // registry before any card charge or supplier-wallet debit. The legacy
+ // litix_boostero_services table remains the separate historical retail approval
+ // list: do not weaken it or claim every service was preapproved.
+ // The registry is deliberately only an ID, not a claim of service quality.
+ try{
+  await sql.query(
+   "insert into public.litix_boostero_service_registry(supplier_service_id) values($1) on conflict(supplier_service_id) do nothing",
+   [id]
+  );
+ }catch(error){
+  console.error("Litix verified supplier registration failed",{code:String(error?.code||"registry_unavailable"),serviceId:id});
+  return send({error:"Verified supplier registration unavailable. No payment or supplier order attempted.",chargeAttempted:false},503);
+ }
  // Only validated Default services with a current supplier quote can enter this idempotent payment ledger.
  let balance;
  try{balance=await boosteroProduction("balance")}
