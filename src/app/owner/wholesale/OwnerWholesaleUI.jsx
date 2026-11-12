@@ -12,7 +12,12 @@ const usd=value=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}
 const request=async(path,options)=>{
  const res=await fetch(path,{cache:"no-store",credentials:"same-origin",...options});
  const payload=await res.json().catch(()=>({error:"Unable to read response"}));
- if(!res.ok)throw Error(payload?.error||"Request failed");
+ if(!res.ok){
+  const e=new Error(payload?.error||"Request failed");
+  e.details=payload;
+  e.status=res.status;
+  throw e;
+ }
  return payload;
 };
 const post=(path,body)=>request(path,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)});
@@ -100,13 +105,29 @@ export default function OwnerWholesaleUI(){
     expectedChargeCents:quote.chargeAmountCents,
     idempotencyKey:key,confirmed:true
    });
+   if(!data?.orderId){
+    throw Object.assign(new Error(data?.error||"No confirmed order ID was returned"),{
+     details:data,status:202
+    });
+   }
    setOrder(data);setQuote(null);setConfirmed(false);
    setMessage(data.payment==="review"?
     "PayKings outcome requires review. Do not retry this order or card payment.":
-    "Owner order recorded. Check supplier fulfillment before placing another order.");
+    "Order "+data.orderId+" is recorded. Check its supplier status before another order.");
   }catch(e){
-   setError(String(e.message||e)+". Card or supplier outcome may be unknown. Check order records before any retry.");
-   setOrder({orderId:null,fulfillment:"REVIEW_REQUIRED"});
+   const details=e.details||{};
+   const definitelyUncharged=details.chargeAttempted===false&&
+    !details.orderId&&paymentMethod==="supplier_balance";
+   if(definitelyUncharged){
+    // A pre-ledger failure cannot debit the wallet: leave the product editable.
+    setOrder(null);
+    setError(String(e.message||e)+" The order was not recorded, and your wallet was not debited. You can review a fresh quote after this issue is resolved.");
+   }else{
+    // Outcome is ambiguous: never assert that an order was recorded.
+    setOrder({orderId:details.orderId||null,fulfillment:"REVIEW_REQUIRED",
+      paymentMethod,unconfirmed:true});
+    setError(String(e.message||e)+" Order outcome needs reconciliation. Do not pay again until checked.");
+   }
    setQuote(null);setConfirmed(false);
   }finally{setBuying(false)}
  }
@@ -265,8 +286,10 @@ export default function OwnerWholesaleUI(){
    {message&&<section role="status" style={{...panel,color:"#b9e5ff"}}>{message}</section>}
    {error&&<section role="alert" style={{...panel,borderColor:"#bf6170",color:"#ffc5c6"}}>{error}</section>}
    {order&&<section style={panel}>
-    <h2>Owner order status</h2>
-    <p style={note}>{order.paymentMethod==="paykings"?"A PayKings payment request was submitted; verify its outcome below.":"Boostero wallet order recorded; no card charged."} Do not submit a duplicate payment or fulfillment order.</p>
+    <h2>{order.orderId?"Owner order status":"Order status needs reconciliation"}</h2>
+    <p style={note}>{order.orderId?
+     (order.paymentMethod==="paykings"?"PayKings payment requested; verify its outcome below.":"Supplier wallet order record exists; check delivery status."):
+     "No confirmed Litix order ID was returned. Do not assume an order was created or a payment was made. Contact Litix support for reconciliation before retrying."}</p>
     {order.orderId&&<p><strong>Litix order:</strong> <code>{order.orderId}</code></p>}
     <p><strong>Fulfillment:</strong> {order.current?.delivery_state||order.fulfillment||"Awaiting review"}</p>
     {order.supplierOrderId&&<p><strong>Supplier order:</strong> {order.supplierOrderId}</p>}
