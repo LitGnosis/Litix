@@ -37,12 +37,14 @@ export default function LitixDirectRetailCheckout(){
  },[]);
  useEffect(()=>{
   if(!state.checkoutReady||!state.publicCollectKey||!item)return;
-  let active=true,timer,interval;
+  let active=true,timer,interval,initialized=false,fieldsRendered=false;
   const key=state.publicCollectKey;
   const fail=message=>{if(active){setReady(false);setNotice(message)}};
   const initialize=()=>{
    const c=collect();
-   if(!active||typeof c?.configure!=="function")return;
+   if(!active||initialized||typeof c?.configure!=="function")return;
+   initialized=true;
+   clearInterval(interval);
    try{
     c.configure({variant:"inline",styleSniffer:false,
       customCss:{"font-size":"16px","font-family":"sans-serif",color:"#ffffff","background-color":"transparent"},
@@ -57,9 +59,9 @@ export default function LitixDirectRetailCheckout(){
        if(result?.token)sendToken.current?.(result.token);
        else{setBusy(false);fail("PayKings tokenization failed. Check the secure fields.")}
       },
-      fieldsAvailableCallback:()=>{if(active){setReady(true);setNotice("")}}
+      fieldsAvailableCallback:()=>{if(active){fieldsRendered=true;setReady(true);setNotice("")}}
     });
-   }catch{fail("PayKings card fields could not initialize.")}
+   }catch{initialized=false;fail("PayKings card fields could not initialize.")}
   };
   const script=document.createElement("script");
   script.src="https://secure.nmi.com/token/Collect.js";
@@ -78,14 +80,14 @@ export default function LitixDirectRetailCheckout(){
   document.head.appendChild(script);
   interval=setInterval(()=>{if(active&&collect()?.configure&&
      ["ccnumber","ccexp","cvv"].every(id=>document.getElementById(id)))initialize()},1000);
-  timer=setTimeout(()=>{if(active&&!ready)fail("Secure card fields did not become ready.")},15000);
+  timer=setTimeout(()=>{if(active&&!fieldsRendered)fail("Secure card fields did not become ready.")},15000);
   return()=>{active=false;clearTimeout(timer);clearInterval(interval);script.remove()};
  },[state.checkoutReady,state.publicCollectKey,item?.serviceKind]);
  const valid=!!item&&email.includes("@")&&
    CREATIVE_FIELDS.every(([k])=>typeof brief[k]==="string"&&brief[k].trim().length>=2)&&
    brief.landingUrl.startsWith("https://");
  async function pay(token){
-  if(!valid||done||busy)return;
+  if(!valid||done)return;
   setBusy(true);setNotice("");
   try{
     const res=await fetch("/api/checkout/v1",{
