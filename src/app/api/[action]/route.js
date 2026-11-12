@@ -30,6 +30,37 @@ const verifiedLiveNmiSettlement = async sql => {
  try { const rows = await sql.query("SELECT (EXISTS(SELECT 1 FROM growth_ops.litix_nmi_sale_receipts r JOIN growth_ops.litix_nmi_settled_transactions s ON s.transaction_id=r.transaction_id WHERE r.amount_cents>0 AND lower(r.currency)='usd') OR EXISTS(SELECT 1 FROM growth_ops.verified_recurring_settlements v WHERE lower(v.provider)='nmi' AND v.amount_cents>0 AND lower(v.currency)='usd' AND nullif(v.settlement_reference,'') IS NOT NULL)) AS verified",[]); return rows?.[0]?.verified === true; }
  catch { return false; }
 };
+// Independent statuses: live merchant settlement is not a queue ACK,
+// and a running worker is not proof of delivered customer results.
+const firstPartyProof = async sql => {
+ try {
+  const rows=await sql.query(`SELECT
+    EXISTS(SELECT 1 FROM public.master_execution_nodes n
+      WHERE n.id='litix-direct-primary-01' AND n.owned=true AND n.enabled=true
+        AND n.last_seen>NOW()-INTERVAL '90 seconds') AS worker_online,
+    EXISTS(SELECT 1 FROM growth_ops.first_party_nodes n
+      JOIN growth_ops.first_party_node_keys k ON k.node_name=n.node_name
+      WHERE n.status='ONLINE' AND n.last_heartbeat>NOW()-INTERVAL '90 seconds'
+        AND k.enabled=true) AS signed_node_ready,
+    EXISTS(SELECT 1 FROM public.master_node_jobs j
+      JOIN growth_ops.litix_owned_payment_intents i ON i.order_id=j.order_id
+      JOIN growth_ops.litix_nmi_settled_transactions s ON s.transaction_id=i.provider_transaction_id
+      WHERE i.execution_approved=true AND i.live_mode=true
+        AND j.status IN ('running','succeeded')) AS settled_job_accepted,
+    EXISTS(SELECT 1 FROM public.master_node_jobs j
+      JOIN growth_ops.litix_owned_payment_intents i ON i.order_id=j.order_id
+      JOIN growth_ops.litix_nmi_settled_transactions s ON s.transaction_id=i.provider_transaction_id
+      JOIN public.master_private_artifacts a ON a.job_id=j.id
+      WHERE i.execution_approved=true AND i.live_mode=true
+        AND j.status='succeeded') AS paid_delivery_verified`,[]);
+  const x=rows?.[0]||{};
+  return {firstPartyWorkerOnline:x.worker_online===true,
+    firstPartySignedNodeReady:x.signed_node_ready===true,
+    settledFirstPartyJobAccepted:x.settled_job_accepted===true,
+    paidOrderFulfillmentVerified:x.paid_delivery_verified===true};
+ }catch{return {firstPartyWorkerOnline:false,firstPartySignedNodeReady:false,
+  settledFirstPartyJobAccepted:false,paidOrderFulfillmentVerified:false};}
+};
 const name = req => new URL(req.url).pathname.split("/").pop();
 const bounded = (v,n=120) => String(v??"").trim().slice(0,n);
 // Retired supplier integration: no outbound legacy provider API calls, ever.
@@ -176,7 +207,7 @@ export async function GET(req){
  const op=name(req),flags=conf(),p=new URL(req.url).searchParams;
  if(!["config","health","smmservices","track"].includes(op))return send({error:"Unknown route"},404);
  if(op==="config")return send({ready:flags.database&&flags.supplier&&flags.payment,publicKey:publicCollectKey()||null});
- if(op==="health"){let database=false,liveTransactionVerified=false;if(flags.database)try{const sql=db();await sql.query("select 1",[]);database=true;liveTransactionVerified=await verifiedLiveNmiSettlement(sql)}catch{}const gatewayMode=selectedGatewayMode();const gatewayConfigured=gatewayMode==="TEST"?!!(process.env.NMI_TEST_SECURITY_KEY&&process.env.NMI_TEST_GATEWAY_URL):!!process.env.NMI_SECURITY_KEY;return send({service:"litix-v2",database,supplierConfigured:flags.supplier,paykingsConfigured:flags.payment,orderEmailConfigured:notificationsConfigured(),gatewayMode,testGatewayConfigured:gatewayMode==="TEST"?gatewayConfigured:undefined,liveTransactionVerified,ready:database&&flags.supplier&&flags.payment},database?200:503)}
+ if(op==="health"){let database=false,liveTransactionVerified=false;let direct={firstPartyWorkerOnline:false,firstPartySignedNodeReady:false,settledFirstPartyJobAccepted:false,paidOrderFulfillmentVerified:false};if(flags.database)try{const sql=db();await sql.query("select 1",[]);database=true;[liveTransactionVerified,direct]=await Promise.all([verifiedLiveNmiSettlement(sql),firstPartyProof(sql)])}catch{}const gatewayMode=selectedGatewayMode();const gatewayConfigured=gatewayMode==="TEST"?!!(process.env.NMI_TEST_SECURITY_KEY&&process.env.NMI_TEST_GATEWAY_URL):!!process.env.NMI_SECURITY_KEY;return send({service:"litix-v2",database,supplierConfigured:flags.supplier,paykingsConfigured:flags.payment,orderEmailConfigured:notificationsConfigured(),gatewayMode,testGatewayConfigured:gatewayMode==="TEST"?gatewayConfigured:undefined,liveTransactionVerified,...direct,paidCatalogCheckoutReady:false,ready:database&&flags.supplier&&flags.payment},database?200:503)}
  if(op==="smmservices"){
   // Deprecated legacy API. The public catalog is /api/catalog/v1, Boostero only.
   return send({error:"Retired catalog disabled. Use the verified public catalog.",items:[],total:0},410);
