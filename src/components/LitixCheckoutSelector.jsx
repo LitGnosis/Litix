@@ -6,7 +6,6 @@ const DEFAULT_PLATFORMS=["Instagram","TikTok","YouTube","Facebook","Twitter (X)"
 export default function LitixCheckoutSelector({selected,onChoose}){
  const [platform,setPlatform]=useState("Instagram");
  const [kind,setKind]=useState("followers");
- const [search,setSearch]=useState("");
  const [data,setData]=useState({platforms:[],kinds:[],items:[],total:0});
  const [loading,setLoading]=useState(true);
  const [error,setError]=useState("");
@@ -19,7 +18,6 @@ export default function LitixCheckoutSelector({selected,onChoose}){
   if(selected.platform&&selected.platform!==platform){
    setPlatform(selected.platform);
    setKind(selected.kind||"other");
-   setSearch("");
   }else if(selected.kind&&selected.kind!==kind){
    setKind(selected.kind);
   }
@@ -54,13 +52,11 @@ export default function LitixCheckoutSelector({selected,onChoose}){
  },[platform,retry]);
  const platforms=data.platforms.length?data.platforms:
   DEFAULT_PLATFORMS.map(name=>({name,count:0}));
- const filtered=useMemo(()=>data.items.filter(x=>(x.kind||"other")===kind&&
-   (!search.trim()||x.name.toLowerCase().includes(search.toLowerCase().trim()))),[data.items,kind,search]);
+ const filtered=useMemo(()=>data.items.filter(x=>(x.kind||"other")===kind),[data.items,kind]);
  const actualSelected=selected?.id&&selected.platform===platform&&selected.kind===kind?
   selected:null;
  const visibleSelected=actualSelected&&!filtered.some(x=>x.id===actualSelected.id)?actualSelected:null;
  function chooseCustom(nextPlatform,nextKind){
-  setSearch("");
   if(nextPlatform===platform){
    setKind(nextKind);
    if(loading||!data.items.length){
@@ -75,10 +71,10 @@ export default function LitixCheckoutSelector({selected,onChoose}){
  function changePlatform(value){
   if(value===platform)return;
   pendingIntent.current={platform:value,kind:"followers"};
-  setPlatform(value);setKind("followers");setSearch("");onChoose(null);
+  setPlatform(value);setKind("followers");onChoose(null);
  }
  function changeKind(value){
-  setKind(value);setSearch("");
+  setKind(value);
   onChoose(litixPreferredCustomService(data.items,platform,value));
  }
  function changeService(id){
@@ -128,18 +124,10 @@ export default function LitixCheckoutSelector({selected,onChoose}){
     </option>)}
    </select>
   </label>
-  {data.items.filter(x=>(x.kind||"other")===kind).length>14&&
-   <label htmlFor="litix-quick-search" className="litix-quick-search-label">
-    Find a specific package
-    <input id="litix-quick-search" type="search" placeholder="e.g. USA, active, premium…"
-     value={search} onChange={e=>setSearch(e.target.value)} autoComplete="off"/>
-   </label>}
-  {error?<div className="litix-quick-error" role="alert">{error}
+  {error&&<div className="litix-quick-error" role="alert">{error}
     <button type="button" className="alt" onClick={()=>setRetry(v=>v+1)}>Retry services</button>
-   </div>:
-   <p role="status" className="litix-quick-status">{loading?"Checking current Litix services…":
-    kind?data.items.filter(x=>(x.kind||"other")===kind).length+" available "+(data.kinds.find(x=>x.value===kind)?.label||"services")+" packages. All prices are USD.":
-    "Select a service type to continue."}</p>}
+   </div>}
+  {loading&&<p role="status" className="litix-quick-status">Checking current Litix services…</p>}
   {actualSelected&&<div className="litix-quick-chosen" aria-live="polite">
    <strong>{actualSelected.name}</strong>
    <span>{dollars(Math.ceil(actualSelected.per1000*100))} per 1,000 · Minimum {actualSelected.min.toLocaleString()} · Maximum {actualSelected.max.toLocaleString()}</span>
