@@ -19,7 +19,7 @@ const privateCard=item=>({
  category:publicServiceCardName({name:String(item.category||"Other")}),
  platform:litixPlatform(item.name,item.category),kind:litixKind(item.name,item.category),
  rateUSDPer1000:Number(item.rate),min:litixPurchasableDefault(item),
- max:Number(item.max),usa:/\b(?:usa|u\.s\.a\.|united states|american)\b/i.test(String(item.name||"")+" "+String(item.category||""))
+ max:Number(item.max),usa:/(?:🇺🇸|\b(?:usa|u\.s\.a\.?|u\.s\.?|united states|american|america)\b)/i.test(String(item.name||"")+" "+String(item.category||""))
 });
 async function liveItem(serviceId){
  const id=idOf(serviceId);
@@ -64,18 +64,20 @@ export async function GET(request){
  if(view!=="catalog")return reply({error:"invalid_view"},400);
  try{
   const [data,wallet]=await Promise.all([boosteroProduction("services"),boosteroProduction("balance")]);
-  const items=data.filter(eligible).map(privateCard).sort((a,b)=>{
-   const aPriority=a.platform==="Instagram"&&a.kind==="followers"&&a.usa?0:
-    a.platform==="Instagram"&&a.kind==="followers"?1:
-    a.platform==="TikTok"&&a.kind==="followers"?2:3;
-   const bPriority=b.platform==="Instagram"&&b.kind==="followers"&&b.usa?0:
-    b.platform==="Instagram"&&b.kind==="followers"?1:
-    b.platform==="TikTok"&&b.kind==="followers"?2:3;
-   return aPriority-bPriority||a.rateUSDPer1000-b.rateUSDPer1000;
-  });
-  return reply({items,count:items.length,walletUSD:Number(wallet.balance),
+  const servicePriority=x=>x.platform==="Instagram"&&x.kind==="followers"?0:
+    x.platform==="Instagram"?1:x.platform==="TikTok"&&x.kind==="followers"?2:
+    x.platform==="TikTok"?3:4;
+  const items=data.filter(eligible).map(privateCard).sort((a,b)=>
+   // Display USA/American services first for owner shopping, then all others.
+   // Do not delay or reprioritize existing customer or supplier orders.
+   Number(b.usa)-Number(a.usa)||
+   servicePriority(a)-servicePriority(b)||
+   a.rateUSDPer1000-b.rateUSDPer1000||
+   a.name.localeCompare(b.name));
+  return reply({items,count:items.length,usaServices:items.filter(item=>item.usa).length,
+   walletUSD:Number(wallet.balance),sort:"american_first_then_international",
    purchaseMethod:"boostero_prepaid_wallet",publicPricesUnchanged:true,
-   notice:"Only this verified owner session can see supplier prices and submit prepaid-wallet orders. No PayKings charge."});
+   notice:"USA/American services appear first, followed by all other locations. Only this owner session sees supplier prices and can purchase from the Boostero wallet. No PayKings charge."});
  }catch{return reply({error:"Supplier pricing or balance temporarily unavailable"},503)}
 }
 export async function POST(request){
