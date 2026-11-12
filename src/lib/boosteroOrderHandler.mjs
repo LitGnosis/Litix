@@ -185,8 +185,15 @@ export async function handleBoosteroOrder(request,{adminOnly=true}={}){
     quote.wholesaleCents,idem,hashBoostero(secret),JSON.stringify({supplier:"boostero",adminOnly:true,ownerWholesale:adminOnly&&data?.ownerWholesale===true,...(ownerPurchase?{ownerPaymentMethod:ownerCard?"paykings":"supplier_balance",ownerPurpose:purpose,...(replacementOf?{replacementOf}:{})}:{}),...(multiple?{postAllocations:verifiedPosts,postPlatform:String(quote.platform).toLowerCase(),fulfillmentMode:autoMulti?"boostero_child_order_dispatch":"litix_assisted_multi_post"}:{})}),paymentMode==="admin"?"admin_authorized":"processing",
     paymentMode,paymentMode==="admin"?"QUEUED":"PENDING_PAYMENT",paymentMode==="admin"?"owner":null]);
   inserted=rows.length===1;
- }catch{return send({error:"Cannot create safe order ledger; no charge attempted"},503)}
- if(!inserted)return send({error:"Checkout already submitted; no repeat charge or purchase"},409);
+ }catch(error){
+  console.error("Litix order ledger write rejected",{
+   sqlstate:String(error?.code||"unknown").slice(0,12),
+   constraint:String(error?.constraint||"unavailable").slice(0,90),
+   paymentMode,serviceId:id
+  });
+  return send({error:"Cannot create safe order ledger; no charge attempted",chargeAttempted:false,orderCreated:false},503);
+ }
+ if(!inserted)return send({error:"Checkout already submitted; no repeat charge or purchase",chargeAttempted:false},409);
  if(autoMulti){
   try{await stageBoosteroPostChildren(orderId,id,verifiedPosts,{sql})}
   catch{
