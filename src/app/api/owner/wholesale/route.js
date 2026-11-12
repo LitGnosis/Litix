@@ -12,6 +12,17 @@ export const runtime="nodejs";
 export const dynamic="force-dynamic";
 export const maxDuration=60;
 const reply=(body,status=200)=>Response.json(body,{status,headers:ownerHeaders});
+const ownerCardPublicKey=()=>process.env.NEXT_PUBLIC_PAYKINGS_NMI_COLLECT_PUBLIC_KEY||
+ process.env.PAYKINGS_NMI_COLLECT_PUBLIC_KEY||"";
+const ownerPayKingsReady=()=>process.env.VERCEL_ENV==="production"&&
+ process.env.NMI_GATEWAY_MODE!=="TEST"&&!!process.env.NMI_SECURITY_KEY&&
+ !!ownerCardPublicKey();
+const validOrderId=id=>/^ltx2_[0-9a-f-]{36}$/.test(String(id||""));
+const ownerProxy=(request,adminToken,body)=>new Request(request.url,{
+ method:"POST",headers:{"content-type":"application/json",
+ "origin":new URL(request.url).origin,"authorization":"Bearer "+adminToken},
+ body:JSON.stringify(body)
+});
 const idOf=value=>String(value||"").replace(/^litix_/,"");
 const eligible=item=>!retiredAutoLikesService(item)&&litixPurchasableDefault(item)!==null;
 const privateCard=item=>({
@@ -53,12 +64,19 @@ export async function GET(request){
  const url=new URL(request.url),view=url.searchParams.get("view")||"catalog";
  if(view==="order"){
   const id=String(url.searchParams.get("id")||"");
-  if(!/^ltx2_[a-f0-9-]{36}$/.test(id))return reply({error:"invalid_order_id"},422);
+  if(!validOrderId(id))return reply({error:"invalid_order_id"},422);
   try{
    const rows=await ownerDB().query(
-    "SELECT o.id,o.service_name,o.quantity,o.supplier_cost_cents,o.payment_state,o.fulfillment_state,f.state AS delivery_state,f.supplier_order_id,f.error_code,f.supplier_status FROM public.litix_v2_orders o JOIN public.litix_boostero_fulfillment f ON f.litix_order_id=o.id WHERE o.id=$1 AND o.metadata->>'ownerWholesale'='true' LIMIT 1",
+    "SELECT o.id,o.service_id,o.service_name,o.destination,o.quantity,o.amount_cents,o.supplier_cost_cents,o.payment_state,o.fulfillment_state,o.metadata->>'ownerPurpose' AS purpose,f.state AS delivery_state,f.supplier_order_id,f.error_code,f.supplier_status FROM public.litix_v2_orders o JOIN public.litix_boostero_fulfillment f ON f.litix_order_id=o.id WHERE o.id=$1 LIMIT 1",
     [id]);
-   return rows.length?reply({order:rows[0]}):reply({error:"order_not_found"},404);
+   if(!rows.length)return reply({error:"order_not_found"},404);
+   const order=rows[0];
+   const replacementEligible=["FAILED","REJECTED"].includes(order.delivery_state)&&
+    !order.supplier_order_id&&order.payment_state!=="review";
+   return reply({order:{...order,replacementEligible,
+    advice:replacementEligible?
+     "Verified failed supplier submission: owner may explicitly authorize a new replacement order.":
+     "Do not reorder this order without reconciling payment and supplier delivery first."}});
   }catch{return reply({error:"Order tracking temporarily unavailable"},503)}
  }
  if(view!=="catalog")return reply({error:"invalid_view"},400);
@@ -76,8 +94,10 @@ export async function GET(request){
    a.name.localeCompare(b.name));
   return reply({items,count:items.length,usaServices:items.filter(item=>item.usa).length,
    walletUSD:Number(wallet.balance),sort:"american_first_then_international",
-   purchaseMethod:"boostero_prepaid_wallet",publicPricesUnchanged:true,
-   notice:"USA/American services appear first, followed by all other locations. Only this owner session sees supplier prices and can purchase from the Boostero wallet. No PayKings charge."});
+   purchaseMethods:["paykings","supplier_balance"],paykingsEnabled:ownerPayKingsReady(),
+   cardPublicKey:ownerPayKingsReady()?ownerCardPublicKey():null,
+   publicPricesUnchanged:true,
+   notice:"USA/American services first. Owner purchases can use PayKings or Boostero balance; customer retail prices and customer cards are unchanged."});
  }catch{return reply({error:"Supplier pricing or balance temporarily unavailable"},503)}
 }
 export async function POST(request){
@@ -86,45 +106,71 @@ export async function POST(request){
  if(!boosteroProductionReady())return reply({error:"Supplier connection unavailable"},503);
  if(Number(request.headers.get("content-length")||0)>5000)return reply({error:"request_too_large"},413);
  let body;try{body=await request.json()}catch{return reply({error:"invalid_json"},400)}
- if(!["quote","purchase"].includes(body?.action))return reply({error:"unsupported_action"},400);
+ if(!["quote","purchase","refill"].includes(body?.action))return reply({error:"unsupported_action"},400);
+ if(body.action==="refill"){
+  const orderId=String(body?.orderId||"");
+  if(!validOrderId(orderId)||body.confirmed!==true)return reply({error:"An explicitly confirmed order ID is required for refill"},422);
+  const admin=String(process.env.LITIX_BOOSTERO_ADMIN_TOKEN||"");
+  if(admin.length<40)return reply({error:"Owner supplier action unavailable"},503);
+  const result=await handleBoosteroOrder(ownerProxy(request,admin,{action:"refill",orderId}),{adminOnly:true});
+  const answer=await result.json().catch(()=>({error:"Refill outcome requires review"}));
+  return reply({...answer,cardCharged:false,paymentMethod:"supplier_refill"},result.status);
+ }
+ if(body.paymentMethod&&!["paykings","supplier_balance"].includes(body.paymentMethod))
+  return reply({error:"invalid_payment_method"},422);
+ const paymentMethod=body.paymentMethod||"paykings";
  try{
   const {quote,destination,balanceUSD}=await liveQuote(body);
   const wholesaleCents=quote.wholesaleCents;
   if(!Number.isSafeInteger(wholesaleCents)||wholesaleCents<=0||wholesaleCents>100000000)
    return reply({error:"invalid_wholesale_total"},422);
   const enough=balanceUSD+1e-7>=quote.costUSD;
+  const chargeAmountCents=paymentMethod==="paykings"?Math.max(100,wholesaleCents):wholesaleCents;
   if(body.action==="quote")return reply({
    serviceId:quote.serviceId,quantity:quote.quantity,
    destination,wholesaleCents,wholesaleUSD:quote.costUSD,
    supplierBalanceUSD:balanceUSD,balanceEnough:enough,
+   paymentMethod,chargeAmountCents,cardMinimumApplied:paymentMethod==="paykings"&&wholesaleCents<100,
+   paykingsReady:ownerPayKingsReady(),
    publicRetailCents:quote.amountCents,
-   note:"Boostero wallet charge only. Displayed cents round supplier fractional cents upward."
+   note:paymentMethod==="paykings"?
+    "Owner's PayKings card sale covers this wholesale supplier order. Card checkout minimum is $1; any excess above supplier cost is retained to cover processing. Settlement is distinct from gateway approval.":
+    "Owner's Boostero wallet pays the supplier directly. No card charge."
   });
-  if(body.confirmed!==true||Number(body.expectedWholesaleCents)!==wholesaleCents)
-   return reply({error:"Confirm the current wholesale total before purchase. No order submitted."},409);
+  if(body.confirmed!==true||Number(body.expectedWholesaleCents)!==wholesaleCents||
+     Number(body.expectedChargeCents)!==chargeAmountCents)
+   return reply({error:"Confirm the current wholesale payment amount before purchase. No order submitted."},409);
+  if(paymentMethod==="paykings"&&!ownerPayKingsReady())
+   return reply({error:"Owner PayKings card checkout is not configured; no charge attempted."},503);
   if(!enough)return reply({error:"Insufficient Boostero wallet funds. No order submitted."},409);
   const idem=String(body.idempotencyKey||"");
   if(!/^[0-9a-f]{8}-[0-9a-f-]{27,}$/.test(idem)||idem.length>40)
    return reply({error:"invalid_purchase_idempotency_key"},422);
   const admin=String(process.env.LITIX_BOOSTERO_ADMIN_TOKEN||"");
   if(admin.length<40)return reply({error:"Private owner order authentication unavailable"},503);
+  const purpose=String(body.ownerPurpose||"personal");
+  if(!["personal","promotion","giveaway","replacement"].includes(purpose))
+   return reply({error:"Invalid order purpose"},422);
+  const replacementOf=purpose==="replacement"?String(body.replacementOf||""):"";
+  if(purpose==="replacement"&&!validOrderId(replacementOf))
+   return reply({error:"Review a confirmed failed original order before any replacement"},422);
+  const token=String(body.paymentToken||"");
+  if(paymentMethod==="paykings"&&(token.length<10||token.length>500))
+   return reply({error:"Secure PayKings token required; no card charge attempted."},422);
   const payload={
-   action:"admin_purchase",ownerWholesale:true,
+   action:paymentMethod==="paykings"?"owner_card_purchase":"admin_purchase",
+   ownerWholesale:true,ownerPurpose:purpose,...(replacementOf?{replacementOf}:{}),
    serviceId:quote.serviceId,quantity:quote.quantity,
    destination,email:ownerEmail(),
-   approvedCostCents:wholesaleCents,
-   expectedAmountCents:quote.amountCents,
+   ...(paymentMethod==="paykings"?{paymentToken:token}:{approvedCostCents:wholesaleCents}),
+   expectedAmountCents:paymentMethod==="paykings"?chargeAmountCents:quote.amountCents,
    idempotencyKey:idem
   };
-  const proxy=new Request(request.url,{
-   method:"POST",headers:{"content-type":"application/json",
-    "origin":new URL(request.url).origin,"authorization":"Bearer "+admin},
-   body:JSON.stringify(payload)
-  });
-  const result=await handleBoosteroOrder(proxy,{adminOnly:true});
+  const result=await handleBoosteroOrder(ownerProxy(request,admin,payload),{adminOnly:true});
   const answer=await result.json().catch(()=>({error:"owner_order_status_unavailable"}));
-  // This records owner-authorized supplier-wallet spending, NOT revenue or a new card sale.
-  return reply({...answer,wholesaleCents,paymentMethod:"boostero_prepaid_wallet",
-   cardCharged:false},result.status);
+  // Owner card payments and wallet debits are distinguished from ordinary retail sales.
+  return reply({...answer,wholesaleCents,chargeAmountCents,
+   paymentMethod:paymentMethod==="paykings"?"paykings":"boostero_prepaid_wallet",
+   cardCharged:paymentMethod==="paykings"?answer.payment==="paid":false},result.status);
  }catch(error){return reply({error:whitelistError(error),chargeAttempted:false},422)}
 }
