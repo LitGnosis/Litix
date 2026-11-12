@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import base64
+import asyncio
+import logging
 import hashlib
 import hmac
 import httpx
@@ -9,7 +11,7 @@ import json
 import os
 import re
 import secrets
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from datetime import datetime, timezone
 from decimal import Decimal
 from uuid import UUID
@@ -24,7 +26,7 @@ from redis.asyncio import Redis
 from nmi import cents, verify_signature, query_completed_transaction, NmiVerificationError
 from node_api import router as node_router
 from panel_api import router as panel_router
-from retail_api import router as retail_router
+from retail_api import router as retail_router, reconcile_pending
 
 PRICES = {"PANEL_149_WK":14900, "AGENCY_500_WK":50000, "ENTERPRISE_1500_WK":150000}
 MAX_HANDLES = {"AGENCY_500_WK":25, "ENTERPRISE_1500_WK":100}
@@ -43,9 +45,24 @@ async def lifespan(app: FastAPI):
     app.state.redis = Redis.from_url(redis_url, decode_responses=True,
                                      socket_connect_timeout=5, socket_timeout=8)
     await app.state.redis.ping()
-    yield
-    await app.state.redis.aclose()
-    await app.state.db.close()
+    async def settlement_loop():
+        while True:
+            if os.environ.get("LITIX_DIRECT_RETAIL_RECONCILE_ENABLED")=="true":
+                try:
+                    await reconcile_pending(app.state.db)
+                except Exception as error:
+                    logging.getLogger("litix.direct").warning(
+                        "retail_settlement_reconciliation_pending: %s", type(error).__name__)
+            await asyncio.sleep(60)
+    reconciliation=asyncio.create_task(settlement_loop())
+    try:
+        yield
+    finally:
+        reconciliation.cancel()
+        with suppress(asyncio.CancelledError):
+            await reconciliation
+        await app.state.redis.aclose()
+        await app.state.db.close()
 
 app = FastAPI(title="Litix Direct Supplier API", version="1.0", lifespan=lifespan,
               openapi_url=None if os.environ.get("LITIX_DIRECT_EXPOSE_DOCS")!="true" else "/openapi.json")
