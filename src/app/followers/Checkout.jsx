@@ -8,7 +8,7 @@ const action={background:"#2474c1",border:"1px solid #73b4ea",color:"#fff",
  padding:"15px 21px",borderRadius:12,fontSize:16,fontWeight:700,cursor:"pointer"};
 
 export default function FollowerCheckout(){
- const [platform,setPlatform]=useState("instagram");
+ const [platform,setPlatform]=useState("tiktok");
  const [quantity,setQuantity]=useState("");
  const [quote,setQuote]=useState(null);
  const [priceError,setPriceError]=useState("");
@@ -150,7 +150,7 @@ export default function FollowerCheckout(){
      <label style={{fontWeight:700,display:"grid",gap:7}}>Platform
       <select value={platform} onChange={e=>{setPlatform(e.target.value);setQuantity("");setQuote(null)}}
         disabled={busy||paymentSent.current} style={field}>
-       <option value="instagram">Instagram Followers</option>
+       <option value="instagram" disabled>Instagram Followers · Not currently available</option>
        <option value="tiktok">TikTok Followers</option>
       </select></label>
      <label style={{fontWeight:700,display:"grid",gap:7}}>Public profile / @username

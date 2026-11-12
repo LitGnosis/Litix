@@ -23,11 +23,12 @@ const nextConfig = {
     // Retired public social-engagement storefronts now resolve to owned digital products.
     // Order history, tracking, and cancellation/manage endpoints remain intact.
     ...["/services","/autolikes","/bundles","/bundles/checkout",
-      "/custom-likes","/custom-followers","/custom-orders",
+      "/custom-likes","/custom-orders",
       "/tools/tiktok-engagement","/solutions","/for-creators",
       "/for-businesses","/for-individuals"].map(source=>({
         source,destination:"/shop",permanent:false
       })),
+    {source:"/custom-followers",destination:"/followers",permanent:false},
     {source:"/for-agencies",destination:"/agency",permanent:false},
     {source:"/solutions/:slug",destination:"/shop",permanent:false},
     {source:"/global/:locale",destination:"/shop",permanent:false},

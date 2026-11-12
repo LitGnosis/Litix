@@ -33,7 +33,9 @@ export const litixOrderCents=(retailPer1000Cents,quantity)=>{
 export const litixServiceMinimum=(min,max,per1000Cents)=>{
  if(!Number.isSafeInteger(min)||min<1||!Number.isSafeInteger(max)||max<min||
     !Number.isSafeInteger(per1000Cents)||per1000Cents<1)return null;
- const q=Math.max(min,Math.ceil((LITIX_MINIMUM_CHARGE_CENTS*1000)/per1000Cents-1e-9));
+ // Order cents round UP, so $1 starts at the first unit yielding >99 cents.
+ // Do not force a $1.01 minimum for a quantity that correctly totals $1.00.
+ const q=Math.max(min,Math.floor(((LITIX_MINIMUM_CHARGE_CENTS-1)*1000)/per1000Cents)+1);
  return q<=max&&litixOrderCents(per1000Cents,q)>=LITIX_MINIMUM_CHARGE_CENTS?q:null;
 };
 export const litixPurchasableDefault=x=>{
