@@ -1,0 +1,43 @@
+name: Litix first-party retail checkout
+on:
+  push:
+    branches:
+      - fix/direct-only-retail-checkout-20261111
+  pull_request:
+    paths:
+      - 'ops/direct-supplier-v1/**'
+      - 'src/app/page.jsx'
+      - 'src/components/LitixDirectRetailCheckout.jsx'
+      - 'src/app/api/checkout/v1/**'
+      - 'src/app/api/catalog/**'
+      - 'src/app/api/bundles/**'
+      - 'src/app/api/autolikes/**'
+      - 'src/tests/first-party-retail-only.test.mjs'
+permissions:
+  contents: read
+jobs:
+  backend:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -r ops/direct-supplier-v1/backend/requirements.txt pytest==8.3.5
+      - run: python -m compileall -q ops/direct-supplier-v1/backend
+      - run: python -m pytest -q ops/direct-supplier-v1/tests/test_direct_retail.py
+      - run: python -m pytest -q ops/direct-supplier-v1/tests/test_direct_security.py
+  frontend:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test src/tests/first-party-retail-only.test.mjs
+      - run: npm ci --no-audit --no-fund
+        working-directory: src
+      - run: npm run build
+        working-directory: src
