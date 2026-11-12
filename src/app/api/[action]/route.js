@@ -170,7 +170,7 @@ function shape(x){const first=servicePurchaseMinimum(x,retailPer1000(x));return 
 export async function GET(req){
  const op=name(req),flags=conf(),p=new URL(req.url).searchParams;
  if(!["config","health","smmservices","track"].includes(op))return send({error:"Unknown route"},404);
- if(op==="config")return send({ready:flags.database&&flags.supplier&&flags.payment,publicKey:publicCollectKey()||null});
+ if(op==="config")return send({ready:false,publicKey:null,directCheckout:"/api/direct-retail/catalog",paymentProvider:"NMI",legacyCheckoutDisabled:true});
  if(op==="health"){let database=false;if(flags.database)try{await db().query("select 1",[]);database=true}catch{}const gatewayMode=selectedGatewayMode();const gatewayConfigured=gatewayMode==="TEST"?!!(process.env.NMI_TEST_SECURITY_KEY&&process.env.NMI_TEST_GATEWAY_URL):!!process.env.NMI_SECURITY_KEY;return send({service:"litix-v2",database,supplierConfigured:flags.supplier,paykingsConfigured:flags.payment,orderEmailConfigured:notificationsConfigured(),gatewayMode,testGatewayConfigured:gatewayMode==="TEST"?gatewayConfigured:undefined,liveTransactionVerified:false,ready:database&&flags.supplier&&flags.payment},database?200:503)}
  if(op==="smmservices"){
   // Deprecated legacy API. The public catalog is /api/catalog/v1, Boostero only.
@@ -214,55 +214,14 @@ async function lookupOrderByEmail(req){
  catch{return send({error:"Order lookup is temporarily unavailable"},503)}
  if(!rows.length)return send({error:"No matching order found. Check the number and email used at checkout."},404);
  const x=rows[0],refresh=await refreshSupplierOrder(sql,x);
- return send({order:publicOrder(x,refresh)});
-}
-export async function POST(req){
- if(name(req)==="lookup-order")return lookupOrderByEmail(req);
- if(name(req)==="resend-confirmation")return resendPaidOrderConfirmation(req);
- if(name(req)!=="checkout")return send({error:"Unknown action"},404);
- // Litix Global 2026-10-28: Boostero is the ONLY approved supplier for NEW
- // production purchases. This legacy action is retained strictly for past
- // SMMGLOB order lookup, reconciliation and optional nonproduction tests.
- // Reject before reading card data, opening the DB, or calling the gateway.
- return send({error:"Retired supplier checkout is disabled. Choose an approved Boostero service. No payment was attempted."},409);
- const flags=conf();if(!flags.database||!flags.supplier||!flags.payment)return send({error:"Secure checkout is temporarily unavailable"},503);
- const gatewayMode=selectedGatewayMode();
- // TEST mode is fail-closed: never fall back to production credentials or pretend a transaction was verified.
- const gatewayKey=gatewayMode==="TEST"?process.env.NMI_TEST_SECURITY_KEY:process.env.NMI_SECURITY_KEY;
- const gatewayUrl=gatewayMode==="TEST"?process.env.NMI_TEST_GATEWAY_URL:"https://paykings.transactiongateway.com/api/transact.php";
- if(!gatewayKey||!gatewayUrl){return send({error:gatewayMode==="TEST"?"Sandbox checkout needs NMI_TEST_SECURITY_KEY and NMI_TEST_GATEWAY_URL configured in Vercel. No charge was submitted.":"Secure checkout is temporarily unavailable"},503)}
- let parsedGateway;try{parsedGateway=new URL(gatewayUrl)}catch{return send({error:"Payment gateway configuration is invalid"},503)}
- if(parsedGateway.protocol!=="https:"||(gatewayMode==="TEST"&&parsedGateway.hostname==="paykings.transactiongateway.com"))return send({error:"Test mode requires a dedicated HTTPS sandbox gateway URL. No charge was submitted."},503);
- let x;try{x=await req.json()}catch{return send({error:"Invalid JSON"},400)}
- const id=bounded(x.serviceId,32),qty=Number(x.quantity),email=bounded(x.email,250).toLowerCase(),link=bounded(x.link,1200),token=bounded(x.paymentToken,500),idem=bounded(x.idempotencyKey,36);
- if(!/^[0-9]+$/.test(id)||!Number.isSafeInteger(qty)||qty<1||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||!link||token.length<10||!/^[a-f0-9-]{36}$/.test(idem))return send({error:"Invalid service, quantity, public URL, email or payment information"},400);
- let service;try{service=(await refreshServices(false)).find(s=>String(s.service)===id)}catch{return send({error:"Litix prices unavailable; no charge submitted"},503)}
- if(!service||!/^default$/i.test(String(service.type||"Default"))||qty<Number(service.min)||qty>Number(service.max))return send({error:"This service needs additional order information or a different quantity"},422);
- if(!legacyPublicServiceAllowed(service))return send({error:"This Instagram/TikTok service is temporarily unavailable. Choose a verified Boostero service instead; no payment attempted."},409);
- const serviceMinimum=minimumPurchaseQuantity(service,retailPer1000(service));
- const supplierStep=Number(service.quantity_step??service.quantityStep??service.step??service.increment??1);
- if(serviceMinimum===null||qty<serviceMinimum||!Number.isSafeInteger(supplierStep)||supplierStep<1||(qty-Number(service.min))%supplierStep!==0)return send({error:"Minimum $5 purchase not met at a supplier-permitted quantity. Choose an eligible quantity; no payment was submitted."},422);
- const followerPlatform=followerPlatformForService(service);
- let destination=link;
- if(followerPlatform){
-  destination=canonicalFollowerDestination(link,followerPlatform);
-  if(!destination)return send({error:"Enter a valid public "+(followerPlatform==="instagram"?"Instagram":"TikTok")+" username or profile link. Post URLs cannot be used for Followers."},422);
- }else{
-  let target;try{target=new URL(link)}catch{}
-  if(!target||target.protocol!=="https:"||!target.hostname.includes(".")||target.username||target.password)
-   return send({error:"Enter the public post or profile URL required by this service."},422);
- }
- const cents=calculateOrderCents(qty,retailPer1000(service));if(cents<500||!Number.isSafeInteger(cents)||cents>100000000)return send({error:"Minimum service purchase is $5 USD; choose a higher supported quantity."},422);
- const quote=validateCheckoutQuote({actualSupplierWholesaleUsd:Number(service.rate)*qty/1000,customerSubtotalCents:cents,displayedPer1000:retailPer1000(service),quantity:qty,service:supplierPricingInput(service)});
- if(!quote.allowed)return send({error:"Quantity cannot meet wholesale pricing requirements; no charge submitted"},422);
- if(!Number.isSafeInteger(x.expectedAmountCents)||x.expectedAmountCents!==cents)return send({error:"The price has changed. Refresh the catalog and confirm the new total before paying."},409);
- const orderId="ltx2_"+randomUUID(),secret=randomUUID()+"-"+randomUUID(),sql=db();
- const notifyPaid=(fulfillment)=>after(()=>sendOrderEmails({orderId,secret,email,amountCents:cents,quantity:qty,serviceName:String(service.name||"Social media service"),fulfillment,destination,purchaseDate:new Date().toISOString()}).catch(e=>console.error("Litix email task failed",{orderId,error:String(e?.message||"send error").slice(0,100)})));
- try{const rows=await sql.query("insert into litix_v2_orders(id,email,service_id,service_name,category,destination,quantity,amount_cents,supplier_cost_cents,idempotency_key,tracking_token_hash,metadata) values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12::jsonb) on conflict(idempotency_key) do nothing returning id",[orderId,email,id,String(service.name),String(service.category||"Other"),destination,qty,cents,Math.ceil(Number(service.rate)*qty/10),idem,hash(secret),JSON.stringify({refill:!!service.refill})]);if(!rows.length)return send({error:"Payment already submitted; do not retry the same checkout"},409);await sql.query("update litix_v2_orders set payment_state='processing',payment_attempted_at=now() where id=$1",[orderId])}catch{return send({error:"Database unavailable; no charge submitted"},503)}
- let payment;try{const r=await fetch(gatewayUrl,{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded"},body:new URLSearchParams({security_key:gatewayKey,type:"sale",payment_token:token,amount:(cents/100).toFixed(2),orderid:orderId,email}),signal:AbortSignal.timeout(18000),cache:"no-store"});if(!r.ok)throw Error("Payment gateway request failed");payment=Object.fromEntries(new URLSearchParams(await r.text()))}catch{await sql.query("update litix_v2_orders set payment_state='review' where id=$1",[orderId]).catch(()=>{});return send({orderId,secret,payment:"review",message:"Payment outcome is uncertain; do not retry or place a second order"},202)}
- if(String(payment.response)!=="1"){await sql.query("update litix_v2_orders set payment_state='declined' where id=$1",[orderId]).catch(()=>{});return send({error:"Payment declined: "+String(payment.responsetext||"Please contact your card issuer").slice(0,100)},402)}
- const transactionId=String(payment.transactionid||"").trim();if(!transactionId){await sql.query("update litix_v2_orders set payment_state='review' where id=$1",[orderId]).catch(()=>{});return send({orderId,secret,payment:"review",message:"Gateway reported approval without a transaction ID. Payment requires reconciliation; do not retry or place a second order."},202)}
- try{await sql.query("update litix_v2_orders set payment_state='paid',payment_transaction_id=$2 where id=$1",[orderId,transactionId]);await sql.query("update litix_v2_orders set fulfillment_state='dispatching',supplier_attempted_at=now() where id=$1 and supplier_attempted_at is null",[orderId])}catch{return send({orderId,secret,payment:"paid",fulfillment:"review",message:"Paid; supplier reconciliation required"},202)}
- try{const supplierResult=await smm("add",{service:id,link:destination,quantity:String(qty)});if(!supplierResult?.order)throw Error("No supplier order ID");await sql.query("update litix_v2_orders set supplier_order_id=$2,fulfillment_state='submitted',last_supplier_status=$3::jsonb where id=$1",[orderId,String(supplierResult.order),JSON.stringify(supplierResult)]);notifyPaid("submitted");return send({orderId,secret,payment:"paid",fulfillment:"submitted",message:"Payment approved and supplier order submitted"})}
- catch{await sql.query("update litix_v2_orders set fulfillment_state='manual_review' where id=$1",[orderId]).catch(()=>{});notifyPaid("manual_review");return send({orderId,secret,payment:"paid",fulfillment:"manual_review",message:"Payment approved, but supplier outcome requires review. Do not reorder."},202)}
+ return send({export async function POST(req){
+ const op=name(req);
+ if(op==="lookup-order")return lookupOrderByEmail(req);
+ if(op==="resend-confirmation")return resendPaidOrderConfirmation(req);
+ if(op==="checkout")return send({
+   error:"Retired purchase endpoint. Use /api/checkout/v1 for Litix-owned services only.",
+   code:"FIRST_PARTY_ONLY",
+   chargeAttempted:false,supplierApiCalled:false
+ },410);
+ return send({error:"Unknown action"},404);
 }
