@@ -11,11 +11,11 @@ import {LITIX_SITE_URL,LITIX_DISCOVERY_TITLE,LITIX_DISCOVERY_DESCRIPTION,LITIX_D
 
 const keywords = [
   "Litix.net",
-  "original digital marketing drafts",
-  "creative kits",
-  "AI content planning",
-  "agency and wholesale blueprints",
-  "private order tracking",
+  "digital social media services",
+  "business marketing workflows",
+  "creator tools",
+  "marketing operations",
+  "order tracking",
 ];
 const siteUrl = LITIX_SITE_URL;
 const description = LITIX_DISCOVERY_DESCRIPTION;

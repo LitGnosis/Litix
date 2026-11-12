@@ -17,24 +17,13 @@ const nextConfig = {
    return {beforeFiles:[{source:"/privacy",destination:"/legal/privacy"}],
     afterFiles:[],fallback:[]};
   },
-  async redirects(){
-   return [
-    {source:"/refund-policy",destination:"/refunds",permanent:false},
-    // Retired public social-engagement storefronts now resolve to owned digital products.
-    // Order history, tracking, and cancellation/manage endpoints remain intact.
-    ...["/services","/autolikes","/bundles","/bundles/checkout",
-      "/custom-likes","/custom-orders",
-      "/tools/tiktok-engagement","/solutions","/for-creators",
-      "/for-businesses","/for-individuals"].map(source=>({
-        source,destination:"/shop",permanent:false
-      })),
-    {source:"/custom-followers",destination:"/followers",permanent:false},
-    {source:"/for-agencies",destination:"/agency",permanent:false},
-    {source:"/solutions/:slug",destination:"/shop",permanent:false},
-    {source:"/global/:locale",destination:"/shop",permanent:false},
-    {source:"/shop/:platform/:kind",destination:"/shop",permanent:false}
-   ];
-  },
+  // Restore all social storefront routes. Retire ONLY unavailable AutoLikes public pages.
+  async redirects(){return [
+   {source:"/refund-policy",destination:"/refunds",permanent:false},
+   {source:"/autolikes",destination:"/shop",permanent:false},
+   {source:"/autolikes/prepaid",destination:"/shop",permanent:false},
+   {source:"/autolikes/prepaid/checkout",destination:"/shop",permanent:false}
+  ];},
 
   // Temporary recovery settings requested for the Litix deployment.
   // Keep runtime/security validation in place; these only skip build-time lint/type gates.

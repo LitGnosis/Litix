@@ -1,4 +1,5 @@
 import {boosteroProduction} from "./boosteroReadOnly.mjs";
+import {retiredAutoLikesService} from "./retiredAutolikes.mjs";
 import {boosteroProductionReady} from "./boosteroFulfillment.mjs";
 import {publicServiceCardName} from "./serviceCardDisplay.mjs";
 import {matchesServiceQuickKind} from "./catalogSort.mjs";
@@ -18,6 +19,7 @@ async function fetchFreshBoosteroCards(){
  const items=raw;
   const unique=new Map();
   for(const item of items){
+   if(retiredAutoLikesService(item))continue;
    const supplierId=String(item?.service??"");
    if(!/^\d{1,12}$/.test(supplierId)||unique.has(supplierId))continue;
    const retailCents=litixRetailPer1000Cents(item.rate,item);

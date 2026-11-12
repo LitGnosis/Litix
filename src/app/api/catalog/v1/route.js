@@ -1,15 +1,28 @@
+import {allBoosteroCardsSnapshot} from "../../../../lib/boosteroCatalog.mjs";
+import {buildActiveStorefrontCatalog} from "../../../../lib/activeStorefrontCatalog.mjs";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
-// Owned digital-product discovery. No reseller catalog, API, credentials, or stock claims.
-export async function GET(){
- return Response.json({
-  brand:"Litix",source:"litix_first_party_only",catalogStatus:"owned_digital_only",
-  items:[],recommendations:[],categories:[],platforms:[],total:0,allCount:0,
-  checkoutEnabled:false, // Legacy social-service checkout remains closed.
-  currency:"USD",firstPartyProducts:[
-   {id:"litix_marketing_drafts",name:"12 Original Marketing Drafts",amountCents:100,currency:"USD",checkoutUrl:"/shop/marketing-drafts",kind:"original_digital_content"},
-   {id:"litix_creative_kit",name:"Creative Kit",amountCents:0,currency:"USD",deliveryUrl:"/direct-services",kind:"original_digital_content"},
-   {id:"litix_ai_content_studio",name:"AI Content Studio",amountCents:0,currency:"USD",deliveryUrl:"/ai-content-studio",kind:"creative_workspace"}
-  ]
- },{headers:{"cache-control":"no-store","x-content-type-options":"nosniff"}});
+export const maxDuration=60;
+// Boostero is the exclusive NEW-ORDER storefront catalog.
+// No historical supplier API fetch, old numeric SKUs, or supplier fallback.
+export async function GET(request){
+ const params=new URL(request.url).searchParams;
+ let snapshot={items:[],status:"unavailable"};
+ try{
+  if(process.env.LITIX_BOOSTERO_ENABLED==="true")snapshot=await allBoosteroCardsSnapshot();
+ }catch{
+  // No backup supplier, no unlimited stale data. Checkout remains authoritative.
+ }
+ const data=buildActiveStorefrontCatalog(snapshot.items,params,{sourceStatus:snapshot.status});
+ // Public pricing and categories only: never cache payment, user or tracking data.
+ // The checkout handler independently obtains a fresh quote before charging.
+ // An empty or unavailable catalog is never stored at the edge.
+ const cacheControl=data.allCount>0
+  ?snapshot.status==="live"
+   ?"public, s-maxage=30, stale-while-revalidate=60"
+   :"public, s-maxage=10, stale-while-revalidate=20"
+  :"no-store";
+ return Response.json(data,{
+  headers:{"cache-control":cacheControl,"x-content-type-options":"nosniff"}
+ });
 }

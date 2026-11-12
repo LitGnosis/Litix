@@ -2,6 +2,7 @@
 import {neon} from "@neondatabase/serverless";
 import {createHash,randomUUID,timingSafeEqual} from "node:crypto";
 import {boosteroProduction,boosteroCompatibleServices} from "./boosteroReadOnly.mjs";
+import {retiredAutoLikesService} from "./retiredAutolikes.mjs";
 import {litixRetailPer1000Cents,litixOrderCents,litixPurchasableDefault,litixSupplierSafeLink} from "./litixRetail60.mjs";
 import {litixPlatform,litixKind} from "./litixServiceClassify.mjs";
 import {publicServiceCardName} from "./serviceCardDisplay.mjs";
@@ -58,6 +59,7 @@ export function boosteroDestination(input,platform,kind="followers"){
 // Price and eligibility are verified directly against the latest Boostero service
 // every time before charging a real card. The catalog alone is not authority.
 export function boosteroQuote({service,quantity}){
+ if(retiredAutoLikesService(service))throw Error("autolikes_new_orders_retired");
  const id=String(service?.service??service?.id??"");
  const qty=Number(quantity),min=Number(service?.min),max=Number(service?.max);
  const lowest=litixPurchasableDefault(service);
