@@ -214,14 +214,15 @@ async function lookupOrderByEmail(req){
  catch{return send({error:"Order lookup is temporarily unavailable"},503)}
  if(!rows.length)return send({error:"No matching order found. Check the number and email used at checkout."},404);
  const x=rows[0],refresh=await refreshSupplierOrder(sql,x);
- return send({export async function POST(req){
+ return send({order:publicOrder(x,refresh)});
+}
+export async function POST(req){
  const op=name(req);
  if(op==="lookup-order")return lookupOrderByEmail(req);
  if(op==="resend-confirmation")return resendPaidOrderConfirmation(req);
  if(op==="checkout")return send({
    error:"Retired purchase endpoint. Use /api/checkout/v1 for Litix-owned services only.",
-   code:"FIRST_PARTY_ONLY",
-   chargeAttempted:false,supplierApiCalled:false
+   code:"FIRST_PARTY_ONLY",chargeAttempted:false,supplierApiCalled:false
  },410);
  return send({error:"Unknown action"},404);
 }
