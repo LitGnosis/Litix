@@ -18,7 +18,17 @@ const nextConfig = {
     afterFiles:[],fallback:[]};
   },
   async redirects(){
-   return [{source:"/refund-policy",destination:"/refunds",permanent:false}];
+   return [
+    {source:"/refund-policy",destination:"/refunds",permanent:false},
+    // Retired public social-engagement storefronts now resolve to owned digital products.
+    // Order history, tracking, and cancellation/manage endpoints remain intact.
+    ...["/services","/autolikes","/bundles","/bundles/checkout",
+      "/custom-likes","/custom-followers","/custom-orders",
+      "/tools/tiktok-engagement"].map(source=>({
+        source,destination:"/shop",permanent:false
+      })),
+    {source:"/shop/:platform/:kind",destination:"/shop",permanent:false}
+   ];
   },
 
   // Temporary recovery settings requested for the Litix deployment.

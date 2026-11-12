@@ -13,7 +13,7 @@ export default function DirectServicesPage() {
  return <main className="litix-direct">
   <nav className="litix-direct-nav" aria-label="Litix direct services navigation">
    <Link href="/" aria-label="Litix home" className="litix-direct-brand"><img src="/assets/brand/litix-logo.webp" alt="Litix" width="128" height="50"/></Link>
-   <div><Link href="/services">All Services</Link><Link href="/growth-studio">Growth Studio</Link><Link href="/track">Track Orders</Link></div>
+   <div><Link href="/shop">Digital Shop</Link><Link href="/growth-studio">Growth Studio</Link><Link href="/track">Track Orders</Link></div>
   </nav>
   <header className="litix-direct-hero">
    <p className="litix-direct-eyebrow">LITIX DIRECT · FIRST-PARTY TECHNOLOGY</p>
