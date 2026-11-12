@@ -173,7 +173,7 @@ export async function dispatchBoostero(orderId,{sql=boosteroSQL(),operation=boos
   console.error("Litix Boostero audit lock failed",{orderId});
   return {submitted:false,state:"MANUAL_REVIEW",requiresReview:true};
  }
- const orders=await sql.query("select o.destination,o.quantity,o.amount_cents,f.supplier_service_id from public.litix_v2_orders o join public.litix_boostero_fulfillment f on f.litix_order_id=o.id where o.id=$1",[orderId]);
+ const orders=await sql.query("select o.destination,o.quantity,o.amount_cents,o.supplier_cost_cents,o.metadata,f.supplier_service_id from public.litix_v2_orders o join public.litix_boostero_fulfillment f on f.litix_order_id=o.id where o.id=$1",[orderId]);
  if(orders.length!==1){
   await sql.query("update public.litix_boostero_fulfillment set state='MANUAL_REVIEW',error_code='paid_order_lookup_failed',updated_at=now() where litix_order_id=$1 and purchase_attempt_id=$2 and state='DISPATCHING'",[orderId,attemptId]).catch(()=>{});
   console.error("Litix Boostero paid order lookup missing",{orderId});
@@ -183,9 +183,17 @@ export async function dispatchBoostero(orderId,{sql=boosteroSQL(),operation=boos
  try{
   // Refresh current wholesale and remaining account balance just before spend.
   const {quote}=await verifyBoosteroQuote(String(orders[0].supplier_service_id),Number(orders[0].quantity),sql);
-  // Paid orders keep their locked historical retail totals after a future pricing-floor increase.
-  // Still enforce the original 60% wholesale protection before any supplier spend.
-  if(Number(orders[0].amount_cents)<Math.ceil(quote.costUSD*160-1e-8))throw Error("boostero_wholesale_changed_after_payment");
+  // Retail customer orders must preserve their original 60% markup.
+  // Owner-funded PayKings orders are intentionally wholesale-only but must
+  // keep the *exact* supplier price locked at payment to avoid underfunding.
+  const ownerCard=orders[0].metadata?.ownerWholesale===true&&
+   orders[0].metadata?.ownerPaymentMethod==="paykings";
+  if(ownerCard){
+   if(Number(orders[0].supplier_cost_cents)!==quote.wholesaleCents||
+      Number(orders[0].amount_cents)<quote.wholesaleCents)
+    throw Error("boostero_wholesale_changed_after_payment");
+  }else if(Number(orders[0].amount_cents)<Math.ceil(quote.costUSD*160-1e-8))
+   throw Error("boostero_wholesale_changed_after_payment");
   const balance=await operation("balance");
   if(!Number.isFinite(Number(balance.balance))||Number(balance.balance)<quote.costUSD)throw Error("boostero_insufficient_balance");
   result=await operation("add",{service:quote.serviceId,link:orders[0].destination,quantity:quote.quantity},{claimed:true});
