@@ -21,6 +21,9 @@ export async function handleBoosteroOrder(request,{adminOnly=true}={}){
  if(!adminOnly&&action!=="card_purchase")return send({error:"Customer actions must use verified card checkout"},403);
  const ownerCard=adminOnly&&action==="owner_card_purchase"&&data?.ownerWholesale===true;
  if(action==="owner_card_purchase"&&!ownerCard)return send({error:"Owner authorization required"},403);
+ // Separate merchant-acquirer approval gate. This never affects customer PayKings.
+ if(ownerCard&&process.env.LITIX_OWNER_PAYKINGS_ENABLED!=="true")
+  return send({error:"Owner-funded PayKings checkout is pending merchant approval. No charge attempted.",chargeAttempted:false},409);
  const sql=boosteroSQL();
  if(action==="refill"){
   const orderId=String(data.orderId||"");
