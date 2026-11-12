@@ -2,7 +2,7 @@
 import {useCallback,useEffect,useRef,useState} from "react";
 
 const DEFAULT_BRIEF={
- brand:"Litix",campaign:"First-party checkout pilot",
+ brand:"Litix",campaign:"Litix marketing drafts",
  audience:"Creators and independent businesses",
  pain:"Content planning takes time",
  solution:"Original editable campaign ideas",
@@ -60,7 +60,7 @@ export default function LitixDollarPilot(){
   const key=attempt.current||crypto.randomUUID();
   attempt.current=key;
   try{
-   const r=await fetch("/api/checkout/pilot",{
+   const r=await fetch("/api/checkout/v1",{
     method:"POST",headers:{"content-type":"application/json"},
     body:JSON.stringify({product:"website_preview",amountCents:100,
       brief,email,paymentToken:token,idempotencyKey:key})
@@ -70,7 +70,7 @@ export default function LitixDollarPilot(){
     paid.current=true;
     const purchaseStatus={...body,orderId:body.orderId,token:body.token};
     setOrder(purchaseStatus);
-    history.replaceState(null,"","/pilot?order="+encodeURIComponent(body.orderId)+
+    history.replaceState(null,"",location.pathname+"?order="+encodeURIComponent(body.orderId)+
      "&token="+encodeURIComponent(body.token));
    }
    if(!r.ok&&r.status!==202){
@@ -133,8 +133,8 @@ export default function LitixDollarPilot(){
   <div style={{maxWidth:680,margin:"0 auto"}}>
    <a href="/" style={{color:"#b6dfff",textDecoration:"none"}}>Litix Home</a>
    <h1 style={{fontSize:"clamp(28px,6vw,44px)",letterSpacing:"-.03em",marginBottom:8}}>
-    Litix $1 checkout pilot</h1>
-   <p style={{...minor,fontSize:16}}>PayKings secure card test for <strong>12 original editable marketing drafts</strong>,
+    Litix Original Marketing Drafts</h1>
+   <p style={{...minor,fontSize:16}}>Secure one-time checkout for <strong>12 original editable marketing drafts</strong>,
     created by Litix. This is not a Likes, Followers, or Views purchase.</p>
    <div style={{...color,margin:"18px 0",background:"#0a1e38"}}>
     <div style={{fontSize:13,color:"#b9cce3"}}>One-time price · no subscription</div>
@@ -191,7 +191,7 @@ export default function LitixDollarPilot(){
       }}>{busy?"Processing—do not retry":"Pay $1.00 once"}</button>
     </section>:<section style={{...color,marginBottom:16}}>
      <h2 style={{marginTop:0}}>Payment disabled</h2>
-     <p style={minor}>This first-party test checkout has not passed its operational readiness gate.
+     <p style={minor}>This first-party product checkout is temporarily unavailable.
       No card payment will be attempted.</p>
     </section>}
    </>}
