@@ -98,7 +98,7 @@ async function resend({to,subject,text,key}){
 }
 export async function boosteroNotice(orderId,secret){
  const sql=boosteroSQL();
- const orders=await sql.query("select o.id,o.email,o.service_name,o.quantity,o.amount_cents,o.payment_state,o.destination,o.metadata,f.state,f.supplier_order_id from public.litix_v2_orders o join public.litix_boostero_fulfillment f on o.id=f.litix_order_id where o.id=$1",[orderId]);
+ const orders=await sql.query("select o.id,o.email,o.service_name,o.quantity,o.amount_cents,o.payment_state,o.destination,o.metadata,f.state,f.supplier_order_id,f.supplier_status,f.payment_mode from public.litix_v2_orders o join public.litix_boostero_fulfillment f on o.id=f.litix_order_id where o.id=$1",[orderId]);
  if(orders.length!==1)return false;
  const o=orders[0];
  const allocations=Array.isArray(o.metadata?.postAllocations)?o.metadata.postAllocations.slice(0,5):[];
@@ -111,6 +111,10 @@ export async function boosteroNotice(orderId,secret){
  // Customer communication stays Litix-branded. The private owner notification
  // retains supplier references needed for fulfillment and support.
  const amount="USD $"+(Number(o.amount_cents)/100).toFixed(2);
+ const isOwnerWallet=o.metadata?.ownerWholesale===true&&o.payment_mode==="admin";
+ const supplierAccepted=!!o.supplier_order_id&&["SUBMITTED","COMPLETED"].includes(o.state);
+ const reviewRequired=["FAILED","REJECTED","UNKNOWN_OUTCOME","MANUAL_REVIEW"].includes(o.state);
+ const purpose=o.metadata?.ownerPurpose||"personal";
  const customerBody=[
   "Litix — Your payment and order confirmation",
   "Litix Order: "+orderId,
@@ -140,10 +144,12 @@ export async function boosteroNotice(orderId,secret){
     postPlatform==="Instagram"?"Submit each post separately to the existing supplier. Never submit the parent destination as a single order.":"Submit each video separately to the existing supplier. Never submit the parent destination as a single order.",
     ...allocationLines]):[]),
   "Amount: "+amount,
-  "Payment: "+o.payment_state,
+  isOwnerWallet?"Payment: owner authorized via Boostero prepaid wallet (no PayKings card charge)":"Payment: "+o.payment_state,
+  isOwnerWallet?"Purchase purpose: "+purpose:null,
   "Supplier: Boostero",
   automatedMulti?"Boostero order IDs are recorded separately for each selected post.": "Boostero Order ID: "+(o.supplier_order_id||"Awaiting confirmation"),
   "Fulfillment: "+o.state,
+  o.supplier_status?.status?"Supplier progress: "+String(o.supplier_status.status).slice(0,70):null,
   ownerLink?"Private tracking URL: "+ownerLink:null
  ].filter(Boolean).join("\n");
  if(secret&&o.payment_state==="paid"){
@@ -153,9 +159,15 @@ export async function boosteroNotice(orderId,secret){
     subject:"Litix — New paid order "+orderId,text:ownerBody,key:"litix-boostero-owner/"+orderId})
   ]);
  }else{
+  // A supplier-accepted owner-wallet order is NOT a fulfillment incident.
+  // Only actual failed/unknown/manual-review outcomes use the urgent subject.
+  const subject=reviewRequired?"Litix — Fulfillment needs review "+orderId:
+   supplierAccepted?"Litix — Owner order submitted to Boostero "+orderId:
+   "Litix — Owner order update "+orderId;
+  const messageKey=reviewRequired?"litix-boostero-review/":
+   supplierAccepted?"litix-boostero-owner-submitted/":"litix-boostero-owner-update/";
   await resend({to:["litixsocial@gmail.com","litgnosisllc@gmail.com"],
-   subject:"Litix — Fulfillment needs review "+orderId,text:ownerBody,
-   key:"litix-boostero-review/"+orderId+"/"+o.state});
+   subject,text:ownerBody,key:messageKey+orderId+"/"+o.state});
  }
  return true;
 }
