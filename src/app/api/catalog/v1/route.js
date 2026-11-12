@@ -22,6 +22,9 @@ export async function GET(request){
   items:listed.items.map(x=>({...x,purchasable:false})),
   recommendations:listed.recommendations.map(x=>({...x,purchasable:false})),
   checkoutEnabled:false,
+  paidFirstPartyTestUrl:"/pilot",
+  paidFirstPartyTestAmountCents:100,
+  paidFirstPartyTestProduct:"12 original Litix marketing drafts",
   message:"Paid checkout for these services is unavailable until first-party fulfillment is verified. No payment will be attempted."
  };
  // Public pricing and categories only: never cache payment, user or tracking data.
