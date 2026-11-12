@@ -27,7 +27,7 @@ const whatsappNumber=(process.env.NEXT_PUBLIC_WHATSAPP_NUMBER||"").replace(/\D/g
 const publicCollectKey=process.env.NEXT_PUBLIC_PAYKINGS_NMI_COLLECT_PUBLIC_KEY||"";
 export default function Home(){
  const GenUIcopy=text=>{if(navigator.clipboard?.writeText)navigator.clipboard.writeText(text)};
- const [services,setServices]=useState([]),[categories,setCategories]=useState([]),[favorites,setFavorites]=useState([]),[recentServices,setRecentServices]=useState([]),[savedOrders,setSavedOrders]=useState([]),[workspaceReady,setWorkspaceReady]=useState(false),[growthGoal,setGrowthGoal]=useState("Grow audience"),[industry,setIndustry]=useState("Creator"),[planDays,setPlanDays]=useState("30"),[planGenerated,setPlanGenerated]=useState(false),[campaignName,setCampaignName]=useState(""),[campaigns,setCampaigns]=useState([]),[cat,setCat]=useState(""),[query,setQuery]=useState(""),[platform,setPlatform]=useState("All platforms"),[quickKind,setQuickKind]=useState(""),[favoritesOnly,setFavoritesOnly]=useState(false),[compareIds,setCompareIds]=useState([]),[pg,setPg]=useState(1),[catalogRetry,setCatalogRetry]=useState(0),[catalogCheckoutEnabled,setCatalogCheckoutEnabled]=useState(false),[catalogState,setCatalogState]=useState("loading"),[catalogSource,setCatalogSource]=useState("unavailable"),[count,setCount]=useState(0),[total,setTotal]=useState(0),[selected,setSelected]=useState(null),[qty,setQty]=useState(100),[email,setEmail]=useState(""),[link,setLink]=useState(""),[config,setConfig]=useState({ready:false}),[cardReady,setCardReady]=useState(false),[cardRetry,setCardRetry]=useState(0),[busy,setBusy]=useState(false),[notice,setNotice]=useState(""),[receipt,setReceipt]=useState(null),[privateUrl,setPrivateUrl]=useState(""),[tracked,setTracked]=useState(null),[key,setKey]=useState("");const done=useRef(null);
+ const [services,setServices]=useState([]),[categories,setCategories]=useState([]),[favorites,setFavorites]=useState([]),[recentServices,setRecentServices]=useState([]),[savedOrders,setSavedOrders]=useState([]),[workspaceReady,setWorkspaceReady]=useState(false),[growthGoal,setGrowthGoal]=useState("Grow audience"),[industry,setIndustry]=useState("Creator"),[planDays,setPlanDays]=useState("30"),[planGenerated,setPlanGenerated]=useState(false),[campaignName,setCampaignName]=useState(""),[campaigns,setCampaigns]=useState([]),[cat,setCat]=useState(""),[query,setQuery]=useState(""),[platform,setPlatform]=useState("All platforms"),[quickKind,setQuickKind]=useState(""),[favoritesOnly,setFavoritesOnly]=useState(false),[compareIds,setCompareIds]=useState([]),[pg,setPg]=useState(1),[catalogRetry,setCatalogRetry]=useState(0),[catalogCheckoutEnabled,setCatalogCheckoutEnabled]=useState(false),[catalogState,setCatalogState]=useState("loading"),[catalogSource,setCatalogSource]=useState("unavailable"),[count,setCount]=useState(0),[total,setTotal]=useState(0),[selected,setSelected]=useState(null),[qty,setQty]=useState(100),[email,setEmail]=useState(""),[link,setLink]=useState(""),[config,setConfig]=useState({ready:false}),[cardReady,setCardReady]=useState(false),[cardRetry,setCardRetry]=useState(0),[busy,setBusy]=useState(false),[notice,setNotice]=useState(""),[receipt,setReceipt]=useState(null),[privateUrl,setPrivateUrl]=useState(""),[tracked,setTracked]=useState(null),[key,setKey]=useState("");const done=useRef(null),paymentTokenTimer=useRef(null),tokenizationExpired=useRef(false);
  const [planServices,setPlanServices]=useState([]),[planStatus,setPlanStatus]=useState("");
  const validServiceFilter=(nextPlatform,nextKind="")=>allowedServiceFilter(nextPlatform,nextKind)||(!nextKind&&["Facebook","Spotify","Other"].includes(nextPlatform));
  const applyServiceQuickFilter=(nextPlatform,nextKind="")=>{
@@ -263,10 +263,14 @@ export default function Home(){
       cvv:{selector:"#cvv",title:"Security Code",placeholder:"CVV"}
      },
      callback:r=>{
-      if(!active)return;
+      if(!active||tokenizationExpired.current)return;
+      if(paymentTokenTimer.current!==null){
+       window.clearTimeout(paymentTokenTimer.current);
+       paymentTokenTimer.current=null;
+      }
       if(r?.token)done.current?.(r.token);
       else{
-       setNotice("Secure card tokenization failed. Check the card fields and try again.");
+       setNotice("Secure card tokenization failed. Check the card fields and try again. No checkout request was sent.");
        setBusy(false);
       }
      },
@@ -354,11 +358,15 @@ export default function Home(){
   :Math.ceil(selected.per1000*qty/10-1e-8)):0;
  async function purchase(token){
   try{
-   const r=await fetch("/api/checkout/v1",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({serviceId:selected.id,quantity:orderQuantity,email,link:normalizedOrderLink,...(multiMode?{postAllocations:multiPosts.map(p=>({link:p.verifiedUrl,quantity:Number(p.quantity)}))}:{}),paymentToken:token,idempotencyKey:key,expectedAmountCents:price})});
-   const v=await r.json();
-   // Ambiguous checkout outcomes reuse the original idempotency key to avoid accidental duplicate charges.
-   if(!r.ok&&r.status!==202)throw Error(v.error||"Payment processing failed");
-   setReceipt(v);setNotice(v.message);
+   const r=await fetch("/api/checkout/v1",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({serviceId:selected.id,quantity:orderQuantity,email,link:normalizedOrderLink,...(multiMode?{postAllocations:multiPosts.map(p=>({link:p.verifiedUrl,quantity:Number(p.quantity)}))}:{}),paymentToken:token,idempotencyKey:key,expectedAmountCents:price}),signal:AbortSignal.timeout(60000)});
+   const v=await r.json().catch(()=>({}));
+   // Surface the backend's exact error even for HTTP 202 review results.
+   // Never automatically retry a payment with an unknown outcome.
+   if(v.orderId&&(v.chargeAttempted===true||r.status===202))setReceipt(v);
+   if(v.error)throw Error(String(v.error));
+   if(!r.ok)throw Error("Checkout request rejected (HTTP "+r.status+").");
+   if(!v.orderId)throw Error("Checkout returned no order confirmation. Check payment activity before retrying.");
+   setReceipt(v);setNotice(v.message||"Payment request received. Review your order status.");
    if(v.orderId&&v.secret){
     const trackingUrl=location.origin+"/?track="+encodeURIComponent(v.orderId)+"&token="+encodeURIComponent(v.secret);
     const item={id:v.orderId,url:trackingUrl,createdAt:new Date().toISOString(),payment:v.payment,fulfillment:v.fulfillment||"pending",quantity:orderQuantity,destination:normalizedOrderLink};
@@ -374,11 +382,25 @@ export default function Home(){
      if(stored){location.assign("/confirmation?order="+encodeURIComponent(v.orderId));return}
     }
    }
-  }catch(e){setNotice(e.message)}
-  finally{setBusy(false)}
+  }catch(e){
+   const outcomeUnknown=e?.name==="TimeoutError"||e?.name==="AbortError"||e instanceof TypeError;
+   setNotice(outcomeUnknown
+    ?"Checkout response was unavailable or timed out. Payment status is unknown; check your order or contact support before trying again."
+    :String(e?.message||"Checkout failed."));
+  }finally{setBusy(false)}
  }
  done.current=purchase;
- const submit=e=>{e.preventDefault();if(busy)return;if(!catalogCheckoutEnabled){setNotice("Paid social-service checkout is not enabled. No payment attempted. Use the $1 Litix marketing-drafts pilot for a real PayKings test.");setCardReady(false);return;}if(!detailsReady||!cardReady||!selected)return;if(!Number.isSafeInteger(orderQuantity)||orderQuantity<selected.min||(multiMode?orderQuantity>1000000:orderQuantity>selected.max)){setNotice("Enter a whole-number quantity within this service’s limits.");return}if(!selected.purchasable){setNotice("This service requires additional supplier fields and cannot be checked out here.");return}setBusy(true);setNotice("");try{getCollectJS().startPaymentRequest()}catch{setBusy(false);setNotice("Complete your secure card fields before paying")}};
+ const submit=e=>{e.preventDefault();if(busy)return;if(!catalogCheckoutEnabled){setNotice("Paid social-service checkout is not enabled. No payment attempted. Use the $1 Litix marketing-drafts pilot for a real PayKings test.");setCardReady(false);return;}if(!detailsReady||!cardReady||!selected)return;if(!Number.isSafeInteger(orderQuantity)||orderQuantity<selected.min||(multiMode?orderQuantity>1000000:orderQuantity>selected.max)){setNotice("Enter a whole-number quantity within this service’s limits.");return}if(!selected.purchasable){setNotice("This service requires additional supplier fields and cannot be checked out here.");return}setBusy(true);setNotice("");tokenizationExpired.current=false;
+  if(paymentTokenTimer.current!==null)window.clearTimeout(paymentTokenTimer.current);
+  paymentTokenTimer.current=window.setTimeout(()=>{
+   paymentTokenTimer.current=null;tokenizationExpired.current=true;setBusy(false);
+   setNotice("PayKings tokenization timed out. Litix did not submit this payment request. Check your card activity before trying again.");
+  },25000);
+  try{getCollectJS().startPaymentRequest()}catch{
+   if(paymentTokenTimer.current!==null)window.clearTimeout(paymentTokenTimer.current);
+   paymentTokenTimer.current=null;tokenizationExpired.current=true;setBusy(false);
+   setNotice("Complete your secure card fields before paying. No checkout request was submitted.");
+  }};
  const track=async value=>{try{const u=new URL(value,location.origin),id=u.searchParams.get("track"),token=u.searchParams.get("token");if(!id||!token)throw Error("Paste the full private tracking URL");const r=await fetch("/api/track?id="+encodeURIComponent(id)+"&token="+encodeURIComponent(token)),v=await r.json();if(!r.ok)throw Error(v.error||"Tracking failed");setTracked(v.order)}catch(e){setNotice(e.message)}};
  useEffect(()=>{if(location.search.includes("track=")){setPrivateUrl(location.href);track(location.href)}},[]);
  return <main className="wrap"><nav className="nav litix-home-nav"><a className="brand" href="/" aria-label="Litix home"><img src="/assets/brand/litix-logo.webp" alt="Litix — Innovation, Ignited." className="litix-new-logo" /></a><div><a href="/shop">Shop</a><a href="/partners">Partners</a><a href="/agency-growth">Business Growth</a><a href="/direct-services">Litix Direct</a><a href="/custom-likes">Custom Likes &amp; Followers</a><a href="#growth-bundles">Bundles</a><a href="/services">All Services</a><a href="#checkout">Checkout</a><a href="/track">Track Order</a></div></nav>
