@@ -3,7 +3,7 @@ import { POST as runDollarPilot } from "../pilot/route.js";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 25;
+export const maxDuration = 60;
 
 const reply = (body, status = 200) => NextResponse.json(body, {
   status,
