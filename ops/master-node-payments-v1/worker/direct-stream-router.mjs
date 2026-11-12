@@ -106,9 +106,12 @@ export async function startDirectStreamRouter(db,parentRedis,shouldStop){
     console.log('LITIX_DIRECT_STREAM_ROUTER_READY',{queue:STREAM,signedNodeRequired:true});
     let lastReclaim=0,lastLog=0;
     while(!shouldStop()){
+      let stage='publish';
       try{
         await publishQueued(db,redis);
+        stage='lease_recovery';
         if(Date.now()-lastReclaim>15000){await reclaimExpired(db);lastReclaim=Date.now();}
+        stage='redis_read';
         const messages=await redis.xreadgroup('GROUP',GROUP,CONSUMER,'COUNT',10,'BLOCK',2000,'STREAMS',STREAM,'>');
         if(!Array.isArray(messages))continue;
         for(const [,items] of messages){
@@ -136,6 +139,7 @@ export async function startDirectStreamRouter(db,parentRedis,shouldStop){
         }
       }catch(err){
         console.error('LITIX_DIRECT_STREAM_ROUTER_RETRY',{
+          stage,code:String(err?.code||'unspecified').slice(0,24),
           type:String(err?.name||'Error').slice(0,60)});
         if(!shouldStop())await sleep(3000);
       }
