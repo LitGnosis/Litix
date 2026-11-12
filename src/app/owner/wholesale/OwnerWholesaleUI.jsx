@@ -111,6 +111,12 @@ export default function OwnerWholesaleUI(){
     });
    }
    setOrder(data);setQuote(null);setConfirmed(false);
+   // Display the separately reconciled supplier progress on first load.
+   // Read-only status: never resubmit or change order fulfillment here.
+   void request("/api/owner/wholesale?view=order&id="+encodeURIComponent(data.orderId))
+    .then(latest=>setOrder(previous=>previous?.orderId===data.orderId?
+      {...previous,current:latest.order}:previous))
+    .catch(()=>{});
    setMessage(data.payment==="review"?
     "PayKings outcome requires review. Do not retry this order or card payment.":
     "Order "+data.orderId+" is recorded. Check its supplier status before another order.");
@@ -225,6 +231,10 @@ export default function OwnerWholesaleUI(){
     {selected&&<div style={{border:"1px solid #2c5e85",borderRadius:12,padding:15,marginTop:15}}>
      <strong>{selected.name}</strong>
      <p style={note}>{selected.platform} · {selected.kind} · Wholesale rate {usd(selected.rateUSDPer1000)} per 1,000</p>
+     {!selected.usa&&<p role="status" style={{background:"#43301c",color:"#ffe6b7",borderRadius:10,padding:"10px 12px",fontWeight:700}}>
+      International service selected — this is NOT a USA/American-targeted package.
+      For American followers, choose an item in the USA / AMERICAN group above.
+     </p>}
      <p style={note}>Supplier quantity limits: {selected.min.toLocaleString()}–{selected.max.toLocaleString()}</p>
     </div>}
     <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(min(100%,250px),1fr))",gap:12,marginTop:17}}>
@@ -293,7 +303,10 @@ export default function OwnerWholesaleUI(){
     {order.orderId&&<p><strong>Litix order:</strong> <code>{order.orderId}</code></p>}
     <p><strong>Fulfillment:</strong> {order.current?.delivery_state||order.fulfillment||"Awaiting review"}</p>
     {order.supplierOrderId&&<p><strong>Supplier order:</strong> {order.supplierOrderId}</p>}
-    {order.current?.supplier_status?.status&&<p><strong>Provider update:</strong> {order.current.supplier_status.status}</p>}
+    {order.current?.supplier_status?.status&&<p><strong>Boostero delivery progress:</strong> {order.current.supplier_status.status}
+      {order.current.supplier_status.remains!==undefined&&order.current.supplier_status.remains!==null?
+       " · "+Number(order.current.supplier_status.remains).toLocaleString()+" remaining":""}</p>}
+    {order.current?.supplier_status?.checked_at&&<p style={note}>Status last checked: {new Date(order.current.supplier_status.checked_at).toLocaleString()}</p>}
     {order.orderId&&<button type="button" style={btn} disabled={refreshing} onClick={refreshOrder}>
      {refreshing?"Refreshing…":"Refresh order status"}</button>}
    </section>}
