@@ -21,6 +21,7 @@ export default function LitixDollarPilot(){
  const [error,setError]=useState(""),[order,setOrder]=useState(null);
  const [cardState,setCardState]=useState("loading");
  const attempt=useRef(null),onToken=useRef(null),paid=useRef(false);
+ const tokenTimeout=useRef(null),tokenTimedOut=useRef(false),paymentRequestSent=useRef(false);
  const loadStatus=useCallback(async(id,token)=>{
   try{
    const u="/api/checkout/pilot?order="+encodeURIComponent(id)+"&token="+encodeURIComponent(token);
@@ -103,8 +104,13 @@ export default function LitixDollarPilot(){
       cvv:{selector:"#cvv",placeholder:"Security code"}
      },
      callback:(result)=>{
+      // Ignore delayed token callbacks after a timed-out browser tokenization.
+      if(disposed||tokenTimedOut.current||paymentRequestSent.current)return;
+      if(tokenTimeout.current!==null){clearTimeout(tokenTimeout.current);tokenTimeout.current=null;}
       const token=result?.token;
-      if(!token){setBusy(false);setError("Secure payment token missing.");return}
+      if(!token){setBusy(false);setError("Secure payment token missing. No checkout request sent.");return}
+      paymentRequestSent.current=true;
+      paid.current=true; // no second live sale from a stale/clicked-again checkout
       void onToken.current?.(token);
      }
     });
@@ -119,10 +125,10 @@ export default function LitixDollarPilot(){
   };
   script.onerror=()=>{if(!disposed)setCardState("unavailable")};
   document.head.append(script);
-  return()=>{disposed=true;clearInterval(poll);script.remove()};
+  return()=>{disposed=true;clearInterval(poll);if(tokenTimeout.current!==null){clearTimeout(tokenTimeout.current);tokenTimeout.current=null;}script.remove()};
  },[ready,publicKey]);
  const buttonStyle={...color,cursor:"pointer",background:"#1e67ad",fontWeight:700,minHeight:48};
- const cannotPay=!ready||cardState!=="ready"||busy||!!order||!email.includes("@");
+ const cannotPay=!ready||cardState!=="ready"||busy||!!order||paid.current||!email.includes("@");
  return <main style={{background:"linear-gradient(150deg,#06101f,#102647 65%,#051120)",color:"#eaf5ff",minHeight:"100vh",padding:"32px 16px",fontFamily:"system-ui,sans-serif"}}>
   <div style={{maxWidth:680,margin:"0 auto"}}>
    <a href="/" style={{color:"#b6dfff",textDecoration:"none"}}>Litix Home</a>
@@ -170,8 +176,17 @@ export default function LitixDollarPilot(){
      <button style={{...buttonStyle,marginTop:18,width:"100%",opacity:cannotPay?.5:1}}
       disabled={cannotPay} onClick={()=>{
        if(cannotPay)return;setError("");setBusy(true);
+       tokenTimedOut.current=false;
+       tokenTimeout.current=window.setTimeout(()=>{
+        tokenTimeout.current=null;
+        if(paymentRequestSent.current)return;
+        tokenTimedOut.current=true;
+        setBusy(false);setCardState("unavailable");
+        setError("PayKings tokenization did not finish. Litix did not submit a checkout request from this page. Check account activity before any further attempt.");
+       },25000);
        try{window.CollectJS.startPaymentRequest()}catch{
-        setBusy(false);setError("Please complete the secure card fields.");
+        if(tokenTimeout.current!==null){clearTimeout(tokenTimeout.current);tokenTimeout.current=null;}
+        setBusy(false);setError("Please complete your secure card fields. No payment was submitted.");
        }
       }}>{busy?"Processing—do not retry":"Pay $1.00 once"}</button>
     </section>:<section style={{...color,marginBottom:16}}>
