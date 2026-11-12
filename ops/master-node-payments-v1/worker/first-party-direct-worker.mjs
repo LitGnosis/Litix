@@ -116,8 +116,11 @@ async function main(){
         await conn.query('BEGIN');
         const rows=await conn.query(
           `SELECT j.id,j.order_id,j.kind,j.payload,j.status,
-             g.kind AS grant_kind,g.revoked_at,g.expires_at,
-             i.provider_transaction_id,i.execution_approved,i.state AS payment_state
+             g.kind AS grant_kind,g.verification_source,
+             g.revoked_at,g.expires_at,
+             i.provider_transaction_id,i.provider,i.expected_amount_cents,
+             i.currency,i.live_mode,i.service_kind,
+             i.execution_approved,i.state AS payment_state
            FROM public.master_node_jobs j
            JOIN public.master_fulfillment_grants g ON g.order_id=j.order_id
            JOIN growth_ops.litix_owned_payment_intents i ON i.order_id=j.order_id
@@ -128,12 +131,28 @@ async function main(){
         if(item.kind!=='website_preview'||item.grant_kind!==item.kind||
            item.revoked_at||item.expires_at&&new Date(item.expires_at)<new Date()||
            item.execution_approved!==true||
-           !['dispatch_pending','dispatched','settled'].includes(item.payment_state))
+           !['awaiting_settlement','dispatch_pending','dispatched','settled'].includes(item.payment_state)||
+           item.provider!=='nmi'||item.currency!=='USD'||item.live_mode!==true||
+           item.service_kind!=='website_preview'||Number(item.expected_amount_cents)!==100)
           throw Error('direct_job_not_approved');
-        const payment=await conn.query(
+        // Release verified captured sales before bank settlement, but NEVER an
+        // auth-only/uncaptured card hold, browser claim, or unsupported product.
+        // Only the server-side independent NMI Query API may write this grant.
+        const captureProof=await conn.query(
+          `SELECT 1 FROM growth_ops.litix_nmi_sale_receipts r
+           WHERE r.order_id=$1 AND r.transaction_id=$2
+             AND r.amount_cents=100 AND r.currency='USD' LIMIT 1`,
+          [item.order_id,item.provider_transaction_id]);
+        const settlementProof=await conn.query(
           `SELECT 1 FROM growth_ops.litix_nmi_settled_transactions
            WHERE transaction_id=$1 LIMIT 1`,[item.provider_transaction_id]);
-        if(payment.rowCount!==1)throw Error('direct_settlement_not_verified');
+        const independentCapturedProof=
+          item.verification_source==='nmi_query_captured_sale'
+          &&captureProof.rowCount===1;
+        if(settlementProof.rowCount!==1&&!independentCapturedProof)
+          throw Error('direct_nmi_captured_sale_not_verified');
+        if(item.payment_state==='awaiting_settlement'&&!independentCapturedProof)
+          throw Error('direct_uncaptured_or_unverified_authorization');
         // Reject all engagement jobs: no proof of a real connected platform account.
         const brief=verifiedBrief(item);
         await conn.query(
