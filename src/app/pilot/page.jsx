@@ -73,8 +73,16 @@ export default function LitixDollarPilot(){
     paid.current=true;
     const purchaseStatus={...body,orderId:body.orderId,token:body.token};
     setOrder(purchaseStatus);
-    history.replaceState(null,"",location.pathname+"?order="+encodeURIComponent(body.orderId)+
-     "&token="+encodeURIComponent(body.token));
+    const privateTrackingPage=location.pathname+"?order="+encodeURIComponent(body.orderId)+
+     "&token="+encodeURIComponent(body.token);
+    // Successful approval: open the private tracking view immediately, rather
+    // than leaving the customer on a stale processing form. Do not re-charge.
+    // Error/review outcomes remain on the page to show the exact response.
+    if((r.ok||r.status===202)&&!body.error){
+     window.location.replace(privateTrackingPage);
+     return;
+    }
+    history.replaceState(null,"",privateTrackingPage);
    }
    if(!r.ok&&r.status!==202){
     setError(body.error||"Payment could not be verified. Do not retry; check the displayed order status.");
