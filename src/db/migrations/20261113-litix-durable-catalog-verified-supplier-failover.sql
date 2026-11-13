@@ -40,6 +40,14 @@ CREATE INDEX IF NOT EXISTS litix_verified_supplier_routes_eligible
   ON public.litix_verified_supplier_routes (litix_service_id,priority)
   WHERE enabled AND owner_approved AND verified_at IS NOT NULL;
 
+CREATE TABLE IF NOT EXISTS public.litix_supplier_route_claims (
+  litix_order_id text PRIMARY KEY REFERENCES public.litix_v2_orders(id) ON DELETE RESTRICT,
+  claimed_at timestamptz NOT NULL DEFAULT now(),
+  final_state text NOT NULL DEFAULT 'CLAIMED'
+    CHECK(final_state IN ('CLAIMED','SUBMITTED','MANUAL_REVIEW','REJECTED')),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
 CREATE TABLE IF NOT EXISTS public.litix_supplier_failover_attempts (
   id uuid PRIMARY KEY,
   litix_order_id text NOT NULL REFERENCES public.litix_v2_orders(id) ON DELETE RESTRICT,
