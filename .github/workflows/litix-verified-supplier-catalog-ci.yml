@@ -1,0 +1,39 @@
+name: Litix durable catalog and verified supplier routing
+on:
+  pull_request:
+    paths:
+      - 'src/lib/litixDurableCatalog.mjs'
+      - 'src/lib/litixVerifiedSupplierRouter.mjs'
+      - 'src/tests/litix-verified-supplier-failover-20261113.test.mjs'
+      - 'src/tests/litix-durable-catalog-20261113.test.mjs'
+      - 'src/app/api/catalog/v1/route.js'
+      - 'src/app/api/internal/verified-supplier-dispatch/route.js'
+      - 'src/db/migrations/20261113-litix-durable-catalog-verified-supplier-failover.sql'
+      - '.github/workflows/litix-verified-supplier-catalog-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/lib/litixDurableCatalog.mjs'
+      - 'src/lib/litixVerifiedSupplierRouter.mjs'
+      - 'src/tests/litix-verified-supplier-failover-20261113.test.mjs'
+      - 'src/tests/litix-durable-catalog-20261113.test.mjs'
+      - 'src/app/api/catalog/v1/route.js'
+      - 'src/app/api/internal/verified-supplier-dispatch/route.js'
+      - 'src/db/migrations/20261113-litix-durable-catalog-verified-supplier-failover.sql'
+jobs:
+  safety:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: src
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: src/package-lock.json
+      - run: npm ci
+      - run: node --test tests/litix-verified-supplier-failover-20261113.test.mjs tests/litix-durable-catalog-20261113.test.mjs tests/litix-catalog-resilience.test.mjs
+      - run: npm run build
