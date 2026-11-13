@@ -1,7 +1,7 @@
 // Verified multi-supplier v2 adapter. Backend only; no secrets in the browser.
 // Only use for new PAID orders explicitly created for verified_router dispatch.
 // Existing Boostero and owned-node orders must NEVER be replayed here.
-import {randomUUID,timingSafeEqual} from "node:crypto";
+import {randomUUID} from "node:crypto";
 import {neon} from "@neondatabase/serverless";
 import {litixPlatform,litixKind} from "./litixServiceClassify.mjs";
 
@@ -23,7 +23,6 @@ export function supplierConfiguration(code,{env=process.env}={}){
  return {url:url.toString(),key};
 }
 
-const validId=v=>/^[0-9]{1,12}$/.test(String(v??""));
 const validOrderId=v=>/^ltx2_[a-f0-9-]{36}$/.test(String(v??""));
 const positiveInteger=v=>Number.isSafeInteger(v)&&v>0&&v<=1_000_000;
 export function classifySupplierResponse(payload,{action}={}){
@@ -101,10 +100,11 @@ const status=async (sql,id,state)=>sql.query(
 // Each paid order is claimed ONCE in Neon. Any crash after a supplier call
 // requires reconciliation, never an implicit second purchase.
 export async function dispatchVerifiedSupplierOrder(orderId,{
- sql=database(),requestSupplier=supplierRequest,enabled=process.env.LITIX_VERIFIED_SUPPLIER_FAILOVER_ENABLED==="true"
+ sql=null,requestSupplier=supplierRequest,enabled=process.env.LITIX_VERIFIED_SUPPLIER_FAILOVER_ENABLED==="true"
 }={}){
  if(!enabled||process.env.VERCEL_ENV!=="production")return {state:"DISABLED",reason:"router_not_released"};
  if(!validOrderId(orderId))return {state:"INVALID_ORDER"};
+ sql=sql||database();
  const claims=await sql.query(`
   INSERT INTO public.litix_supplier_route_claims(litix_order_id)
   SELECT o.id FROM public.litix_v2_orders o
