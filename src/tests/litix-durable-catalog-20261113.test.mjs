@@ -1,7 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {persistVerifiedCatalog,readDurableCatalog} from "../lib/litixDurableCatalog.mjs";
-const old=process.env.LITIX_V2_DATABASE_URL;
 process.env.LITIX_V2_DATABASE_URL="postgresql://fake.example/test";
 test("catalog snapshot stores only approved card fields, never supplier secrets",async()=>{
  let saved=[];
@@ -42,4 +41,3 @@ test("catalog fallback is read-only with no configured DB",async()=>{
  const out=await readDurableCatalog({sqlFactory:()=>{throw Error("should not execute")}});
  assert.deepEqual(out,{status:"unavailable",items:[]});
 });
-process.env.LITIX_V2_DATABASE_URL=old;
