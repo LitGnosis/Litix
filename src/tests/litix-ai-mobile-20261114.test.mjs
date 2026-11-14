@@ -41,8 +41,8 @@ test("assistant suggestions exclude retired bundles and guided responses avoid d
 
 test("private order lookup clears on close/open and never seeds customer data",async()=>{
  const component=await read("../components/LitixAI.jsx");
- assert.match(component,/const \[orderId,setOrderId\]=useState\("")/);
- assert.match(component,/const \[email,setEmail\]=useState\("")/);
+ assert.match(component,/const \[orderId,setOrderId\]=useState\(""\)/);
+ assert.match(component,/const \[email,setEmail\]=useState\(""\)/);
  assert.match(component,/const resetLookup=\(\)=>/);
  assert.match(component,/const closePanel=\(\)=>\{resetLookup\(\)/);
  assert.match(component,/const selectTracking=\(\)=>\{resetLookup\(\)/);
