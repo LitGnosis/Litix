@@ -99,10 +99,11 @@ export function checkoutDisplay(row){
  // Missing differences are not invented: use actual min/max and a stable
  // variant reference so two differently priced offers are distinguishable.
  const limit=min.toLocaleString("en-US")+"–"+max.toLocaleString("en-US")+" limit";
- const subtitle=specifics.length
-  ? specifics.join(" · ")+(details.pace?"":" · "+limit)
+ const tierLabel=specifics.join(" · ");
+ const subtitle=tierLabel
+  ? tierLabel+(details.pace?"":" · "+limit)
   : "Standard service · "+limit;
- return {title,subtitle,specialty,tier:specialty?"Specialty / Custom":"Standard catalog",
+ return {title,subtitle,tierLabel,specialty,tier:specialty?"Specialty / Custom":"Standard catalog",
   label:title+" · "+subtitle+" ("+money(row?.per1000||0)+"/1k)"};
 }
 const rankTarget=x=>/\bUSA(?:\s*\/\s*UK)?\b/i.test(cleanCheckoutTitle(x?.name))?0:1;
