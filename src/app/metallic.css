@@ -310,3 +310,13 @@ button:disabled{filter:saturate(.55)}
  .litix-service-filter-buttons button{font-size:13px;padding:10px 8px}
  .litix-service-results-anchor{scroll-margin-top:195px}
 }
+
+/* Accessible private order lookup: order number + checkout email + action. */
+.trackingbox:has(label){grid-template-columns:repeat(2,minmax(0,1fr)) auto;align-items:end}
+.trackingbox label{display:flex;flex-direction:column;gap:7px;min-width:0;font-weight:650}
+.trackingbox label input{width:100%;min-width:0}
+.trackingbox button{min-height:44px}
+.litix-shop-actions button.litix-shop-secondary{font:inherit;cursor:pointer}
+.litix-early-link input{width:100%;margin-top:6px}
+.litix-starter-actions{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0}
+@media(max-width:750px){.trackingbox:has(label){grid-template-columns:1fr}}
