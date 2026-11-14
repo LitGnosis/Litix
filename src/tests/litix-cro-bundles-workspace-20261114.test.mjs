@@ -84,6 +84,7 @@ test("customer-facing copy is clear and avoids unverified automation claims",asy
  assert.match(home,/Verified Real-Time Catalog/);
  assert.match(home,/Direct Order Processing/);
  assert.doesNotMatch(home,/Supplier-dependent delivery|Live supplier catalog|depends on the specific supplier service/);
+ assert.doesNotMatch(home,/The supplier catalog is temporarily unavailable|Service checkout is paused until the supplier|This supplier service requires special order fields/);
  assert.doesNotMatch(bundles,/MANUALLY COORDINATED/);
  assert.doesNotMatch(instructions,/supplier-dependent/);
  assert.match(bundles,/before processing/);
