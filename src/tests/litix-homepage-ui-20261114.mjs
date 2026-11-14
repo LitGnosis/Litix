@@ -40,7 +40,7 @@ const test=async width=>{
  const grp=page.getByRole("group",{name:"Select a social platform"});
  await grp.getByRole("button",{name:"Facebook"}).click();
  assert.equal(await page.locator('.litix-platform-choices a[href="/shop/facebook/followers"]').count(),1);
- await page.locator(".litix-hero-shop").getByRole("button",{name:"Ask LITIX AI"}).click();
+ await page.locator(".lxai-launcher").click();
  await page.locator(".lxai-panel").waitFor();
  await page.locator("#lxai-entry").fill("Where is the catalog?");
  await page.locator(".lxai-compose button").click();
@@ -51,6 +51,20 @@ const test=async width=>{
  await tracking.locator('input[aria-label="Checkout email"]').fill("customer@example.com");
  await tracking.getByRole("button",{name:"Check status"}).click();
  await tracking.getByText("Saved delivery status.").waitFor();
+ assert.equal(await page.locator("#campaign-studio").count(),0);
+ assert.equal(await page.locator("#workspace").count(),0);
+ assert.equal(await page.locator("#growth-studio").count(),0);
+ assert.equal(await page.locator(".litix-purchase-layout #checkout").count(),1);
+ assert.equal(await page.locator("ol.checkout-steps li").count(),3);
+ if(width<576){
+  const ai=await page.locator(".lxai-launcher").boundingBox();
+  const whats=await page.locator(".whatsapp-float").boundingBox();
+  assert.ok(ai&&whats&&ai.x+ai.width+10<whats.x,
+   "mobile AI and WhatsApp must stay separate");
+  assert.equal(await page.locator(".lxai-launcher").getByText("Ask LITIX AI").isVisible(),true);
+ }
+ await page.goto("http://localhost:3100/workspace",{waitUntil:"domcontentloaded"});
+ await page.locator("#campaign-studio").waitFor();
  await page.getByRole("button",{name:"7-day content sprint"}).click();
  await page.getByRole("button",{name:"Create campaign"}).click();
  const savedCampaign=page.locator("#campaign-studio .workspace-row").first();
@@ -71,13 +85,7 @@ const test=async width=>{
  assert.ok(debugCampaign[0].rect[3]<160,"Campaign row should not stretch into an oversized empty panel");
  assert.equal(await page.locator('.panel.support-banner').count(),0);
  assert.equal(await page.locator('.panel[aria-label="Litix customer support"]').count(),0);
- if(width<576){
-  const ai=await page.locator(".lxai-launcher").boundingBox();
-  const whats=await page.locator(".whatsapp-float").boundingBox();
-  assert.ok(ai&&whats&&ai.x+ai.width+10<whats.x,
-   "mobile AI and WhatsApp must stay separate");
-  assert.equal(await page.locator(".lxai-launcher").getByText("Ask LITIX AI").isVisible(),true);
- }
+
  assert.deepEqual(errors,[]);
  await context.close();
  console.log("PASS LITIX HOMEPAGE UI",width);
