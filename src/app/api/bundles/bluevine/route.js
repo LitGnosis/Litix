@@ -5,6 +5,6 @@ export const dynamic="force-dynamic";
 export async function POST(){
  return Response.json({
   error:"Growth Bundles are discontinued. No new payment link was created.",
-  code:"BUNDLES_RETIRED",chargeAttempted:false,checkoutUrl:null
+  code:"BUNDLES_RETIRED",checkoutEnabled:false,chargeAttempted:false,checkoutUrl:null
  },{status:410,headers:{"cache-control":"no-store","x-content-type-options":"nosniff"}});
 }
