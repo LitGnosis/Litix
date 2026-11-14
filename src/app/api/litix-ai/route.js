@@ -3,6 +3,7 @@ import {createHmac} from "node:crypto";
 import {GET as catalogGET} from "../catalog/v1/route.js";
 import {GET as bundlesGET} from "../bundles/route.js";
 import {redactForAI,cleanConversation,catalogIntent,needsGuardian,needsBundles,responseText,textIsSensitive} from "../../../lib/litixAI.mjs";
+import {guidedLitixReply} from "../../../lib/litixGuidedSupport.mjs";
 
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
@@ -14,7 +15,7 @@ const answer=(value,status=200,headers={})=>Response.json(value,{
 const databaseURL=()=>process.env.LITIX_AI_DATABASE_URL||process.env.LITIX_V2_DATABASE_URL||process.env.LITIX_AUTOLIKES_DATABASE_URL||process.env.DATABASE_URL||process.env.POSTGRES_URL;
 const configured=()=>Boolean(process.env.OPENAI_API_KEY&&databaseURL());
 export async function GET(){
-  return answer({available:configured(),verified:configured()&&process.env.LITIX_AI_VERIFIED==="true",
+  return answer({available:true,mode:configured()?"ai":"guided",modelAvailable:configured(),verified:configured()&&process.env.LITIX_AI_VERIFIED==="true",
     title:"LITIX AI — Intelligent Growth Assistant",readOnly:true});
 }
 async function reserveQuota(request){
@@ -101,13 +102,13 @@ const POLICY=[
 export async function POST(request){
   const origin=request.headers.get("origin");
   if(origin&&origin!==new URL(request.url).origin)return answer({error:"Cross-site request blocked."},403);
-  if(!configured())return answer({error:"LITIX AI is not configured yet. Contact human support."},503);
   let body,raw;
   try{raw=await request.text();if(raw.length>6000)return answer({error:"Message too long."},413);body=JSON.parse(raw);}
   catch{return answer({error:"Invalid request."},400);}
   const message=String(body?.message||"").trim();
   if(!message||message.length>750)return answer({error:"Use a message between 1 and 750 characters."},400);
   if(textIsSensitive(message))return answer({error:"Please do not share passwords, card details, API keys, or tracking tokens in chat."},400);
+  if(!configured())return answer({reply:guidedLitixReply(message),mode:"guided",verified:false});
   try{if(!await reserveQuota(request))return answer({error:"Chat limit reached. Please use human support or try again later."},429,{"retry-after":"3600"});}
   catch{return answer({error:"Chat temporarily unavailable. Please use human support."},503);}
   const cleanMessage=redactForAI(message);
@@ -125,18 +126,18 @@ export async function POST(request){
     const response=await fetch("https://api.openai.com/v1/responses",{
       method:"POST",
       headers:{"authorization":"Bearer "+process.env.OPENAI_API_KEY,"content-type":"application/json"},
-      body:JSON.stringify({model:process.env.LITIX_AI_MODEL||"gpt-6-luna",
+      body:JSON.stringify({model:process.env.LITIX_AI_MODEL||"gpt-4.1-mini",
         store:false,max_output_tokens:600,reasoning:{effort:"none"},
         instructions:POLICY+"\nVERIFIED STORE DATA (may be incomplete or stale):\n"+facts,
         input:[...cleanConversation(body?.history),{role:"user",content:cleanMessage}]}),
       cache:"no-store",signal:AbortSignal.timeout(21000)
     });
-    if(!response.ok)return answer({error:"AI support is temporarily unavailable. Human support is available."},502);
+    if(!response.ok)return answer({reply:"Live AI is temporarily unavailable. "+guidedLitixReply(message),mode:"guided",verified:false});
     const result=await response.json();
     const text=responseText(result);
-    if(!text)return answer({error:"AI response unavailable. Please contact support."},502);
+    if(!text)return answer({reply:"Live AI is temporarily unavailable. "+guidedLitixReply(message),mode:"guided",verified:false});
     if(/\b(i (?:have|just) (?:placed|charged|ordered|refunded)|your refund (?:has been|was) processed)\b/i.test(text))
       return answer({reply:"I cannot complete payments, supplier orders, or refunds. Please contact Litix support for assistance.",verified:false});
-    return answer({reply:text,verified:process.env.LITIX_AI_VERIFIED==="true"});
-  }catch{return answer({error:"AI support is temporarily unavailable. Try human support."},502);}
+    return answer({reply:text,mode:"ai",verified:process.env.LITIX_AI_VERIFIED==="true"});
+  }catch{return answer({reply:"Live AI is temporarily unavailable. "+guidedLitixReply(message),mode:"guided",verified:false});}
 }
