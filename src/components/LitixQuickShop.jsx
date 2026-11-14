@@ -1,6 +1,5 @@
 "use client";
 import {useState} from "react";
-import {quickShopCustomHref} from "../lib/litixXCustomRouting.mjs";
 
 // Navigation only. We never manufacture prices, timing or supplier guarantees.
 const categories = [
@@ -37,12 +36,8 @@ export default function LitixQuickShop(){
     <span>{item.kind}</span><span aria-hidden="true">›</span></a>)}
   </nav>
   <div className="litix-shop-actions">
-   <a className="litix-metal-cta"
-    href={platform==="Facebook"?"/shop/facebook/followers":platform==="YouTube"?"/shop/youtube/subscribers":quickShopCustomHref(platform)}>
-    {platform==="Facebook"?"Browse Facebook Services":platform==="YouTube"?"Browse YouTube Services":"Custom Likes & Followers"} <span aria-hidden="true">›</span>
-   </a>
-   <button type="button" className="litix-shop-secondary" onClick={()=>window.dispatchEvent(new Event("litix:open-ai"))}>Ask LITIX AI</button>
-   <a className="litix-shop-secondary" href="/services">Compare All Services</a>
+   <a className="litix-metal-cta" href="#checkout">Shop a Single Service <span aria-hidden="true">›</span></a>
+   <a className="litix-shop-secondary" href="/bundles">Choose a Growth Bundle</a>
   </div>
   <p className="litix-hero-footnote">Public links only · No social password required · Every order receives an independent price and availability check before payment.</p>
  </section>;
