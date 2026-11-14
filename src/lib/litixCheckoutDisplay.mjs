@@ -52,10 +52,17 @@ function rawDetails(source){
  // caption or refill=false is not proof of eligibility or a guarantee.
  return data;
 }
+export function publicCheckoutTraits(raw){return rawDetails({listingName:raw});}
 export function checkoutDisplay(row){
  const original=String(row?.name||"Litix service");
  const title=cleanCheckoutTitle(original);
- const details={...(VERIFIED_VARIANTS[String(row?.id)]||{}),...rawDetails(row)};
+ const provided={
+  ...(/^(?:High quality|Premium quality|Active-look listing|Active-account listing)$/i.test(String(row?.variantQuality||""))?
+   {quality:String(row.variantQuality)}:{}),
+  ...(/^(?:\d+(?:[,.]\d+)?\s*[kK]?\s*\/\s*[Dd]ay listed)$/i.test(String(row?.variantPace||""))?
+   {pace:String(row.variantPace)}:{})
+ };
+ const details={...(VERIFIED_VARIANTS[String(row?.id)]||{}),...provided,...rawDetails(row)};
  const specifics=[details.quality,details.pace].filter(Boolean);
  const min=Number(row?.min)||1,max=Number(row?.max)||min;
  const specialty=Number(row?.per1000)>FAST_CHECKOUT_MAX_RATE;
