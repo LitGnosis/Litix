@@ -14,7 +14,9 @@ export async function GET(request){
  if(process.env.VERCEL_ENV!=="production")return Response.json({disabled:true,environment:"nonproduction"});
  try{
   const outcomes=await runFulfillmentMaintenance();
-  return Response.json(outcomes,{headers:{"cache-control":"no-store"}});
+  const failures=Object.values(outcomes).some(x=>x&&typeof x==="object"&&
+    (x.failed===true||(Number.isFinite(x.failed)&&x.failed>0)));
+  return Response.json(outcomes,{status:failures?503:200,headers:{"cache-control":"no-store"}});
  }catch{
   return Response.json({error:"maintenance_unavailable"},{status:503});
  }
