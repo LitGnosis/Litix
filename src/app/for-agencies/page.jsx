@@ -3,25 +3,25 @@ import "../partners/partners.css";
 
 export const metadata={
  title:"Litix for Global Agencies | Client Service Purchasing & Partnerships",
- description:"Agencies worldwide can explore Litix's existing catalog, see currently available bundles, track orders and request a manually reviewed client-service partnership. Prices and availability confirmed at checkout.",
+ description:"Agencies worldwide can explore Litix's existing catalog, review service options, track orders and request a manually reviewed client-service partnership. Prices and availability confirmed at checkout.",
  alternates:{canonical:"https://www.litix.net/for-agencies"},
  openGraph:{title:"Global Agency Partnerships | Litix",description:"A practical ordering and tracking workflow for agencies and client-service teams. Request partnership terms and review currently available services.",url:"https://www.litix.net/for-agencies"}
 };
 const paths=[
  {heading:"Start with available services",copy:"Review the current catalog, service minimums, public prices and eligibility before placing a customer order.",href:"/shop",cta:"Browse available services"},
- {heading:"Plan larger client orders",copy:"Explore Litix's existing bundles and confirm exactly what each package includes, its fulfillment availability and checkout terms.",href:"/bundles",cta:"Explore existing bundles"},
+ {heading:"Plan larger client orders",copy:"Review individual Litix services and their current platform restrictions, price and availability before ordering.",href:"/services",cta:"Compare individual services"},
  {heading:"Discuss recurring agency volume",copy:"Tell us your markets, estimated monthly client volume and operational needs. Commercial terms are reviewed manually—no automatic wholesale discounts or credit are promised.",href:"/partners?utm_source=agency_page&utm_medium=owned&utm_campaign=global_agencies#apply",cta:"Request agency review"}
 ];
 export default function GlobalAgencyPage(){
  return <main className="wrap partner-page">
   <nav className="nav" aria-label="Litix global agency navigation">
    <Link className="brand" href="/">LITIX</Link>
-   <div><Link href="/shop">Shop</Link><Link href="/bundles">Bundles</Link><Link href="/track">Track an order</Link></div>
+   <div><Link href="/shop">Shop</Link><Link href="/track">Track an order</Link></div>
   </nav>
   <section className="panel partner-hero">
    <p className="kicker">LITIX · GLOBAL AGENCY PARTNERSHIPS</p>
    <h1>One storefront. Clients around the world.</h1>
-   <p>Manage client-service purchasing without juggling multiple storefronts. Discover Litix's existing services, review available bundles and request an agency partnership for your business.</p>
+   <p>Manage client-service purchasing without juggling multiple storefronts. Discover Litix's existing services, review available services and request an agency partnership for your business.</p>
    <div className="partner-actions">
     <Link className="primary" href="/agency-growth?utm_source=agency_page&utm_medium=owned&utm_campaign=agency_inquiry#request">Request a business growth proposal</Link>
     <Link href="/shop">Explore live services</Link>
@@ -38,7 +38,7 @@ export default function GlobalAgencyPage(){
   <section className="panel">
    <h2>For agencies operating in multiple markets</h2>
    <ol className="partner-steps">
-    <li>Choose the relevant public service or bundle and review its terms, pricing and platform restrictions.</li>
+    <li>Choose the relevant public service and review its terms, pricing and platform restrictions.</li>
     <li>Keep a separate order reference for each customer campaign and share only authorized public account or post destinations.</li>
     <li>Track verified payment and delivery status through Litix. Escalate exceptions before placing replacements or duplicate orders.</li>
     <li>For repeat purchasing, submit an agency inquiry with your market, typical order sizes, estimated volume and business website.</li>
