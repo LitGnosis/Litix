@@ -340,3 +340,26 @@ button:disabled{filter:saturate(.55)}
  #campaign-studio .workspace-row{grid-template-columns:minmax(0,1fr) 118px 38px;gap:8px}
  #campaign-studio .workspace-row select{font-size:13px}
 }
+
+
+/* Single conversion path on the landing page; planning tools live in /workspace. */
+.litix-purchase-layout{width:100%;max-width:860px;margin:12px auto 28px}
+.litix-purchase-layout #checkout{width:100%;max-width:100%;position:relative}
+.litix-purchase-path{display:flex;align-items:center;justify-content:space-between;
+ flex-wrap:wrap;gap:12px;margin:18px 0;padding:16px 19px}
+.litix-purchase-path>span{font-size:14px;color:#c6e2f6}
+.litix-purchase-path>div{display:flex;gap:10px;flex-wrap:wrap}
+.litix-purchase-path a{min-height:44px;display:inline-flex;align-items:center;
+ justify-content:center;border-radius:12px;padding:10px 14px;text-decoration:none}
+.litix-track-support{display:flex;gap:11px;align-items:center;flex-wrap:wrap;margin-top:17px}
+.litix-track-support a{border:1px solid #77c9eb80;border-radius:10px;
+ padding:10px 13px;color:#dff4ff;font-size:13px;text-decoration:none}
+.litix-workspace-page .campaign-form{margin:16px 0}
+.litix-workspace-page #campaign-studio .workspace-row{min-height:62px}
+.litix-workspace-page .growth-plan{margin-top:18px}
+@media(max-width:700px){
+ .litix-purchase-path{display:block}
+ .litix-purchase-path>div{margin-top:12px;display:grid;grid-template-columns:1fr}
+ .litix-purchase-layout{margin:10px 0}
+ .litix-track-support a{flex:1 1 auto;text-align:center}
+}

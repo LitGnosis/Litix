@@ -3,10 +3,34 @@ import {useEffect,useMemo,useRef,useState} from "react";
 import {LITIX_CUSTOM_QUICK_PICKS,litixPreferredCustomService} from "../lib/litixCustomQuickPick.mjs";
 const dollars=cents=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(Number(cents)/100);
 const DEFAULT_PLATFORMS=["Instagram","TikTok","YouTube","Facebook","Twitter (X)"];
+const CACHE_PREFIX="litix:verified-checkout-choices:v2:";
+const EMPTY=Object.freeze({platforms:[],kinds:[],items:[],total:0,note:"",liveAvailability:false});
+function storedChoices(platform){
+ if(typeof window==="undefined")return null;
+ try{
+  const item=JSON.parse(sessionStorage.getItem(CACHE_PREFIX+platform)||"null");
+  if(!item||item.platform!==platform||Date.now()-item.savedAt>24*60*60*1000||Date.now()<item.savedAt
+    ||!Array.isArray(item.data?.items)||!Array.isArray(item.data?.kinds))return null;
+  const items=item.data.items.filter(x=>/^litix_\d{1,12}$/.test(String(x?.id||""))
+    &&x.platform===platform&&Number(x.per1000)>0&&Number(x.min)>0).slice(0,3000);
+  return {...item.data,items,liveAvailability:false,
+   note:"Showing recently verified Litix listings. Prices and availability are rechecked before payment."};
+ }catch{return null}
+}
+function saveChoices(platform,value){
+ if(typeof window==="undefined"||!value||!Array.isArray(value.items))return;
+ try{sessionStorage.setItem(CACHE_PREFIX+platform,JSON.stringify({
+  platform,savedAt:Date.now(),data:{...value,
+    // Public display state only, not a live checkout authorization.
+    liveAvailability:false,
+    items:value.items.slice(0,3000),kinds:value.kinds||[],platforms:value.platforms||[]}
+ }))}catch{/* Browsers without session storage can still load the API. */}
+}
+
 export default function LitixCheckoutSelector({selected,onChoose}){
  const [platform,setPlatform]=useState("Instagram");
  const [kind,setKind]=useState("followers");
- const [data,setData]=useState({platforms:[],kinds:[],items:[],total:0,note:"",liveAvailability:false});
+ const [data,setData]=useState(EMPTY);
  const [loading,setLoading]=useState(true);
  const [error,setError]=useState("");
  const [retry,setRetry]=useState(0);
@@ -25,10 +49,27 @@ export default function LitixCheckoutSelector({selected,onChoose}){
  useEffect(()=>{
   let cancelled=false;
   const controller=new AbortController();
-  const timeout=setTimeout(()=>controller.abort("checkout_catalog_timeout"),12000);
-  setLoading(true);setError("");
+  const cached=storedChoices(platform);
+  // A session snapshot renders immediately on return visits and platform changes.
+  // Network refresh continues without disabling the choices already on screen.
+  setData(cached||EMPTY);
+  setLoading(!cached);
+  setError("");
+  if(cached){
+   const intent=pendingIntent.current;
+   const kinds=cached.kinds||[];
+   if(intent?.platform===platform&&cached.items.length){
+    pendingIntent.current=null;
+    const type=kinds.some(k=>k.value===intent.kind)?intent.kind:kinds[0]?.value||"";
+    setKind(type);
+    onChoose(litixPreferredCustomService(cached.items,platform,type));
+   }else{
+    setKind(previous=>kinds.some(k=>k.value===previous)?previous:(kinds[0]?.value||""));
+   }
+  }
+  const timer=setTimeout(()=>controller.abort(),5000);
   const p=new URLSearchParams({platform});
-  fetch("/api/catalog/checkout-choices?"+p,{signal:controller.signal,cache:"no-store"})
+  fetch("/api/catalog/checkout-choices?"+p,{cache:"no-store",signal:controller.signal})
    .then(async response=>{
     const value=await response.json();
     if(!response.ok)throw Error(value.error||"Unable to load Litix services");
@@ -38,8 +79,11 @@ export default function LitixCheckoutSelector({selected,onChoose}){
     if(cancelled)return;
     const kinds=Array.isArray(value.kinds)?value.kinds:[];
     const items=Array.isArray(value.items)?value.items:[];
-    setData({platforms:Array.isArray(value.platforms)?value.platforms:[],
-     kinds,items,total:value.total||0,note:String(value.note||""),liveAvailability:value.liveAvailability===true});
+    const fresh={platforms:Array.isArray(value.platforms)?value.platforms:[],
+     kinds,items,total:Number(value.total||0),note:String(value.note||""),
+     liveAvailability:value.liveAvailability===true};
+    setData(fresh);
+    saveChoices(platform,fresh);
     const intent=pendingIntent.current;
     if(intent?.platform===platform){
      pendingIntent.current=null;
@@ -47,12 +91,21 @@ export default function LitixCheckoutSelector({selected,onChoose}){
      setKind(type);onChoose(litixPreferredCustomService(items,platform,type));
     }else setKind(previous=>kinds.some(x=>x.value===previous)?previous:(kinds[0]?.value||""));
    })
-   .catch(err=>{if(!cancelled){setError(controller.signal.aborted?"The service list took too long to load. Try again.":err.message||"Unable to load services");setData(d=>({...d,kinds:[],items:[],total:0}))}})
-   .finally(()=>{clearTimeout(timeout);if(!cancelled)setLoading(false)});
-  return()=>{cancelled=true;clearTimeout(timeout);controller.abort()};
+   .catch(err=>{
+    if(cancelled)return;
+    if(cached){
+     setData(previous=>({...previous,note:"Recent verified listings remain available for browsing. Retry to refresh; payment requires a fresh quote."}));
+    }else{
+     setError(controller.signal.aborted?"Service verification took too long. Choose another platform or retry.":err.message||"Unable to load services");
+     setData(EMPTY);
+    }
+   })
+   .finally(()=>{clearTimeout(timer);if(!cancelled)setLoading(false)});
+  return()=>{cancelled=true;clearTimeout(timer);controller.abort()};
  },[platform,retry]);
- const platforms=data.platforms.length?data.platforms:
-  DEFAULT_PLATFORMS.map(name=>({name,count:0}));
+ const platforms=[...DEFAULT_PLATFORMS.map(name=>({
+  name,count:data.platforms.find(p=>p.name===name)?.count||0
+ })),...data.platforms.filter(p=>!DEFAULT_PLATFORMS.includes(p.name))];
  const filtered=useMemo(()=>data.items.filter(x=>(x.kind||"other")===kind),[data.items,kind]);
  const actualSelected=selected?.id&&selected.platform===platform&&selected.kind===kind?
   selected:null;
