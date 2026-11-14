@@ -1,4 +1,5 @@
 // Owner-only transactional alerts for confirmed purchases; never collect or include card fields.
+import {publicServiceCardName} from "./serviceCardDisplay.mjs";
 export const OWNER_ORDER_RECIPIENTS=Object.freeze(["litixsocial@gmail.com","litgnosisllc@gmail.com"]);
 const resendKey=()=>process.env.RESEND_API_KEY||process.env.LITIX_RESEND_API_KEY||"";
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -13,7 +14,7 @@ export async function sendOwnerPurchaseNotification({
  if(!Number.isSafeInteger(amount)||amount<0)throw Error("Invalid owner notification amount");
  const fields=[
  ["Order ID",orderId],["Purchase date (UTC)",date],["Customer email",String(customerEmail||"").slice(0,254)],
- ["Service / bundle",String(serviceName||"Service").slice(0,200)],["Quantity / bundle totals",String(quantity??"").slice(0,300)],
+ ["Service / bundle",publicServiceCardName({name:String(serviceName||"Service").slice(0,200)})],["Quantity / bundle totals",String(quantity??"").slice(0,300)],
  ["Total","USD $"+(amount/100).toFixed(2)],["Payment status",paymentStatus],
  ["Fulfillment instructions",String(fulfillmentInstructions||"Check owner order records").slice(0,1300)]
  ];
