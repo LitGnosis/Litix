@@ -1,4 +1,5 @@
 import {sendOwnerPurchaseNotification} from "./ownerNotifications.mjs";
+import {publicServiceCardName} from "./serviceCardDisplay.mjs";
 // Transactional order notifications. Never include raw card data or log private tracking tokens.
 const emailKey=()=>process.env.RESEND_API_KEY||process.env.LITIX_RESEND_API_KEY||"";
 export const notificationsConfigured=()=>Boolean(emailKey());
@@ -23,7 +24,7 @@ export async function sendOrderEmails({orderId,secret,email,amountCents,quantity
  if(!notificationsConfigured()){console.warn("Litix transactional email unavailable: missing Resend API key",{orderId});return false}
  const tracking=safeTrackingURL(orderId,secret);
  const amount=(Number(amountCents)/100).toFixed(2);
- const service=String(serviceName||"Social media service").slice(0,200);
+ const service=publicServiceCardName({name:String(serviceName||"Social media service").slice(0,200)});
  const state=String(fulfillment||"pending").replace(/_/g," ");
  const base="Order: "+orderId+"\nService: "+service+"\nQuantity: "+quantity+"\nTotal: USD $"+amount+"\nDelivery status: "+state;
  const orderEsc=htmlEscape(orderId),serviceEsc=htmlEscape(service),stateEsc=htmlEscape(state),trackEsc=htmlEscape(tracking);
