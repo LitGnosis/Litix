@@ -550,7 +550,7 @@ export default function Home(){
    aria-invalid={Boolean(link.trim()&&selected&&!targetFeedback.ok)}
    aria-describedby="litix-link-feedback"/>
   <span className="small" id="litix-link-feedback" role="status" aria-live="polite">
-   {link.trim()&&!targetFeedback.ok?targetFeedback.message:""}
+   {link.trim()?targetFeedback.message:""}
    {tiktokLikes&&tiktokLinkVerification.input===link.trim()&&
     tiktokLinkVerification.serviceId===selected?.id&&
     (tiktokLinkVerification.status==="checking"?" Verifying TikTok share link…":
