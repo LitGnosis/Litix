@@ -110,7 +110,7 @@ export default function LitixAI(){
     lookupRequest.current=controller;
     setOrderBusy(true);setOrderError("");setOrder(null);
     try{
-      const r=await fetch("/api/order-lookup",{method:"POST",headers:{"content-type":"application/json"},
+      const r=await fetch("/api/orders/lookup",{method:"POST",headers:{"content-type":"application/json"},
         body:JSON.stringify({orderId:orderId.trim(),email:email.trim().toLowerCase()}),
         signal:controller.signal,cache:"no-store"});
       const d=await r.json();
