@@ -51,3 +51,4 @@ jobs:
           if [ -z "$CHROME_PATH" ]; then npx playwright install chromium; fi
           node tests/litix-instant-checkout-browser-20261114.mjs
           node tests/checkout-cro-browser-20261114.mjs
+          node tests/litix-directory-buy-now-browser-20261114.mjs
