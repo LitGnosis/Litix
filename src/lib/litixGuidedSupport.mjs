@@ -6,7 +6,7 @@ export function guidedLitixReply(value){
   return "To check a real order, select Track order in this chat or open /track. Enter your Litix order number and the checkout email. Your private payment and delivery records stay outside the AI conversation. If an order needs review, contact support at litixsocial@gmail.com. Please do not pay again for the same order.";
  }
  if(/bundle|launch|momentum|power|apex|package/.test(q)){
-  return "See /bundles for the current Launch, Momentum, Power and Apex packages. The final price and service availability must be checked before checkout. No order has been placed.";
+  return "Litix no longer sells Growth Bundles. Choose an individual service at /services. Past bundle orders can still be reviewed through their original private tracking links or with Litix support.";
  }
  if(/instagram|tiktok|facebook|youtube|\bx\b|twitter|follower|like|view|subscriber|service|catalog|price|cost/.test(q)){
   return "Open /services to compare Litix's currently listed services. Select a platform and service type, then enter a public profile or post URL. Prices and supplier availability are verified again at checkout; the catalog alone does not authorize payment.";
@@ -17,5 +17,5 @@ export function guidedLitixReply(value){
  if(/help|contact|support|human|email|whatsapp/.test(q)){
   return "You can reach Litix support at litixsocial@gmail.com, or use the WhatsApp link on the website. For order support, include only the Litix order number—not card details, passwords or private tracking tokens.";
  }
- return "I can guide you to services (/services), bundles (/bundles), private tracking (/track), or campaign planning (/growth-studio). Live AI answers are not currently available, but these tools and the support team can still help. What would you like to do?";
+ return "I can guide you to services (/services), private tracking (/track), or campaign planning (/workspace). Live AI answers are not currently available, but these tools and the support team can still help. What would you like to do?";
 }
