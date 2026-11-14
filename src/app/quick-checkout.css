@@ -209,3 +209,16 @@ footer.end .legal-links a:focus-visible{outline:2px solid #80d5ff;outline-offset
 .litix-checkout-trust li{font-size:11px;line-height:1.4;color:#b4e4fa;background:#0e3548;border:1px solid #78caec68;border-radius:999px;padding:7px 10px;display:inline-flex;align-items:center;gap:5px}
 .litix-checkout-trust li span{font-weight:800;color:#a3f2d9}
 @media(max-width:575px){.litix-checkout-trust{justify-content:flex-start}.litix-checkout-trust li{font-size:11px}}
+
+/* Homepage trust row: grounded capability statements, never invented ratings. */
+.litix-hero-shop .litix-hero-proof{
+ display:flex;align-items:center;flex-wrap:wrap;gap:6px 9px;
+ width:fit-content;max-width:100%;margin:13px 0 19px;
+ padding:9px 13px;border:1px solid #7fc8e971;border-radius:999px;
+ background:linear-gradient(115deg,#0a3045a8,#0e264291);
+ color:#d6eeff;font-size:12px;font-weight:600;line-height:1.45;
+}
+.litix-hero-proof strong{font-weight:800;color:#f0faff}
+.litix-hero-proof>span:first-child{color:#a3f2d9;font-size:14px;font-weight:900}
+.litix-hero-proof .litix-proof-separator{color:#8abed6}
+@media(max-width:575px){.litix-hero-shop .litix-hero-proof{border-radius:14px;padding:10px 12px;gap:4px 7px}}
