@@ -58,6 +58,12 @@ try{
   assert.equal(await email.inputValue(),"");
   assert.equal(await id.getAttribute("placeholder"),"e.g. ltx2_xxxxxxxx-xxxx-xxxx-xxxx");
   assert.equal(await email.getAttribute("placeholder"),"e.g. you@example.com");
+  assert.equal(await id.getAttribute("autocomplete"),"off");
+  assert.equal(await email.getAttribute("autocomplete"),"off");
+  assert.equal(await page.locator(".lxai-track>p").first().innerText(),
+   "Enter your Litix order number and checkout email to view real-time payment and delivery updates.");
+  assert.equal(await page.locator(".lxai-footer small").innerText(),
+   "Litix never asks for social passwords or card numbers in support chat.");
   const track=page.locator(".lxai-track");
   const headerBefore=await header.boundingBox();
   await track.evaluate(el=>{el.scrollTop=el.scrollHeight;});

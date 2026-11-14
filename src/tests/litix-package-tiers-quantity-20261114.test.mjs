@@ -102,3 +102,27 @@ test("API and payment paths preserve exact service identity and amounts",async()
  assert.equal(combined.items[0].id,original.id);
  assert.equal(combined.items[0].per1000,original.per1000);
 });
+
+test("verified Indonesia 500/day listing keeps pace after the sanitized bootstrap title",async()=>{
+ const {VERIFIED_CHECKOUT_SEED}=await import("../lib/litixCheckoutVerifiedSeed.mjs");
+ const {choicesForPlatform}=await import("../lib/litixCheckoutBootstrap.mjs");
+ const source=VERIFIED_CHECKOUT_SEED.items.find(row=>row.id==="litix_2050");
+ assert.ok(source);
+ assert.equal(source.name,"Instagram Indonesia Followers 500/Day");
+ const choices=choicesForPlatform("Instagram");
+ const item=choices.items.find(row=>row.id==="litix_2050");
+ assert.ok(item);
+ assert.equal(item.name,"Instagram Indonesia Followers");
+ const display=checkoutDisplay(item);
+ assert.equal(display.title,"Instagram Indonesia Followers");
+ assert.match(display.subtitle,/Up to 500\/day/i);
+ assert.doesNotMatch(display.subtitle,/^Available /i);
+ assert.equal(item.min,111);
+ assert.equal(item.max,50000);
+});
+test("source-free service subtitles carry real limits instead of invented delivery promises",()=>{
+ const service={id:"litix_9999999",name:"Instagram Example Followers",platform:"Instagram",kind:"followers",min:111,max:50000,per1000:9};
+ const rendered=checkoutDisplay(service);
+ assert.equal(rendered.subtitle,"Standard service · 111–50,000 limit");
+ assert.doesNotMatch(rendered.subtitle,/Standard delivery|guarantee|refill|instant start/i);
+});
