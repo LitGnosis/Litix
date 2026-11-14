@@ -83,7 +83,7 @@ const publicOrder=(x,refresh={})=>{
  const remaining=stat.remains==null?null:Number(stat.remains);
  const validRemaining=Number.isFinite(remaining)&&Number.isInteger(remaining)&&remaining>=0&&remaining<=Number(x.quantity)?remaining:null;
  const supplierStatus=String(stat.status||"").trim();
- return {id:x.id,service:x.service_name,quantity:Number(x.quantity),amount:(Number(x.amount_cents)/100).toFixed(2),payment:x.payment_state,fulfillment:x.fulfillment_state,supplierOrderId:x.supplier_order_id||null,status:supplierStatus||null,remains:validRemaining,checkedAt:stat.checked_at||null,liveSupplierStatus:refresh.live===true,deliveryConfirmed:x.fulfillment_state==="completed",statusNote:refresh.warning||(!supplierStatus?"Supplier accepted the order; delivery is not confirmed yet.":"Supplier status is based on its most recent response.")};
+ return {id:x.id,service:x.service_name,quantity:Number(x.quantity),amount:(Number(x.amount_cents)/100).toFixed(2),payment:x.payment_state,fulfillment:x.fulfillment_state,status:supplierStatus||null,remains:validRemaining,checkedAt:stat.checked_at||null,liveSupplierStatus:refresh.live===true,deliveryConfirmed:x.fulfillment_state==="completed",statusNote:refresh.warning||(!supplierStatus?"Litix has received the order; delivery is not confirmed yet.":"Delivery progress reflects the latest recorded status.")};
 };
 async function refreshSupplierOrder(sql,x){
  // Only live Boostero orders may use the saved Boostero fulfillment record.
@@ -99,7 +99,7 @@ async function refreshSupplierOrder(sql,x){
    x.supplier_order_id=b.supplier_order_id||null;
    x.last_supplier_status={...b.supplier_status,provider:"boostero",
     checked_at:b.checked_at||b.supplier_status?.checked_at||null};
-   return {live:false,warning:"Showing the last saved Boostero status. Delivery is not independently confirmed."};
+   return {live:false,warning:"Showing the latest saved Litix delivery status. Completion is not yet confirmed."};
   }
  }catch{return {live:false,warning:"Tracking is temporarily unavailable. Saved order history remains unchanged."};}
  return {live:false,warning:"Historical order: showing last saved status. No retired supplier requests are made."};
