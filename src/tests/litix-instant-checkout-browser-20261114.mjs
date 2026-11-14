@@ -44,7 +44,7 @@ try{
   assert.ok((await page.getByRole("button",{name:/Verify secure checkout/}).count())>=1,
    "the verification action stays available even without the payment gateway");
   await page.getByRole("button",{name:/Verify secure checkout/}).click();
-  await page.getByText("no charge was attempted",{exact:false}).first().waitFor({timeout:3000});
+  await page.getByText("No card charge has been attempted",{exact:false}).first().waitFor({timeout:3000});
   await picks.getByRole("button",{name:"TikTok Followers"}).click();
   assert.equal(await page.locator("#litix-platform").inputValue(),"TikTok");
   assert.ok((await page.locator("#litix-service-choice option").count())>=1);
