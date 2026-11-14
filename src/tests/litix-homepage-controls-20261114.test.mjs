@@ -24,12 +24,12 @@ test("link and private order lookup fields exist on main page",async()=>{
  assert.match(src,/onSubmit=\{trackByNumber\}/);
 });
 
-test("AI has a visible working launcher, a hero opener and explicitly guided fallback",async()=>{
+test("AI has a visible working launcher and explicitly guided fallback",async()=>{
  const hero=await source("../components/LitixQuickShop.jsx");
  const ai=await source("../components/LitixAI.jsx");
  const api=await source("../app/api/litix-ai/route.js");
  const css=await source("../app/litix-ai.css");
- assert.match(hero,/new Event\("litix:open-ai"\)/);
+ assert.match(hero,/Shop a Single Service/);
  assert.match(ai,/addEventListener\("litix:open-ai"/);
  assert.match(ai,/setOpen\(true\)/);
  assert.match(api,/available:true,mode:configured\(\)\?"ai":"guided"/);
@@ -53,7 +53,10 @@ test("Facebook is a working hero tab and homepage removes repetitive CTAs",async
   assert.ok(hero.includes(route));
  assert.doesNotMatch(home,/className="panel support-banner"/);
  assert.doesNotMatch(home,/aria-label="Litix customer support"/);
- assert.match(home,/7-day content sprint/);
- assert.match(home,/Client outreach campaign/);
+ const ws=await source("../components/LitixWorkspace.jsx");
+ assert.doesNotMatch(home,/id="campaign-studio"|id="growth-studio"|id="workspace"/);
+ assert.match(home,/href="\/workspace"/);
+ assert.match(ws,/7-day content sprint/);
+ assert.match(ws,/Client outreach/);
  assert.match(home,/Open the full order tracking center/);
 });
