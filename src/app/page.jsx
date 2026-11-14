@@ -5,7 +5,7 @@ import PremiumInlineCheckout from "../components/PremiumInlineCheckout";
 import LitixCheckoutSelector from "../components/LitixCheckoutSelector";
 import {choicesForPlatform,firstPackageFor} from "../lib/litixCheckoutBootstrap.mjs";
 import {checkoutDisplay,defaultCheckoutQuantity,clampCheckoutQuantity,checkoutQuantityEligible,QUANTITY_PRESETS} from "../lib/litixCheckoutDisplay.mjs";
-import {profilePlatformForService,normalizeProfileDestination,checkoutProfileLabel,checkoutProfilePlaceholder,validateLitixCheckoutTarget} from "../lib/litixOrderTarget.mjs";
+import {profilePlatformForService,normalizeProfileDestination,checkoutProfileLabel,checkoutTargetPlaceholder,validateLitixCheckoutTarget} from "../lib/litixOrderTarget.mjs";
 import {restrictedSocialKind} from "../lib/publicBoosteroOnly.mjs";
 import {sortServicesPer1000} from "../lib/catalogSort.mjs";
 import {SERVICE_NAV_GROUPS,allowedServiceFilter} from "../lib/serviceNavigation.mjs";
@@ -545,17 +545,12 @@ export default function Home(){
    "Public "+selected.platform+" post or page link"):"Public profile or post link"}
   <input aria-label="Public profile or post link" type="text"
    value={link} onChange={e=>setLink(e.target.value)}
-   placeholder={selected&&profilePlatformForService(selected)?
-      checkoutProfilePlaceholder(profilePlatformForService(selected)):
-     selected?.platform==="Instagram"?"https://www.instagram.com/p/POST_ID/":
-     selected?.platform==="TikTok"?"https://www.tiktok.com/@user/video/1234567890123456789":
-     "https://... or @username"}
+   placeholder={checkoutTargetPlaceholder(selected)}
    autoCapitalize="none" autoCorrect="off" spellCheck={false}
    aria-invalid={Boolean(link.trim()&&selected&&!targetFeedback.ok)}
    aria-describedby="litix-link-feedback"/>
   <span className="small" id="litix-link-feedback" role="status" aria-live="polite">
-   {!selected?"Paste your public link now. Select a package above to check its format.":
-    targetFeedback.message}
+   {link.trim()?targetFeedback.message:""}
    {tiktokLikes&&tiktokLinkVerification.input===link.trim()&&
     tiktokLinkVerification.serviceId===selected?.id&&
     (tiktokLinkVerification.status==="checking"?" Verifying TikTok share link…":

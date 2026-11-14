@@ -36,12 +36,26 @@ export const checkoutProfileLabel=platform=>({
  x:"X username or profile link"
 }[platform]||"Public page or profile URL");
 export const checkoutProfilePlaceholder=platform=>({
- instagram:"@username or instagram.com/username",
- tiktok:"@username or tiktok.com/@username",
- youtube:"@channel or youtube.com/@channel",
- facebook:"@page or facebook.com/page",
- x:"@username or x.com/username"
-}[platform]||"https://...");
+ instagram:"e.g. @username or https://instagram.com/username",
+ tiktok:"e.g. @username or https://tiktok.com/@username",
+ youtube:"e.g. @channel or https://youtube.com/@channel",
+ facebook:"e.g. @page or https://facebook.com/page",
+ x:"e.g. @username or https://x.com/username"
+}[platform]||"e.g. https://example.com/public-profile");
+
+export function checkoutTargetPlaceholder(service){
+ const profile=profilePlatformForService(service);
+ if(profile)return checkoutProfilePlaceholder(profile);
+ switch(String(service?.platform||"").toLowerCase()){
+  case "instagram":return "e.g. https://instagram.com/p/AbCd123/ or /reel/...";
+  case "tiktok":return "e.g. https://tiktok.com/@creator/video/1234567890123456789";
+  case "youtube":return "e.g. https://youtube.com/watch?v=abcdefghijk";
+  case "facebook":return "e.g. https://facebook.com/page/posts/12345";
+  case "twitter (x)":
+  case "x":return "e.g. https://x.com/creator/status/123456789012";
+  default:return "e.g. a full HTTPS link to your public post or profile";
+ }
+}
 export function normalizeProfileDestination(value,platform){
  const raw=String(value||"").trim();
  if(!platform)return {ok:true,value:raw};

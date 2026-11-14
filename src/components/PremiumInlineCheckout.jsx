@@ -58,6 +58,11 @@ export default function PremiumInlineCheckout({
         {busy && <span className="premium-pay-spinner" aria-hidden="true" />}
         <span>{buttonLabel}</span>
       </button>
+      <ul className="litix-checkout-trust" aria-label="Checkout safeguards">
+        <li><span aria-hidden="true">✓</span> Live service verification</li>
+        <li><span aria-hidden="true">✓</span> Private order tracking</li>
+        <li><span aria-hidden="true">✓</span> PayKings-hosted card fields</li>
+      </ul>
       <p className="premium-checkout-security">
         Encrypted PayKings checkout · Instant live verification before any charge · No social passwords required
       </p>
