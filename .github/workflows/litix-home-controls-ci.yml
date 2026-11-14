@@ -11,14 +11,16 @@ on:
       - 'src/components/LitixCheckoutSelector.jsx'
       - 'src/components/LitixQuickShop.jsx'
       - 'src/components/LitixAI.jsx'
-      - 'src/components/GrowthBundles.jsx'
       - 'src/components/LitixWorkspace.jsx'
       - 'src/app/bundles/checkout/page.jsx'
-      - 'src/app/growthBundles.css'
       - 'src/app/workspace/page.jsx'
       - 'src/lib/growthBundles.mjs'
-      - 'src/tests/litix-cro-bundles-workspace-20261114.test.mjs'
-      - 'src/tests/litix-cro-bundles-ui-20261114.mjs'
+      - 'src/tests/litix-bundles-retired-20261114.test.mjs'
+      - 'src/tests/litix-bundles-retired-browser-20261114.mjs'
+      - 'src/app/api/bundles/**'
+      - 'src/app/bundles/**'
+      - 'src/app/sitemap.js'
+      - 'src/tests/litix-bundles-retired-20261114.test.mjs'
       - 'src/lib/litixGuidedSupport.mjs'
       - 'src/tests/litix-homepage-controls-20261114.test.mjs'
       - 'src/tests/litix-homepage-ui-20261114.mjs'
@@ -35,14 +37,16 @@ on:
       - 'src/components/LitixCheckoutSelector.jsx'
       - 'src/components/LitixQuickShop.jsx'
       - 'src/components/LitixAI.jsx'
-      - 'src/components/GrowthBundles.jsx'
       - 'src/components/LitixWorkspace.jsx'
       - 'src/app/bundles/checkout/page.jsx'
-      - 'src/app/growthBundles.css'
       - 'src/app/workspace/page.jsx'
       - 'src/lib/growthBundles.mjs'
       - 'src/tests/litix-cro-bundles-workspace-20261114.test.mjs'
-      - 'src/tests/litix-cro-bundles-ui-20261114.mjs'
+      - 'src/tests/litix-bundles-retired-browser-20261114.mjs'
+      - 'src/app/api/bundles/**'
+      - 'src/app/bundles/**'
+      - 'src/app/sitemap.js'
+      - 'src/tests/litix-bundles-retired-20261114.test.mjs'
       - 'src/lib/litixGuidedSupport.mjs'
 jobs:
   homepage:
@@ -90,4 +94,4 @@ jobs:
           export CHROME_PATH="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
           if [ -z "$CHROME_PATH" ]; then npx playwright install chromium; fi
           node tests/litix-homepage-ui-20261114.mjs
-          node tests/litix-cro-bundles-ui-20261114.mjs
+          node tests/litix-bundles-retired-browser-20261114.mjs
