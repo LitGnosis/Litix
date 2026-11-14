@@ -2,12 +2,12 @@
 import {useEffect,useRef,useState} from "react";
 
 const SUPPORT_EMAIL="litixsocial@gmail.com";
-const suggestions=["Instagram follower services","Show growth bundles","Is Litix experiencing an outage?"];
+const suggestions=["Compare USA follower tiers","How fast do orders start?","How do I track my order?"];
 const cash=v=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(Number(v||0));
 export default function LitixAI(){
   const [open,setOpen]=useState(false);
   const [status,setStatus]=useState(null);
-  const [messages,setMessages]=useState([{role:"assistant",content:"Welcome to LITIX AI! Ask about available services, bundles, pricing, or Guardian status. Order tracking is available through the verified lookup below."}]);
+  const [messages,setMessages]=useState([{role:"assistant",content:"Welcome to Litix! I can help compare service options, explain checkout, or guide you to private order tracking."}]);
   const [draft,setDraft]=useState("");
   const [busy,setBusy]=useState(false);
   const [orderView,setOrderView]=useState(false);
@@ -19,6 +19,7 @@ export default function LitixAI(){
   const bottom=useRef(null);
   const launcherRef=useRef(null);
   const closeRef=useRef(null);
+  const lookupRequest=useRef(null);
   const wa=(process.env.NEXT_PUBLIC_WHATSAPP_NUMBER||"").replace(/\D/g,"");
   const whatsapp=wa.length>=10&&wa.length<=15?"https://wa.me/"+wa+"?text="+encodeURIComponent("Hello LITIX support, I need help with my order or service."):"";
   useEffect(()=>{
@@ -27,9 +28,16 @@ export default function LitixAI(){
       .catch(()=>{if(active)setStatus({available:true,mode:"guided",verified:false})});
     return()=>{active=false};
   },[]);
-  const closePanel=()=>{setOpen(false);launcherRef.current?.focus();};
+  const resetLookup=()=>{
+    lookupRequest.current?.abort();
+    lookupRequest.current=null;
+    setOrderId("");setEmail("");setOrder(null);setOrderError("");setOrderBusy(false);
+  };
+  const openPanel=()=>{resetLookup();setOrderView(false);setOpen(true);};
+  const closePanel=()=>{resetLookup();setOpen(false);launcherRef.current?.focus();};
+  const selectTracking=()=>{resetLookup();setOrderView(true);};
   useEffect(()=>{
-    const openFromPage=()=>{setOpen(true);setOrderView(false)};
+    const openFromPage=()=>openPanel();
     window.addEventListener("litix:open-ai",openFromPage);
     return()=>window.removeEventListener("litix:open-ai",openFromPage);
   },[]);
@@ -42,8 +50,28 @@ export default function LitixAI(){
         closePanel();
       }
     };
+    const onTrapTab=e=>{
+      if(e.key!=="Tab")return;
+      const panel=document.getElementById("lxai-dialog");
+      const tabbable=Array.from(panel?.querySelectorAll('button:not([disabled]),a[href],input:not([disabled])')||[])
+        .filter(el=>el.getClientRects().length>0);
+      if(!tabbable.length)return;
+      const first=tabbable[0],last=tabbable[tabbable.length-1];
+      if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}
+      else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}
+    };
+    const priorBodyOverflow=document.body.style.overflow;
+    const priorRootOverflow=document.documentElement.style.overflow;
+    document.body.style.overflow="hidden";
+    document.documentElement.style.overflow="hidden";
     document.addEventListener("keydown",onEscape);
-    return()=>document.removeEventListener("keydown",onEscape);
+    document.addEventListener("keydown",onTrapTab);
+    return()=>{
+      document.removeEventListener("keydown",onEscape);
+      document.removeEventListener("keydown",onTrapTab);
+      document.body.style.overflow=priorBodyOverflow;
+      document.documentElement.style.overflow=priorRootOverflow;
+    };
   },[open]);
   useEffect(()=>{
     if(!open)return;
@@ -70,33 +98,43 @@ export default function LitixAI(){
   async function track(e){
     e.preventDefault();
     if(orderBusy)return;
+    lookupRequest.current?.abort();
+    const controller=new AbortController();
+    lookupRequest.current=controller;
     setOrderBusy(true);setOrderError("");setOrder(null);
     try{
       const r=await fetch("/api/order-lookup",{method:"POST",headers:{"content-type":"application/json"},
-        body:JSON.stringify({orderId:orderId.trim(),email:email.trim().toLowerCase()}),cache:"no-store"});
+        body:JSON.stringify({orderId:orderId.trim(),email:email.trim().toLowerCase()}),
+        signal:controller.signal,cache:"no-store"});
       const d=await r.json();
       if(!r.ok||!d.order)throw Error(d.error||"Unable to verify the order.");
-      setOrder(d.order);
-    }catch(e){setOrderError(e.message||"Order tracking is unavailable.");}
-    finally{setOrderBusy(false);}
+      if(lookupRequest.current===controller)setOrder(d.order);
+    }catch(e){
+      if(!controller.signal.aborted)setOrderError(e.message||"Order tracking is unavailable.");
+    }finally{
+      if(lookupRequest.current===controller){
+        lookupRequest.current=null;setOrderBusy(false);
+      }
+    }
   }
-  return <div className="lxai-shell">
-    {open&&<section id="lxai-dialog" className="lxai-panel" role="dialog" aria-label="LITIX AI Intelligent Growth Assistant">
+  return <div className={"lxai-shell"+(open?" lxai-open":"")}>
+    {open&&<div className="lxai-backdrop" aria-hidden="true" onClick={closePanel}/>}
+    {open&&<section id="lxai-dialog" className="lxai-panel" role="dialog" aria-modal="true" aria-label="LITIX AI Instant Order & Catalog Concierge">
       <header className="lxai-head"><div className="lxai-emblem" aria-hidden="true">L</div>
-        <div className="lxai-titles"><strong>LITIX AI</strong><small>{status?.mode==="guided"?"Guided support · live AI unavailable":"Intelligent Growth Assistant"}</small></div>
+        <div className="lxai-titles"><strong>LITIX AI</strong><small>Instant Order &amp; Catalog Concierge</small></div>
         {status?.verified&&<span className="lxai-badge">GPT-powered</span>}
         <button type="button" ref={closeRef} className="lxai-close" aria-label="Close assistant" onClick={closePanel}>×</button>
       </header>
       <div className="lxai-tabs">
         <button type="button" aria-pressed={!orderView} className={!orderView?"lxai-active":""} onClick={()=>setOrderView(false)}>AI assistance</button>
-        <button type="button" aria-pressed={orderView} className={orderView?"lxai-active":""} onClick={()=>setOrderView(true)}>Track order</button>
+        <button type="button" aria-pressed={orderView} className={orderView?"lxai-active":""} onClick={selectTracking}>Track order</button>
       </div>
       {!orderView?<><div className="lxai-messages" role="log" aria-live="polite">
         {messages.map((m,i)=><p key={i} className={"lxai-message lxai-"+m.role}>{m.content}</p>)}
         {busy&&<p className="lxai-message lxai-assistant">Looking that up…</p>}
         <div ref={bottom}/>
       </div>
-      {status?.mode==="guided"&&<p className="lxai-offline">Guided support is active. These are helpful navigation answers, not AI-generated live account checks.</p>}
+      {status?.mode==="guided"&&<p className="lxai-offline">Instant guided answers use public site information. Private order details are verified in Track order.</p>}
       {!status?.available&&<p className="lxai-offline">Connecting to chat… You can also track an order or contact human support.</p>}
       {status?.available&&<div className="lxai-suggestions">{suggestions.map(v=><button type="button" key={v} disabled={busy} onClick={()=>send(v)}>{v}</button>)}</div>}
       <form className="lxai-compose" onSubmit={e=>{e.preventDefault();send(draft)}}>
@@ -104,11 +142,11 @@ export default function LitixAI(){
         <input id="lxai-entry" value={draft} maxLength={750} onChange={e=>setDraft(e.target.value)} placeholder="Ask about services or pricing…" disabled={busy||!status?.available}/>
         <button type="submit" disabled={busy||!draft.trim()||!status?.available}>Send</button>
       </form></>:
-      <form className="lxai-track" onSubmit={track}>
+      <form className="lxai-track" onSubmit={track} autoComplete="off" noValidate={false}>
         <h3>Private order lookup</h3>
         <p>Enter your order number and the same email used at checkout. Verification happens on Litix's existing order system; your email and order details are not sent to the AI model.</p>
-        <label>Order number<input value={orderId} onChange={e=>setOrderId(e.target.value)} maxLength={80} placeholder="ltx2_…" autoComplete="off" required/></label>
-        <label>Checkout email<input type="email" value={email} onChange={e=>setEmail(e.target.value)} maxLength={254} placeholder="you@example.com" autoComplete="email" required/></label>
+        <label>Order number<input value={orderId} onChange={e=>setOrderId(e.target.value)} maxLength={80} placeholder="e.g. ltx2_xxxxxxxx-xxxx-xxxx-xxxx" autoComplete="off" autoCapitalize="none" autoCorrect="off" spellCheck={false} required/></label>
+        <label>Checkout email<input type="email" value={email} onChange={e=>setEmail(e.target.value)} maxLength={254} placeholder="e.g. you@example.com" autoComplete="off" autoCapitalize="none" autoCorrect="off" spellCheck={false} required/></label>
         <button type="submit" disabled={orderBusy}>{orderBusy?"Checking…":"Verify and track"}</button>
         {orderError&&<p className="lxai-error" role="alert">{orderError}</p>}
         {order&&<div className="lxai-order" role="status">
@@ -126,7 +164,7 @@ export default function LitixAI(){
         <small>{status?.mode==="guided"?"Guided support uses site information without an external AI model.":"AI chat uses OpenAI."} Never share passwords, payment details, or tracking tokens.</small>
       </footer>
     </section>}
-    <button type="button" ref={launcherRef} className="lxai-launcher" aria-controls="lxai-dialog" aria-haspopup="dialog" aria-label={open?"Close LITIX AI":"Open LITIX AI"} aria-expanded={open} onClick={()=>open?closePanel():setOpen(true)}>
+    <button type="button" ref={launcherRef} className="lxai-launcher" aria-controls="lxai-dialog" aria-haspopup="dialog" aria-label={open?"Close LITIX AI":"Open LITIX AI"} aria-expanded={open} aria-hidden={open} tabIndex={open?-1:0} onClick={()=>open?closePanel():openPanel()}>
       <span className="lxai-orb">✦</span><span>{open?"Close assistant":"Ask LITIX AI"}</span>
     </button>
   </div>;
