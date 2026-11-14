@@ -57,7 +57,7 @@ export async function sendPendingConfirmations({sql=boosteroSQL(),limit=5}={}){
  let sent=0,failed=0;
  for(let i=0;i<limit;i++){
   const rows=await sql.query(
-   "with selected as (select litix_order_id from public.litix_automation_confirmations where state='queued' and next_attempt_at<=now() and attempts<5 order by next_attempt_at limit 1 for update skip locked) update public.litix_automation_confirmations c set state='sending',attempts=attempts+1 from selected where c.litix_order_id=selected.litix_order_id returning c.litix_order_id,c.attempts");
+   "with selected as (select litix_order_id from public.litix_automation_confirmations where ((state='queued' and next_attempt_at<=now()) or (state='sending' and next_attempt_at<now()-interval '12 minutes')) and attempts<5 order by next_attempt_at limit 1 for update skip locked) update public.litix_automation_confirmations c set state='sending',attempts=attempts+1,next_attempt_at=now() from selected where c.litix_order_id=selected.litix_order_id returning c.litix_order_id,c.attempts");
   if(!rows.length)break;
   const item=rows[0];
   try{
@@ -188,6 +188,41 @@ export async function syncLitixBoosteroOrders({sql=boosteroSQL(),operation=boost
  }
  return {checked,failed,review};
 }
+export async function sendPendingAdminReviews({sql=boosteroSQL(),limit=6}={}){
+ let notified=0,failed=0;
+ for(let i=0;i<Math.min(limit,10);i++){
+  const selected=await sql.query(
+   "with chosen as (select litix_order_id,reason from public.litix_automation_reviews where (alert_state='queued' or (alert_state='sending' and alert_leased_at<now()-interval '12 minutes')) and alert_attempts<5 order by created_at limit 1 for update skip locked) update public.litix_automation_reviews r set alert_state='sending',alert_attempts=r.alert_attempts+1,alert_leased_at=now() from chosen where r.litix_order_id=chosen.litix_order_id and r.reason=chosen.reason returning r.litix_order_id,r.reason,r.supplier_status,r.remains,r.estimated_supplier_credit_usd"
+  );
+  if(!selected.length)break;
+  const row=selected[0];
+  try{
+   const note=[
+    "Litix fulfillment requires review",
+    "Litix order: "+row.litix_order_id,
+    "Reason: "+row.reason,
+    "Supplier status: "+(row.supplier_status||"Not confirmed"),
+    "Remains: "+(row.remains??"Not reported"),
+    "Estimated wholesale credit, not verified refund: "+
+      (row.estimated_supplier_credit_usd??"Not available"),
+    "Do not automatically repeat supplier purchase, refill, or payment refund."
+   ].join("\n");
+   await sendLitixTransactionalEmail({to:ADMIN_EMAIL,
+    subject:"Litix — Fulfillment needs review: "+row.reason,
+    text:note,key:"litix-fulfillment-review/"+row.litix_order_id+"/"+row.reason});
+   await sql.query(
+    "update public.litix_automation_reviews set alert_state='sent',alerted_at=now(),alert_leased_at=null where litix_order_id=$1 and reason=$2 and alert_state='sending'",
+    [row.litix_order_id,row.reason]);
+   notified++;
+  }catch{
+   failed++;
+   await sql.query(
+    "update public.litix_automation_reviews set alert_state=case when alert_attempts>=5 then 'failed' else 'queued' end,alert_leased_at=null where litix_order_id=$1 and reason=$2 and alert_state='sending'",
+    [row.litix_order_id,row.reason]).catch(()=>{});
+  }
+ }
+ return {notified,failed};
+}
 export async function runFulfillmentMaintenance({sql=boosteroSQL()}={}){
  if(!guarded())return {disabled:true};
  const balance=await checkBoosteroBalance({sql}).catch(()=>({unavailable:true}));
@@ -195,5 +230,6 @@ export async function runFulfillmentMaintenance({sql=boosteroSQL()}={}){
  const tracking=await syncLitixBoosteroOrders({sql}).catch(()=>({failed:true}));
  const confirmations=await sendPendingConfirmations({sql}).catch(()=>({failed:true}));
  const updates=await deliverLitixCustomerUpdates({sql,limit:5}).catch(()=>({failed:true}));
- return {balance,dispatch,tracking,confirmations,updates};
+ const reviews=await sendPendingAdminReviews({sql,limit:5}).catch(()=>({failed:true}));
+ return {balance,dispatch,tracking,confirmations,updates,reviews};
 }
