@@ -5,6 +5,7 @@ on:
       - fix/always-visible-paykings-checkout-20261114
       - fix/litix-checkout-final-polish-20261114
       - fix/checkout-final-micro-ux-20261114
+      - fix/litix-hero-trust-placeholders-20261114
   pull_request:
     branches:
       - main
