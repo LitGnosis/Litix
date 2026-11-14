@@ -35,7 +35,7 @@ export default function BundleAdmin(){
    const r2=await fetch("/api/bundles/admin",{headers:headers(),cache:"no-store"});if(r2.ok)setData(await r2.json());
   }catch(e){setMessage(e.message)}finally{setBusy(false)}
  }
- return <main className="wrap"><nav className="nav"><a href="/" className="brand">LITIX</a><a href="/bundles">Growth Bundles</a></nav>
+ return <main className="wrap"><nav className="nav"><a href="/" className="brand">LITIX</a><a href="/track">Historical Orders</a></nav>
   <section className="panel" style={{maxWidth:1050,margin:"25px auto"}}>
    <div className="kicker">LITIX · PROTECTED ADMIN</div><h1>Growth Bundle Management</h1>
    <p className="small">Restricted to a server-verified administrator. The token is held in this page's memory only. This dashboard never sends supplier orders. You personally fulfill customers after their WhatsApp messages and record completed deliveries.</p>
