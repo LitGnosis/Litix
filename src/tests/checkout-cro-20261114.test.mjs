@@ -39,7 +39,8 @@ test("Selected package has one range and price without duplicate metadata",async
  assert.doesNotMatch(page,/Available range:/);
  assert.match(selector,/checkoutDisplay\(current\)\.title/);
  assert.match(selector,/checkoutDisplay\(current\)\.subtitle/);
- assert.match(selector,/Allowed quantity: \{Number\(current\.min\)\.toLocaleString\(\)\}–\{Number\(current\.max\)\.toLocaleString\(\)\}/);
+ assert.match(selector,/Allowed quantity: \{allowedRange\}/);
+ assert.match(selector,/\$\{Number\(current\.min\)\.toLocaleString\("en-US"\)\}–\$\{Number\(current\.max\)\.toLocaleString\("en-US"\)\}/);
  assert.match(selector,/\(\$\{specialty\.length\}\)/);
  assert.match(page,/QUANTITY_PRESETS\.map/);
  assert.match(page,/clampCheckoutQuantity/);
