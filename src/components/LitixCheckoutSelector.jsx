@@ -6,7 +6,7 @@ const DEFAULT_PLATFORMS=["Instagram","TikTok","YouTube","Facebook","Twitter (X)"
 export default function LitixCheckoutSelector({selected,onChoose}){
  const [platform,setPlatform]=useState("Instagram");
  const [kind,setKind]=useState("followers");
- const [data,setData]=useState({platforms:[],kinds:[],items:[],total:0});
+ const [data,setData]=useState({platforms:[],kinds:[],items:[],total:0,note:"",liveAvailability:false});
  const [loading,setLoading]=useState(true);
  const [error,setError]=useState("");
  const [retry,setRetry]=useState(0);
@@ -25,6 +25,7 @@ export default function LitixCheckoutSelector({selected,onChoose}){
  useEffect(()=>{
   let cancelled=false;
   const controller=new AbortController();
+  const timeout=setTimeout(()=>controller.abort("checkout_catalog_timeout"),12000);
   setLoading(true);setError("");
   const p=new URLSearchParams({platform});
   fetch("/api/catalog/checkout-choices?"+p,{signal:controller.signal,cache:"no-store"})
@@ -38,7 +39,7 @@ export default function LitixCheckoutSelector({selected,onChoose}){
     const kinds=Array.isArray(value.kinds)?value.kinds:[];
     const items=Array.isArray(value.items)?value.items:[];
     setData({platforms:Array.isArray(value.platforms)?value.platforms:[],
-     kinds,items,total:value.total||0});
+     kinds,items,total:value.total||0,note:String(value.note||""),liveAvailability:value.liveAvailability===true});
     const intent=pendingIntent.current;
     if(intent?.platform===platform){
      pendingIntent.current=null;
@@ -46,9 +47,9 @@ export default function LitixCheckoutSelector({selected,onChoose}){
      setKind(type);onChoose(litixPreferredCustomService(items,platform,type));
     }else setKind(previous=>kinds.some(x=>x.value===previous)?previous:(kinds[0]?.value||""));
    })
-   .catch(err=>{if(!cancelled){setError(err.message||"Unable to load services");setData(d=>({...d,kinds:[],items:[],total:0}))}})
-   .finally(()=>{if(!cancelled)setLoading(false)});
-  return()=>{cancelled=true;controller.abort()};
+   .catch(err=>{if(!cancelled){setError(controller.signal.aborted?"The service list took too long to load. Try again.":err.message||"Unable to load services");setData(d=>({...d,kinds:[],items:[],total:0}))}})
+   .finally(()=>{clearTimeout(timeout);if(!cancelled)setLoading(false)});
+  return()=>{cancelled=true;clearTimeout(timeout);controller.abort()};
  },[platform,retry]);
  const platforms=data.platforms.length?data.platforms:
   DEFAULT_PLATFORMS.map(name=>({name,count:0}));
@@ -127,7 +128,9 @@ export default function LitixCheckoutSelector({selected,onChoose}){
   {error&&<div className="litix-quick-error" role="alert">{error}
     <button type="button" className="alt" onClick={()=>setRetry(v=>v+1)}>Retry services</button>
    </div>}
-  {loading&&<p role="status" className="litix-quick-status">Checking current Litix services…</p>}
+  {loading&&<p role="status" className="litix-quick-status">Loading Litix packages from our verified catalog…</p>}
+  {!loading&&data.note&&<p role="status" className="litix-quick-status">{data.note}</p>}
+  {!loading&&!error&&!filtered.length&&<p className="litix-quick-status">No {kind||"service"} packages are listed for {platform}. Select a different service or use the full catalog.</p>}
   {actualSelected&&<div className="litix-quick-chosen" aria-live="polite">
    <strong>{actualSelected.name}</strong>
    <span>{dollars(Math.ceil(actualSelected.per1000*100))} per 1,000 · Minimum {actualSelected.min.toLocaleString()} · Maximum {actualSelected.max.toLocaleString()}</span>

@@ -90,10 +90,12 @@
 /* Keep the checkout fully tappable on narrow phones without disabling support. */
 @media(max-width:575px){
  body:has(#checkout) .lxai-launcher{
-  width:54px;max-width:54px;min-width:54px;height:54px;min-height:54px;
-  padding:10px;justify-content:center;gap:0;overflow:hidden;
+  width:min(180px,calc(100vw - 100px));max-width:min(180px,calc(100vw - 100px));
+  min-width:0;height:54px;min-height:54px;
+  padding:8px 11px;justify-content:center;gap:8px;overflow:hidden;
  }
- body:has(#checkout) .lxai-launcher > span:not(.lxai-orb){display:none}
+ /* Keep the text visible so iPhone users know the AI button opens chat. */
+ body:has(#checkout) .lxai-launcher > span:not(.lxai-orb){display:inline;white-space:nowrap}
  body:has(#checkout) .whatsapp-float{
   width:54px;max-width:54px;min-width:54px;height:54px;min-height:54px;
   padding:8px;justify-content:center;gap:0;overflow:hidden;

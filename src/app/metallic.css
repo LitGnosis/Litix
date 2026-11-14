@@ -310,3 +310,33 @@ button:disabled{filter:saturate(.55)}
  .litix-service-filter-buttons button{font-size:13px;padding:10px 8px}
  .litix-service-results-anchor{scroll-margin-top:195px}
 }
+
+/* Accessible private order lookup: order number + checkout email + action. */
+.trackingbox:has(label){grid-template-columns:repeat(2,minmax(0,1fr)) auto;align-items:end}
+.trackingbox label{display:flex;flex-direction:column;gap:7px;min-width:0;font-weight:650}
+.trackingbox label input{width:100%;min-width:0}
+.trackingbox button{min-height:44px}
+.litix-shop-actions button.litix-shop-secondary{font:inherit;cursor:pointer}
+.litix-early-link input{width:100%;margin-top:6px}
+.litix-starter-actions{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0}
+@media(max-width:750px){.trackingbox:has(label){grid-template-columns:1fr}}
+
+/* Campaign list rows must not stretch to fill oversized browser-native selects. */
+#campaign-studio .workspace-row{
+ display:grid;grid-template-columns:minmax(0,1fr) minmax(125px,165px) 42px;
+ align-items:center;gap:10px;min-height:62px;height:auto;margin-top:8px
+}
+#campaign-studio .workspace-row > .workspace-link{
+ display:flex;min-width:0;max-height:92px;overflow:auto;flex-direction:column
+}
+#campaign-studio .workspace-row select{
+ width:100%;min-width:0;height:44px;max-height:44px;
+ padding:8px 10px;line-height:1.3
+}
+#campaign-studio .workspace-row > .icon-action{
+ width:40px;max-width:40px;height:40px;max-height:40px
+}
+@media(max-width:575px){
+ #campaign-studio .workspace-row{grid-template-columns:minmax(0,1fr) 118px 38px;gap:8px}
+ #campaign-studio .workspace-row select{font-size:13px}
+}

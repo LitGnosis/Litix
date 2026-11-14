@@ -1,32 +1,34 @@
 import {allBoosteroCardsSnapshot} from "../../../../lib/boosteroCatalog.mjs";
 import {buildCheckoutChoices} from "../../../../lib/litixCheckoutChoices.mjs";
+import {readDurableCatalog} from "../../../../lib/litixDurableCatalog.mjs";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 export const maxDuration=60;
 
-// All options come from the exact same approved catalog as /api/checkout/v1.
-// Never expose provider IDs, wholesale rates, credentials or raw supplier data.
+// Service selection reads the SAME verified snapshot as /api/catalog/v1.
+// Outages must not strand checkout at "Loading verified services", but cached
+// cards are browse-only and never authorize a charge.
 export async function GET(request){
  const requested=new URL(request.url).searchParams.get("platform")||"Instagram";
- try{
-  const snapshot=process.env.LITIX_BOOSTERO_ENABLED==="true"?
-   await allBoosteroCardsSnapshot():{items:[],status:"unavailable"};
-  const choices=buildCheckoutChoices(snapshot.items,requested);
-  if(!choices.items.length)return Response.json({
-   platforms:choices.platforms,platform:choices.platform,kinds:[],items:[],total:0,
-   error:"Litix services are temporarily unavailable. No payment attempted."
-  },{status:503,headers:{"cache-control":"no-store","x-content-type-options":"nosniff"}});
-  return Response.json({...choices,currency:"USD",liveAvailability:snapshot.status==="live",
-   note:snapshot.status==="cached"?
-    "Recently verified services. Prices and availability are checked again before payment.":
-    "Select a verified service; the final total is checked before payment."},
-   {headers:{"cache-control":snapshot.status==="live"
-     ?"public, s-maxage=30, stale-while-revalidate=60"
-     :"public, s-maxage=10, stale-while-revalidate=20",
-     "x-content-type-options":"nosniff"}});
- }catch{
-  return Response.json({platforms:[],kinds:[],items:[],total:0,
-   error:"Litix services are temporarily unavailable. No payment attempted."},
-   {status:503,headers:{"cache-control":"no-store","x-content-type-options":"nosniff"}});
+ // Read our already-verified local snapshot first: the selector must never
+ // wait on a remote vendor timeout before showing fields. Checkout itself
+ // continues to enforce fresh supplier verification and PayKings gate.
+ let snapshot=await readDurableCatalog();
+ if(!snapshot.items?.length){
+  try{
+   if(process.env.LITIX_BOOSTERO_ENABLED==="true")
+    snapshot=await allBoosteroCardsSnapshot();
+  }catch{/* Provider failure is reflected in the empty-state note. */}
  }
+ const choices=buildCheckoutChoices(snapshot.items,requested);
+ const hasItems=choices.items.length>0,live=snapshot.status==="live";
+ return Response.json({...choices,currency:"USD",liveAvailability:live,
+  catalogStatus:hasItems?(live?"live":"cached"):"unavailable",
+  note:hasItems&&!live
+   ?"Browse recently verified services. Secure checkout waits for a fresh supplier verification."
+   :hasItems?"Choose your service, then enter the destination and verify the final price."
+   :"No verified services are available right now. Please retry or contact support."
+ },{status:200,headers:{"cache-control":hasItems&&live
+    ?"public, s-maxage=20, stale-while-revalidate=40":"no-store",
+   "x-content-type-options":"nosniff"}});
 }

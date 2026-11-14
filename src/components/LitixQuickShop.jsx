@@ -12,9 +12,12 @@ const categories = [
   { label: "TikTok Views", href: "/shop/tiktok/views", group: "TikTok",kind:"Views" },
   { label: "YouTube Subscribers", href: "/shop/youtube/subscribers", group: "YouTube",kind:"Subscribers" },
   { label: "YouTube Likes & Views", href: "/shop/youtube/likes", group: "YouTube",kind:"Likes & Views" },
-  { label: "X Likes & Retweets", href: "/shop/x/likes", group: "X",kind:"Likes & Retweets" }
+  { label: "X Likes & Retweets", href: "/shop/x/likes", group: "X",kind:"Likes & Retweets" },
+  { label: "Facebook Followers", href: "/shop/facebook/followers", group:"Facebook",kind:"Followers" },
+  { label: "Facebook Likes", href: "/shop/facebook/likes", group:"Facebook",kind:"Likes" },
+  { label: "Facebook Views", href: "/shop/facebook/views", group:"Facebook",kind:"Views" }
 ];
-const platforms=["Instagram","TikTok","YouTube","X"];
+const platforms=["Instagram","TikTok","YouTube","Facebook","X"];
 export default function LitixQuickShop(){
  const [platform,setPlatform]=useState("Instagram");
  const choices=categories.filter(item=>item.group===platform);
@@ -34,11 +37,12 @@ export default function LitixQuickShop(){
     <span>{item.kind}</span><span aria-hidden="true">›</span></a>)}
   </nav>
   <div className="litix-shop-actions">
-   <a className="litix-metal-cta" href={quickShopCustomHref(platform)} aria-label={platform==="X"?"Custom X Followers":"Custom Likes & Followers"}>Custom Likes &amp; Followers <span aria-hidden="true">›</span></a>
-   <a className="litix-shop-secondary" href="/bundles">Growth Bundles</a>
-   <a className="litix-shop-secondary" href="/solutions">Business & Creator Growth</a>
-   <a className="litix-shop-secondary" href="/services">Browse All Litix Services</a>
-   <a className="litix-shop-secondary" href="/track">Track an Order</a>
+   <a className="litix-metal-cta"
+    href={platform==="Facebook"?"/shop/facebook/followers":platform==="YouTube"?"/shop/youtube/subscribers":quickShopCustomHref(platform)}>
+    {platform==="Facebook"?"Browse Facebook Services":platform==="YouTube"?"Browse YouTube Services":"Custom Likes & Followers"} <span aria-hidden="true">›</span>
+   </a>
+   <button type="button" className="litix-shop-secondary" onClick={()=>window.dispatchEvent(new Event("litix:open-ai"))}>Ask LITIX AI</button>
+   <a className="litix-shop-secondary" href="/services">Compare All Services</a>
   </div>
   <p className="litix-hero-footnote">Public links only · No social password required · Every order receives an independent price and availability check before payment.</p>
  </section>;
