@@ -106,3 +106,45 @@ test("wrong profile/post destinations are rejected before payment or supplier sp
  assert.equal(boosteroDestination("@testcreator","instagram","followers"),"https://www.instagram.com/testcreator/");
  assert.equal(boosteroDestination("https://www.instagram.com/reel/AbCdE1234/","instagram","likes"),"https://www.instagram.com/reel/AbCdE1234/");
 });
+
+
+test("Partial delivery is reviewed without auto-refund, double-purchase or fabricated missing fields",async()=>{
+ const {syncLitixBoosteroOrders}=await import("../lib/litixFulfillmentAutomation.mjs");
+ const vars=["VERCEL_ENV","LITIX_BOOSTERO_ENABLED","BOOSTERO_API_KEY","BOOSTERO_API_URL","DATABASE_URL"];
+ const saved=Object.fromEntries(vars.map(k=>[k,process.env[k]]));
+ Object.assign(process.env,{
+  VERCEL_ENV:"production",LITIX_BOOSTERO_ENABLED:"true",BOOSTERO_API_KEY:"fake-for-test-only",
+  BOOSTERO_API_URL:"https://boostero.com/api/v2",DATABASE_URL:"postgresql://test.invalid/never-connected"
+ });
+ const rows=[];
+ const sql={query:async (statement,params=[])=>{
+  rows.push({statement,params});
+  if(statement.startsWith("select f.litix_order_id"))return [{
+   litix_order_id:id,supplier_order_id:"900001",supplier_status:{status:"Pending",remains:1000},
+   quantity:1000,supplier_cost_cents:300
+  }];
+  if(statement.startsWith("insert into public.litix_customer_delivery_updates"))return [{id:"notice-test"}];
+  if(statement.startsWith("update public.litix_boostero_fulfillment"))return [];
+  if(statement.startsWith("update public.litix_v2_orders"))return [];
+  if(statement.startsWith("insert into public.litix_automation_reviews"))return [];
+  throw Error("Unexpected SQL during no-charge test: "+statement.slice(0,100));
+ }};
+ const operations=[];
+ const operation=async (action,input)=>{
+  operations.push({action,input});
+  assert.equal(action,"status");
+  return {"900001":{status:"Partial",remains:"300",start_count:"1000",charge:"3.00"}};
+ };
+ try{
+  const result=await syncLitixBoosteroOrders({sql,operation,limit:10});
+  assert.deepEqual(result,{checked:1,failed:0,review:1});
+  assert.deepEqual(operations.map(o=>o.action),["status"]);
+  const review=rows.find(x=>x.statement.startsWith("insert into public.litix_automation_reviews"));
+  assert.ok(review,"Partial status creates a durable admin review");
+  assert.equal(review.params[4],300);
+  assert.equal(review.params[6],0.9,"wholesale credit estimate is explicitly provisional");
+  assert.ok(!rows.some(x=>/refunded|payment_refund|action.?=.?'add'/i.test(x.statement)));
+ }finally{
+  for(const k of vars){if(saved[k]===undefined)delete process.env[k];else process.env[k]=saved[k];}
+ }
+});
