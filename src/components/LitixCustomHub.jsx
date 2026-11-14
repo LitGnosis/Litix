@@ -213,7 +213,6 @@ export default function LitixCustomHub(){
    </article>
    <div className="litix-custom-support-links">
      <a href="/shop">Explore more services</a>
-     <a href="/bundles">View Growth Bundles</a>
      <a href="/track">Track an order</a>
    </div>
    <details className="litix-compact-details">
