@@ -53,4 +53,16 @@ test("private order lookup clears on close/open and never seeds customer data",a
  assert.match(component,/autoComplete="off"/);
  assert.doesNotMatch(component,/spears5417|96aa4526/i);
  assert.match(component,/fetch\("\/api\/order-lookup"/);
+ assert.match(component,/event\.persisted/);
+ assert.match(component,/window\.addEventListener\("pageshow"/);
+});
+
+test("order lookup copy is customer-facing and does not expose personal strings",async()=>{
+ const component=await read("../components/LitixAI.jsx");
+ assert.ok(component.includes("Enter your Litix order number and checkout email to view real-time payment and delivery updates."));
+ assert.ok(component.includes("Litix never asks for social passwords or card numbers in support chat."));
+ assert.doesNotMatch(component,/your email and order details are not sent to the AI model|without an external AI model/);
+ assert.doesNotMatch(component,/defaultValue=/);
+ assert.match(component,/value=\{orderId\}/);
+ assert.match(component,/value=\{email\}/);
 });
