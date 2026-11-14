@@ -91,7 +91,7 @@ export default function LitixWorkspace(){
  return <main className="wrap litix-workspace-page">
   <nav className="nav" aria-label="Litix workspace navigation">
    <a className="brand" href="/">LITIX</a>
-   <div><a href="/">Home</a><a href="/#checkout">Checkout</a><a href="/bundles">Bundles</a><a href="/growth">Content Calendar</a><a href="/track">Track Orders</a></div>
+   <div><a href="/">Home</a><a href="/#checkout">Checkout</a><a href="/growth">Content Calendar</a><a href="/track">Track Orders</a></div>
   </nav>
   <section className="panel">
    <span className="kicker">LITIX GROWTH OS</span>
