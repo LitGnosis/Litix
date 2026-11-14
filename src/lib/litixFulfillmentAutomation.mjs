@@ -35,22 +35,27 @@ export async function recordCapturedCheckout(sql,{eventId,type,transactionId,ord
     (order.payment_transaction_id&&order.payment_transaction_id!==transactionId)||
     !["processing","review","paid"].includes(order.payment_state))
   return {accepted:false,reason:"payment_order_mismatch"};
- await sql.query(
-  "insert into public.litix_paykings_webhook_events(event_id,transaction_id,order_id,event_type,body_sha256) values($1,$2,$3,$4,$5) on conflict(event_id) do nothing",
-  [eventId,transactionId,orderId,type,bodyHash]);
+ const recovering=order.payment_state!=="paid";
+ const added=await sql.query(
+  "insert into public.litix_paykings_webhook_events(event_id,transaction_id,order_id,event_type,body_sha256,error_code) values($1,$2,$3,$4,$5,$6) on conflict(event_id) do nothing returning event_id,error_code,body_sha256,order_id,transaction_id",
+  [eventId,transactionId,orderId,type,bodyHash,recovering?"recovery_confirmation":"already_paid"]);
+ const recorded=added.length?added[0]:(await sql.query(
+  "select event_id,error_code,body_sha256,order_id,transaction_id from public.litix_paykings_webhook_events where event_id=$1",[eventId]))[0];
+ if(!recorded||recorded.transaction_id!==transactionId||recorded.order_id!==orderId||
+    recorded.body_sha256!==bodyHash)return {accepted:false,reason:"event_mismatch"};
  const changed=await sql.query(
   "with approved as (update public.litix_v2_orders o set payment_state='paid',payment_transaction_id=$2,updated_at=now() where o.id=$1 and o.amount_cents=$3 and o.payment_state in ('processing','review','paid') and (o.payment_transaction_id is null or o.payment_transaction_id=$2) and exists (select 1 from public.litix_boostero_fulfillment f where f.litix_order_id=o.id and f.payment_mode='card') returning o.id), queued as (update public.litix_boostero_fulfillment f set state='QUEUED',updated_at=now() where f.litix_order_id in (select id from approved) and f.state='PENDING_PAYMENT' returning f.litix_order_id) select id from approved",
   [orderId,transactionId,amountCents]);
  if(changed.length!==1)return {accepted:false,reason:"payment_conflict"};
- await sql.query(
-  "update public.litix_paykings_webhook_events set state='processed',processed_at=now() where event_id=$1 and transaction_id=$2",
-  [eventId,transactionId]);
- if(order.payment_state!=="paid"){
+ if(recorded.error_code==="recovery_confirmation"){
   await sql.query(
    "insert into public.litix_automation_confirmations(litix_order_id) values($1) on conflict do nothing",
    [orderId]);
  }
- return {accepted:true,recovered:order.payment_state!=="paid"};
+ await sql.query(
+  "update public.litix_paykings_webhook_events set state='processed',processed_at=now() where event_id=$1 and transaction_id=$2",
+  [eventId,transactionId]);
+ return {accepted:true,recovered:recorded.error_code==="recovery_confirmation"};
 }
 
 export async function sendPendingConfirmations({sql=boosteroSQL(),limit=5}={}){
