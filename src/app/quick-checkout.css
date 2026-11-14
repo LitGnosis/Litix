@@ -131,3 +131,59 @@
 @media(max-width:380px){
  .litix-custom-pick{font-size:13px;padding:10px 8px}
 }
+
+
+/* Checkout variants are source-derived, not inferred premium/refill promises. */
+.litix-quick-selector optgroup{
+ background:#0b283b;color:#a2ddff;font-size:14px;font-weight:700;
+}
+.litix-quick-selector optgroup option{
+ background:#081b2c;color:#f0faff;font-weight:550;white-space:normal;
+}
+.litix-specialty-toggle{
+ display:inline-flex;justify-content:center;align-items:center;
+ min-height:44px;margin:0 0 14px;padding:10px 16px;
+ border-radius:12px;border:1px solid #72c3ee88;
+ background:#0e2a40;color:#b9e6ff;font-size:13px;font-weight:750;
+ cursor:pointer;
+}
+.litix-specialty-toggle:focus-visible{outline:2px solid #9ddfff;outline-offset:3px}
+.litix-quantity-control{
+ display:grid;gap:10px;margin:11px 0 19px;
+ padding:16px;border:1px solid #74bde866;border-radius:15px;
+ background:linear-gradient(140deg,#0d2842,#071c30);
+}
+.litix-quantity-heading{
+ display:flex;align-items:baseline;justify-content:space-between;gap:12px;
+ flex-wrap:wrap;
+}
+.litix-quantity-heading strong{color:#f2faff;font-size:15px}
+.litix-quantity-heading span{color:#a5cfe7;font-size:12px}
+.litix-quantity-presets{
+ display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;
+}
+.litix-quantity-preset{
+ display:flex;align-items:center;justify-content:center;
+ min-height:44px;min-width:0;padding:8px 4px;
+ border:1px solid #76b9e78c;border-radius:10px;
+ background:#102c44;color:#e4f8ff;font-size:13px;font-weight:800;
+ cursor:pointer;
+}
+.litix-quantity-preset[aria-pressed="true"]{
+ background:linear-gradient(135deg,#c4efff,#70c5fa);
+ border-color:#ddf9ff;color:#061e32;
+}
+.litix-quantity-preset:disabled{opacity:.38;cursor:not-allowed}
+.litix-quantity-preset:focus-visible{outline:2px solid #9fd9ff;outline-offset:2px}
+.litix-quantity-control label{display:grid;gap:7px;color:#dcefff;font-weight:750}
+.litix-quantity-control input[type=number]{
+ width:100%;box-sizing:border-box;min-height:52px;padding:12px 14px;
+ border-radius:11px;border:1px solid #79bde988;
+ background:#071826;color:#fff;font-size:17px;font-weight:750;
+}
+.litix-quantity-control .small{margin:0;color:#a8cfe3;line-height:1.5}
+@media(max-width:560px){
+ .litix-quantity-presets{grid-template-columns:repeat(3,minmax(0,1fr))}
+ .litix-quantity-preset{font-size:14px}
+ .litix-quantity-heading{display:grid;gap:4px}
+}
