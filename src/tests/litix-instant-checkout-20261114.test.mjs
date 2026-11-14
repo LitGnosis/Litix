@@ -94,5 +94,6 @@ test("hero is informational and FAQ names both tracking methods without invented
  assert.doesNotMatch(hero,/litix-platform-choices|litix-platform-tabs|Shop a Single Service/);
  assert.match(page,/Order Number \+ Checkout Email lookup form/);
  assert.match(page,/start times vary by service|start times vary/i);
- assert.match(page,/5–30 minute start is not guaranteed/);
+ assert.match(page,/Eligible orders can begin processing within minutes/);
+ assert.match(page,/Bookmark your private tracking link for one-click status updates/);
 });

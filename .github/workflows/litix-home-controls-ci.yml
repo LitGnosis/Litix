@@ -9,6 +9,11 @@ on:
       - 'src/app/api/catalog/checkout-choices/route.js'
       - 'src/app/api/litix-ai/route.js'
       - 'src/components/LitixCheckoutSelector.jsx'
+      - 'src/lib/litixCheckoutDisplay.mjs'
+      - 'src/lib/litixCheckoutChoices.mjs'
+      - 'src/app/quick-checkout.css'
+      - 'src/tests/litix-package-tiers-quantity-20261114.test.mjs'
+      - 'src/tests/litix-package-tiers-browser-20261114.mjs'
       - 'src/lib/litixCheckoutVerifiedSeed.mjs'
       - 'src/lib/litixCheckoutVerifiedSeed.json'
       - 'src/lib/litixCheckoutBootstrap.mjs'
@@ -42,6 +47,11 @@ on:
       - 'src/app/api/catalog/checkout-choices/route.js'
       - 'src/app/api/litix-ai/route.js'
       - 'src/components/LitixCheckoutSelector.jsx'
+      - 'src/lib/litixCheckoutDisplay.mjs'
+      - 'src/lib/litixCheckoutChoices.mjs'
+      - 'src/app/quick-checkout.css'
+      - 'src/tests/litix-package-tiers-quantity-20261114.test.mjs'
+      - 'src/tests/litix-package-tiers-browser-20261114.mjs'
       - 'src/lib/litixCheckoutVerifiedSeed.mjs'
       - 'src/lib/litixCheckoutVerifiedSeed.json'
       - 'src/lib/litixCheckoutBootstrap.mjs'
@@ -77,7 +87,7 @@ jobs:
           cache: npm
           cache-dependency-path: src/package-lock.json
       - run: npm ci
-      - run: node --test tests/litix-homepage-controls-20261114.test.mjs tests/litix-instant-checkout-20261114.test.mjs tests/litix-bundles-retired-20261114.test.mjs tests/litix-ai.test.mjs tests/litix-catalog-resilience.test.mjs
+      - run: node --test tests/litix-homepage-controls-20261114.test.mjs tests/litix-instant-checkout-20261114.test.mjs tests/litix-package-tiers-quantity-20261114.test.mjs tests/litix-bundles-retired-20261114.test.mjs tests/litix-ai.test.mjs tests/litix-catalog-resilience.test.mjs
       - run: npm run build
   browser:
     runs-on: ubuntu-latest
@@ -109,4 +119,5 @@ jobs:
           if [ -z "$CHROME_PATH" ]; then npx playwright install chromium; fi
           node tests/litix-homepage-ui-20261114.mjs
           node tests/litix-instant-checkout-browser-20261114.mjs
+          node tests/litix-package-tiers-browser-20261114.mjs
           node tests/litix-bundles-retired-browser-20261114.mjs
