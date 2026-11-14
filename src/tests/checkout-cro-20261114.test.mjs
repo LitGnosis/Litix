@@ -7,7 +7,7 @@ const source=path=>readFile(new URL(path,import.meta.url),"utf8");
 test("Fast Checkout always mounts one gateway CTA within its form",async()=>{
  const page=await source("../app/page.jsx");
  const component=await source("../components/PremiumInlineCheckout.jsx");
- assert.equal((page.match(/<PremiumInlineCheckout\\b/g)||[]).length,1);
+ assert.equal((page.match(/<PremiumInlineCheckout\b/g)||[]).length,1);
  assert.ok(page.indexOf("<PremiumInlineCheckout")>page.indexOf('className="litix-pick-first"'));
  assert.ok(page.indexOf("<PremiumInlineCheckout")<page.indexOf("</form>{notice&&"));
  assert.match(component,/type="submit"/);
