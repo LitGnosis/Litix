@@ -5,6 +5,7 @@ import { randomUUID, createHash } from "node:crypto";
 import { after } from "next/server";
 import { sendOrderEmails, notificationsConfigured } from "../../../lib/orderNotifications.mjs";
 import {allBoosteroCardsSnapshot} from "../../../lib/boosteroCatalog.mjs";
+import {publicServiceCardName} from "../../../lib/serviceCardDisplay.mjs";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -82,8 +83,8 @@ const publicOrder=(x,refresh={})=>{
  const stat=x.last_supplier_status||{};
  const remaining=stat.remains==null?null:Number(stat.remains);
  const validRemaining=Number.isFinite(remaining)&&Number.isInteger(remaining)&&remaining>=0&&remaining<=Number(x.quantity)?remaining:null;
- const supplierStatus=String(stat.status||"").trim();
- return {id:x.id,service:x.service_name,quantity:Number(x.quantity),amount:(Number(x.amount_cents)/100).toFixed(2),payment:x.payment_state,fulfillment:x.fulfillment_state,status:supplierStatus||null,remains:validRemaining,checkedAt:stat.checked_at||null,liveSupplierStatus:refresh.live===true,deliveryConfirmed:x.fulfillment_state==="completed",statusNote:refresh.warning||(!supplierStatus?"Litix has received the order; delivery is not confirmed yet.":"Delivery progress reflects the latest recorded status.")};
+ const supplierStatus=String(stat.status||"").replace(/\b(?:boostero|smmglob|smmfollowom)\b/gi,"Litix").trim();
+ return {id:x.id,service:publicServiceCardName({name:x.service_name}),quantity:Number(x.quantity),amount:(Number(x.amount_cents)/100).toFixed(2),payment:x.payment_state,fulfillment:x.fulfillment_state,status:supplierStatus||null,remains:validRemaining,checkedAt:stat.checked_at||null,liveSupplierStatus:refresh.live===true,deliveryConfirmed:x.fulfillment_state==="completed",statusNote:refresh.warning||(!supplierStatus?"Litix has received the order; delivery is not confirmed yet.":"Delivery progress reflects the latest recorded status.")};
 };
 async function refreshSupplierOrder(sql,x){
  // Only live Boostero orders may use the saved Boostero fulfillment record.
