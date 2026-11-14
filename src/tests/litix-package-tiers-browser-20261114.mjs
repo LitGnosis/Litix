@@ -51,8 +51,8 @@ try{
   assert.equal(await page.locator(".nav.litix-home-nav a[href='#checkout']").count(),0);
   const presets=page.getByRole("group",{name:"Quick quantity presets"});
   for(const value of ["250","500","1,000","2,500","5,000"])
-   assert.equal(await presets.getByRole("button",{name:value}).count(),1);
-  await presets.getByRole("button",{name:"250"}).click();
+   assert.equal(await presets.getByRole("button",{name:value,exact:true}).count(),1);
+  await presets.getByRole("button",{name:"250",exact:true}).click();
   assert.equal(await page.locator("#litix-quantity-custom").inputValue(),"250");
   assert.match(await total.innerText(),/2\.76/);
   await page.locator("#litix-quantity-custom").fill("7000");
@@ -65,7 +65,7 @@ try{
   assert.ok(options2.some(t=>t.includes("1,244.88")));
   await selector.selectOption("litix_2145");
   assert.equal(await page.locator("#litix-quantity-custom").inputValue(),"200");
-  assert.equal(await presets.getByRole("button",{name:"1,000"}).isDisabled(),true);
+  assert.equal(await presets.getByRole("button",{name:"1,000",exact:true}).isDisabled(),true);
   await selector.selectOption("litix_2132");
   assert.equal(await page.locator("#litix-quantity-custom").inputValue(),"1000");
   const faq=page.locator("#faq");
