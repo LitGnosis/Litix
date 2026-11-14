@@ -38,7 +38,7 @@ jobs:
       - name: Install locked dependencies
         run: npm ci --no-audit --no-fund
       - name: Security, signature, idempotency and private token regressions
-        run: node --test tests/litix-fulfillment-automation-20261114.test.mjs tests/boostero-live-fulfillment.test.mjs
+        run: node --test tests/litix-fulfillment-automation-20261114.test.mjs tests/checkout-cro-20261114.test.mjs
       - name: Compile Next.js production application
         run: npm run build
       - name: Assert safe feature-flag defaults and no duplicate provider handlers
