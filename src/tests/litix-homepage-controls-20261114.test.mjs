@@ -10,7 +10,7 @@ test("checkout selector reads durable catalog first and stops loading on timeout
  assert.ok(api.indexOf("readDurableCatalog()")<api.indexOf("allBoosteroCardsSnapshot()"));
  assert.match(ui,/setTimeout\(\(\)=>ctrl\.abort/);
  assert.match(ui,/setRefreshing\(false\)/);
- assert.match(ui,/liveAvailability/);
+ assert.match(ui,/choicesForPlatform/);
  assert.match(ui,/Retry services/);
 });
 
