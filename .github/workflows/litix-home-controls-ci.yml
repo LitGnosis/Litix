@@ -12,6 +12,7 @@ on:
       - 'src/components/LitixAI.jsx'
       - 'src/lib/litixGuidedSupport.mjs'
       - 'src/tests/litix-homepage-controls-20261114.test.mjs'
+      - 'src/tests/litix-homepage-ui-20261114.mjs'
       - '.github/workflows/litix-home-controls-ci.yml'
   push:
     branches: [main]
@@ -42,3 +43,32 @@ jobs:
       - run: npm ci
       - run: node --test tests/litix-homepage-controls-20261114.test.mjs tests/litix-ai.test.mjs tests/litix-catalog-resilience.test.mjs
       - run: npm run build
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: src
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: src/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - name: Install isolated UI test runner
+        run: npm install --no-save --ignore-scripts playwright@1.56.1
+      - name: Verify mobile and desktop controls without real transactions
+        run: |
+          npm run start -- --port 3100 >/tmp/litix-home-smoke.log 2>&1 &
+          app_pid=$!
+          trap 'kill $app_pid || true' EXIT
+          for i in $(seq 1 35); do
+            if curl --fail --silent --output /dev/null http://localhost:3100/; then break; fi
+            sleep 1
+          done
+          export CHROME_PATH="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
+          if [ -z "$CHROME_PATH" ]; then npx playwright install chromium; fi
+          node tests/litix-homepage-ui-20261114.mjs
