@@ -24,7 +24,7 @@ try{
   body:JSON.stringify({catalogStatus:"static",items:[]})}));
  await page.route("**/api/checkout/readiness?*",route=>{
   readinessCount++;
-  const q=new URL(route.request().url).searchParams;
+  const q=new URL(route.request().url()).searchParams;
   return route.fulfill({status:200,contentType:"application/json",
    body:JSON.stringify({ready:true,serviceId:q.get("serviceId"),quantity:Number(q.get("quantity")),
     amountCents:Number(q.get("expectedAmountCents")),chargeAttempted:false})});
