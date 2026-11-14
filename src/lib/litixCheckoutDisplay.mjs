@@ -26,6 +26,12 @@ export const FAST_CHECKOUT_MAX_RATE=(()=>{
 export const QUANTITY_PRESETS=Object.freeze([250,500,1000,2500,5000]);
 const money=value=>"$"+Number(value).toFixed(2);
 const spacing=value=>String(value||"").replace(/\s+/g," ").trim();
+// A trailing catalog speed is display metadata, not part of the public title.
+const SPEED_SUFFIX=/(?:\s+|[|·–—-]\s*)(\d+(?:[,.]\d+)?\s*[kK]?\s*\/\s*day)\s*$/i;
+function trailingSpeed(value){
+ const trimmed=spacing(value).replace(/\s+(?:No\s+Drop|Non\s+Drop|Manual\s+Refills?)\s*$/i,"");
+ return trimmed.match(SPEED_SUFFIX)?.[1]||"";
+}
 
 export function cleanCheckoutTitle(raw){
  let text=String(raw||"").replace(/[\p{Extended_Pictographic}\p{Regional_Indicator}\uFE0E\uFE0F\u200D\u20E3]/gu,"");
@@ -35,6 +41,7 @@ export function cleanCheckoutTitle(raw){
  text=text.replace(/\bReal\b/gi,"Active");
  text=text.replace(/\b(?:No\s+Drop|Non\s+Drop|Manual\s+Refills?)\b/gi,"");
  text=text.replace(/\s+(?:Top\s+Pick|Recommended)\s*$/gi,"");
+ text=text.replace(SPEED_SUFFIX,"");
  for(const [name,pattern] of PLATFORM_TITLES)text=text.replace(pattern,name);
  return spacing(text.replace(/^[\s.,:|–—➜>\-]+|[\s.,:|–—➜>\-]+$/g,""));
 }
@@ -80,7 +87,9 @@ export function checkoutDisplay(row){
   ...(/^(?:\d+(?:[,.]\d+)?\s*[kK]?\s*\/\s*[Dd]ay listed)$/i.test(String(row?.variantPace||""))?
    {pace:String(row.variantPace)}:{})
  };
- const details={...(VERIFIED_VARIANTS[String(row?.id)]||{}),...provided,...rawDetails(row)};
+ const titleSpeed=trailingSpeed(original);
+ const details={...(VERIFIED_VARIANTS[String(row?.id)]||{}),...provided,...rawDetails(row),
+  ...(titleSpeed?{pace:spacing(titleSpeed).replace(/\s*\/\s*/,"/")+" listed"}:{})};
  const specifics=[customerCheckoutQuality(details.quality),customerCheckoutPace(details.pace)].filter(Boolean);
  const min=Number(row?.min)||1,max=Number(row?.max)||min;
  const specialty=Number(row?.per1000)>FAST_CHECKOUT_MAX_RATE;
