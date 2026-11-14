@@ -247,11 +247,15 @@ export async function sendPendingAdminReviews({sql=boosteroSQL(),limit=6}={}){
 }
 export async function runFulfillmentMaintenance({sql=boosteroSQL()}={}){
  if(!guarded())return {disabled:true};
- const balance=await checkBoosteroBalance({sql}).catch(()=>({unavailable:true}));
- const dispatch=await resumeSafeBoosteroDispatch({sql}).catch(()=>({failed:true}));
- const tracking=await syncLitixBoosteroOrders({sql}).catch(()=>({failed:true}));
- const confirmations=await sendPendingConfirmations({sql}).catch(()=>({failed:true}));
- const updates=await deliverLitixCustomerUpdates({sql,limit:5}).catch(()=>({failed:true}));
- const reviews=await sendPendingAdminReviews({sql,limit:5}).catch(()=>({failed:true}));
+ // Bounded independent tasks may overlap; supplier operations never run
+ // in a large concurrent fan-out. Existing DB claims keep dispatch one-way.
+ const [balance,dispatch,tracking,confirmations,updates,reviews]=await Promise.all([
+  checkBoosteroBalance({sql}).catch(()=>({failed:true})),
+  resumeSafeBoosteroDispatch({sql,limit:1}).catch(()=>({failed:true})),
+  syncLitixBoosteroOrders({sql,limit:40}).catch(()=>({failed:true})),
+  sendPendingConfirmations({sql,limit:2}).catch(()=>({failed:true})),
+  deliverLitixCustomerUpdates({sql,limit:2}).catch(()=>({failed:true})),
+  sendPendingAdminReviews({sql,limit:2}).catch(()=>({failed:true}))
+ ]);
  return {balance,dispatch,tracking,confirmations,updates,reviews};
 }
