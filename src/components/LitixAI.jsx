@@ -37,6 +37,13 @@ export default function LitixAI(){
   const closePanel=()=>{resetLookup();setOpen(false);launcherRef.current?.focus();};
   const selectTracking=()=>{resetLookup();setOrderView(true);};
   useEffect(()=>{
+    const resetRestoredPage=event=>{
+      if(event.persisted)resetLookup();
+    };
+    window.addEventListener("pageshow",resetRestoredPage);
+    return()=>window.removeEventListener("pageshow",resetRestoredPage);
+  },[]);
+  useEffect(()=>{
     const openFromPage=()=>openPanel();
     window.addEventListener("litix:open-ai",openFromPage);
     return()=>window.removeEventListener("litix:open-ai",openFromPage);
@@ -144,7 +151,7 @@ export default function LitixAI(){
       </form></>:
       <form className="lxai-track" onSubmit={track} autoComplete="off" noValidate={false}>
         <h3>Private order lookup</h3>
-        <p>Enter your order number and the same email used at checkout. Verification happens on Litix's existing order system; your email and order details are not sent to the AI model.</p>
+        <p>Enter your Litix order number and checkout email to view real-time payment and delivery updates.</p>
         <label>Order number<input value={orderId} onChange={e=>setOrderId(e.target.value)} maxLength={80} placeholder="e.g. ltx2_xxxxxxxx-xxxx-xxxx-xxxx" autoComplete="off" autoCapitalize="none" autoCorrect="off" spellCheck={false} required/></label>
         <label>Checkout email<input type="email" value={email} onChange={e=>setEmail(e.target.value)} maxLength={254} placeholder="e.g. you@example.com" autoComplete="off" autoCapitalize="none" autoCorrect="off" spellCheck={false} required/></label>
         <button type="submit" disabled={orderBusy}>{orderBusy?"Checking…":"Verify and track"}</button>
@@ -161,7 +168,7 @@ export default function LitixAI(){
         <span>Human support: </span>
         {whatsapp&&<a href={whatsapp} rel="noopener noreferrer" target="_blank">WhatsApp</a>}
         <a href={"mailto:"+SUPPORT_EMAIL}>Email</a>
-        <small>{status?.mode==="guided"?"Guided support uses site information without an external AI model.":"AI chat uses OpenAI."} Never share passwords, payment details, or tracking tokens.</small>
+        <small>Litix never asks for social passwords or card numbers in support chat.</small>
       </footer>
     </section>}
     <button type="button" ref={launcherRef} className="lxai-launcher" aria-controls="lxai-dialog" aria-haspopup="dialog" aria-label={open?"Close LITIX AI":"Open LITIX AI"} aria-expanded={open} aria-hidden={open} tabIndex={open?-1:0} onClick={()=>open?closePanel():openPanel()}>
