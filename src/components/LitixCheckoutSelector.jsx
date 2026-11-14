@@ -153,7 +153,7 @@ export default function LitixCheckoutSelector({selected,onChoose}){
   </label>
   {specialty.length>0&&<button type="button" className="alt litix-specialty-toggle"
    aria-expanded={visibleSpecialty} onClick={()=>setShowSpecialty(v=>!v)}>
-   {visibleSpecialty?"Hide specialty-priced options":"Show Specialty / Custom options"} ({specialty.length})
+   {`${visibleSpecialty?"Hide specialty-priced options":"Show Specialty / Custom options"} (${specialty.length})`}
   </button>}
   {refreshing&&<p role="status" className="litix-quick-status">Checking catalog updates in the background…</p>}
   {problem&&<p role="status" className="litix-quick-status">{problem}
@@ -162,11 +162,7 @@ export default function LitixCheckoutSelector({selected,onChoose}){
    No verified {kind||"service"} packages are available for {platform}.
    <button type="button" className="alt" onClick={()=>setRetry(x=>x+1)}>Retry services</button>
   </div>}
-  {filtered.length>0&&<p className="litix-quick-status">
-   {data.catalogStatus==="static"?
-    "Previously verified listings; final price and eligibility are checked before payment.":
-    "Current Litix catalog; final price and eligibility are checked before payment."}
-  </p>}
+  {filtered.length>0&&<p className="litix-quick-status">Choose the package that fits your campaign.</p>}
   {current&&<div className="litix-quick-chosen" aria-live="polite">
    <strong>{checkoutDisplay(current).title}</strong>
    <span>{checkoutDisplay(current).subtitle} · {usdRate(current.per1000)} per 1,000</span>
