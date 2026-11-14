@@ -58,5 +58,5 @@ test("Facebook is a working hero tab and homepage removes repetitive CTAs",async
  assert.match(home,/href="\/workspace"/);
  assert.match(ws,/7-day content sprint/);
  assert.match(ws,/Client outreach/);
- assert.match(home,/Open the full order tracking center/);
+ assert.match(home,/Full order tracking center/);
 });
