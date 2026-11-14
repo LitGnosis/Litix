@@ -97,7 +97,6 @@ export default function LitixDirectory({standalone=false,initialPlatform="",init
     <p>Find followers, likes, views, engagement, streams and more. Browse across every supported social platform, all in your Litix blue storefront.</p>
    </div>
    <a className="litix-directory-feature-link" href="/custom-likes">Custom Likes &amp; Followers · Customize Your Order</a>
-   <a className="litix-directory-feature-link" href="/bundles">Explore Growth Bundles</a>
   </div>
   <div className="litix-directory-stats">
    <div><strong>{allCount==null?"—":allCount.toLocaleString()}</strong><span>Services in catalog</span></div>

@@ -396,14 +396,10 @@ export default function Home(){
   finally{setLookupBusy(false)}
  }
  useEffect(()=>{if(location.search.includes("track=")){setPrivateUrl(location.href);track(location.href)}},[]);
- return <main className="wrap"><nav className="nav litix-home-nav"><a className="brand" href="/" aria-label="Litix home"><img src="/assets/brand/litix-logo.webp" alt="Litix — Innovation, Ignited." className="litix-new-logo" /></a><div><a href="/shop">Shop</a><a href="/partners">Partners</a><a href="/custom-likes">Custom Likes &amp; Followers</a><a href="/bundles">Bundles</a><a href="/services">All Services</a><a href="#checkout">Checkout</a><a href="/track">Track Order</a><a href="/workspace">Workspace</a></div></nav>
+ return <main className="wrap"><nav className="nav litix-home-nav"><a className="brand" href="/" aria-label="Litix home"><img src="/assets/brand/litix-logo.webp" alt="Litix — Innovation, Ignited." className="litix-new-logo" /></a><div><a href="/shop">Shop</a><a href="/partners">Partners</a><a href="/custom-likes">Custom Likes &amp; Followers</a><a href="/services">All Services</a><a href="#checkout">Checkout</a><a href="/track">Track Order</a><a href="/workspace">Workspace</a></div></nav>
  
  <LitixQuickShop/>
- <nav className="litix-purchase-path panel" aria-label="Choose your purchase type">
-   <span><strong>Ready to order?</strong> Choose one checkout path.</span>
-   <div><a className="primary" href="#checkout">Single service checkout</a>
-    <a className="alt" href="/bundles">Fixed-price Growth Bundles</a></div>
- </nav>
+
    <div className="litix-purchase-layout"><section id="checkout" className="panel sticky"><div className="kicker">SECURE PAYKINGS CHECKOUT</div><h2>Your order</h2><ol className="checkout-steps" aria-label="Checkout steps"><li className={selected?"step-done":"step-current"}>Choose service</li><li className={selected&&link?"step-current":"step-pending"}>Order details</li><li className={cardReady?"step-done":"step-pending"}>Secure payment</li></ol><p className="checkout-hint">You’ll review the final USD total before paying. Card details are entered securely with PayKings.</p><form onSubmit={submit} className="form"><LitixCheckoutSelector selected={selected} onChoose={service=>{setSelected(service);setQty(service?.min||100);setReceipt(null);setNotice("");setKey(crypto.randomUUID())}}/>
  {!selected&&<label className="litix-early-link" style={{display:"block",margin:"14px 0"}}>Public profile or post link
   <input aria-label="Public profile or post link" type="text" value={link}

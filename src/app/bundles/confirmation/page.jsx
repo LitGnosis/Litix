@@ -31,7 +31,7 @@ export default function BundleConfirmation(){
  ].join("\n"):"";
  const emailLink=order?"mailto:Litixsocial@gmail.com?subject="+encodeURIComponent(subject)+"&body="+encodeURIComponent(mailBody):null;
  const paid=order?.payment==="settled";
- return <main className="wrap"><nav className="nav"><a href="/" className="brand">LITIX</a><a href="/bundles">Growth Bundles</a></nav>
+ return <main className="wrap"><nav className="nav"><a href="/" className="brand">LITIX</a><a href="/track">Track Orders</a></nav>
   <section className="panel" style={{maxWidth:770,margin:"32px auto"}}>
    <span className="kicker">LITIX · BUNDLE ORDER</span><h1>Order confirmation and submission</h1>
    {order?<div>

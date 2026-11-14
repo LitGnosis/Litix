@@ -41,7 +41,7 @@ test("AI has a visible working launcher and explicitly guided fallback",async()=
 test("guidance never invents live order status or processes payment",()=>{
  assert.match(guidedLitixReply("track my order"),/order number and the checkout email/i);
  assert.match(guidedLitixReply("your Instagram likes price"),/Prices and supplier availability are verified/i);
- assert.match(guidedLitixReply("can I get a bundle"),/\/bundles/);
+ assert.match(guidedLitixReply("can I get a bundle"),/no longer sells Growth Bundles/);
  assert.doesNotMatch(guidedLitixReply("who charged me"),/refunded successfully|order fulfilled/i);
 });
 

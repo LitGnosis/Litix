@@ -11,7 +11,7 @@ export default function ShopIndex(){
    <a className="brand" href="/" aria-label="Litix home">
     <img src="/assets/brand/litix-logo.webp" alt="Litix" className="litix-new-logo"/>
    </a>
-   <div><a href="/services">All Litix Services</a><a href="/bundles">Growth Bundles</a><a href="/track">Track Order</a></div>
+   <div><a href="/services">All Litix Services</a><a href="/track">Track Order</a></div>
   </nav>
   <section className="panel" aria-labelledby="shop-head">
    <div className="kicker">LITIX · SHOP BY PLATFORM</div>

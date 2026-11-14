@@ -37,7 +37,6 @@ export default function LitixQuickShop(){
   </nav>
   <div className="litix-shop-actions">
    <a className="litix-metal-cta" href="#checkout">Shop a Single Service <span aria-hidden="true">›</span></a>
-   <a className="litix-shop-secondary" href="/bundles">Choose a Growth Bundle</a>
   </div>
   <p className="litix-hero-footnote">Public links only · No social password required · Every order receives an independent price and availability check before payment.</p>
  </section>;

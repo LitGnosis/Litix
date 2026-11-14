@@ -16,7 +16,6 @@ export default function CustomLikesAndFollowersPage(){
     <a href="/">Home</a>
     <a href="/shop">Shop</a>
     <a href="/custom-orders">Custom Orders</a>
-    <a href="/bundles">Bundles</a>
     <a href="/track">Track Order</a>
    </div>
   </nav>

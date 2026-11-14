@@ -1,6 +1,5 @@
 import "./style.css";
 import "./metallic.css";
-import "./growthBundles.css";
 import "./litix-ai.css";
 import "./catalog.css";
 import "./quick-checkout.css";

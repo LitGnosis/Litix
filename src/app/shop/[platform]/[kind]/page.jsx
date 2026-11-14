@@ -26,7 +26,7 @@ export default async function ShopCategoryPage({params}){
    <a className="brand" href="/" aria-label="Litix home">
     <img src="/assets/brand/litix-logo.webp" className="litix-new-logo" alt="Litix" />
    </a>
-   <div><a href="/shop">Shop by Platform</a><a href="/services">All Litix Services</a><a href="/bundles">Bundles</a><a href="/track">Track Order</a></div>
+   <div><a href="/shop">Shop by Platform</a><a href="/services">All Litix Services</a><a href="/track">Track Order</a></div>
   </nav>
   <section className="panel" aria-labelledby="litix-shop-title">
    <div className="kicker">LITIX · {selected.platformLabel.toUpperCase()}</div>
