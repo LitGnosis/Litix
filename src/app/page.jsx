@@ -576,7 +576,7 @@ export default function Home(){
   min={selected?.min||1} max={selected?.max||1000000} step={selected?.unitStep||1}
   required value={qty} onChange={e=>setQty(Number(e.target.value))}
   onBlur={()=>setQty(clampCheckoutQuantity(qty,selected))}/></label>
- {selected&&<p className="small">Available range: {Number(selected.min).toLocaleString("en-US")}–{Number(selected.max).toLocaleString("en-US")} units. Your total updates as you choose a quantity.</p>}
+
  </div>{selected&&qty<selected.min&&<div className="checkout-quantity-warning" role="alert"><strong>Minimum quantity for this service: {selected.min.toLocaleString()}.</strong><p>You entered {qty.toLocaleString()}. The $1 minimum order does not override the service's quantity requirement. The lowest eligible total for this service is {money(Math.ceil(selected.per1000*selected.min/10-1e-8))}.</p><button type="button" className="alt" onClick={()=>setQty(selected.min)}>Use minimum: {selected.min.toLocaleString()} units</button></div>}</>}
  <label>Email<input type="email" required placeholder="you@example.com" value={email} onChange={e=>setEmail(e.target.value)}/></label>
  <div className="totalbox" aria-live="polite">
