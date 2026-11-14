@@ -23,7 +23,7 @@ export async function GET(req){
  const phase=boosteroCronPhase();
  try{
   const sendUpdates=deliverLitixCustomerUpdates({limit:2});
-  const task=phase===0?syncBoosteroStatuses({limit:3}):
+  const task=phase===0?(process.env.LITIX_AUTOMATED_FULFILLMENT_ENABLED==="true"?Promise.resolve({skipped:"handled_by_sync_orders"}):syncBoosteroStatuses({limit:3})):
    phase===1?syncBoosteroMultiStatuses({limit:5}):
    process.env.LITIX_MULTIPOST_AUTO_FULFILL_ENABLED==="true"?
     resumeBoosteroMultiQueue({limitParents:1}):

@@ -65,7 +65,7 @@ export default function OrderTracker(){
    if(credentials.kind==="private"){
     response=await fetch("/api/track?id="+encodeURIComponent(credentials.id)+"&token="+encodeURIComponent(credentials.token),{cache:"no-store"});
    }else{
-    response=await fetch("/api/order-lookup",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({orderId:credentials.id,email:credentials.email}),cache:"no-store"});
+    response=await fetch("/api/orders/lookup",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({orderId:credentials.id,email:credentials.email}),cache:"no-store"});
    }
    const body=await response.json();
    if(!response.ok)throw Error(body.error||"Order tracking is temporarily unavailable.");

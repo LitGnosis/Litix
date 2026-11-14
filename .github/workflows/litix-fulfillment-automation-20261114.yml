@@ -1,0 +1,49 @@
+name: Litix payment and supplier automation — no-charge production build
+on:
+  pull_request:
+    paths:
+      - src/lib/litixFulfillmentSecurity.mjs
+      - src/lib/litixFulfillmentAutomation.mjs
+      - src/app/api/webhooks/paykings/route.js
+      - src/app/api/cron/**
+      - src/app/api/orders/**
+      - src/app/api/health/fulfillment/route.js
+      - src/app/track/**
+      - src/app/api/catalog/v1/route.js
+      - src/vercel.json
+      - src/db/migrations/20261114-litix-paykings-fulfillment-automation.sql
+      - src/tests/litix-fulfillment-automation-20261114.test.mjs
+      - .github/workflows/litix-fulfillment-automation-20261114.yml
+  push:
+    branches:
+      - feature/litix-paykings-fulfillment-engine-20261114
+permissions:
+  contents: read
+jobs:
+  safe-checkout:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: src
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: src/package-lock.json
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Security, signature, idempotency and private token regressions
+        run: node --test tests/litix-fulfillment-automation-20261114.test.mjs tests/checkout-cro-20261114.test.mjs
+      - name: Compile Next.js production application
+        run: npm run build
+      - name: Assert safe feature-flag defaults and no duplicate provider handlers
+        run: |
+          node --input-type=module -e 'import {readFileSync} from "node:fs";let s=readFileSync("lib/litixFulfillmentAutomation.mjs","utf8");if(!s.includes("LITIX_AUTOMATED_FULFILLMENT_ENABLED"))process.exit(1);'
+          node --check app/api/webhooks/paykings/route.js
+          node --check app/api/cron/sync-orders/route.js
+          node --check app/api/cron/sync-services/route.js

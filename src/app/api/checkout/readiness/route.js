@@ -1,4 +1,5 @@
 import {boosteroProductionReady,verifyBoosteroQuote} from "../../../../lib/boosteroFulfillment.mjs";
+import {checkBoosteroBalance} from "../../../../lib/litixFulfillmentAutomation.mjs";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 export const maxDuration=10;
@@ -34,6 +35,17 @@ export async function GET(request){
    return reply({ready:false,error:"The price or service limits have changed. Refresh package details before paying.",
     expectedAmountCents,currentAmountCents:quote.amountCents,
     chargeAttempted:false,retryable:true},409);
+  // Feature-gated supplementary wallet guard for high-value carts.
+  // The normal paid checkout independently checks supplier balance again.
+  const threshold=Number(process.env.LITIX_HIGH_VALUE_BALANCE_CHECK_CENTS||10000);
+  if(process.env.LITIX_AUTOMATED_FULFILLMENT_ENABLED==="true"&&
+     Number.isSafeInteger(threshold)&&threshold>=10000&&
+     expectedAmountCents>=threshold){
+   const balance=await timeout(checkBoosteroBalance(),4000);
+   if(balance.balance<quote.costUSD)
+    return reply({ready:false,error:"This service is temporarily unavailable due to supplier inventory funding. No payment was attempted.",
+     chargeAttempted:false,retryable:true},409);
+  }
   return reply({ready:true,serviceId:id,quantity,amountCents:quote.amountCents,
    currency:"USD",chargeAttempted:false});
  }catch{
