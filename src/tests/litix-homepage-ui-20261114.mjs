@@ -39,7 +39,7 @@ const test=async width=>{
   "https://www.instagram.com/p/abc/");
  const grp=page.getByRole("group",{name:"Select a social platform"});
  await grp.getByRole("button",{name:"Facebook"}).click();
- assert.equal(await page.locator('a[href="/shop/facebook/followers"]').count(),1);
+ assert.equal(await page.locator('.litix-platform-choices a[href="/shop/facebook/followers"]').count(),1);
  await page.locator(".litix-hero-shop").getByRole("button",{name:"Ask LITIX AI"}).click();
  await page.locator(".lxai-panel").waitFor();
  await page.locator("#lxai-entry").fill("Where is the catalog?");
