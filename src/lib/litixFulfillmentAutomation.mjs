@@ -142,7 +142,10 @@ export async function resumeSafeBoosteroDispatch({sql=boosteroSQL(),dispatch=dis
   }
   const outcome=await dispatch(item.litix_order_id,{sql}).catch(()=>({submitted:false,state:"UNKNOWN_OUTCOME"}));
   if(outcome.submitted)submitted++;
-  if(outcome.state==="UNKNOWN_OUTCOME")review++;
+  if(outcome.state==="UNKNOWN_OUTCOME"||outcome.state==="MANUAL_REVIEW"){
+   await flagUnknownSupplierOutcome({sql,orderId:item.litix_order_id});
+   review++;
+  }
  }
  return {checked:candidates.length,submitted,review,waiting};
 }
@@ -192,6 +195,20 @@ export async function syncLitixBoosteroOrders({sql=boosteroSQL(),operation=boost
   }catch{failed++;}
  }
  return {checked,failed,review};
+}
+export async function flagUnknownSupplierOutcome({sql=boosteroSQL(),orderId}){
+ if(!/^ltx2_[a-f0-9-]{36}$/.test(String(orderId||"")))return false;
+ const rows=await sql.query(
+  "select o.id from public.litix_v2_orders o join public.litix_boostero_fulfillment f on f.litix_order_id=o.id where o.id=$1 and o.payment_state='paid' and f.payment_mode='card' and f.supplier_order_id is null and f.state in('UNKNOWN_OUTCOME','MANUAL_REVIEW')",
+  [orderId]);
+ if(rows.length!==1)return false;
+ await sql.query(
+  "update public.litix_v2_orders set fulfillment_state='manual_review',updated_at=now() where id=$1 and payment_state='paid' and supplier_order_id is null",
+  [orderId]);
+ await sql.query(
+  "insert into public.litix_automation_reviews(litix_order_id,reason) values($1,'supplier_outcome_unknown') on conflict do nothing",
+  [orderId]);
+ return true;
 }
 export async function sendPendingAdminReviews({sql=boosteroSQL(),limit=6}={}){
  let notified=0,failed=0;
