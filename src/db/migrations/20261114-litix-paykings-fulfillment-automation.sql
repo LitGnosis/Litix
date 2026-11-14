@@ -40,6 +40,10 @@ CREATE TABLE IF NOT EXISTS public.litix_automation_reviews (
  estimated_supplier_credit_usd numeric(14,5),
  credited_amount_usd numeric(14,5),
  credit_confirmed_at timestamptz,
+ alert_state text NOT NULL DEFAULT 'queued' CHECK(alert_state IN('queued','sending','sent','failed')),
+ alert_attempts integer NOT NULL DEFAULT 0,
+ alert_leased_at timestamptz,
+ alerted_at timestamptz,
  created_at timestamptz NOT NULL DEFAULT now(),
  updated_at timestamptz NOT NULL DEFAULT now(),
  PRIMARY KEY (litix_order_id,reason)
