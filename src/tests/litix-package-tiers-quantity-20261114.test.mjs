@@ -37,7 +37,7 @@ test("source parser differentiates true public traits without claiming unverifie
 
 test("true duplicates collapse only if price, display traits, quantities and step are identical",()=>{
  const input=realId("litix_2132");
- const twin={...input,id:"litix_998877"};
+ const twin={...input,id:"litix_998877",variantQuality:"High quality",variantPace:"4K/day listed"};
  assert.equal(dedupeCheckoutCards([input,twin]).length,1);
  const diffPrice={...twin,per1000:14.37};
  const diffRange={...twin,max:9000};
