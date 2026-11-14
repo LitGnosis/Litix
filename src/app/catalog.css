@@ -36,7 +36,9 @@
 .litix-directory-state{font-size:10px;color:#b4c9da;border:1px solid #4a708b;border-radius:99px;padding:5px 8px;white-space:nowrap}
 .litix-directory-state.is-ready{color:#9bf0d1;border-color:#289d7b}
 .litix-directory-service h3{font-size:15px;line-height:1.4;color:#f3f9ff;min-height:40px;margin:13px 0 5px;overflow-wrap:anywhere}
-.litix-directory-service-category{margin:0 0 15px;color:#8eb5cb;font-size:11px;overflow-wrap:anywhere;min-height:16px}
+.litix-directory-service-category{margin:0;color:#8eb5cb;font-size:11px;overflow-wrap:anywhere;min-height:16px}
+.litix-directory-service-meta{display:flex;flex-direction:column;align-items:flex-start;gap:7px;min-width:0;margin:0 0 15px}
+.litix-directory-service-tier{display:inline-flex;align-items:center;max-width:100%;overflow-wrap:anywhere;padding:6px 9px;border:1px solid #5baae468;border-radius:999px;background:#0b49703d;color:#d3eeff;font-size:11px;font-weight:750;line-height:1.35}
 .litix-directory-service-price{font-size:25px;font-weight:900;letter-spacing:-.03em;color:#c8eeff;margin-top:auto}
 .litix-directory-service-price small{font-size:11px;color:#96b3c7;letter-spacing:0;font-weight:500;display:block;margin-top:1px}
 .litix-directory-service-range{font-size:11px;color:#9abbd0;display:flex;align-items:start;justify-content:space-between;gap:10px;margin:13px 0}
