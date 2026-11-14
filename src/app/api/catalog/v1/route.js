@@ -2,6 +2,7 @@ import {after} from "next/server";
 import {allBoosteroCardsSnapshot} from "../../../../lib/boosteroCatalog.mjs";
 import {buildActiveStorefrontCatalog} from "../../../../lib/activeStorefrontCatalog.mjs";
 import {persistVerifiedCatalog,readDurableCatalog} from "../../../../lib/litixDurableCatalog.mjs";
+import {boosteroSQL} from "../../../../lib/boosteroFulfillment.mjs";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 export const maxDuration=60;
@@ -21,6 +22,20 @@ export async function GET(request){
  if(!snapshot.items?.length || snapshot.status==="unavailable"){
   snapshot=await readDurableCatalog();
  }
+ // A fresh daily inventory scan may pause a service ID that disappeared.
+ // Never substitute another supplier service or alter a customer quote here.
+ try{
+  const records=await boosteroSQL().query(
+   "select supplier_service_id from public.litix_supplier_service_health where active=false and scanned_at>now()-interval '48 hours' limit 12000"
+  );
+  if(records.length){
+   const blocked=new Set(records.map(x=>x.supplier_service_id));
+   snapshot={...snapshot,items:snapshot.items.filter(x=>{
+    const serviceId=String(x?.id||"").match(/^(?:litix|boostero)_(\d{1,12})$/)?.[1];
+    return !serviceId||!blocked.has(serviceId);
+   })};
+  }
+ }catch{ /* Schema deployment is independent of the existing catalog. Live checkout always re-verifies. */ }
  const listed=buildActiveStorefrontCatalog(snapshot.items,params,{sourceStatus:snapshot.status});
  const isFresh=snapshot.status==="live";
  const data={
