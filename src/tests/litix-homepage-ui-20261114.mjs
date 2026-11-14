@@ -53,7 +53,21 @@ const test=async width=>{
  await tracking.getByText("Saved delivery status.").waitFor();
  await page.getByRole("button",{name:"7-day content sprint"}).click();
  await page.getByRole("button",{name:"Create campaign"}).click();
- await page.locator("#campaign-studio").getByText("7-day content sprint").waitFor();
+ const savedCampaign=page.locator("#campaign-studio .workspace-row").first();
+ await savedCampaign.waitFor({state:"attached"});
+ const debugCampaign=await savedCampaign.evaluate(el=>{
+  const chain=[];let n=el;
+  while(n&&chain.length<6){
+   const s=getComputedStyle(n),r=n.getBoundingClientRect();
+   chain.push({tag:n.tagName,cls:n.className,display:s.display,visibility:s.visibility,
+    opacity:s.opacity,contentVisibility:s.contentVisibility,rect:[r.x,r.y,r.width,r.height]});
+   n=n.parentElement;
+  }
+  return chain;
+ });
+ console.log("CAMPAIGN_RENDER",JSON.stringify(debugCampaign));
+ assert.ok((await savedCampaign.textContent()).includes("7-day content sprint"),"Campaign saved in workspace");
+ assert.equal(await savedCampaign.isVisible(),true,"New campaign row must be visible");
  assert.equal(await page.locator('.panel.support-banner').count(),0);
  assert.equal(await page.locator('.panel[aria-label="Litix customer support"]').count(),0);
  if(width<576){
