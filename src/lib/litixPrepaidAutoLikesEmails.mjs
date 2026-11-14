@@ -19,7 +19,7 @@ export function prepaidAutoLikesMessages({
  const reference=String(orderId),paid=usd(amountCents);
  const plan=`${Number(likes)} likes per future post, up to ${Number(posts)} posts within 30 days; one-time payment, no automatic renewal.`;
  const trackingStatus=fulfillment==="processing"?
-  "Your package has been submitted for supplier monitoring; future posts may take time to appear.":
+  "Your package has been submitted for Litix delivery monitoring; future posts may take time to appear.":
   "Your package is recorded. Activation is being verified; monitoring is not yet confirmed.";
  return [
   {kind:"payment",recipients:[email],
@@ -27,7 +27,7 @@ export function prepaidAutoLikesMessages({
    text:`Litix payment confirmation\n\nYour payment was accepted.\nOrder: ${reference}\nAmount paid: ${paid}\nPayment status: PAID\nPlatform: ${platform}\nPlan: ${plan}\n\nYour separate tracking email contains the private link. Keep it confidential.\nSupport: litixsocial@gmail.com\n`},
   {kind:"tracking",recipients:[email],
    subject:`Litix AutoLikes — Private Order Tracking ${reference}`,
-   text:`Your private Litix AutoLikes tracking link\n\nOrder: ${reference}\nPayment status: PAID\n${trackingStatus}\n\nTrack your order here:\n${link.toString()}\n\nThis link allows private order access. Do not forward or publish it.\nOnly future public posts count toward your plan. Delivery depends on supplier availability.\nSupport: litixsocial@gmail.com\n`},
+   text:`Your private Litix AutoLikes tracking link\n\nOrder: ${reference}\nPayment status: PAID\n${trackingStatus}\n\nTrack your order here:\n${link.toString()}\n\nThis link allows private order access. Do not forward or publish it.\nOnly future public posts count toward your plan. Delivery timing depends on verified service availability and processing conditions.\nSupport: litixsocial@gmail.com\n`},
   {kind:"owner",recipients:["litixsocial@gmail.com","litgnosisllc@gmail.com"],
    subject:`Litix Owner Alert — Paid AutoLikes ${reference}`,
    text:`New verified paid Litix AutoLikes purchase\n\nOrder: ${reference}\nCustomer contact: ${email}\nAmount: ${paid}\nPayment status: PAID\nPlatform: ${platform}\nPlan: ${plan}\nActivation: ${fulfillment==="processing"?"Submitted for monitoring":"Pending review / verification"}\n\nCheck the protected order ledger before manually contacting the supplier. Do not re-charge or re-submit the supplier order without reconciliation.\n`}
