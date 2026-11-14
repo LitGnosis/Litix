@@ -7,6 +7,6 @@ export default function ServicesPage(){
    <div><a href="/">Home</a><a href="/shop">Shop by Platform</a><a href="/custom-likes">Custom Likes</a><a href="/#checkout">Checkout</a><a href="/track">Track Order</a></div>
   </nav>
   <LitixDirectory standalone />
-  <p className="small" style={{textAlign:"center",margin:"24px auto 60px"}}>LITIX · Analytics Amplified · Innovation Ignited · Metrics that Move</p>
+  <p className="small" style={{textAlign:"center",margin:"24px auto 60px"}}>LITIX · Innovation, Ignited. Direct Social Media Growth & Campaign Workflows · Encrypted PayKings Checkout</p>
  </main>;
 }
