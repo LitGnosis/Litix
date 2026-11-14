@@ -66,4 +66,14 @@ CREATE TABLE IF NOT EXISTS public.litix_supplier_balance_alerts (
  state text NOT NULL DEFAULT 'queued' CHECK(state IN('queued','sent','review')),
  created_at timestamptz NOT NULL DEFAULT now()
 );
+CREATE TABLE IF NOT EXISTS public.litix_supplier_service_health (
+ supplier_service_id text PRIMARY KEY,
+ active boolean NOT NULL DEFAULT true,
+ current_min integer,
+ current_max integer,
+ rate_usd_per_1000 numeric(14,6),
+ last_seen_at timestamptz,
+ scanned_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS litix_supplier_health_inactive ON public.litix_supplier_service_health(active,scanned_at);
 COMMIT;
