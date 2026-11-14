@@ -12,7 +12,7 @@ const authorized=req=>{
 };
 export async function GET(request){
  if(!authorized(request))return Response.json({error:"unauthorized"},{status:401});
- if(!boosteroProductionReady())return Response.json({disabled:true});
+ if(!boosteroProductionReady()||process.env.LITIX_AUTOMATED_FULFILLMENT_ENABLED!=="true")return Response.json({disabled:true});
  try{
   const live=await boosteroProduction("services");
   if(!Array.isArray(live)||live.length<1||live.length>12000)
