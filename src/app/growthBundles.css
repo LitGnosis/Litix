@@ -57,3 +57,18 @@
 .lg-auto-thumb img{display:block;width:100%;aspect-ratio:9/14;object-fit:cover;border-radius:8px}
 @media(max-width:650px){.lg-auto-gallery{grid-template-columns:repeat(3,minmax(0,1fr))}.lg-bundle-auto-posts{padding:12px}}
 @media(max-width:385px){.lg-auto-gallery{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+
+/* A bundle CTA always offers a checkout readiness check; the payment backend
+   alone decides whether a real card can be charged. */
+.lg-bundle-actions button.lg-bundle-buy{
+ display:flex;width:100%;align-items:center;justify-content:center;
+ padding:12px 16px;min-height:48px;border:0;border-radius:11px;
+ background:linear-gradient(110deg,#cceeff,#77bdfa);
+ color:#062342;font-weight:850;font-size:15px;cursor:pointer;
+}
+.lg-bundle-actions button.lg-bundle-buy:hover:not(:disabled){filter:brightness(1.08)}
+.lg-bundle-actions button.lg-bundle-buy:focus-visible{outline:3px solid #fff;outline-offset:3px}
+.lg-bundle-actions .lg-bundle-warning{border-radius:12px;padding:14px}
+.lg-bundle-actions .lg-bundle-warning .alt{width:100%;min-height:42px}
+.lg-bundle-actions .lg-bundle-warning a{margin-top:9px}
