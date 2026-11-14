@@ -53,7 +53,7 @@ test("checkout trust text remains accurate and avoids unsupported promises",asyn
  const premium=await source("../components/PremiumInlineCheckout.jsx");
  const lib=await source("../lib/litixCheckoutDisplay.mjs");
  assert.match(page,/checkoutTargetPlaceholder\(selected\)/);
- assert.match(page,/link\.trim\(\)&&!targetFeedback\.ok\?targetFeedback\.message/);
+ assert.match(page,/link\.trim\(\)\?targetFeedback\.message/);
  assert.doesNotMatch(page,/checkoutProfilePlaceholder/);
  for(const value of ["Live service verification","Private order tracking","PayKings-hosted card fields"])
   assert.ok(premium.includes(value));
