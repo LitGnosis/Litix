@@ -1,4 +1,5 @@
 import {VERIFIED_CHECKOUT_SEED} from "./litixCheckoutVerifiedSeed.mjs";
+import {compareCheckoutCards,dedupeCheckoutCards,checkoutDisplay} from "./litixCheckoutDisplay.mjs";
 export const CHECKOUT_PLATFORMS=Object.freeze(["Instagram","TikTok","YouTube","Facebook","Twitter (X)"]);
 export const CHECKOUT_KINDS=Object.freeze(["followers","likes","subscribers","views","comments","shares","saves","retweets","plays","members","traffic","other"]);
 const KIND_LABELS={followers:"Followers",likes:"Likes",subscribers:"Subscribers",views:"Views",comments:"Comments",shares:"Shares",saves:"Saves",retweets:"Retweets",plays:"Plays",members:"Members",traffic:"Traffic",other:"Other services"};
@@ -22,7 +23,9 @@ function dedupe(items,platform){
    platform,kind:String(source.kind),
    min:Number(source.min),max:Number(source.max),
    unitStep:Number(source.unitStep||1),per1000:Number(source.per1000),
-   startingAmountCents:Number(source.startingAmountCents),purchasable:true
+   startingAmountCents:Number(source.startingAmountCents),purchasable:true,
+   ...(source.variantQuality?{variantQuality:String(source.variantQuality).slice(0,60)}:{}),
+   ...(source.variantPace?{variantPace:String(source.variantPace).slice(0,60)}:{})
   };
   map.set(row.id,row);
   if(map.size>=MAX_PUBLIC_ITEMS)break;
@@ -32,8 +35,8 @@ function dedupe(items,platform){
 const orderKind=k=>{const i=CHECKOUT_KINDS.indexOf(k);return i<0?999:i};
 export function choicesForPlatform(platform,sourceItems=VERIFIED_CHECKOUT_SEED.items){
  const current=CHECKOUT_PLATFORMS.includes(platform)?platform:"Instagram";
- const items=dedupe(sourceItems,current).sort((a,b)=>orderKind(a.kind)-orderKind(b.kind)||
-   a.per1000-b.per1000||a.name.localeCompare(b.name));
+ const items=dedupeCheckoutCards(dedupe(sourceItems,current))
+  .sort((a,b)=>orderKind(a.kind)-orderKind(b.kind)||compareCheckoutCards(a,b));
  const kinds=[...new Set(items.map(x=>x.kind))].sort((a,b)=>orderKind(a)-orderKind(b))
   .map(value=>({value,label:KIND_LABELS[value]||value,count:items.filter(x=>x.kind===value).length}));
  return {platform:current,platforms:CHECKOUT_PLATFORMS.map(name=>({name,
@@ -47,7 +50,7 @@ export function defaultKindFor(choices,wanted="followers"){
  return choices?.kinds?.[0]?.value||"";
 }
 export function firstPackageFor(choices,kind){
- return (Array.isArray(choices?.items)?choices.items:[]).find(x=>x.kind===kind)||null;
+ return (Array.isArray(choices?.items)?choices.items:[]).find(x=>x.kind===kind&&!checkoutDisplay(x).specialty)||null;
 }
 export function combineCheckoutChoices(platform,network,fallback=choicesForPlatform(platform)){
  const items=dedupe(network?.items,platform);
