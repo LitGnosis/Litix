@@ -10,13 +10,15 @@ export const maxDuration=60;
 // cards are browse-only and never authorize a charge.
 export async function GET(request){
  const requested=new URL(request.url).searchParams.get("platform")||"Instagram";
- let snapshot={items:[],status:"unavailable"};
- try{
-  if(process.env.LITIX_BOOSTERO_ENABLED==="true")
-   snapshot=await allBoosteroCardsSnapshot();
- }catch{/* Provider catalog call failed; use last known verified data. */}
- if(!snapshot.items?.length||snapshot.status==="unavailable"){
-  snapshot=await readDurableCatalog();
+ // Read our already-verified local snapshot first: the selector must never
+ // wait on a remote vendor timeout before showing fields. Checkout itself
+ // continues to enforce fresh supplier verification and PayKings gate.
+ let snapshot=await readDurableCatalog();
+ if(!snapshot.items?.length){
+  try{
+   if(process.env.LITIX_BOOSTERO_ENABLED==="true")
+    snapshot=await allBoosteroCardsSnapshot();
+  }catch{/* Provider failure is reflected in the empty-state note. */}
  }
  const choices=buildCheckoutChoices(snapshot.items,requested);
  const hasItems=choices.items.length>0,live=snapshot.status==="live";
