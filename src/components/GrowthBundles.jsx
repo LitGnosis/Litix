@@ -94,7 +94,7 @@ export default function GrowthBundles({standalone=false}){
       <button type="button" className="alt" disabled={checking} onClick={continueCheckout}>Retry secure checkout</button>
       <a href={"https://wa.me/19452106315?text="+encodeURIComponent("Hello LITIX Concierge, please help me with "+p.name+" ("+currency(p.priceCents)+"). I will not send card information in chat.")} target="_blank" rel="noopener noreferrer">WhatsApp Concierge</a>
       <a href={"/bundles/checkout?package="+encodeURIComponent(p.id)}>Review package details</a>
-    </div>
+    </div>}
     {bluevineEnabled?<a className="lg-bundle-bluevine" href={"/bundles/checkout?package="+encodeURIComponent(p.id)+"&method=bluevine"}>Pay with Bluevine</a>:null}
     <a href={"/bundles?package="+encodeURIComponent(p.id)+"#growth-bundles"}>See package in full</a>
    </div>
