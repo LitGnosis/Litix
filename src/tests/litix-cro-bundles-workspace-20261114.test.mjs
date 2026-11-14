@@ -52,6 +52,7 @@ test("homepage has one checkout entry and clean order steps; workspace is separa
  const hero=await file("../components/LitixQuickShop.jsx");
  const route=await file("../app/workspace/page.jsx");
  const ws=await file("../components/LitixWorkspace.jsx");
+ const css=await file("../app/style.css");
  assert.match(home,/className="litix-purchase-layout"/);
  assert.match(home,/href="\/workspace"/);
  assert.match(home,/href="\/bundles"/);
@@ -66,6 +67,8 @@ test("homepage has one checkout entry and clean order steps; workspace is separa
  assert.match(home,/>Choose service<\/li>/);
  assert.match(home,/>Order details<\/li>/);
  assert.match(home,/>Secure payment<\/li>/);
+ assert.match(css,/counter-reset:litix-checkout-step/);
+ assert.match(css,/counter-increment:litix-checkout-step/);
  assert.ok(home.indexOf('id="how-it-works"')<home.indexOf('id="tracking"'));
  assert.match(route,/LitixWorkspace/);
  assert.match(ws,/Instant Browser Workspace/);
