@@ -20,6 +20,7 @@ const raw=overrides=>JSON.stringify({
  }
 });
 const source=async p=>readFile(new URL(p,import.meta.url),"utf8");
+import {boosteroDestination} from "../lib/boosteroFulfillment.mjs";
 
 test("NMI signed event validates exact raw bytes, tampering and wrong keys fail",()=>{
  const body=raw({});
@@ -96,4 +97,12 @@ test("existing one-way supplier claims, live link validation and safeties remain
  assert.equal(schedules.find(x=>x.path==="/api/cron/sync-orders")?.schedule,"*/2 * * * *");
  assert.equal(schedules.find(x=>x.path==="/api/cron/sync-services")?.schedule,"10 3 * * *");
  assert.ok(!JSON.stringify(schedules).includes("retired supplier"));
+});
+
+test("wrong profile/post destinations are rejected before payment or supplier spend",()=>{
+ assert.equal(boosteroDestination("https://www.instagram.com/reel/AbCdE1234/","instagram","followers"),null);
+ assert.equal(boosteroDestination("https://www.instagram.com/testcreator/","instagram","likes"),null);
+ assert.equal(boosteroDestination("https://www.tiktok.com/@creator/video/1234567890123456789","tiktok","followers"),null);
+ assert.equal(boosteroDestination("@testcreator","instagram","followers"),"https://www.instagram.com/testcreator/");
+ assert.equal(boosteroDestination("https://www.instagram.com/reel/AbCdE1234/","instagram","likes"),"https://www.instagram.com/reel/AbCdE1234/");
 });
