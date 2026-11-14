@@ -1,5 +1,5 @@
 import {VERIFIED_CHECKOUT_SEED} from "./litixCheckoutVerifiedSeed.mjs";
-import {compareCheckoutCards,dedupeCheckoutCards,checkoutDisplay} from "./litixCheckoutDisplay.mjs";
+import {compareCheckoutCards,dedupeCheckoutCards,checkoutDisplay,cleanCheckoutTitle} from "./litixCheckoutDisplay.mjs";
 export const CHECKOUT_PLATFORMS=Object.freeze(["Instagram","TikTok","YouTube","Facebook","Twitter (X)"]);
 export const CHECKOUT_KINDS=Object.freeze(["followers","likes","subscribers","views","comments","shares","saves","retweets","plays","members","traffic","other"]);
 const KIND_LABELS={followers:"Followers",likes:"Likes",subscribers:"Subscribers",views:"Views",comments:"Comments",shares:"Shares",saves:"Saves",retweets:"Retweets",plays:"Plays",members:"Members",traffic:"Traffic",other:"Other services"};
@@ -19,7 +19,7 @@ function dedupe(items,platform){
  for(const source of Array.isArray(items)?items:[]){
   if(!isCheckoutChoice(source,platform))continue;
   const row={
-   id:String(source.id),name:String(source.name||"Litix service").slice(0,150),
+   id:String(source.id),name:cleanCheckoutTitle(String(source.name||"Litix service").slice(0,150)),
    platform,kind:String(source.kind),
    min:Number(source.min),max:Number(source.max),
    unitStep:Number(source.unitStep||1),per1000:Number(source.per1000),
