@@ -116,12 +116,12 @@ export async function POST(request){
         input:[...cleanConversation(body?.history),{role:"user",content:cleanMessage}]}),
       cache:"no-store",signal:AbortSignal.timeout(21000)
     });
-    if(!response.ok)return answer({reply:"Live AI is temporarily unavailable. "+guidedLitixReply(message),mode:"guided",verified:false});
+    if(!response.ok)return answer({reply:guidedLitixReply(message),mode:"guided",verified:false});
     const result=await response.json();
     const text=responseText(result);
-    if(!text)return answer({reply:"Live AI is temporarily unavailable. "+guidedLitixReply(message),mode:"guided",verified:false});
+    if(!text)return answer({reply:guidedLitixReply(message),mode:"guided",verified:false});
     if(/\b(i (?:have|just) (?:placed|charged|ordered|refunded)|your refund (?:has been|was) processed)\b/i.test(text))
       return answer({reply:"I cannot complete payments, supplier orders, or refunds. Please contact Litix support for assistance.",verified:false});
     return answer({reply:text,mode:"ai",verified:process.env.LITIX_AI_VERIFIED==="true"});
-  }catch{return answer({reply:"Live AI is temporarily unavailable. "+guidedLitixReply(message),mode:"guided",verified:false});}
+  }catch{return answer({reply:guidedLitixReply(message),mode:"guided",verified:false});}
 }
