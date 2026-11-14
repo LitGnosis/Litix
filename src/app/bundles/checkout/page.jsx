@@ -143,13 +143,13 @@ export default function BundleCheckout(){
    <p className="small">Fixed-price package totals. Likes, Views and Shares can be allocated across up to 10 posts. Followers are delivered once to your selected account.</p>
    <div className="lg-bundle-items">{pkg&&Object.entries(pkg.items).map(([kind,n])=><div key={kind}><span>{kind}</span><strong>{n.toLocaleString()}</strong></div>)}</div>
    <p className="lg-bundle-warning">{autoSelected
-     ?"Choose up to 10 public posts. Likes, Views and Shares are split across your chosen posts; Followers go once to your profile. Litix verifies all supplier delivery parts and your fixed package price before processing one PayKings payment."
+     ?"Choose up to 10 public posts. Likes, Views and Shares are split across your chosen posts; Followers go once to your profile. Litix verifies each delivery component and your fixed package total before processing one PayKings payment."
      :BUNDLE_INSTRUCTIONS}</p>
    <div className="lg-bundle-methods" role="group" aria-label="Choose bundle payment method">
      <button type="button" className={"lg-bundle-method"+(method==="paykings"?" active":"")} aria-pressed={method==="paykings"} disabled={busy||bluevineBusy||submitted.current||pendingBluevine?.packageId===pkg?.id} onClick={()=>{setMethod("paykings");if(!catalog?.checkoutEnabled)void refreshReadiness();else setNotice("")}}>Pay with PayKings</button>
      <button type="button" className={"lg-bundle-method"+(method==="bluevine"?" active":"")} aria-pressed={method==="bluevine"} disabled={!catalog?.bluevineEnabled||busy||bluevineBusy||submitted.current} onClick={()=>{setMethod("bluevine");setNotice("")}}>Pay with Bluevine</button>
     </div>
-    {method==="paykings"&&<p className="small">PayKings processes a single one-time payment with secure card fields. {autoSelected?"After verified settlement, Litix submits separate delivery orders for each included service and post.":"After payment, submit your post links through the confirmation page for manual coordination."}</p>}
+    {method==="paykings"&&<p className="small">PayKings processes a single one-time payment with secure card fields. {autoSelected?"After verified settlement, Litix submits separate delivery orders for each included service and post.":"After payment, submit your post links through the Litix confirmation page for reviewed allocation."}</p>}
     {pendingBluevine?.packageId===pkg?.id?<p className="lg-bundle-warning" role="status">A Bluevine checkout has already been started for this bundle. To prevent duplicate payment, review that order before attempting PayKings. <a href={"/bundles/confirmation?id="+encodeURIComponent(pendingBluevine.id)}>Track existing order</a>.</p>:null}
    <form onSubmit={submit} className="form">
     <label>Email<input type="email" required value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com"/></label>
