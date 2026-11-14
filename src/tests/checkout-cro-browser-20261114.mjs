@@ -40,13 +40,13 @@ try{
  assert.equal(await page.locator("#checkout .totalbox .small").innerText(),"Total (USD)");
  assert.equal(await page.locator(".premium-checkout-helper").innerText(),"Paste a valid public profile or post link to continue.");
  const allowed=await page.locator(".litix-quick-chosen").innerText();
- assert.match(allowed,/Allowed quantity: \\d[\\d,]*–\\d[\\d,]*/);
- assert.doesNotMatch(allowed,/–\\s+\\d/);
+ assert.match(allowed,/Allowed quantity: \d[\d,]*–\d[\d,]*/);
+ assert.doesNotMatch(allowed,/–\s+\d/);
  await page.locator("#checkout input[aria-label='Public profile or post link']").fill("https://www.instagram.com/testcreator/");
  await page.getByText("Enter your email address for your receipt and private tracking link.",{exact:true}).waitFor();
  await page.locator("#checkout input[type=email]").fill("qa@example.com");
  await page.locator("#litix-quantity-custom").fill("1");
- await page.getByText(/Enter a quantity between [\\d,]+ and [\\d,]+\\./).waitFor();
+ await page.getByText(/Enter a quantity between [\d,]+ and [\d,]+\./).waitFor();
  await page.locator("#litix-quantity-custom").fill("1000");
  await page.waitForFunction(()=>!document.querySelector(".premium-checkout-helper"));
  await page.waitForFunction(()=>{
