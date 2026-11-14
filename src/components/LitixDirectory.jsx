@@ -1,5 +1,6 @@
 "use client";
 import {litixCustomerServiceName} from "../lib/serviceCardDisplay.mjs";
+import {checkoutDisplay} from "../lib/litixCheckoutDisplay.mjs";
 import {SERVICE_NAV_GROUPS,allowedServiceFilter} from "../lib/serviceNavigation.mjs";
 import {useEffect,useRef,useState} from "react";
 
@@ -162,16 +163,20 @@ export default function LitixDirectory({standalone=false,initialPlatform="",init
      {entries.filter(s=>s.purchasable===true).map(s=>{
       const approved=s.purchasable===true;
       const displayPrice=currency(s.per1000);
+      const tierLabel=checkoutDisplay(s).tierLabel;
       return <article className="litix-directory-service" key={s.id}>
        <div className="litix-directory-service-top"><span className="litix-directory-network">{s.platform}</span><span className={approved?"litix-directory-state is-ready":"litix-directory-state"}>Instant checkout</span></div>
        <h3>{litixCustomerServiceName(s.name)}</h3>
-       <p className="litix-directory-service-category">{litixCustomerServiceName(s.category)}</p>
+       <div className="litix-directory-service-meta">
+        <p className="litix-directory-service-category">{litixCustomerServiceName(s.category)}</p>
+        {tierLabel&&<span className="litix-directory-service-tier">{tierLabel}</span>}
+       </div>
        <div className="litix-directory-service-price">{displayPrice||"Ask for price"} <small>/ 1,000 {approved?"":"· indicative"}</small></div>
        <div className="litix-directory-service-range">
         {Number.isInteger(s.min)&&Number.isInteger(s.max)?s.min.toLocaleString()+"–"+s.max.toLocaleString()+" units":"Quantity confirmed on request"}
         <span>Litix verified service</span>
        </div>
-       <a className="litix-directory-buy" href={"/?service="+encodeURIComponent(s.id)+(["litix_4751","litix_5251"].includes(String(s.id))?"&mode=multi":"")+"#checkout"}>{["litix_4751","litix_5251"].includes(String(s.id))?"Choose Your Posts":"Review & pay with PayKings"}</a>
+       <a className="litix-directory-buy" href={"/?service="+encodeURIComponent(s.id)+(["litix_4751","litix_5251"].includes(String(s.id))?"&mode=multi":"")+"#checkout"}>{["litix_4751","litix_5251"].includes(String(s.id))?"Choose Your Posts":"BUY NOW"}</a>
       </article>
      })}
     </div>
