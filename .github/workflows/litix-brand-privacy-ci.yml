@@ -1,0 +1,42 @@
+name: Litix branded notifications and tracking privacy
+on:
+  pull_request:
+    paths:
+      - "src/lib/boosteroFulfillment.mjs"
+      - "src/lib/orderNotifications.mjs"
+      - "src/lib/ownerNotifications.mjs"
+      - "src/lib/litixPrepaidAutoLikesEmails.mjs"
+      - "src/app/api/[action]/route.js"
+      - "src/app/api/status/route.js"
+      - "src/tests/litix-email-supplier-branding-20261114.test.mjs"
+      - ".github/workflows/litix-brand-privacy-ci.yml"
+  push:
+    branches: [main]
+    paths:
+      - "src/lib/boosteroFulfillment.mjs"
+      - "src/lib/orderNotifications.mjs"
+      - "src/lib/ownerNotifications.mjs"
+      - "src/lib/litixPrepaidAutoLikesEmails.mjs"
+      - "src/app/api/[action]/route.js"
+      - "src/app/api/status/route.js"
+      - "src/tests/litix-email-supplier-branding-20261114.test.mjs"
+      - ".github/workflows/litix-brand-privacy-ci.yml"
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    defaults:
+      run:
+        working-directory: src
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: src/package-lock.json
+      - run: npm ci
+      - name: Confirm private supplier details never leak into public emails and tracking
+        run: node --test tests/litix-email-supplier-branding-20261114.test.mjs
+      - name: Verify Next.js production build
+        run: npm run build
