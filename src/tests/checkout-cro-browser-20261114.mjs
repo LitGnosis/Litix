@@ -35,8 +35,12 @@ try{
  assert.equal(await trust.count(),3,"three source-grounded trust indicators beneath PayKings CTA");
  assert.match(await trust.allInnerTexts().then(v=>v.join(" | ").replace(/\s+/g," ")),/Live service verification.*Private order tracking.*PayKings-hosted card fields/);
  assert.equal(await page.locator("#checkout input[aria-label='Public profile or post link']").getAttribute("placeholder"),
-  "e.g. @username or https://instagram.com/username");
+  "e.g. @username or https://instagram.com");
  assert.equal(await page.locator("#litix-link-feedback").innerText(),"","no duplicate URL prompt before input");
+ const heroProof=page.locator(".litix-hero-shop .litix-hero-proof");
+ assert.equal(await heroProof.count(),1,"homepage has one concise trust line");
+ assert.match(await heroProof.innerText(),/For creators & agencies.*No social passwords required.*PayKings-hosted card fields/s);
+ assert.equal(await page.getByText(/4\.9\/5 Rated by Creators/).count(),0,"no unsupported customer rating");
  const cta=page.locator("#checkout button.premium-pay-button");
  await cta.waitFor();
  assert.equal(await cta.count(),1);
