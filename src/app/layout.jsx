@@ -8,6 +8,8 @@ import "./litix-custom-calculator.css";
 import LitixAI from "../components/LitixAI";
 import {LITIX_SITE_URL,LITIX_DISCOVERY_TITLE,LITIX_DISCOVERY_DESCRIPTION,LITIX_DISCOVERY_SCHEMA} from "../lib/litixBrandDiscovery.mjs";
 
+export const viewport = {width:"device-width",initialScale:1,viewportFit:"cover"};
+
 const keywords = [
   "Litix.net",
   "digital social media services",
