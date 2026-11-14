@@ -24,7 +24,7 @@ test("title suffix speed is moved to display subtitle without mutating catalog d
   assert.equal(cleanCheckoutTitle(name),title);
   const sample=checkoutDisplay({id:"litix_999999",name,per1000:9,min:100,max:5000,purchasable:true});
   assert.equal(sample.title,title);
-  assert.match(sample.subtitle,new RegExp(speed.replace(/[.*+?^$${}()|[\]\\]/g,"\\$&")));
+  assert.ok(sample.subtitle.includes(speed),`${name} displays ${speed}`);
  }
 });
 
