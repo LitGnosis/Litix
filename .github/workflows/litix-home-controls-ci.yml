@@ -1,0 +1,44 @@
+name: Litix home functional controls
+on:
+  pull_request:
+    paths:
+      - 'src/app/page.jsx'
+      - 'src/app/metallic.css'
+      - 'src/app/litix-ai.css'
+      - 'src/app/api/catalog/checkout-choices/route.js'
+      - 'src/app/api/litix-ai/route.js'
+      - 'src/components/LitixCheckoutSelector.jsx'
+      - 'src/components/LitixQuickShop.jsx'
+      - 'src/components/LitixAI.jsx'
+      - 'src/lib/litixGuidedSupport.mjs'
+      - 'src/tests/litix-homepage-controls-20261114.test.mjs'
+      - '.github/workflows/litix-home-controls-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'src/app/page.jsx'
+      - 'src/app/metallic.css'
+      - 'src/app/litix-ai.css'
+      - 'src/app/api/catalog/checkout-choices/route.js'
+      - 'src/app/api/litix-ai/route.js'
+      - 'src/components/LitixCheckoutSelector.jsx'
+      - 'src/components/LitixQuickShop.jsx'
+      - 'src/components/LitixAI.jsx'
+      - 'src/lib/litixGuidedSupport.mjs'
+jobs:
+  homepage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    defaults:
+      run:
+        working-directory: src
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: src/package-lock.json
+      - run: npm ci
+      - run: node --test tests/litix-homepage-controls-20261114.test.mjs tests/litix-ai.test.mjs tests/litix-catalog-resilience.test.mjs
+      - run: npm run build
