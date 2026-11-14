@@ -41,7 +41,7 @@ on:
       - 'src/app/bundles/checkout/page.jsx'
       - 'src/app/workspace/page.jsx'
       - 'src/lib/growthBundles.mjs'
-      - 'src/tests/litix-cro-bundles-workspace-20261114.test.mjs'
+      - 'src/tests/litix-bundles-retired-20261114.test.mjs'
       - 'src/tests/litix-bundles-retired-browser-20261114.mjs'
       - 'src/app/api/bundles/**'
       - 'src/app/bundles/**'
@@ -63,7 +63,7 @@ jobs:
           cache: npm
           cache-dependency-path: src/package-lock.json
       - run: npm ci
-      - run: node --test tests/litix-homepage-controls-20261114.test.mjs tests/litix-cro-bundles-workspace-20261114.test.mjs tests/litix-ai.test.mjs tests/litix-catalog-resilience.test.mjs
+      - run: node --test tests/litix-homepage-controls-20261114.test.mjs tests/litix-bundles-retired-20261114.test.mjs tests/litix-ai.test.mjs tests/litix-catalog-resilience.test.mjs
       - run: npm run build
   browser:
     runs-on: ubuntu-latest
