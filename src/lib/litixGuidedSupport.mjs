@@ -2,6 +2,12 @@
 // or the model service are unavailable. Does NOT claim to check live accounts.
 export function guidedLitixReply(value){
  const q=String(value||"").trim().toLowerCase().slice(0,750);
+ if(/\bcompare\b.*\busa\b.*\bfollower\b|\busa\b.*\bfollower\b.*\btier\b/.test(q)){
+  return "To compare USA Instagram follower tiers, open /services, choose Instagram and Followers, then review the USA-labeled packages. The live catalog shows the current price per 1,000, quality descriptors and quantity limits. Checkout verifies eligibility and the final USD total before payment.";
+ }
+ if(/\bhow\b.*\bfast\b.*\b(order|start|delivery)|\bwhen\b.*\b(order|start|processing)/.test(q)){
+  return "Order processing begins only after payment and service eligibility are confirmed. Start and delivery times vary by package and supplier availability, so Litix does not guarantee an instant start. Use Track order for your latest recorded fulfillment status.";
+ }
  if(/order|track|delivery|status|receipt|refund|missing|not received|charge/.test(q)){
   return "To check a real order, select Track order in this chat or open /track. Enter your Litix order number and the checkout email. Your private payment and delivery records stay outside the AI conversation. If an order needs review, contact support at litixsocial@gmail.com. Please do not pay again for the same order.";
  }
@@ -17,5 +23,5 @@ export function guidedLitixReply(value){
  if(/help|contact|support|human|email|whatsapp/.test(q)){
   return "You can reach Litix support at litixsocial@gmail.com, or use the WhatsApp link on the website. For order support, include only the Litix order number—not card details, passwords or private tracking tokens.";
  }
- return "I can guide you to services (/services), private tracking (/track), or campaign planning (/workspace). Live AI answers are not currently available, but these tools and the support team can still help. What would you like to do?";
+ return "I can help you find services (/services), verify order progress privately (/track), or plan a campaign (/workspace). What would you like to do next?";
 }
