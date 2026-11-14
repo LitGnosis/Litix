@@ -2,7 +2,7 @@
 // details never leave the server; this does not alter purchase eligibility.
 import {sortServicesPer1000} from "./catalogSort.mjs";
 import {litixPublicCard} from "./publicLitixCatalog.mjs";
-import {publicCheckoutTraits} from "./litixCheckoutDisplay.mjs";
+import {publicCheckoutTraits,cleanCheckoutTitle} from "./litixCheckoutDisplay.mjs";
 
 export const CHECKOUT_PLATFORM_ORDER=Object.freeze([
  "Instagram","TikTok","YouTube","Facebook","Twitter (X)",
@@ -46,7 +46,7 @@ export function buildCheckoutChoices(rows,requestedPlatform="Instagram"){
    if(!visible)return null;
    const traits=publicCheckoutTraits(s.name);
    return {
-    id:visible.id,name:visible.name,platform:visible.platform,kind:visible.kind||"other",
+    id:visible.id,name:cleanCheckoutTitle(visible.name),platform:visible.platform,kind:visible.kind||"other",
     min:visible.min,max:visible.max,unitStep:visible.unitStep,per1000:visible.per1000,
     startingAmountCents:visible.startingAmountCents,purchasable:visible.purchasable,
     ...(traits.quality?{variantQuality:traits.quality}:{}),
