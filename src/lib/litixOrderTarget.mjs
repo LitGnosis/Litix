@@ -71,3 +71,53 @@ export function normalizeProfileDestination(value,platform){
  if(!usernamePattern[platform].test(username))return {ok:false,error:"Enter a valid "+platform+" username or direct profile link."};
  return {ok:true,url:prefix[platform]+username+(platform==="instagram"?"/":"")};
 }
+
+// Browser guidance only; fulfillment and payment routes independently validate
+// the destination against the exact current service requirements.
+export function validateLitixCheckoutTarget(value,service){
+ const raw=String(value||"").trim();
+ if(!raw)return {ok:false,message:"Paste a public profile or post link to continue."};
+ if(!service)return {ok:false,message:"Select a service to verify the link format."};
+ const platform=String(service.platform||"").toLowerCase();
+ const kind=String(service.kind||"").toLowerCase();
+ const profile=profilePlatformForService(service);
+ if(profile){
+  const p=normalizeProfileDestination(raw,profile);
+  return p.ok?{ok:true,url:p.url,message:"Public profile or channel format looks valid."}:
+   {ok:false,message:p.error||"Enter the direct public profile URL."};
+ }
+ let url;
+ try{url=new URL(raw)}catch{return {ok:false,message:"Paste the full HTTPS post or video URL."}}
+ const host=url.hostname.toLowerCase().replace(/^www\./,"");
+ if(url.protocol!=="https:"||url.username||url.password||url.port||
+    host==="localhost"||!host.includes(".")||/^(127\.|10\.|192\.168\.|169\.254\.)/.test(host))
+  return {ok:false,message:"Use a secure public link with no login information."};
+ const pathname=url.pathname,segments=pathname.split("/").filter(Boolean);
+ let valid=true,message="Public link format looks valid.";
+ if(platform==="instagram"){
+  valid=host==="instagram.com"&&
+    /^\/(?:p|reel|tv)\/[a-zA-Z0-9_-]{5,40}\/?$/.test(pathname);
+  message="Instagram Likes and Views require a public post or reel URL (/p/ or /reel/).";
+ }else if(platform==="tiktok"){
+  valid=["tiktok.com","vm.tiktok.com","vt.tiktok.com"].includes(host)&&(
+    /^\/@[A-Za-z0-9._]{2,24}\/video\/\d{10,30}\/?$/.test(pathname)||
+    (/^(?:vm|vt)\.tiktok\.com$/.test(host)&&segments.length>=1));
+  message="Paste a public TikTok video URL or short Share link.";
+ }else if(platform==="youtube"){
+  valid=["youtube.com","youtu.be","m.youtube.com"].includes(host)&&(
+    (/^\/(?:shorts|live)\/[A-Za-z0-9_-]{7,30}\/?$/.test(pathname))||
+    (pathname==="/watch"&&/^[A-Za-z0-9_-]{7,30}$/.test(url.searchParams.get("v")||""))||
+    (host==="youtu.be"&&/^\/[A-Za-z0-9_-]{7,30}\/?$/.test(pathname)));
+  message="Use a public YouTube video, Shorts, live or watch link.";
+ }else if(platform==="twitter (x)"||platform==="x"){
+  valid=["x.com","twitter.com"].includes(host)&&
+    /^\/[A-Za-z0-9_]{1,15}\/status\/\d{5,30}\/?$/.test(pathname);
+  message="Use the public X post URL containing /status/.";
+ }else if(platform==="facebook"){
+  valid=["facebook.com","m.facebook.com","fb.watch"].includes(host)&&
+    (segments.length>0||pathname==="/watch"&&url.searchParams.has("v"));
+  message="Use a public Facebook page, post, reel or video link.";
+ }
+ return valid?{ok:true,url:url.toString(),message:"Link format looks valid for "+service.platform+" "+(kind||"service")+". Verification occurs before payment."}:
+  {ok:false,message};
+}

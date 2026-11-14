@@ -3,7 +3,7 @@
 import {useEffect,useRef,useState} from "react";
 import PremiumInlineCheckout from "../components/PremiumInlineCheckout";
 import LitixCheckoutSelector from "../components/LitixCheckoutSelector";
-import {profilePlatformForService,normalizeProfileDestination,checkoutProfileLabel,checkoutProfilePlaceholder} from "../lib/litixOrderTarget.mjs";
+import {profilePlatformForService,normalizeProfileDestination,checkoutProfileLabel,checkoutProfilePlaceholder,validateLitixCheckoutTarget} from "../lib/litixOrderTarget.mjs";
 import {restrictedSocialKind} from "../lib/publicBoosteroOnly.mjs";
 import {sortServicesPer1000} from "../lib/catalogSort.mjs";
 import {SERVICE_NAV_GROUPS,allowedServiceFilter} from "../lib/serviceNavigation.mjs";
@@ -26,6 +26,10 @@ const publicCollectKey=process.env.NEXT_PUBLIC_PAYKINGS_NMI_COLLECT_PUBLIC_KEY||
 export default function Home(){
  const [services,setServices]=useState([]),[categories,setCategories]=useState([]),[recentServices,setRecentServices]=useState([]),[savedOrders,setSavedOrders]=useState([]),[workspaceReady,setWorkspaceReady]=useState(false),[cat,setCat]=useState(""),[query,setQuery]=useState(""),[platform,setPlatform]=useState("All platforms"),[quickKind,setQuickKind]=useState(""),[favoritesOnly,setFavoritesOnly]=useState(false),[compareIds,setCompareIds]=useState([]),[pg,setPg]=useState(1),[catalogRetry,setCatalogRetry]=useState(0),[catalogState,setCatalogState]=useState("loading"),[catalogSource,setCatalogSource]=useState("unavailable"),[catalogCheckoutEnabled,setCatalogCheckoutEnabled]=useState(false),[count,setCount]=useState(0),[total,setTotal]=useState(0),[selected,setSelected]=useState(null),[qty,setQty]=useState(100),[email,setEmail]=useState(""),[link,setLink]=useState(""),[config,setConfig]=useState({ready:false}),[cardReady,setCardReady]=useState(false),[cardRetry,setCardRetry]=useState(0),[busy,setBusy]=useState(false),[notice,setNotice]=useState(""),[receipt,setReceipt]=useState(null),[privateUrl,setPrivateUrl]=useState(""),[tracked,setTracked]=useState(null),[key,setKey]=useState("");const done=useRef(null),submittedKey=useRef("");
  const [lookupId,setLookupId]=useState(""),[lookupEmail,setLookupEmail]=useState(""),[lookupBusy,setLookupBusy]=useState(false),[lookupNotice,setLookupNotice]=useState("");
+ const [verifiedQuote,setVerifiedQuote]=useState(null);
+ const [checkoutPhase,setCheckoutPhase]=useState("idle");
+ const [checkoutError,setCheckoutError]=useState("");
+ const [verificationRetry,setVerificationRetry]=useState(0);
  const validServiceFilter=(nextPlatform,nextKind="")=>allowedServiceFilter(nextPlatform,nextKind)||(!nextKind&&["Facebook","Spotify","Other"].includes(nextPlatform));
  const applyServiceQuickFilter=(nextPlatform,nextKind="")=>{
   if(!validServiceFilter(nextPlatform,nextKind))return;
@@ -124,10 +128,11 @@ export default function Home(){
   ?tiktokLinkVerification.url:"";
 
  const profileInput=multiMode?{ok:true}:normalizeProfileDestination(link,selected?.kind==="likes"?"":profilePlatformForService(selected));
+ const targetFeedback=validateLitixCheckoutTarget(link,selected);
  const normalizedOrderLink=multiMode?(multiPosts[0]?.verifiedUrl||""):(verifiedTikTokVideo||(profileInput.url||link));
  const detailsReady=multiMode
   ?verifiedMultiPosts&&validOrderDetails(selected,normalizedOrderLink,email,Number(multiPosts[0]?.quantity||0))&&Number.isSafeInteger(orderQuantity)&&orderQuantity<=1000000
-  :profileInput.ok&&(!tiktokLikes||!!verifiedTikTokVideo)&&validOrderDetails(selected,normalizedOrderLink,email,qty);
+  :targetFeedback.ok&&profileInput.ok&&(!tiktokLikes||!!verifiedTikTokVideo)&&validOrderDetails(selected,normalizedOrderLink,email,qty);
  // Preserve deep links from the complete Litix directory, including services not on page one.
  useEffect(()=>{
   const id=new URLSearchParams(location.search).get("service");
@@ -170,8 +175,70 @@ export default function Home(){
  useEffect(()=>{setKey(crypto.randomUUID());try{setRecentServices(JSON.parse(localStorage.getItem("litix:recent-services")||"[]"));setSavedOrders(JSON.parse(localStorage.getItem("litix:saved-orders")||"[]"));}catch{}setWorkspaceReady(true);fetch("/api/config",{cache:"no-store"}).then(r=>r.json()).then(v=>setConfig({...v,publicKey:v.publicKey||publicCollectKey,ready:!!(v.ready&& (v.publicKey||publicCollectKey))})).catch(()=>setConfig({ready:false,publicKey:publicCollectKey||""}))},[]);
  useEffect(()=>{const abort=new AbortController(),p=new URLSearchParams({category:cat,q:query,page:String(pg),platform,kind:quickKind});setCatalogState("loading");const deadline=setTimeout(()=>abort.abort("timeout"),42000);fetch("/api/catalog/v1?"+p,{signal:abort.signal}).then(async r=>{const v=await r.json();if(!r.ok)throw Error(v.error||"Litix service catalog is temporarily unavailable");return v}).then(v=>{setServices(v.items||[]);setCategories(v.categories||[]);setCount(v.allCount||0);setTotal(v.total||0);setCatalogSource(v.catalogStatus==="live"?"live":v.catalogStatus==="cached"?"cached":"unavailable");setCatalogCheckoutEnabled(v.checkoutEnabled===true);setCatalogState("ready");if(v.error)setNotice(v.error)}).catch(e=>{if(!abort.signal.aborted||abort.signal.reason==="timeout"){setCatalogSource("unavailable");setCatalogCheckoutEnabled(false);setCatalogState("error");setNotice("The Litix service list could not be refreshed. Please retry; no order has been placed.")}}).finally(()=>clearTimeout(deadline));return()=>{clearTimeout(deadline);abort.abort()}},[cat,query,pg,platform,quickKind,catalogRetry]);
  useEffect(()=>{if(!workspaceReady)return;try{localStorage.setItem("litix:recent-services",JSON.stringify(recentServices.slice(0,8)));localStorage.setItem("litix:saved-orders",JSON.stringify(savedOrders.slice(0,12)));}catch{}},[workspaceReady,recentServices,savedOrders]);
+
+ const price=selected?(multiMode?multiPosts.reduce((sum,p)=>
+  sum+Math.max(0,Math.ceil(selected.per1000*(Number(p.quantity)||0)/10-1e-8)),0)
+  :Math.ceil(selected.per1000*qty/10-1e-8)):0;
+ const checkoutAuthorized=multiMode?catalogCheckoutEnabled:
+   !!verifiedQuote&&verifiedQuote.serviceId===selected?.id&&
+   verifiedQuote.quantity===orderQuantity&&verifiedQuote.amountCents===price;
+ // Independent read-only checkout preflight; neither saved listing nor a
+ // successful tokenization alone authorizes the server to charge a card.
  useEffect(()=>{
-  if(!catalogCheckoutEnabled||!config.publicKey||!config.ready||!selected?.purchasable){setCardReady(false);return;}
+  setVerifiedQuote(null);
+  if(!selected?.id||!selected.purchasable){
+   setCheckoutPhase("idle");setCheckoutError("");return;
+  }
+  if(multiMode){
+   setCheckoutPhase(catalogCheckoutEnabled?"ready":"error");
+   setCheckoutError(catalogCheckoutEnabled?"":"Multi-post checkout needs a fresh eligibility check. No payment attempted.");
+   return;
+  }
+  if(!config.ready||!config.publicKey){
+   setCheckoutPhase("error");
+   setCheckoutError("Secure PayKings fields are not configured or available. Retry or contact support; no charge was attempted.");
+   return;
+  }
+  if(!Number.isSafeInteger(orderQuantity)||orderQuantity<1||
+     !Number.isSafeInteger(price)||price<100){
+   setCheckoutPhase("idle");setCheckoutError("");return;
+  }
+  let active=true;
+  const controller=new AbortController();
+  const timeout=setTimeout(()=>controller.abort("quote_deadline"),4000);
+  setCheckoutPhase("validating");setCheckoutError("");
+  const params=new URLSearchParams({
+   serviceId:selected.id,quantity:String(orderQuantity),
+   expectedAmountCents:String(price)
+  });
+  fetch("/api/checkout/readiness?"+params,{cache:"no-store",signal:controller.signal})
+   .then(async response=>{
+    const body=await response.json().catch(()=>({}));
+    if(!response.ok||body.ready!==true)throw Error(body.error||"Current checkout availability could not be verified.");
+    if(body.serviceId!==selected.id||body.amountCents!==price||
+       body.quantity!==orderQuantity)throw Error("Package quote changed. Check the total and retry.");
+    return body;
+   })
+   .then(body=>{
+    if(!active)return;
+    setVerifiedQuote({serviceId:body.serviceId,amountCents:body.amountCents,quantity:body.quantity});
+    setCheckoutPhase("ready");
+   })
+   .catch(error=>{
+    if(!active)return;
+    console.warn("Litix checkout readiness preflight:",String(error?.name||"error"));
+    setVerifiedQuote(null);setCheckoutPhase("error");
+    setCheckoutError(controller.signal.aborted?
+     "Price verification took too long. Your selection is saved; retry or contact support. No charge attempted.":
+     String(error.message||"Current service could not be verified.").slice(0,240));
+   })
+   .finally(()=>clearTimeout(timeout));
+  return()=>{active=false;clearTimeout(timeout);controller.abort()};
+ },[selected?.id,selected?.purchasable,orderQuantity,price,multiMode,
+    catalogCheckoutEnabled,config.ready,config.publicKey,verificationRetry]);
+
+ useEffect(()=>{
+  if(!checkoutAuthorized||!config.publicKey||!config.ready||!selected?.purchasable){setCardReady(false);return;}
 
   let active=true;
   let configured=false;
@@ -205,6 +272,8 @@ export default function Home(){
    failed=true;
    if(timeoutId!==null)window.clearTimeout(timeoutId);
    setCardReady(false);
+   setCheckoutPhase("error");
+   setCheckoutError(message);
    setNotice(message);
   };
 
@@ -263,6 +332,7 @@ export default function Home(){
       if(r?.token)done.current?.(r.token);
       else{
        setNotice("Secure card tokenization failed. Check the card fields and try again.");
+       setCheckoutPhase("error");
        setBusy(false);
       }
      },
@@ -344,20 +414,19 @@ export default function Home(){
    script?.removeEventListener("load",onLoad);
    script?.removeEventListener("error",onError);
   };
- },[config.ready,config.publicKey,cardRetry,selected?.id,catalogCheckoutEnabled]);
- const price=selected?(multiMode?multiPosts.reduce((sum,p)=>
-  sum+Math.max(0,Math.ceil(selected.per1000*(Number(p.quantity)||0)/10-1e-8)),0)
-  :Math.ceil(selected.per1000*qty/10-1e-8)):0;
+ },[config.ready,config.publicKey,cardRetry,selected?.id,checkoutAuthorized]);
  async function purchase(token){
-  if(!catalogCheckoutEnabled){setNotice("Checkout is paused until the latest service eligibility check succeeds. No payment attempted.");return;}
+  if(!checkoutAuthorized){setCheckoutPhase("error");setNotice("Verify the current package price before submitting payment. No charge attempted.");return;}
   if(!key||submittedKey.current===key)return;
   submittedKey.current=key;
+  setCheckoutPhase("processing");
   try{
    const r=await fetch("/api/checkout/v1",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({serviceId:selected.id,quantity:orderQuantity,email,link:normalizedOrderLink,...(multiMode?{postAllocations:multiPosts.map(p=>({link:p.verifiedUrl,quantity:Number(p.quantity)}))}:{}),paymentToken:token,idempotencyKey:key,expectedAmountCents:price}),signal:AbortSignal.timeout(60000)});
    const v=await r.json();
    // Ambiguous checkout outcomes reuse the original idempotency key to avoid accidental duplicate charges.
    if(!r.ok&&r.status!==202)throw Error(v.error||"Payment processing failed");
    setReceipt(v);setNotice(v.message);
+   setCheckoutPhase("ready");
    if(v.orderId&&v.secret){
     const trackingUrl=location.origin+"/track?track="+encodeURIComponent(v.orderId)+"&token="+encodeURIComponent(v.secret);
     const item={id:v.orderId,url:trackingUrl,createdAt:new Date().toISOString(),payment:v.payment,fulfillment:v.fulfillment||"pending",quantity:orderQuantity,destination:normalizedOrderLink};
@@ -373,11 +442,11 @@ export default function Home(){
      if(stored){location.assign("/confirmation?order="+encodeURIComponent(v.orderId));return}
     }
    }
-  }catch(e){setNotice(e.message)}
+  }catch(e){setNotice(e.message);setCheckoutPhase("error");setCheckoutError(String(e.message||"Checkout error").slice(0,240))}
   finally{setBusy(false)}
  }
  done.current=purchase;
- const submit=e=>{e.preventDefault();if(!catalogCheckoutEnabled||!detailsReady||!cardReady||!selected||busy)return;if(!Number.isSafeInteger(orderQuantity)||orderQuantity<selected.min||(multiMode?orderQuantity>1000000:orderQuantity>selected.max)){setNotice("Enter a whole-number quantity within this service’s limits.");return}if(!selected.purchasable){setNotice("This package needs additional order details. Choose another service or contact Litix support.");return}setBusy(true);setNotice("");try{getCollectJS().startPaymentRequest()}catch{setBusy(false);setNotice("Complete your secure card fields before paying")}};
+ const submit=e=>{e.preventDefault();if(!checkoutAuthorized||!detailsReady||!cardReady||!selected||busy){setCheckoutPhase("error");setNotice("Check your link, email, and verified package status before continuing. No payment attempted.");return;}if(!Number.isSafeInteger(orderQuantity)||orderQuantity<selected.min||(multiMode?orderQuantity>1000000:orderQuantity>selected.max)){setNotice("Enter a whole-number quantity within this service’s limits.");return}if(!selected.purchasable){setNotice("This package needs additional order details. Choose another service or contact Litix support.");return}setBusy(true);setCheckoutPhase("processing");setNotice("");try{getCollectJS().startPaymentRequest()}catch{setBusy(false);setCheckoutPhase("error");setNotice("Complete your secure card fields before paying")}};
  const track=async value=>{try{const u=new URL(value,location.origin),id=u.searchParams.get("track"),token=u.searchParams.get("token");if(!id||!token)throw Error("Paste the full private tracking URL");const r=await fetch("/api/track?id="+encodeURIComponent(id)+"&token="+encodeURIComponent(token)),v=await r.json();if(!r.ok)throw Error(v.error||"Tracking failed");setTracked(v.order)}catch(e){setLookupNotice(e.message)}};
  async function trackByNumber(e){
   e.preventDefault();if(lookupBusy)return;
@@ -396,16 +465,38 @@ export default function Home(){
   finally{setLookupBusy(false)}
  }
  useEffect(()=>{if(location.search.includes("track=")){setPrivateUrl(location.href);track(location.href)}},[]);
- return <main className="wrap"><nav className="nav litix-home-nav"><a className="brand" href="/" aria-label="Litix home"><img src="/assets/brand/litix-logo.webp" alt="Litix — Innovation, Ignited." className="litix-new-logo" /></a><div><a href="/shop">Shop</a><a href="/partners">Partners</a><a href="/custom-likes">Custom Likes &amp; Followers</a><a href="/services">All Services</a><a href="#checkout">Checkout</a><a href="/track">Track Order</a><a href="/workspace">Workspace</a></div></nav>
+ return <main className="wrap"><nav className="nav litix-home-nav"><a className="brand" href="/" aria-label="Litix home"><img src="/assets/brand/litix-logo.webp" alt="Litix — Innovation, Ignited." className="litix-new-logo" /></a><div><a href="/services">Services</a><a href="#checkout">Checkout</a><a href="#tracking">Track order</a><a href="/workspace">Workspace</a></div></nav>
  
  <LitixQuickShop/>
 
    <div className="litix-purchase-layout"><section id="checkout" className="panel sticky"><div className="kicker">SECURE PAYKINGS CHECKOUT</div><h2>Your order</h2><ol className="checkout-steps" aria-label="Checkout steps"><li className={selected?"step-done":"step-current"}>Choose service</li><li className={selected&&link?"step-current":"step-pending"}>Order details</li><li className={cardReady?"step-done":"step-pending"}>Secure payment</li></ol><p className="checkout-hint">You’ll review the final USD total before paying. Card details are entered securely with PayKings.</p><form onSubmit={submit} className="form"><LitixCheckoutSelector selected={selected} onChoose={service=>{setSelected(service);setQty(service?.min||100);setReceipt(null);setNotice("");setKey(crypto.randomUUID())}}/>
- {!selected&&<label className="litix-early-link" style={{display:"block",margin:"14px 0"}}>Public profile or post link
-  <input aria-label="Public profile or post link" type="text" value={link}
-   onChange={e=>setLink(e.target.value)} placeholder="@username or https://... (choose a service above)"
-   autoCapitalize="none" autoCorrect="off" spellCheck={false}/>
-  <span className="small">Paste your link now. Once you select a service, Litix will check its required format before payment.</span>
+ {!multiMode&&<label className="litix-early-link" style={{display:"block",margin:"14px 0"}}>
+  {selected?(profilePlatformForService(selected)?
+   checkoutProfileLabel(profilePlatformForService(selected)):
+   selected.platform==="Instagram"?"Public Instagram post or reel link":
+   selected.platform==="TikTok"?"Public TikTok video link":
+   "Public "+selected.platform+" post or page link"):"Public profile or post link"}
+  <input aria-label="Public profile or post link" type="text"
+   value={link} onChange={e=>setLink(e.target.value)}
+   placeholder={selected&&profilePlatformForService(selected)?
+      checkoutProfilePlaceholder(profilePlatformForService(selected)):
+     selected?.platform==="Instagram"?"https://www.instagram.com/p/POST_ID/":
+     selected?.platform==="TikTok"?"https://www.tiktok.com/@user/video/1234567890123456789":
+     "https://... or @username"}
+   autoCapitalize="none" autoCorrect="off" spellCheck={false}
+   aria-invalid={Boolean(link.trim()&&selected&&!targetFeedback.ok)}
+   aria-describedby="litix-link-feedback"/>
+  <span className="small" id="litix-link-feedback" role="status" aria-live="polite">
+   {!selected?"Paste your public link now. Select a package above to check its format.":
+    targetFeedback.message}
+   {tiktokLikes&&tiktokLinkVerification.input===link.trim()&&
+    tiktokLinkVerification.serviceId===selected?.id&&
+    (tiktokLinkVerification.status==="checking"?" Verifying TikTok share link…":
+     tiktokLinkVerification.status==="error"?" "+tiktokLinkVerification.error:
+     tiktokLinkVerification.status==="verified"?" TikTok video verified.":"")}
+   {selected&&profileInput.ok&&profileInput.url&&
+    <a href={profileInput.url} target="_blank" rel="noopener noreferrer"> Check public profile</a>}
+  </span>
  </label>}
  {selected?<>{selected&&<div className="selected-service-meta"><span>{selected.min.toLocaleString()}–{selected.max.toLocaleString()} units</span><span>Litix service</span><span>{selected.refill?"Refill eligible":"Standard service"}</span><span>{money(Math.ceil(selected.per1000*100))} / 1,000</span></div>}{likesWithPostPicker&&<div role="group" aria-label="Choose Likes checkout mode" style={{display:"flex",gap:10,flexWrap:"wrap",padding:"8px 0 16px"}}>
   <button type="button" className="alt" aria-pressed={!multiMode} onClick={()=>{
@@ -419,15 +510,22 @@ export default function Home(){
    }
   }}>Choose multiple posts</button>
  </div>}
- {multiMode?<SocialMultiPostChooser service={selected} platform={String(selected?.platform||"").toLowerCase()} posts={multiPosts} onChange={setMultiPosts}/>:<>{(()=>{const socialPlatform=selected?.kind==="likes"?"":profilePlatformForService(selected);const normalized=normalizeProfileDestination(link,socialPlatform);return <label>{socialPlatform?checkoutProfileLabel(socialPlatform):
- ["followers","subscribers"].includes(selected?.kind)?"Public page, channel or profile URL":selected?.kind==="likes"?(selected.platform==="Instagram"?"Instagram post or reel URL":selected.platform==="TikTok"?"TikTok video URL":"Public post URL"):"Public post URL"}<input type={socialPlatform?"text":"url"} inputMode={socialPlatform?"text":"url"} required value={link} placeholder={socialPlatform?checkoutProfilePlaceholder(socialPlatform):["followers","subscribers"].includes(selected?.kind)?"https://... (public page or channel URL)":selected?.kind==="likes"?(selected.platform==="Instagram"?"https://www.instagram.com/p/POST_ID/":selected.platform==="TikTok"?"https://www.tiktok.com/@user/video/1234567890123456789":"https://..."):"https://..."} autoCapitalize="none" autoCorrect="off" spellCheck={false} aria-describedby={socialPlatform?"profile-check-help":undefined} onChange={e=>setLink(e.target.value)}/>{tiktokLikes&&<span role="status" className="small" aria-live="polite">
-  Paste the video link from TikTok’s Share → Copy link. Full links and short share links are supported.
-  {tiktokLinkVerification.input===link.trim()&&tiktokLinkVerification.serviceId===selected?.id&&
-   (tiktokLinkVerification.status==="checking"?<span> Verifying TikTok share link…</span>:
-    tiktokLinkVerification.status==="error"?<span> {tiktokLinkVerification.error}</span>:
-    tiktokLinkVerification.status==="verified"?<span> TikTok video verified. <a href={verifiedTikTokVideo} target="_blank" rel="noopener noreferrer">Review video</a></span>:null)}
- </span>}{socialPlatform&&<span id="profile-check-help" className="small">Enter @username or paste the direct public profile link. We convert usernames to a profile URL for fulfillment; verify it belongs to the right account before paying. {normalized.ok&&normalized.url&&<a href={normalized.url} target="_blank" rel="noopener noreferrer">Check public profile ↗</a>}</span>}</label>})()}<label>Quantity<input type="number" min={selected?.min||1} max={selected?.max||1000000} step={selected?.unitStep||1} required value={qty} onChange={e=>setQty(Number(e.target.value))} onBlur={()=>{if(selected&&Number.isInteger(qty)&&qty>0&&qty<selected.min)setQty(selected.min)}}/></label>{selected&&qty<selected.min&&<div className="checkout-quantity-warning" role="alert"><strong>Minimum quantity for this service: {selected.min.toLocaleString()}.</strong><p>You entered {qty.toLocaleString()}. The $1 minimum order does not override the service's quantity requirement. The lowest eligible total for this service is {money(Math.ceil(selected.per1000*selected.min/10-1e-8))}.</p><button type="button" className="alt" onClick={()=>setQty(selected.min)}>Use minimum: {selected.min.toLocaleString()} units</button></div>}</>}
- <label>Email<input type="email" required placeholder="you@example.com" value={email} onChange={e=>setEmail(e.target.value)}/></label><div className="totalbox"><div className="small">Final price in USD</div><div className="total">{money(price)}</div><div className="small">Minimum $1 per order · final price shown before payment</div></div>{selected?.purchasable&&catalogCheckoutEnabled&&config.ready&&config.publicKey?<><div className="kicker">PAYKINGS · SECURE CARD PAYMENT</div><PremiumInlineCheckout cardReady={cardReady} busy={busy} canPay={catalogCheckoutEnabled&&detailsReady&&!busy&&config.ready} buttonLabel={busy?"Processing securely...":!selected?"Choose a service":selected&&qty<selected.min?"Increase quantity to "+selected.min.toLocaleString():!detailsReady?(multiMode?"Verify each selected post, quantity and email":tiktokLikes?"Verify TikTok video link and email":"Verify link and email"):!cardReady?"Loading secure card fields...":multiMode?"Pay "+money(price)+" · multiple posts":"Pay "+money(price)+" securely"}/>{!detailsReady&&<p role="status" className="small">{!multiMode&&selected&&qty<selected.min?"Minimum is "+selected.min.toLocaleString()+" units. Tap the minimum quantity button above or leave the Quantity field to adjust automatically.":(multiMode?"Verify your selected post or posts and quantities, then enter your email. Each post has its own service minimum.":tiktokLikes?"Enter a public TikTok video link or short share link, your email and quantity. We verify the video before enabling payment.":"Enter a valid link, email and service quantity. The Pay button will unlock when all required details are valid.")}</p>}</>:<div className="checkout-help" role="status"><strong>{!selected?"Select an approved Litix service to begin secure checkout.":!selected.purchasable?"This service requires manual confirmation.":!catalogCheckoutEnabled?"Live service availability is being verified. Browsing remains available, but checkout is paused.":"PayKings card checkout is not currently configured for live payments."}</strong><p className="small">No payment has been submitted. You can contact support if the payment option stays unavailable.</p></div>}{selected&&!selected.purchasable&&<p className="small">This package needs extra order details before purchase. Contact the Litix Concierge for help.</p>}<p className="small">PayKings handles raw card details, not Litix.</p>{selected?.purchasable&&catalogCheckoutEnabled&&config.ready&&!cardReady&&<button type="button" className="alt" onClick={()=>{setNotice("Retrying secure card fields…");setCardRetry(v=>v+1)}}>Retry secure fields</button>}</>:<div className="litix-pick-first" role="status"><strong>Choose Custom Followers or Custom Likes above to begin.</strong><p>No payment or order has been started. Select a package to see the exact quantity and USD total.</p></div>}</form>{notice&&<div className="msg" role="status" aria-live="polite">{notice}</div>}{selected?.purchasable&&catalogCheckoutEnabled&&config.ready&&!cardReady&&<div className="checkout-help"><b>Having trouble entering card details?</b><p className="small">Retry the secure fields first. If they still do not load, contact Litix support and mention “PayKings card fields”. Never send card numbers or security codes in chat.</p><a className="support-link" href={"https://wa.me/"+(whatsappNumber.length>=8?whatsappNumber:"19452106315")+"?text="+encodeURIComponent("Hi Litix, I need checkout help. The PayKings secure card fields are not loading on my mobile device.")} target="_blank" rel="noopener noreferrer">Get checkout help ↗</a></div>}{receipt&&<div className="msg"><b>{receipt.orderId}</b><p>{receipt.payment} · {receipt.fulfillment||"pending"}</p>{receipt.secret&&<><input readOnly value={privateUrl}/><button className="alt" style={{marginTop:12}} onClick={()=>navigator.clipboard.writeText(privateUrl)}>Copy tracking link</button><a className="alt" style={{display:"inline-block",margin:"10px 0 0 10px"}} href={"/track?order="+encodeURIComponent(receipt.orderId)}>Track this order</a></>}</div>}</section></div>
+ {multiMode?<SocialMultiPostChooser service={selected} platform={String(selected?.platform||"").toLowerCase()} posts={multiPosts} onChange={setMultiPosts}/>:<><label>Quantity<input type="number" min={selected?.min||1} max={selected?.max||1000000} step={selected?.unitStep||1} required value={qty} onChange={e=>setQty(Number(e.target.value))} onBlur={()=>{if(selected&&Number.isInteger(qty)&&qty>0&&qty<selected.min)setQty(selected.min)}}/></label>{selected&&qty<selected.min&&<div className="checkout-quantity-warning" role="alert"><strong>Minimum quantity for this service: {selected.min.toLocaleString()}.</strong><p>You entered {qty.toLocaleString()}. The $1 minimum order does not override the service's quantity requirement. The lowest eligible total for this service is {money(Math.ceil(selected.per1000*selected.min/10-1e-8))}.</p><button type="button" className="alt" onClick={()=>setQty(selected.min)}>Use minimum: {selected.min.toLocaleString()} units</button></div>}</>}
+ <label>Email<input type="email" required placeholder="you@example.com" value={email} onChange={e=>setEmail(e.target.value)}/></label><div className="totalbox"><div className="small">{checkoutAuthorized?"Verified USD total":"Estimated USD total · checked before payment"}</div><div className="total">{money(price)}</div><div className="small">Minimum $1 per order · final price shown before payment</div></div>{selected?.purchasable&&checkoutAuthorized&&config.ready&&config.publicKey?<><div className="kicker">PAYKINGS · SECURE CARD PAYMENT</div><PremiumInlineCheckout cardReady={cardReady} busy={busy} canPay={checkoutAuthorized&&detailsReady&&!busy&&config.ready} buttonLabel={busy?"Processing securely...":!selected?"Choose a service":selected&&qty<selected.min?"Increase quantity to "+selected.min.toLocaleString():!detailsReady?(multiMode?"Verify each selected post, quantity and email":tiktokLikes?"Verify TikTok video link and email":"Verify link and email"):!cardReady?"Loading secure card fields...":multiMode?"Pay "+money(price)+" · multiple posts":"Pay "+money(price)+" securely"}/>{!detailsReady&&<p role="status" className="small">{!multiMode&&selected&&qty<selected.min?"Minimum is "+selected.min.toLocaleString()+" units. Tap the minimum quantity button above or leave the Quantity field to adjust automatically.":(multiMode?"Verify your selected post or posts and quantities, then enter your email. Each post has its own service minimum.":tiktokLikes?"Enter a public TikTok video link or short share link, your email and quantity. We verify the video before enabling payment.":"Enter a valid link, email and service quantity. The Pay button will unlock when all required details are valid.")}</p>}</>:<div className="checkout-help" role="status" aria-live="polite" data-checkout-phase={checkoutPhase}>
+ <strong>{!selected?"Select a package in Step 03 to see the USD total.":
+   !selected.purchasable?"This package needs additional review before checkout.":
+   checkoutPhase==="validating"?"Checking the latest package price and secure gateway…":
+   checkoutPhase==="error"?"Secure checkout verification needs your attention.":
+   "Review your public link, quantity and email to continue."}</strong>
+ {checkoutError&&<p className="small" role="alert">{checkoutError}</p>}
+ {selected?.purchasable&&detailsReady&&<button type="button" className="primary"
+  disabled={checkoutPhase==="validating"}
+  onClick={()=>setVerificationRetry(value=>value+1)}>
+  {checkoutPhase==="validating"?"Checking live availability…":
+   "Verify secure checkout · "+money(price)}
+ </button>}
+ <p className="small">No card charge has been attempted. The quoted amount must pass a live verification before PayKings can accept payment.</p>
+ </div>}{selected&&!selected.purchasable&&<p className="small">This package needs extra order details before purchase. Contact the Litix Concierge for help.</p>}<p className="small">PayKings handles raw card details, not Litix.</p>{selected?.purchasable&&checkoutAuthorized&&config.ready&&!cardReady&&<button type="button" className="alt" onClick={()=>{setNotice("Retrying secure card fields…");setCardRetry(v=>v+1)}}>Retry secure fields</button>}</>:<div className="litix-pick-first" role="status"><strong>Choose a package in Step 03.</strong><p>You can paste your public profile or post link above at any time. The total appears after a package is selected.</p></div>}</form>{notice&&<div className="msg" role="status" aria-live="polite">{notice}</div>}{selected?.purchasable&&checkoutAuthorized&&config.ready&&!cardReady&&<div className="checkout-help"><b>Having trouble entering card details?</b><p className="small">Retry secure card fields. If PayKings remains unavailable, contact Litix support; do not send card numbers or security codes in chat.</p><a className="support-link" href={"https://wa.me/"+(whatsappNumber.length>=8?whatsappNumber:"19452106315")+"?text="+encodeURIComponent("Hi Litix, I need checkout help. The PayKings secure card fields are not loading on my mobile device.")} target="_blank" rel="noopener noreferrer">Get checkout help ↗</a></div>}{receipt&&<div className="msg"><b>{receipt.orderId}</b><p>{receipt.payment} · {receipt.fulfillment||"pending"}</p>{receipt.secret&&<><input readOnly value={privateUrl}/><button className="alt" style={{marginTop:12}} onClick={()=>navigator.clipboard.writeText(privateUrl)}>Copy tracking link</button><a className="alt" style={{display:"inline-block",margin:"10px 0 0 10px"}} href={"/track?order="+encodeURIComponent(receipt.orderId)}>Track this order</a></>}</div>}</section></div>
 
  <section className="panel trust-panel" id="how-it-works"><div className="kicker">THE LITIX STANDARD</div><h2>Built for a smoother experience</h2><div className="trust-grid"><article><span className="trust-symbol">01</span><h3>Choose your service</h3><p>Search the catalog, filter by category, and check the published quantity limits before selecting an option.</p></article><article><span className="trust-symbol">02</span><h3>Submit a public URL</h3><p>Use the eligible public profile or post link requested by the service. Litix never needs your social account password.</p></article><article><span className="trust-symbol">03</span><h3>Track progress</h3><p>Keep your private tracking link. It shows your latest recorded payment and delivery updates when available.</p></article></div><div className="service-note"><strong>Verified Real-Time Catalog.</strong> Check package details and review your final price before payment. Delivery progress and refill eligibility are shown in your order updates.</div>
  <div className="tags" aria-label="Litix trust features"><span>✦ Secure PayKings tokenization</span><span>◇ Litix Order Tracking</span><span>✧ Verified Service Selection</span><span>◆ Direct Order Processing</span></div></section><section className="panel tracking" id="tracking">
@@ -454,5 +552,5 @@ export default function Home(){
   <a href={"https://wa.me/"+(whatsappNumber.length>=8?whatsappNumber:"19452106315")+"?text="+encodeURIComponent("Hello Litix Concierge, I need help with my order.")} target="_blank" rel="noopener noreferrer">WhatsApp Concierge</a>
   <a href="mailto:Litixsocial@gmail.com?subject=Litix%20Order%20Support">Email Support</a>
  </div>
- </section><section className="panel faq-panel" id="faq"><div className="kicker">HELP CENTER</div><h2>Frequently asked questions</h2><details><summary>What information do I need to place an order?</summary><p>Usually a supported public profile or post URL, the quantity you choose within the service limits, and an email address for order support.</p></details><details><summary>Where can I check my order?</summary><p>Use the private tracking URL shown after your order is submitted. Save it somewhere secure; anyone with that private link may be able to view the order status.</p></details><details><summary>When will my order be processed?</summary><p>Litix verifies the selected service and payment before dispatch. Your order tracker shows the latest recorded processing and delivery stage; availability is confirmed before any charge.</p></details><details><summary>How do I get help?</summary><p>Use the Litix Concierge links in the order tracking bar for questions about purchases and status.</p></details><div className="faq-links"><a href="/legal/privacy">Privacy Policy</a><a href="/terms">Terms of Service</a><a href="/refunds">Refunds & Order Issues</a></div></section><footer className="end"><span>LITIX · Analytics Amplified. Innovation Ignited. · Metrics that Move · Data Driven Discovery</span><span>Litix · Secure checkout</span><span className="legal-links"><a href="/solutions">Growth Solutions</a><a href="/partners">Partner Program</a><a href="/global/en" hrefLang="en">Languages</a><a href="/legal/privacy">Privacy</a><a href="/terms">Terms</a><a href="/refunds">Refunds</a></span><a href={"https://wa.me/"+(whatsappNumber.length>=8?whatsappNumber:"19452106315")+"?text="+encodeURIComponent("Hi Litix, I need help with an order.")} target="_blank" rel="noopener noreferrer">WhatsApp Concierge</a></footer><a className="whatsapp-float" href={"https://wa.me/"+(whatsappNumber.length>=8?whatsappNumber:"19452106315")+"?text="+encodeURIComponent("Hi Litix, I need help with an order.")} target="_blank" rel="noopener noreferrer" aria-label="Chat with Litix on WhatsApp"><span className="whatsapp-icon" aria-hidden="true">☏</span><span>Chat with us</span></a></main>
+ </section><section className="panel faq-panel" id="faq"><div className="kicker">HELP CENTER</div><h2>Frequently asked questions</h2><details><summary>What information do I need to place an order?</summary><p>Usually a supported public profile or post URL, the quantity you choose within the service limits, and an email address for order support.</p></details><details><summary>Where can I check my order?</summary><p>Use the Order Number + Checkout Email lookup form above, or open your private tracking link from the order confirmation. Save your private link securely because anyone who has it may be able to see the order status.</p></details><details><summary>When will my order be processed?</summary><p>Payment authorization and service eligibility are checked as soon as you submit checkout. Eligible orders may begin processing within minutes after payment confirmation; start times vary by service, demand, and queue conditions, so a 5–30 minute start is not guaranteed. The order tracker shows the latest verified processing and delivery status.</p></details><details><summary>How do I get help?</summary><p>Use the Litix Concierge links in the order tracking bar for questions about purchases and status.</p></details><div className="faq-links"><a href="/legal/privacy">Privacy Policy</a><a href="/terms">Terms of Service</a><a href="/refunds">Refunds & Order Issues</a></div></section><footer className="end"><span>LITIX · Analytics Amplified. Innovation Ignited. · Metrics that Move · Data Driven Discovery</span><span>Litix · Secure checkout</span><span className="legal-links"><a href="/solutions">Growth Solutions</a><a href="/partners">Partner Program</a><a href="/global/en" hrefLang="en">Languages</a><a href="/legal/privacy">Privacy</a><a href="/terms">Terms</a><a href="/refunds">Refunds</a></span><a href={"https://wa.me/"+(whatsappNumber.length>=8?whatsappNumber:"19452106315")+"?text="+encodeURIComponent("Hi Litix, I need help with an order.")} target="_blank" rel="noopener noreferrer">WhatsApp Concierge</a></footer><a className="whatsapp-float" href={"https://wa.me/"+(whatsappNumber.length>=8?whatsappNumber:"19452106315")+"?text="+encodeURIComponent("Hi Litix, I need help with an order.")} target="_blank" rel="noopener noreferrer" aria-label="Chat with Litix on WhatsApp"><span className="whatsapp-icon" aria-hidden="true">☏</span><span>Chat with us</span></a></main>
 }

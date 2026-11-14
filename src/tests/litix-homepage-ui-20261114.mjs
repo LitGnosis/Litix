@@ -30,16 +30,23 @@ const test=async width=>{
  await page.goto("http://localhost:3100/",{waitUntil:"domcontentloaded"});
  await page.locator(".litix-hero-shop").waitFor();
  assert.equal(await page.locator(".litix-early-link input").count(),1);
- await page.locator(".litix-early-link input").fill("https://www.instagram.com/p/abc/");
+ await page.locator(".litix-early-link input").fill("https://www.instagram.com/p/abc123/");
  await page.locator("#litix-service-choice").waitFor();
  await page.locator("#litix-service-kind").selectOption("likes");
  await page.locator("#litix-service-choice").selectOption("litix_1234");
- assert.equal(await page.locator('#checkout input[placeholder="https://www.instagram.com/p/POST_ID/"]').count(),1);
- assert.equal(await page.locator('#checkout input[placeholder="https://www.instagram.com/p/POST_ID/"]').inputValue(),
-  "https://www.instagram.com/p/abc/");
- const grp=page.getByRole("group",{name:"Select a social platform"});
- await grp.getByRole("button",{name:"Facebook"}).click();
- assert.equal(await page.locator('.litix-platform-choices a[href="/shop/facebook/followers"]').count(),1);
+ assert.equal(await page.locator(".litix-early-link input").count(),1);
+ assert.equal(await page.locator(".litix-early-link input").inputValue(),
+  "https://www.instagram.com/p/abc123/");
+ await page.getByRole("group",{name:"Quick service selection"})
+  .getByRole("button",{name:"TikTok Likes"}).click();
+ assert.equal(await page.locator("#litix-platform").inputValue(),"TikTok");
+ assert.equal(await page.locator("#litix-service-kind").inputValue(),"likes");
+ assert.ok((await page.locator("#litix-service-choice option").count())>0);
+ await page.locator("#litix-platform").selectOption("Facebook");
+ assert.equal(await page.locator("#litix-platform").inputValue(),"Facebook");
+ assert.ok((await page.locator("#litix-service-choice option").count())>0);
+ assert.equal(await page.locator(".litix-platform-tabs").count(),0);
+ assert.equal(await page.locator(".litix-platform-choices").count(),0);
  await page.locator(".lxai-launcher").click();
  await page.locator(".lxai-panel").waitFor();
  await page.locator("#lxai-entry").fill("Where is the catalog?");
