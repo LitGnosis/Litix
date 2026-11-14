@@ -1,6 +1,6 @@
 import {boosteroSQL,boosteroProductionReady,dispatchBoostero} from "../../../../lib/boosteroFulfillment.mjs";
 import {verifyPayKingsWebhook,parsePaidWebhook,verifyCapturedLitixSale} from "../../../../lib/litixFulfillmentSecurity.mjs";
-import {recordCapturedCheckout,sendPendingConfirmations} from "../../../../lib/litixFulfillmentAutomation.mjs";
+import {recordCapturedCheckout,sendPendingConfirmations,flagUnknownSupplierOutcome} from "../../../../lib/litixFulfillmentAutomation.mjs";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 export const maxDuration=60;
@@ -24,6 +24,10 @@ export async function POST(request){
   // Existing atomic QUEUED->DISPATCHING claim prevents duplicate Boostero purchases.
   // No direct supplier HTTP calls, no second order path.
   const dispatched=await dispatchBoostero(data.orderId,{sql}).catch(()=>({state:"needs_reconciliation"}));
+  if(dispatched.requiresReview||dispatched.state==="UNKNOWN_OUTCOME"||dispatched.state==="MANUAL_REVIEW"||
+     dispatched.state==="needs_reconciliation"){
+   await flagUnknownSupplierOutcome({sql,orderId:data.orderId}).catch(()=>{});
+  }
   if(result.recovered)await sendPendingConfirmations({sql,limit:1}).catch(()=>{});
   return respond({accepted:true,paymentVerified:true,fulfillment:dispatched.state||"queued"});
  }catch{
