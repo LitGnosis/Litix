@@ -5,10 +5,10 @@ export function guidedLitixReply(value){
  if(/order|track|delivery|status|receipt|refund|missing|not received|charge/.test(q)){
   return "To check a real order, select Track order in this chat or open /track. Enter your Litix order number and the checkout email. Your private payment and delivery records stay outside the AI conversation. If an order needs review, contact support at litixsocial@gmail.com. Please do not pay again for the same order.";
  }
- if(/bundle|launch|momentum|power|apex|package/.test(q)){
+ if(/bundle|\blaunch\b|\bmomentum\b|\bpower\b|\bapex\b/.test(q)){
   return "Litix no longer sells Growth Bundles. Choose an individual service at /services. Past bundle orders can still be reviewed through their original private tracking links or with Litix support.";
  }
- if(/instagram|tiktok|facebook|youtube|\bx\b|twitter|follower|like|view|subscriber|service|catalog|price|cost/.test(q)){
+ if(/instagram|tiktok|facebook|youtube|\bx\b|twitter|follower|like|view|subscriber|service|catalog|price|cost|package/.test(q)){
   return "Open /services to compare Litix's currently listed services. Select a platform and service type, then enter a public profile or post URL. Prices and supplier availability are verified again at checkout; the catalog alone does not authorize payment.";
  }
  if(/campaign|marketing|growth|content|promote|lead|business|agency/.test(q)){
