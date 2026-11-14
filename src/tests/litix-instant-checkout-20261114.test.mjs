@@ -81,7 +81,9 @@ test("checkout protects the customer from a stale quote while keeping valid inpu
  assert.match(page,/validateLitixCheckoutTarget\(link,selected\)/);
  assert.match(page,/!multiMode&&<label className="litix-early-link"/);
  assert.doesNotMatch(page,/Choose Custom Followers or Custom Likes above to begin/);
- assert.match(page,/Verify secure checkout/);
+ assert.match(page,/Continue to Secure Checkout/);
+ assert.match(page,/Pay with PayKings/);
+ assert.match(page,/verifyQuoteBeforePayment\(\)/);
  assert.match(preflight,/verifyBoosteroQuote/);
  assert.match(preflight,/chargeAttempted:false/);
  assert.match(preflight,/3400/);
