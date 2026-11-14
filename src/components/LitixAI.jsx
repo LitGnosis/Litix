@@ -24,10 +24,15 @@ export default function LitixAI(){
   useEffect(()=>{
     let active=true;
     fetch("/api/litix-ai",{cache:"no-store"}).then(r=>r.json()).then(d=>{if(active)setStatus(d)})
-      .catch(()=>{if(active)setStatus({available:false,verified:false})});
+      .catch(()=>{if(active)setStatus({available:true,mode:"guided",verified:false})});
     return()=>{active=false};
   },[]);
   const closePanel=()=>{setOpen(false);launcherRef.current?.focus();};
+  useEffect(()=>{
+    const openFromPage=()=>{setOpen(true);setOrderView(false)};
+    window.addEventListener("litix:open-ai",openFromPage);
+    return()=>window.removeEventListener("litix:open-ai",openFromPage);
+  },[]);
   useEffect(()=>{
     if(!open)return;
     closeRef.current?.focus();
@@ -56,7 +61,8 @@ export default function LitixAI(){
         headers:{"content-type":"application/json"},
         body:JSON.stringify({message:input,history})});
       const v=await r.json();
-      setMessages(m=>[...m,{role:"assistant",content:r.ok?v.reply:(v.error||"AI service temporarily unavailable. Please contact our team.")}]);
+      if(v.mode==="guided")setStatus(prev=>({...prev,available:true,mode:"guided",verified:false}));
+      setMessages(m=>[...m,{role:"assistant",content:r.ok?v.reply:(v.error||"Chat temporarily unavailable. Please contact our team.")}]);
     }catch{
       setMessages(m=>[...m,{role:"assistant",content:"I cannot connect at the moment. You can still contact our team by WhatsApp or email."}]);
     }finally{setBusy(false)}
@@ -77,7 +83,7 @@ export default function LitixAI(){
   return <div className="lxai-shell">
     {open&&<section id="lxai-dialog" className="lxai-panel" role="dialog" aria-label="LITIX AI Intelligent Growth Assistant">
       <header className="lxai-head"><div className="lxai-emblem" aria-hidden="true">L</div>
-        <div className="lxai-titles"><strong>LITIX AI</strong><small>Intelligent Growth Assistant</small></div>
+        <div className="lxai-titles"><strong>LITIX AI</strong><small>{status?.mode==="guided"?"Guided support · live AI unavailable":"Intelligent Growth Assistant"}</small></div>
         {status?.verified&&<span className="lxai-badge">GPT-powered</span>}
         <button type="button" ref={closeRef} className="lxai-close" aria-label="Close assistant" onClick={closePanel}>×</button>
       </header>
@@ -90,7 +96,8 @@ export default function LitixAI(){
         {busy&&<p className="lxai-message lxai-assistant">Looking that up…</p>}
         <div ref={bottom}/>
       </div>
-      {!status?.available&&<p className="lxai-offline">AI chat is not available yet. You can still track your order or contact human support.</p>}
+      {status?.mode==="guided"&&<p className="lxai-offline">Guided support is active. These are helpful navigation answers, not AI-generated live account checks.</p>}
+      {!status?.available&&<p className="lxai-offline">Connecting to chat… You can also track an order or contact human support.</p>}
       {status?.available&&<div className="lxai-suggestions">{suggestions.map(v=><button type="button" key={v} disabled={busy} onClick={()=>send(v)}>{v}</button>)}</div>}
       <form className="lxai-compose" onSubmit={e=>{e.preventDefault();send(draft)}}>
         <label className="lxai-sr" htmlFor="lxai-entry">Ask Litix AI</label>
@@ -116,7 +123,7 @@ export default function LitixAI(){
         <span>Human support: </span>
         {whatsapp&&<a href={whatsapp} rel="noopener noreferrer" target="_blank">WhatsApp</a>}
         <a href={"mailto:"+SUPPORT_EMAIL}>Email</a>
-        <small>AI chat uses OpenAI. Never share passwords, payment details, or tracking tokens.</small>
+        <small>{status?.mode==="guided"?"Guided support uses site information without an external AI model.":"AI chat uses OpenAI."} Never share passwords, payment details, or tracking tokens.</small>
       </footer>
     </section>}
     <button type="button" ref={launcherRef} className="lxai-launcher" aria-controls="lxai-dialog" aria-haspopup="dialog" aria-label={open?"Close LITIX AI":"Open LITIX AI"} aria-expanded={open} onClick={()=>open?closePanel():setOpen(true)}>
