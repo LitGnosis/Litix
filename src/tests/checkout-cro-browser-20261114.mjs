@@ -33,7 +33,7 @@ try{
  await page.goto("http://localhost:3100/",{waitUntil:"domcontentloaded"});
  const trust=page.locator("#checkout .litix-checkout-trust li");
  assert.equal(await trust.count(),3,"three source-grounded trust indicators beneath PayKings CTA");
- assert.match(await trust.allInnerTexts().then(v=>v.join(" | ")),/Live service verification.*Private order tracking.*PayKings-hosted card fields/);
+ assert.match(await trust.allInnerTexts().then(v=>v.join(" | ").replace(/\s+/g," ")),/Live service verification.*Private order tracking.*PayKings-hosted card fields/);
  assert.equal(await page.locator("#checkout input[aria-label='Public profile or post link']").getAttribute("placeholder"),
   "e.g. @username or https://instagram.com/username");
  assert.equal(await page.locator("#litix-link-feedback").innerText(),"","no duplicate URL prompt before input");
