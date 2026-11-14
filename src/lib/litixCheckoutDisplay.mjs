@@ -53,6 +53,24 @@ function rawDetails(source){
  return data;
 }
 export function publicCheckoutTraits(raw){return rawDetails({listingName:raw});}
+
+// Translate verified listing descriptors into buyer-friendly presentation text.
+// Raw supplier metadata remains unchanged for pricing, eligibility and audits.
+export function customerCheckoutQuality(quality){
+ const value=String(quality||"");
+ if(value==="Active-look listing")return "Real-Look Profiles";
+ if(value==="Active-account listing")return "Premium Active Profiles";
+ return value;
+}
+export function customerCheckoutPace(pace){
+ const value=String(pace||"");
+ const match=value.match(/^\s*(\d+(?:[,.]\d+)?)\s*(k?)\s*\/\s*day\s+listed\s*$/i);
+ if(!match)return value;
+ const amount=Number(match[1].replace(/,/g,""))*(match[2]?1000:1);
+ return Number.isFinite(amount)&&amount>0
+  ? "Up to "+amount.toLocaleString("en-US")+"/day"
+  : value;
+}
 export function checkoutDisplay(row){
  const original=String(row?.name||"Litix service");
  const title=cleanCheckoutTitle(original);
@@ -63,7 +81,7 @@ export function checkoutDisplay(row){
    {pace:String(row.variantPace)}:{})
  };
  const details={...(VERIFIED_VARIANTS[String(row?.id)]||{}),...provided,...rawDetails(row)};
- const specifics=[details.quality,details.pace].filter(Boolean);
+ const specifics=[customerCheckoutQuality(details.quality),customerCheckoutPace(details.pace)].filter(Boolean);
  const min=Number(row?.min)||1,max=Number(row?.max)||min;
  const specialty=Number(row?.per1000)>FAST_CHECKOUT_MAX_RATE;
  // Missing differences are not invented: use actual min/max and a stable

@@ -19,11 +19,11 @@ test("USA Followers appear first and five genuinely different variants carry sou
  assert.deepEqual(five.map(x=>x.per1000),[11.02,14.37,19.32,20.75,58.12]);
  const subtitles=five.map(checkoutDisplay).map(x=>x.subtitle);
  assert.equal(new Set(subtitles).size,5);
- assert.match(subtitles[0],/High quality.*4K\/day/i);
- assert.match(subtitles[1],/Premium quality.*5K\/day/i);
- assert.match(subtitles[2],/Active-look.*5K\/day/i);
- assert.match(subtitles[3],/Active-account.*1K\/day/i);
- assert.match(subtitles[4],/Active-account.*2K\/day/i);
+ assert.match(subtitles[0],/High quality.*Up to 4,000\/day/i);
+ assert.match(subtitles[1],/Premium quality.*Up to 5,000\/day/i);
+ assert.match(subtitles[2],/Real-Look Profiles.*Up to 5,000\/day/i);
+ assert.match(subtitles[3],/Premium Active Profiles.*Up to 1,000\/day/i);
+ assert.match(subtitles[4],/Premium Active Profiles.*Up to 2,000\/day/i);
  for(const s of subtitles)assert.doesNotMatch(s,/guarantee|refill|VIP|non.drop/i);
 });
 

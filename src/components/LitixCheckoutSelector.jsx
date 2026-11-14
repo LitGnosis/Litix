@@ -80,6 +80,7 @@ export default function LitixCheckoutSelector({selected,onChoose}){
  const current=selected?.platform===platform&&selected?.kind===kind?selected:null;
  const extra=current&&!filtered.some(s=>s.id===current.id)?current:null;
  const visibleSpecialty=showSpecialty||Boolean(current&&checkoutDisplay(current).specialty);
+ const allowedRange=current?`${Number(current.min).toLocaleString("en-US")}–${Number(current.max).toLocaleString("en-US")}`:"";
 
  function moveTo(nextPlatform,nextKind="followers"){
   const instant=choicesForPlatform(nextPlatform);
@@ -166,7 +167,7 @@ export default function LitixCheckoutSelector({selected,onChoose}){
   {current&&<div className="litix-quick-chosen" aria-live="polite">
    <strong>{checkoutDisplay(current).title}</strong>
    <span>{checkoutDisplay(current).subtitle} · {usdRate(current.per1000)} per 1,000</span>
-   <span>Allowed quantity: {Number(current.min).toLocaleString()}–{Number(current.max).toLocaleString()}</span>
+   <span>Allowed quantity: {allowedRange}</span>
   </div>}
  </div>;
 }

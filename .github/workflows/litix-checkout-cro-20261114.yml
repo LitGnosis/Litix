@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - fix/always-visible-paykings-checkout-20261114
+      - fix/litix-checkout-final-polish-20261114
   pull_request:
     branches:
       - main

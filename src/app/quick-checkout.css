@@ -195,3 +195,11 @@
 .premium-pay-spinner{display:inline-block;width:17px;height:17px;flex:none;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:litix-payment-spin .75s linear infinite}
 @keyframes litix-payment-spin{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.premium-pay-spinner{animation:none}}
+
+/* One accessible footer navigation row; wrapping without clipping on phones. */
+footer.end{flex-wrap:wrap;align-items:center}
+footer.end .legal-links{display:flex;align-items:center;flex-wrap:wrap;gap:10px 16px}
+footer.end .legal-links a{color:#aee2ff;text-decoration:none;white-space:nowrap}
+footer.end .legal-links a:hover{text-decoration:underline}
+footer.end .legal-links a:focus-visible{outline:2px solid #80d5ff;outline-offset:3px}
+@media(max-width:575px){footer.end .legal-links{gap:12px 16px}}
