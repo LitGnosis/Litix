@@ -8,7 +8,7 @@ const ADMIN_EMAIL="litixsocial@gmail.com";
 const guarded=()=>process.env.VERCEL_ENV==="production"&&
  process.env.LITIX_AUTOMATED_FULFILLMENT_ENABLED==="true"&&boosteroProductionReady();
 const safePreDispatch=new Set(["boostero_insufficient_balance"]);
-const number=(v)=>Number.isFinite(Number(v))?Number(v):null;
+const number=(v)=>v===null||v===undefined||v===""?null:Number.isFinite(Number(v))?Number(v):null;
 
 export async function sendLitixTransactionalEmail({to,subject,text,key,fetcher=fetch}){
  const token=process.env.RESEND_API_KEY||process.env.LITIX_RESEND_API_KEY;
@@ -164,8 +164,8 @@ export async function syncLitixBoosteroOrders({sql=boosteroSQL(),operation=boost
   const name=String(data?.status||"").toLowerCase().trim();
   const valid=["pending","processing","in progress","in_progress","completed","complete","partial","canceled","cancelled"].includes(name);
   if(!valid){failed++;continue;}
-  const remains=data.remains===null||data.remains===undefined?null:Number(data.remains);
-  const start=data.start_count===null||data.start_count===undefined?null:Number(data.start_count);
+  const remains=data.remains===null||data.remains===undefined||data.remains===""?null:Number(data.remains);
+  const start=data.start_count===null||data.start_count===undefined||data.start_count===""?null:Number(data.start_count);
   if(remains!==null&&(!Number.isSafeInteger(remains)||remains<0||remains>Number(item.quantity))){failed++;continue;}
   const snapshot={provider:"boostero",status:String(data.status).slice(0,75),start_count:Number.isSafeInteger(start)?start:null,
    remains,charge:Number.isFinite(Number(data.charge))?String(data.charge):null,checked_at:new Date().toISOString()};
