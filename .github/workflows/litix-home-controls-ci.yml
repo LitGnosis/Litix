@@ -4,6 +4,7 @@ on:
     paths:
       - 'src/app/page.jsx'
       - 'src/app/metallic.css'
+      - 'src/app/style.css'
       - 'src/app/litix-ai.css'
       - 'src/app/api/catalog/checkout-choices/route.js'
       - 'src/app/api/litix-ai/route.js'
@@ -27,6 +28,7 @@ on:
     paths:
       - 'src/app/page.jsx'
       - 'src/app/metallic.css'
+      - 'src/app/style.css'
       - 'src/app/litix-ai.css'
       - 'src/app/api/catalog/checkout-choices/route.js'
       - 'src/app/api/litix-ai/route.js'
