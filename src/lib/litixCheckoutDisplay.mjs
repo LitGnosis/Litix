@@ -8,7 +8,10 @@ const VERIFIED_VARIANTS=Object.freeze({
   litix_2133:{quality:"Active-account listing",pace:"1K/day listed"},
   litix_2131:{quality:"Active-account listing",pace:"2K/day listed"},
   litix_2145:{quality:"USA/UK specialty",pace:"50/day listed"},
-  litix_2063:{pace:"5K/day listed"}
+  litix_2063:{pace:"5K/day listed"},
+  // Verified source listing litix_2050 contains "Instagram Indonesia Followers 500/Day";
+  // checkout choices remove speed from names, so retain it as display-only metadata.
+  litix_2050:{pace:"500/day listed"}
 });
 const PLATFORM_TITLES=[
  ["Instagram",/\binstagram\b/gi],
@@ -95,7 +98,10 @@ export function checkoutDisplay(row){
  const specialty=Number(row?.per1000)>FAST_CHECKOUT_MAX_RATE;
  // Missing differences are not invented: use actual min/max and a stable
  // variant reference so two differently priced offers are distinguishable.
- const subtitle=specifics.join(" · ")||"Available "+min.toLocaleString("en-US")+"–"+max.toLocaleString("en-US");
+ const limit=min.toLocaleString("en-US")+"–"+max.toLocaleString("en-US")+" limit";
+ const subtitle=specifics.length
+  ? specifics.join(" · ")+(details.pace?"":" · "+limit)
+  : "Standard service · "+limit;
  return {title,subtitle,specialty,tier:specialty?"Specialty / Custom":"Standard catalog",
   label:title+" · "+subtitle+" ("+money(row?.per1000||0)+"/1k)"};
 }
