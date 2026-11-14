@@ -26,12 +26,15 @@ export function parsePaidWebhook(raw){
  if(!event||typeof event!=="object"||!body||typeof body!=="object")return null;
  if(!["transaction.sale.success","transaction.capture.success"].includes(event.event_type))return null;
  if(body.features?.is_test_mode===true||String(body.currency||"USD").toUpperCase()!=="USD")return null;
- if(String(body.success)!=="1"||String(body.response_code)!=="100")return null;
+ const action=body.action||{};
+ if(String(body.transaction_type||"cc")!=="cc"||
+    String(action.success)!=="1"||String(action.response_code)!=="100"||
+    !["sale","capture"].includes(String(action.action_type||"").toLowerCase()))return null;
  if(!LITIX_ORDER_ID.test(String(body.order_id||""))||
     !VALID_TRANSACTION.test(String(body.transaction_id||""))||
     !/^[a-f0-9-]{36}$/i.test(String(event.event_id||"")))return null;
  if(!["pendingsettlement","complete"].includes(String(body.condition||"").toLowerCase()))return null;
- const amount=Number(body.amount??body.requested_amount);
+ const amount=Number(action.amount??body.requested_amount);
  const amountCents=Math.round(amount*100);
  if(!Number.isFinite(amount)||!Number.isSafeInteger(amountCents)||amountCents<100||
     Math.abs(amount*100-amountCents)>0.001)return null;
