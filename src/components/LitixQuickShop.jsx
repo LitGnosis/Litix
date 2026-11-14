@@ -11,6 +11,14 @@ export default function LitixQuickShop(){
    Pick Instagram, TikTok, YouTube, Facebook or X in the Fast Checkout below.
    Select a verified package, paste your public link and review the USD total before paying.
   </p>
+  <p className="litix-hero-proof" aria-label="Checkout trust information">
+   <span aria-hidden="true">✓</span>
+   <strong>For creators &amp; agencies</strong>
+   <span className="litix-proof-separator" aria-hidden="true">·</span>
+   No social passwords required
+   <span className="litix-proof-separator" aria-hidden="true">·</span>
+   PayKings-hosted card fields
+  </p>
   <div className="litix-hero-steps" aria-label="Three steps to checkout">
    <span><b>01</b> Choose your package</span>
    <span><b>02</b> Paste a public link</span>
