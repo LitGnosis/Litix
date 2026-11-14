@@ -25,7 +25,7 @@ export default function LitixQuickShop(){
    <span><b>03</b> Review secure checkout</span>
   </div>
   <p className="litix-hero-footnote">
-   No social passwords · The final price and service availability are independently verified before payment.
+   The final price and service availability are independently verified before payment.
   </p>
  </section>;
 }
