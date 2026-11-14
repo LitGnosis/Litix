@@ -22,7 +22,7 @@ try{
    body:JSON.stringify({ready:false,publicKey:null})}));
   await page.route("**/api/catalog/v1?*",route=>route.fulfill({status:200,contentType:"application/json",
    body:JSON.stringify({items:[],total:0,allCount:0,categories:[],catalogStatus:"cached"})}));
-  await page.route("**/api/order-lookup",route=>{
+  await page.route("**/api/orders/lookup",route=>{
    throw Error("No-charge privacy test must not query a real order");
   });
   await page.goto("http://localhost:3100/",{waitUntil:"domcontentloaded"});
