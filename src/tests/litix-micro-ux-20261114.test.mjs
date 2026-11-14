@@ -30,11 +30,11 @@ test("title suffix speed is moved to display subtitle without mutating catalog d
 
 test("profiles and post URL examples vary by platform and service type",()=>{
  const cases=[
-  [{platform:"Instagram",kind:"followers"},"e.g. @username or https://instagram.com/username"],
-  [{platform:"Instagram",kind:"likes"},"e.g. https://instagram.com/p/AbCd123/ or /reel/..."],
-  [{platform:"Instagram",kind:"views"},"e.g. https://instagram.com/p/AbCd123/ or /reel/..."],
-  [{platform:"TikTok",kind:"followers"},"e.g. @username or https://tiktok.com/@username"],
-  [{platform:"TikTok",kind:"likes"},"e.g. https://tiktok.com/@creator/video/1234567890123456789"],
+  [{platform:"Instagram",kind:"followers"},"e.g. @username or https://instagram.com"],
+  [{platform:"Instagram",kind:"likes"},"e.g. https://instagram.com... or /reel/..."],
+  [{platform:"Instagram",kind:"views"},"e.g. https://instagram.com... or /reel/..."],
+  [{platform:"TikTok",kind:"followers"},"e.g. @username or https://tiktok.com"],
+  [{platform:"TikTok",kind:"likes"},"e.g. https://tiktok.com..."],
   [{platform:"YouTube",kind:"subscribers"},"e.g. @channel or https://youtube.com/@channel"],
   [{platform:"YouTube",kind:"views"},"e.g. https://youtube.com/watch?v=abcdefghijk"],
   [{platform:"Facebook",kind:"followers"},"e.g. @page or https://facebook.com/page"],
@@ -66,4 +66,16 @@ test("checkout trust text remains accurate and avoids unsupported promises",asyn
  assert.deepEqual(QUANTITY_PRESETS,[250,500,1000,2500,5000]);
  const first=VERIFIED_CHECKOUT_SEED.items.find(s=>s.id==="litix_2132");
  assert.equal(defaultCheckoutQuantity(first),1000);
+});
+
+test("homepage trust line follows hero subtitle without invented review figures",async()=>{
+ const hero=await source("../components/LitixQuickShop.jsx");
+ const styles=await source("../app/quick-checkout.css");
+ assert.match(hero,/litix-hero-subtitle/);
+ assert.match(hero,/litix-hero-proof/);
+ assert.ok(hero.indexOf("litix-hero-proof")>hero.indexOf("litix-hero-subtitle"));
+ for(const text of ["For creators &amp; agencies","No social passwords required","PayKings-hosted card fields"])
+  assert.ok(hero.includes(text),text);
+ assert.doesNotMatch(hero,/4\.9\/5|Rated by Creators|★★★★★|100% Password-Free/);
+ assert.match(styles,/\.litix-hero-shop \.litix-hero-proof/);
 });
