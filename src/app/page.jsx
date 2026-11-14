@@ -3,7 +3,7 @@
 import {useEffect,useRef,useState} from "react";
 import PremiumInlineCheckout from "../components/PremiumInlineCheckout";
 import LitixCheckoutSelector from "../components/LitixCheckoutSelector";
-import {profilePlatformForService,normalizeProfileDestination,checkoutProfileLabel,checkoutProfilePlaceholder} from "../lib/litixOrderTarget.mjs";
+import {profilePlatformForService,normalizeProfileDestination,checkoutProfileLabel,checkoutProfilePlaceholder,validateLitixCheckoutTarget} from "../lib/litixOrderTarget.mjs";
 import {restrictedSocialKind} from "../lib/publicBoosteroOnly.mjs";
 import {sortServicesPer1000} from "../lib/catalogSort.mjs";
 import {SERVICE_NAV_GROUPS,allowedServiceFilter} from "../lib/serviceNavigation.mjs";
@@ -26,6 +26,10 @@ const publicCollectKey=process.env.NEXT_PUBLIC_PAYKINGS_NMI_COLLECT_PUBLIC_KEY||
 export default function Home(){
  const [services,setServices]=useState([]),[categories,setCategories]=useState([]),[recentServices,setRecentServices]=useState([]),[savedOrders,setSavedOrders]=useState([]),[workspaceReady,setWorkspaceReady]=useState(false),[cat,setCat]=useState(""),[query,setQuery]=useState(""),[platform,setPlatform]=useState("All platforms"),[quickKind,setQuickKind]=useState(""),[favoritesOnly,setFavoritesOnly]=useState(false),[compareIds,setCompareIds]=useState([]),[pg,setPg]=useState(1),[catalogRetry,setCatalogRetry]=useState(0),[catalogState,setCatalogState]=useState("loading"),[catalogSource,setCatalogSource]=useState("unavailable"),[catalogCheckoutEnabled,setCatalogCheckoutEnabled]=useState(false),[count,setCount]=useState(0),[total,setTotal]=useState(0),[selected,setSelected]=useState(null),[qty,setQty]=useState(100),[email,setEmail]=useState(""),[link,setLink]=useState(""),[config,setConfig]=useState({ready:false}),[cardReady,setCardReady]=useState(false),[cardRetry,setCardRetry]=useState(0),[busy,setBusy]=useState(false),[notice,setNotice]=useState(""),[receipt,setReceipt]=useState(null),[privateUrl,setPrivateUrl]=useState(""),[tracked,setTracked]=useState(null),[key,setKey]=useState("");const done=useRef(null),submittedKey=useRef("");
  const [lookupId,setLookupId]=useState(""),[lookupEmail,setLookupEmail]=useState(""),[lookupBusy,setLookupBusy]=useState(false),[lookupNotice,setLookupNotice]=useState("");
+ const [verifiedQuote,setVerifiedQuote]=useState(null);
+ const [checkoutPhase,setCheckoutPhase]=useState("idle");
+ const [checkoutError,setCheckoutError]=useState("");
+ const [verificationRetry,setVerificationRetry]=useState(0);
  const validServiceFilter=(nextPlatform,nextKind="")=>allowedServiceFilter(nextPlatform,nextKind)||(!nextKind&&["Facebook","Spotify","Other"].includes(nextPlatform));
  const applyServiceQuickFilter=(nextPlatform,nextKind="")=>{
   if(!validServiceFilter(nextPlatform,nextKind))return;
@@ -124,10 +128,11 @@ export default function Home(){
   ?tiktokLinkVerification.url:"";
 
  const profileInput=multiMode?{ok:true}:normalizeProfileDestination(link,selected?.kind==="likes"?"":profilePlatformForService(selected));
+ const targetFeedback=validateLitixCheckoutTarget(link,selected);
  const normalizedOrderLink=multiMode?(multiPosts[0]?.verifiedUrl||""):(verifiedTikTokVideo||(profileInput.url||link));
  const detailsReady=multiMode
   ?verifiedMultiPosts&&validOrderDetails(selected,normalizedOrderLink,email,Number(multiPosts[0]?.quantity||0))&&Number.isSafeInteger(orderQuantity)&&orderQuantity<=1000000
-  :profileInput.ok&&(!tiktokLikes||!!verifiedTikTokVideo)&&validOrderDetails(selected,normalizedOrderLink,email,qty);
+  :targetFeedback.ok&&profileInput.ok&&(!tiktokLikes||!!verifiedTikTokVideo)&&validOrderDetails(selected,normalizedOrderLink,email,qty);
  // Preserve deep links from the complete Litix directory, including services not on page one.
  useEffect(()=>{
   const id=new URLSearchParams(location.search).get("service");
@@ -170,8 +175,70 @@ export default function Home(){
  useEffect(()=>{setKey(crypto.randomUUID());try{setRecentServices(JSON.parse(localStorage.getItem("litix:recent-services")||"[]"));setSavedOrders(JSON.parse(localStorage.getItem("litix:saved-orders")||"[]"));}catch{}setWorkspaceReady(true);fetch("/api/config",{cache:"no-store"}).then(r=>r.json()).then(v=>setConfig({...v,publicKey:v.publicKey||publicCollectKey,ready:!!(v.ready&& (v.publicKey||publicCollectKey))})).catch(()=>setConfig({ready:false,publicKey:publicCollectKey||""}))},[]);
  useEffect(()=>{const abort=new AbortController(),p=new URLSearchParams({category:cat,q:query,page:String(pg),platform,kind:quickKind});setCatalogState("loading");const deadline=setTimeout(()=>abort.abort("timeout"),42000);fetch("/api/catalog/v1?"+p,{signal:abort.signal}).then(async r=>{const v=await r.json();if(!r.ok)throw Error(v.error||"Litix service catalog is temporarily unavailable");return v}).then(v=>{setServices(v.items||[]);setCategories(v.categories||[]);setCount(v.allCount||0);setTotal(v.total||0);setCatalogSource(v.catalogStatus==="live"?"live":v.catalogStatus==="cached"?"cached":"unavailable");setCatalogCheckoutEnabled(v.checkoutEnabled===true);setCatalogState("ready");if(v.error)setNotice(v.error)}).catch(e=>{if(!abort.signal.aborted||abort.signal.reason==="timeout"){setCatalogSource("unavailable");setCatalogCheckoutEnabled(false);setCatalogState("error");setNotice("The Litix service list could not be refreshed. Please retry; no order has been placed.")}}).finally(()=>clearTimeout(deadline));return()=>{clearTimeout(deadline);abort.abort()}},[cat,query,pg,platform,quickKind,catalogRetry]);
  useEffect(()=>{if(!workspaceReady)return;try{localStorage.setItem("litix:recent-services",JSON.stringify(recentServices.slice(0,8)));localStorage.setItem("litix:saved-orders",JSON.stringify(savedOrders.slice(0,12)));}catch{}},[workspaceReady,recentServices,savedOrders]);
+
+ const price=selected?(multiMode?multiPosts.reduce((sum,p)=>
+  sum+Math.max(0,Math.ceil(selected.per1000*(Number(p.quantity)||0)/10-1e-8)),0)
+  :Math.ceil(selected.per1000*qty/10-1e-8)):0;
+ const checkoutAuthorized=multiMode?catalogCheckoutEnabled:
+   !!verifiedQuote&&verifiedQuote.serviceId===selected?.id&&
+   verifiedQuote.quantity===orderQuantity&&verifiedQuote.amountCents===price;
+ // Independent read-only checkout preflight; neither saved listing nor a
+ // successful tokenization alone authorizes the server to charge a card.
  useEffect(()=>{
-  if(!catalogCheckoutEnabled||!config.publicKey||!config.ready||!selected?.purchasable){setCardReady(false);return;}
+  setVerifiedQuote(null);
+  if(!selected?.id||!selected.purchasable){
+   setCheckoutPhase("idle");setCheckoutError("");return;
+  }
+  if(multiMode){
+   setCheckoutPhase(catalogCheckoutEnabled?"ready":"error");
+   setCheckoutError(catalogCheckoutEnabled?"":"Multi-post checkout needs a fresh eligibility check. No payment attempted.");
+   return;
+  }
+  if(!config.ready||!config.publicKey){
+   setCheckoutPhase("error");
+   setCheckoutError("Secure PayKings fields are not configured or available. Retry or contact support; no charge was attempted.");
+   return;
+  }
+  if(!Number.isSafeInteger(orderQuantity)||orderQuantity<1||
+     !Number.isSafeInteger(price)||price<100){
+   setCheckoutPhase("idle");setCheckoutError("");return;
+  }
+  let active=true;
+  const controller=new AbortController();
+  const timeout=setTimeout(()=>controller.abort("quote_deadline"),4000);
+  setCheckoutPhase("validating");setCheckoutError("");
+  const params=new URLSearchParams({
+   serviceId:selected.id,quantity:String(orderQuantity),
+   expectedAmountCents:String(price)
+  });
+  fetch("/api/checkout/readiness?"+params,{cache:"no-store",signal:controller.signal})
+   .then(async response=>{
+    const body=await response.json().catch(()=>({}));
+    if(!response.ok||body.ready!==true)throw Error(body.error||"Current checkout availability could not be verified.");
+    if(body.serviceId!==selected.id||body.amountCents!==price||
+       body.quantity!==orderQuantity)throw Error("Package quote changed. Check the total and retry.");
+    return body;
+   })
+   .then(body=>{
+    if(!active)return;
+    setVerifiedQuote({serviceId:body.serviceId,amountCents:body.amountCents,quantity:body.quantity});
+    setCheckoutPhase("ready");
+   })
+   .catch(error=>{
+    if(!active)return;
+    console.warn("Litix checkout readiness preflight:",String(error?.name||"error"));
+    setVerifiedQuote(null);setCheckoutPhase("error");
+    setCheckoutError(controller.signal.aborted?
+     "Price verification took too long. Your selection is saved; retry or contact support. No charge attempted.":
+     String(error.message||"Current service could not be verified.").slice(0,240));
+   })
+   .finally(()=>clearTimeout(timeout));
+  return()=>{active=false;clearTimeout(timeout);controller.abort()};
+ },[selected?.id,selected?.purchasable,orderQuantity,price,multiMode,
+    catalogCheckoutEnabled,config.ready,config.publicKey,verificationRetry]);
+
+ useEffect(()=>{
+  if(!checkoutAuthorized||!config.publicKey||!config.ready||!selected?.purchasable){setCardReady(false);return;}
 
   let active=true;
   let configured=false;
@@ -344,20 +411,19 @@ export default function Home(){
    script?.removeEventListener("load",onLoad);
    script?.removeEventListener("error",onError);
   };
- },[config.ready,config.publicKey,cardRetry,selected?.id,catalogCheckoutEnabled]);
- const price=selected?(multiMode?multiPosts.reduce((sum,p)=>
-  sum+Math.max(0,Math.ceil(selected.per1000*(Number(p.quantity)||0)/10-1e-8)),0)
-  :Math.ceil(selected.per1000*qty/10-1e-8)):0;
+ },[config.ready,config.publicKey,cardRetry,selected?.id,checkoutAuthorized]);
  async function purchase(token){
-  if(!catalogCheckoutEnabled){setNotice("Checkout is paused until the latest service eligibility check succeeds. No payment attempted.");return;}
+  if(!checkoutAuthorized){setCheckoutPhase("error");setNotice("Verify the current package price before submitting payment. No charge attempted.");return;}
   if(!key||submittedKey.current===key)return;
   submittedKey.current=key;
+  setCheckoutPhase("processing");
   try{
    const r=await fetch("/api/checkout/v1",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({serviceId:selected.id,quantity:orderQuantity,email,link:normalizedOrderLink,...(multiMode?{postAllocations:multiPosts.map(p=>({link:p.verifiedUrl,quantity:Number(p.quantity)}))}:{}),paymentToken:token,idempotencyKey:key,expectedAmountCents:price}),signal:AbortSignal.timeout(60000)});
    const v=await r.json();
    // Ambiguous checkout outcomes reuse the original idempotency key to avoid accidental duplicate charges.
    if(!r.ok&&r.status!==202)throw Error(v.error||"Payment processing failed");
    setReceipt(v);setNotice(v.message);
+   setCheckoutPhase("ready");
    if(v.orderId&&v.secret){
     const trackingUrl=location.origin+"/track?track="+encodeURIComponent(v.orderId)+"&token="+encodeURIComponent(v.secret);
     const item={id:v.orderId,url:trackingUrl,createdAt:new Date().toISOString(),payment:v.payment,fulfillment:v.fulfillment||"pending",quantity:orderQuantity,destination:normalizedOrderLink};
@@ -373,11 +439,11 @@ export default function Home(){
      if(stored){location.assign("/confirmation?order="+encodeURIComponent(v.orderId));return}
     }
    }
-  }catch(e){setNotice(e.message)}
+  }catch(e){setNotice(e.message);setCheckoutPhase("error");setCheckoutError(String(e.message||"Checkout error").slice(0,240))}
   finally{setBusy(false)}
  }
  done.current=purchase;
- const submit=e=>{e.preventDefault();if(!catalogCheckoutEnabled||!detailsReady||!cardReady||!selected||busy)return;if(!Number.isSafeInteger(orderQuantity)||orderQuantity<selected.min||(multiMode?orderQuantity>1000000:orderQuantity>selected.max)){setNotice("Enter a whole-number quantity within this service’s limits.");return}if(!selected.purchasable){setNotice("This package needs additional order details. Choose another service or contact Litix support.");return}setBusy(true);setNotice("");try{getCollectJS().startPaymentRequest()}catch{setBusy(false);setNotice("Complete your secure card fields before paying")}};
+ const submit=e=>{e.preventDefault();if(!checkoutAuthorized||!detailsReady||!cardReady||!selected||busy){setCheckoutPhase("error");setNotice("Check your link, email, and verified package status before continuing. No payment attempted.");return;}if(!Number.isSafeInteger(orderQuantity)||orderQuantity<selected.min||(multiMode?orderQuantity>1000000:orderQuantity>selected.max)){setNotice("Enter a whole-number quantity within this service’s limits.");return}if(!selected.purchasable){setNotice("This package needs additional order details. Choose another service or contact Litix support.");return}setBusy(true);setCheckoutPhase("processing");setNotice("");try{getCollectJS().startPaymentRequest()}catch{setBusy(false);setCheckoutPhase("error");setNotice("Complete your secure card fields before paying")}};
  const track=async value=>{try{const u=new URL(value,location.origin),id=u.searchParams.get("track"),token=u.searchParams.get("token");if(!id||!token)throw Error("Paste the full private tracking URL");const r=await fetch("/api/track?id="+encodeURIComponent(id)+"&token="+encodeURIComponent(token)),v=await r.json();if(!r.ok)throw Error(v.error||"Tracking failed");setTracked(v.order)}catch(e){setLookupNotice(e.message)}};
  async function trackByNumber(e){
   e.preventDefault();if(lookupBusy)return;
