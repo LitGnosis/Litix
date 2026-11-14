@@ -52,7 +52,7 @@ test("private order lookup clears on close/open and never seeds customer data",a
  assert.match(component,/placeholder="e\.g\. you@example\.com"/);
  assert.match(component,/autoComplete="off"/);
  assert.doesNotMatch(component,/spears5417|96aa4526/i);
- assert.match(component,/fetch\("\/api\/order-lookup"/);
+ assert.match(component,/fetch\("\/api\/orders\/lookup"/);
  assert.match(component,/event\.persisted/);
  assert.match(component,/window\.addEventListener\("pageshow"/);
 });
