@@ -1,5 +1,5 @@
 // Exact fixed-price Instagram/TikTok Growth Bundles. Do not apply general service markup.
-export const BUNDLE_INSTRUCTIONS="IMPORTANT: After placing a Growth Bundle order, choose WhatsApp, email, or Instagram to send your order number, receipt and up to 10 post links or screenshots. Likes, Views, and Shares are package totals distributed across your selected posts; Followers are applied once to your Instagram or TikTok account. Nothing repeats per post. LITIX independently verifies Bluevine payments and manually approves post allocation before fulfillment.";
+export const BUNDLE_INSTRUCTIONS="A single Litix Growth Bundle covers the package totals shown. After placing your order, send the order number and up to 10 public post links to the Litix Concierge. Likes, Views and Shares are allocated across your selected posts, while Followers apply once to your profile. Litix verifies the payment and confirms delivery eligibility before routing the order. The same quantities are not repeated for every post.";
 // Owner's October 26 update: 20% increase above the previous four prices.
 // Followers are delivered to the purchased account/profile, not to individual posts.
 const levels=[
@@ -15,7 +15,7 @@ export const GROWTH_BUNDLES=["Instagram","TikTok"].flatMap(platform=>
   id:(platform==="Instagram"?"ig":"tt")+"_"+slug,
   name:platform+" "+tier+" Growth Bundle",platform,tier,priceCents,
   items:Object.freeze(Object.fromEntries(BUNDLE_KINDS.map((k,i)=>[k,counts[i]]))),
-  maxPosts:10, manualApprovalRequired:true, refillPolicy:"Supplier dependent; no guaranteed refill",
+  maxPosts:10, manualApprovalRequired:true, refillPolicy:"Refill eligibility varies; no guaranteed refill",
  }))
 );
 export function growthBundle(id){return GROWTH_BUNDLES.find(x=>x.id===id)||null}
