@@ -45,7 +45,7 @@ test("true duplicates collapse only if price, display traits, quantities and ste
  assert.equal(choicesForPlatform("Instagram",[input,twin]).items.length,1);
 });
 
-test("specialty $1,244.88 rate is not the default and has real 200-unit maximum",()=>{
+test("specialty $1,244.88 rate is not the default and has real 200-unit maximum",async()=>{
  const specialty=realId("litix_2145");
  assert.equal(specialty.max,200);
  assert.equal(checkoutDisplay(specialty).specialty,true);
