@@ -8,8 +8,8 @@ test("checkout selector reads durable catalog first and stops loading on timeout
  const api=await source("../app/api/catalog/checkout-choices/route.js");
  const ui=await source("../components/LitixCheckoutSelector.jsx");
  assert.ok(api.indexOf("readDurableCatalog()")<api.indexOf("allBoosteroCardsSnapshot()"));
- assert.match(ui,/setTimeout\(\(\)=>controller\.abort/);
- assert.match(ui,/setLoading\(false\)/);
+ assert.match(ui,/setTimeout\(\(\)=>ctrl\.abort/);
+ assert.match(ui,/setRefreshing\(false\)/);
  assert.match(ui,/liveAvailability/);
  assert.match(ui,/Retry services/);
 });
@@ -17,7 +17,7 @@ test("checkout selector reads durable catalog first and stops loading on timeout
 test("link and private order lookup fields exist on main page",async()=>{
  const src=await source("../app/page.jsx");
  assert.match(src,/aria-label="Public profile or post link"/);
- assert.match(src,/!selected&&<label className="litix-early-link"/);
+ assert.match(src,/!multiMode&&<label className="litix-early-link"/);
  assert.match(src,/aria-label="Litix order number"/);
  assert.match(src,/aria-label="Checkout email"/);
  assert.match(src,/fetch\("\/api\/order-lookup"/);
@@ -29,7 +29,7 @@ test("AI has a visible working launcher and explicitly guided fallback",async()=
  const ai=await source("../components/LitixAI.jsx");
  const api=await source("../app/api/litix-ai/route.js");
  const css=await source("../app/litix-ai.css");
- assert.match(hero,/Shop a Single Service/);
+ assert.match(hero,/Choose a service\. See your price/);
  assert.match(ai,/addEventListener\("litix:open-ai"/);
  assert.match(ai,/setOpen\(true\)/);
  assert.match(api,/available:true,mode:configured\(\)\?"ai":"guided"/);
@@ -48,9 +48,10 @@ test("guidance never invents live order status or processes payment",()=>{
 test("Facebook is a working hero tab and homepage removes repetitive CTAs",async()=>{
  const hero=await source("../components/LitixQuickShop.jsx");
  const home=await source("../app/page.jsx");
- assert.match(hero,/"Facebook","X"/);
- for(const route of ["/shop/facebook/followers","/shop/facebook/likes","/shop/facebook/views"])
-  assert.ok(hero.includes(route));
+ assert.match(hero,/Facebook or X in the Fast Checkout/);
+ const selector=await source("../components/LitixCheckoutSelector.jsx");
+ assert.match(selector,/CHECKOUT_PLATFORMS/);
+ assert.match(selector,/LITIX_CUSTOM_QUICK_PICKS/);
  assert.doesNotMatch(home,/className="panel support-banner"/);
  assert.doesNotMatch(home,/aria-label="Litix customer support"/);
  const ws=await source("../components/LitixWorkspace.jsx");
