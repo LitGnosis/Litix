@@ -68,6 +68,7 @@ const test=async width=>{
  console.log("CAMPAIGN_RENDER",JSON.stringify(debugCampaign));
  assert.ok((await savedCampaign.textContent()).includes("7-day content sprint"),"Campaign saved in workspace");
  assert.equal(await savedCampaign.isVisible(),true,"New campaign row must be visible");
+ assert.ok(debugCampaign[0].rect[3]<160,"Campaign row should not stretch into an oversized empty panel");
  assert.equal(await page.locator('.panel.support-banner').count(),0);
  assert.equal(await page.locator('.panel[aria-label="Litix customer support"]').count(),0);
  if(width<576){
