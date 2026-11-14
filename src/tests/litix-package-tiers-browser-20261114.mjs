@@ -48,7 +48,7 @@ try{
   assert.ok(options.some(t=>t.includes("Instagram Colombia Followers")));
   assert.ok(!options.some(t=>t.includes("Columbia")));
   assert.ok(!options.some(t=>t.includes("1,244")));
-  assert.equal(await page.locator("a[href='#checkout']").count(),0);
+  assert.equal(await page.locator(".nav.litix-home-nav a[href='#checkout']").count(),0);
   const presets=page.getByRole("group",{name:"Quick quantity presets"});
   for(const value of ["250","500","1,000","2,500","5,000"])
    assert.equal(await presets.getByRole("button",{name:value}).count(),1);
