@@ -6,6 +6,7 @@ on:
       - fix/litix-checkout-final-polish-20261114
       - fix/checkout-final-micro-ux-20261114
       - fix/litix-hero-trust-placeholders-20261114
+      - fix/litix-directory-buy-now-tiers-20261114
   pull_request:
     branches:
       - main
@@ -32,7 +33,7 @@ jobs:
       - name: Install locked dependencies
         run: npm ci --no-audit --no-fund
       - name: Run no-charge checkout and catalog regressions
-        run: node --test tests/presentation.test.mjs tests/litix-instant-checkout-20261114.test.mjs tests/litix-package-tiers-quantity-20261114.test.mjs tests/checkout-cro-20261114.test.mjs tests/litix-micro-ux-20261114.test.mjs
+        run: node --test tests/presentation.test.mjs tests/litix-instant-checkout-20261114.test.mjs tests/litix-package-tiers-quantity-20261114.test.mjs tests/checkout-cro-20261114.test.mjs tests/litix-micro-ux-20261114.test.mjs tests/litix-directory-buy-now-tiers-20261114.test.mjs
       - name: Compile Next.js application
         run: npm run build
       - name: Install isolated browser dependency
