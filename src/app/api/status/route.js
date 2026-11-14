@@ -37,7 +37,7 @@ export async function GET() {
   return NextResponse.json({
     service: "Litix",
     status: healthy ? "healthy" : "degraded",
-    supplier: "Boostero",
+    fulfillment: "Litix",
     components: {
       database: !databaseConfigured ? "missing" : databaseReachable ? "reachable" : "unreachable",
       supplierApiKey: supplierConfigured ? "configured-not-tested" : "missing",

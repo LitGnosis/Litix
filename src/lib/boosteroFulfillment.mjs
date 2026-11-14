@@ -108,8 +108,8 @@ export async function boosteroNotice(orderId,secret){
   (postPlatform==="Instagram"?"Post ":"Video ")+(i+1)+": "+String(p.link||"")+" — "+Number(p.quantity||0).toLocaleString()+" likes");
  const publicService=publicServiceCardName({name:o.service_name});
  const publicLink=secret?"https://www.litix.net/track?track="+encodeURIComponent(orderId)+"&token="+encodeURIComponent(secret):null;
- // Customer communication stays Litix-branded. The private owner notification
- // retains supplier references needed for fulfillment and support.
+ // Customer and owner emails are Litix-branded. Sensitive supplier IDs remain
+ // in the internal ledger and are never included in email bodies or subject lines.
  const amount="USD $"+(Number(o.amount_cents)/100).toFixed(2);
  const isOwnerWallet=o.metadata?.ownerWholesale===true&&o.payment_mode==="admin";
  const supplierAccepted=!!o.supplier_order_id&&["SUBMITTED","COMPLETED"].includes(o.state);
@@ -137,19 +137,18 @@ export async function boosteroNotice(orderId,secret){
   "Service: "+publicService,
   "Quantity: "+o.quantity,
   ...(allocations.length?(automatedMulti?[
-    "AUTOMATED PER-POST FULFILLMENT: Review the individual Boostero child statuses in Litix tracking.",
+    "AUTOMATED MULTI-POST FULFILLMENT: Review each child delivery status in the internal Litix operations dashboard.",
     "Do NOT submit any selected post manually unless its prior supplier outcome is independently confirmed not accepted. Unknown outcomes require reconciliation.",
     ...allocationLines
    ]:[postPlatform==="Instagram"?"ACTION REQUIRED: Manual Instagram multi-post fulfillment.":"ACTION REQUIRED: Manual TikTok multi-post fulfillment.",
     postPlatform==="Instagram"?"Submit each post separately to the existing supplier. Never submit the parent destination as a single order.":"Submit each video separately to the existing supplier. Never submit the parent destination as a single order.",
     ...allocationLines]):[]),
   "Amount: "+amount,
-  isOwnerWallet?"Payment: owner authorized via Boostero prepaid wallet (no PayKings card charge)":"Payment: "+o.payment_state,
+  isOwnerWallet?"Payment: owner-authorized prepaid balance (no PayKings card charge)":"Payment: "+o.payment_state,
   isOwnerWallet?"Purchase purpose: "+purpose:null,
-  "Supplier: Boostero",
-  automatedMulti?"Boostero order IDs are recorded separately for each selected post.": "Boostero Order ID: "+(o.supplier_order_id||"Awaiting confirmation"),
+  "Litix fulfillment reference: "+orderId,
   "Fulfillment: "+o.state,
-  o.supplier_status?.status?"Supplier progress: "+String(o.supplier_status.status).slice(0,70):null,
+  o.supplier_status?.status?"Delivery progress: "+String(o.supplier_status.status).slice(0,70):null,
   ownerLink?"Private tracking URL: "+ownerLink:null
  ].filter(Boolean).join("\n");
  if(secret&&o.payment_state==="paid"){
@@ -162,7 +161,7 @@ export async function boosteroNotice(orderId,secret){
   // A supplier-accepted owner-wallet order is NOT a fulfillment incident.
   // Only actual failed/unknown/manual-review outcomes use the urgent subject.
   const subject=reviewRequired?"Litix — Fulfillment needs review "+orderId:
-   supplierAccepted?"Litix — Owner order submitted to Boostero "+orderId:
+   supplierAccepted?"Litix — Owner order submitted "+orderId:
    "Litix — Owner order update "+orderId;
   const messageKey=reviewRequired?"litix-boostero-review/":
    supplierAccepted?"litix-boostero-owner-submitted/":"litix-boostero-owner-update/";

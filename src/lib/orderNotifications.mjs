@@ -1,4 +1,5 @@
 import {sendOwnerPurchaseNotification} from "./ownerNotifications.mjs";
+import {publicServiceCardName} from "./serviceCardDisplay.mjs";
 // Transactional order notifications. Never include raw card data or log private tracking tokens.
 const emailKey=()=>process.env.RESEND_API_KEY||process.env.LITIX_RESEND_API_KEY||"";
 export const notificationsConfigured=()=>Boolean(emailKey());
@@ -23,11 +24,11 @@ export async function sendOrderEmails({orderId,secret,email,amountCents,quantity
  if(!notificationsConfigured()){console.warn("Litix transactional email unavailable: missing Resend API key",{orderId});return false}
  const tracking=safeTrackingURL(orderId,secret);
  const amount=(Number(amountCents)/100).toFixed(2);
- const service=String(serviceName||"Social media service").slice(0,200);
+ const service=publicServiceCardName({name:String(serviceName||"Social media service").slice(0,200)});
  const state=String(fulfillment||"pending").replace(/_/g," ");
- const base="Order: "+orderId+"\nService: "+service+"\nQuantity: "+quantity+"\nTotal: USD $"+amount+"\nSupplier status: "+state;
+ const base="Order: "+orderId+"\nService: "+service+"\nQuantity: "+quantity+"\nTotal: USD $"+amount+"\nDelivery status: "+state;
  const orderEsc=htmlEscape(orderId),serviceEsc=htmlEscape(service),stateEsc=htmlEscape(state),trackEsc=htmlEscape(tracking);
- const details="<p><b>Order:</b> "+orderEsc+"</p><p><b>Service:</b> "+serviceEsc+"</p><p><b>Quantity:</b> "+htmlEscape(quantity)+"</p><p><b>Total:</b> USD $"+htmlEscape(amount)+"</p><p><b>Supplier status:</b> "+stateEsc+"</p>";
+ const details="<p><b>Order:</b> "+orderEsc+"</p><p><b>Service:</b> "+serviceEsc+"</p><p><b>Quantity:</b> "+htmlEscape(quantity)+"</p><p><b>Total:</b> USD $"+htmlEscape(amount)+"</p><p><b>Delivery status:</b> "+stateEsc+"</p>";
  const styles='style="font-family:Arial,sans-serif;background:#091926;color:#f2f7fa;padding:24px;border-radius:12px"';
  const receipt={
   key:"litix-payment/"+orderId,
@@ -40,8 +41,8 @@ export async function sendOrderEmails({orderId,secret,email,amountCents,quantity
   key:"litix-tracking/"+orderId,
   to:email,
   subject:"Litix — Your private tracking link",
-  text:"Your Litix order has been sent for fulfillment.\n\n"+base+"\n\nTrack your order: "+tracking+"\n\nKeep this link private. Supplier processing times may vary.",
-  html:"<div "+styles+"><h1>Track your Litix order</h1><p>Your order has been received for fulfillment.</p>"+details+"<p><a href=\""+trackEsc+"\" style=\"color:#80d8ff\">Track order progress</a></p><p>Keep this link private. Supplier processing times may vary.</p></div>"
+  text:"Your Litix order has been sent for fulfillment.\n\n"+base+"\n\nTrack your order: "+tracking+"\n\nKeep this link private. Delivery times can vary by service and current demand.",
+  html:"<div "+styles+"><h1>Track your Litix order</h1><p>Your order has been received for fulfillment.</p>"+details+"<p><a href=\""+trackEsc+"\" style=\"color:#80d8ff\">Track order progress</a></p><p>Keep this link private. Delivery times can vary by service and current demand.</p></div>"
  };
  const ownerTask=()=>sendOwnerPurchaseNotification({
   orderId,purchaseDate,customerEmail:email,serviceName,quantity,amountCents,paymentStatus:"paid",
