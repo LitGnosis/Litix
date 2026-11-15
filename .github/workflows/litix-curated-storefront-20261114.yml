@@ -44,7 +44,7 @@ jobs:
       - name: Install locked dependencies
         run: npm ci --no-audit --no-fund
       - name: Run pricing, catalog safety and current checkout regression tests
-        run: node --test tests/litix-curated-storefront-20261114.test.mjs tests/litix-package-tiers-quantity-20261114.test.mjs tests/litix-service-navigation.test.mjs
+        run: node --test tests/litix-curated-storefront-20261114.test.mjs tests/litix-customer-only-catalog.test.mjs
       - name: Build Next.js production app
         run: npm run build
       - name: Install isolated browser test runner
