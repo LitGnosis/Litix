@@ -14,6 +14,8 @@ export default function LitixQuickShop(){
    {" "}Paste your public link and review the USD total before secure checkout.
   </p>
 
+  {process.env.NEXT_PUBLIC_LITIX_FREE_TRIAL_ENABLED==="true"&&
+    <p className="litix-trial-entry"><a href="/free-trial">Try 20 free Likes or Views</a></p>}
   <LitixVerifiedActivity/>
   <div className="litix-hero-steps" aria-label="Three steps to checkout">
    <span><b>01</b> Choose your package</span>
