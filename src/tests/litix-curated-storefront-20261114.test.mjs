@@ -35,6 +35,9 @@ test("8 core links, six quantity cards, server-only supplier mapping",async()=>{
   assert.match(String(tiktokSkuForService(x)),/^tiktok_/);
  }
  assert.equal(tiktokSkuForService({...example[0],name:"Followers",category:example[0].name}),"tiktok_followers");
+ assert.equal(tiktokSkuForService({...example[0],name:"TikTok Likes",category:example[0].name}),null,
+  "A category labeled Followers must not accidentally map a Likes service as Followers");
+
  assert.equal(strictTikTok35Service(example[4]),false,"custom comments not purchasable by Default API");
  const match=resolveExactTikTokServices(example);
  assert.equal(match.tiktok_followers.service,11111);
