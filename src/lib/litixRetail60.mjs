@@ -1,7 +1,10 @@
 // One pricing policy for the Litix public directory and live supplier checkout.
 import {litixPlatform,litixKind} from "./litixServiceClassify.mjs";
+import {strictTikTok35Service,curatedTikTokRateCents,curatedTikTokTotalCents} from "./tiktokCatalog.mjs";
 // A 60% markup means 1.6x the supplier's price (NOT a 60% gross margin).
 export const LITIX_RETAIL_MARKUP=1.6;
+export const litixCuratedPricingActive=service=>
+ process.env.LITIX_CURATED_TIKTOK_35_ENABLED==="true"&&strictTikTok35Service(service);
 export const LITIX_MINIMUM_CHARGE_CENTS=100;
 const finitePositive=n=>Number.isFinite(n)&&n>0;
 // Retail rate floors per 1,000 units. Raise underpriced items only.
@@ -21,29 +24,35 @@ export const litixRateFloorCents=service=>{
 export const litixRetailPer1000Cents=(rate,service)=>{
  const n=Number(rate);
  if(!finitePositive(n)||n>1000000)return null;
+ if(litixCuratedPricingActive(service))return curatedTikTokRateCents(n);
  const markedUp=Math.ceil(n*LITIX_RETAIL_MARKUP*100-1e-8);
  return Math.max(markedUp,litixRateFloorCents(service));
 };
-export const litixOrderCents=(retailPer1000Cents,quantity)=>{
+export const litixOrderCents=(retailPer1000Cents,quantity,pricingRule="ceil")=>{
  const q=Number(quantity);
  if(!Number.isSafeInteger(q)||q<1||!Number.isSafeInteger(retailPer1000Cents)||retailPer1000Cents<1)return null;
- const total=Math.ceil(q*retailPer1000Cents/1000-1e-8);
+ const total=pricingRule==="nearest"
+  ?curatedTikTokTotalCents(retailPer1000Cents,q)
+  :Math.ceil(q*retailPer1000Cents/1000-1e-8);
  return Number.isSafeInteger(total)?total:null;
 };
-export const litixServiceMinimum=(min,max,per1000Cents)=>{
+export const litixServiceMinimum=(min,max,per1000Cents,pricingRule="ceil")=>{
  if(!Number.isSafeInteger(min)||min<1||!Number.isSafeInteger(max)||max<min||
     !Number.isSafeInteger(per1000Cents)||per1000Cents<1)return null;
  // Order cents round UP, so $1 starts at the first unit yielding >99 cents.
  // Do not force a $1.01 minimum for a quantity that correctly totals $1.00.
- const q=Math.max(min,Math.floor(((LITIX_MINIMUM_CHARGE_CENTS-1)*1000)/per1000Cents)+1);
- return q<=max&&litixOrderCents(per1000Cents,q)>=LITIX_MINIMUM_CHARGE_CENTS?q:null;
+ const q=pricingRule==="nearest"
+  ?Math.max(min,Math.ceil((LITIX_MINIMUM_CHARGE_CENTS-0.5)*1000/per1000Cents))
+  :Math.max(min,Math.floor(((LITIX_MINIMUM_CHARGE_CENTS-1)*1000)/per1000Cents)+1);
+ return q<=max&&litixOrderCents(per1000Cents,q,pricingRule)>=LITIX_MINIMUM_CHARGE_CENTS?q:null;
 };
 export const litixPurchasableDefault=x=>{
  const type=String(x?.type??"");
  const id=String(x?.service??x?.id??"");
  const per1000Cents=litixRetailPer1000Cents(x?.rate,x);
  const min=Number(x?.min),max=Number(x?.max);
- const minimum=litixServiceMinimum(min,max,per1000Cents);
+ const pricingRule=litixCuratedPricingActive(x)?"nearest":"ceil";
+ const minimum=litixServiceMinimum(min,max,per1000Cents,pricingRule);
  return /^default$/i.test(type)&&/^\d{1,12}$/.test(id)&&minimum!==null&&max<=1000000?minimum:null;
 };
 export const litixSupplierSafeLink=value=>{
