@@ -50,8 +50,13 @@ export async function POST(request){
  }
  const body={...data,serviceId:supplierId,destination:data?.link,action:"card_purchase"};
  const url=new URL(request.url);
- const result=await handleBoosteroOrder(new Request(url,{method:"POST",headers:{"content-type":"application/json",
-   ...(request.headers.get("origin")?{"origin":request.headers.get("origin")}:{})},
+ const evidenceHeaders={"content-type":"application/json",
+   ...(request.headers.get("origin")?{"origin":request.headers.get("origin")}:{})};
+ for(const name of ["user-agent","x-vercel-forwarded-for","x-forwarded-for"]){
+  const value=request.headers.get(name);
+  if(value)evidenceHeaders[name]=value;
+ }
+ const result=await handleBoosteroOrder(new Request(url,{method:"POST",headers:evidenceHeaders,
    body:JSON.stringify(body)}),{adminOnly:false});
  if(!curated||result.status<400)return result;
  try{
