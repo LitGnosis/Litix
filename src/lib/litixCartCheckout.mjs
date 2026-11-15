@@ -2,10 +2,12 @@ import {after} from "next/server";
 import {randomUUID} from "node:crypto";
 import {boosteroProduction} from "./boosteroReadOnly.mjs";
 import {
- boosteroSQL,boosteroOrderId,boosteroToken,hashBoostero,
+ boosteroSQL,boosteroOrderId,hashBoostero,
  boosteroNotice,boosteroProductionReady,verifyBoosteroQuote
 } from "./boosteroFulfillment.mjs";
 import {quoteCuratedCart} from "./litixCartQuote.mjs";
+import {litixCartTrackingToken} from "./litixCartTrackingToken.mjs";
+import {sendPendingCartReceipts} from "./litixCartReceipts.mjs";
 import {publicServiceCardName} from "./serviceCardDisplay.mjs";
 
 const headers={"cache-control":"no-store","referrer-policy":"no-referrer","x-content-type-options":"nosniff"};
@@ -91,7 +93,8 @@ export async function dispatchCart(orderId,{sql=boosteroSQL(),operation=boostero
 
 export async function handleCartPurchase(request,{sql=boosteroSQL(),operation=boosteroProduction}={}){
  if(process.env.VERCEL_ENV!=="production"||!boosteroProductionReady()||
-    process.env.LITIX_CART_BUMPS_ENABLED!=="true")
+    process.env.LITIX_CART_BUMPS_ENABLED!=="true"||
+    (process.env.LITIX_TRACK_SIGNING_SECRET||"").length<32)
   return send({error:"Cart checkout is not enabled. No payment attempted.",chargeAttempted:false},503);
  if(request.headers.get("origin")!==new URL(request.url).origin)
   return send({error:"same_origin_required",chargeAttempted:false},403);
@@ -123,7 +126,7 @@ export async function handleCartPurchase(request,{sql=boosteroSQL(),operation=bo
  const totalCost=cart.main.quote.costUSD+cart.bump.quote.costUSD;
  if(!balance||!Number.isFinite(Number(balance.balance))||Number(balance.balance)<totalCost)
   return send({error:"These services are temporarily unavailable. No payment attempted.",chargeAttempted:false},409);
- const orderId=boosteroOrderId(),secret=boosteroToken();
+ const orderId=boosteroOrderId(),secret=litixCartTrackingToken(orderId);
  const platform=cart.main.quote.platform,mainKind=cart.main.quote.kind;
  const publicTitle=platform+" "+mainKind+" + "+cart.bump.quantity+" "+cart.bump.kind;
  try{
@@ -156,8 +159,11 @@ export async function handleCartPurchase(request,{sql=boosteroSQL(),operation=bo
     ), proof as (
      insert into public.litix_order_proof(order_id,buyer_ip,user_agent,checkout_source)
      select id,nullif($15,'')::inet,$16,'curated_cart' from new_order returning order_id
+    ), receipt as (
+     insert into public.litix_cart_receipts(order_id)
+     select order_id from proof returning order_id
     ) select (select count(*)::int from lines) as items,
-       (select count(*)::int from proof) as proof_records`,
+       (select count(*)::int from receipt) as proof_records`,
    [orderId,email,lines[0].serviceId,publicTitle,
     "Litix "+platform+" cart",cart.main.destination,cart.quantity,
     cart.totalCents,lines.reduce((n,l)=>n+l.costCents,0),
@@ -209,9 +215,15 @@ export async function handleCartPurchase(request,{sql=boosteroSQL(),operation=bo
       where litix_order_id in(select id from paid) and state='PENDING_PAYMENT'
       returning litix_order_id
     )
-    update public.litix_cart_lines set state='QUEUED',updated_at=now()
-    where order_id in(select litix_order_id from parent) and state='PENDING_PAYMENT'
-    returning ordinal`,[orderId,tx]);
+    , items as (
+     update public.litix_cart_lines set state='QUEUED',updated_at=now()
+      where order_id in(select litix_order_id from parent) and state='PENDING_PAYMENT'
+      returning ordinal
+    ), receipts as (
+     update public.litix_cart_receipts set state='queued',next_attempt_at=now()
+      where order_id in(select id from paid) and state='PENDING_PAYMENT'
+      returning order_id
+    ) select ordinal from items`,[orderId,tx]);
   if(released.length!==2)throw Error("payment_release_incomplete");
   await audit(sql,orderId,null,"PAYMENT_APPROVED",{transactionId:tx,amountCents:cart.totalCents});
  }catch{
@@ -222,7 +234,7 @@ export async function handleCartPurchase(request,{sql=boosteroSQL(),operation=bo
  const result=await dispatchCart(orderId,{sql,operation}).catch(()=>({
   submitted:false,state:"MANUAL_REVIEW",requiresReview:true
  }));
- after(()=>boosteroNotice(orderId,secret).catch(()=>{}));
+ after(()=>sendPendingCartReceipts({sql,orderId,limit:1}).catch(()=>{}));
  return send({orderId,secret,payment:"paid",fulfillment:result.state,
   message:result.submitted?"Payment approved. Both items have been submitted.":"Payment approved. Your cart requires a delivery review; do not purchase again."},
   result.submitted?200:202);
