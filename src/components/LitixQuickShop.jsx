@@ -1,6 +1,7 @@
 "use client";
 
 export default function LitixQuickShop(){
+ const curated=process.env.NEXT_PUBLIC_LITIX_CURATED_STOREFRONT_ENABLED==="true";
  return <section className="panel litix-hero-shop" aria-labelledby="litix-quick-shop-title">
   <div className="litix-hero-topline">
    <span className="kicker">LITIX · INNOVATION, IGNITED.</span>
@@ -8,8 +9,8 @@ export default function LitixQuickShop(){
   </div>
   <h1 id="litix-quick-shop-title">Choose a service. See your price. Check out securely.</h1>
   <p className="litix-hero-subtitle">
-   Pick Instagram, TikTok, YouTube, Facebook or X in the Fast Checkout below.
-   Select a verified package, paste your public link and review the USD total before paying.
+   {curated?"Start with Instagram or TikTok, choose Followers, Likes, Views or Comments, then tap a package card.":"Pick Instagram, TikTok, YouTube, Facebook or X in the Fast Checkout below."}
+   {" "}Paste your public link and review the USD total before secure checkout.
   </p>
   <p className="litix-hero-proof" aria-label="Checkout trust information">
    <span aria-hidden="true">✓</span>
