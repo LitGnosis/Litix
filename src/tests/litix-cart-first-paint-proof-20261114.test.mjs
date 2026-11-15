@@ -40,7 +40,7 @@ test("first render has all eight service buttons and six quantity cards with no 
  assert.match(home,/CURATED_HOME_ENABLED\?"curated":"catalog"/);
  assert.match(home,/useState\(CURATED_HOME_ENABLED\?null:INITIAL_FAST_SERVICE\)/);
  assert.match(selector,/useState\(STATIC_CURATED_PREVIEW\)/);
- assert.match(selector,/status==="preview"/);
+ assert.match(selector,/useState\("preview"\)/);
 });
 test("cart bump is priced at live retail, never an invented $1.99/40% discount",async()=>{
  const previous=process.env.LITIX_CART_BUMPS_ENABLED;
