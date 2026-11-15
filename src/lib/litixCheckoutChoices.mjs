@@ -48,6 +48,7 @@ export function buildCheckoutChoices(rows,requestedPlatform="Instagram"){
    return {
     id:visible.id,name:cleanCheckoutTitle(visible.name),platform:visible.platform,kind:visible.kind||"other",
     min:visible.min,max:visible.max,unitStep:visible.unitStep,per1000:visible.per1000,
+    pricingRule:visible.pricingRule==="nearest"?"nearest":"ceil",
     startingAmountCents:visible.startingAmountCents,purchasable:visible.purchasable,
     ...(traits.quality?{variantQuality:traits.quality}:{}),
     ...(traits.pace?{variantPace:traits.pace}:{})

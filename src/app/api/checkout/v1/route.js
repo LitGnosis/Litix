@@ -1,5 +1,8 @@
 import {POST as ownedDollarCheckout} from "../pilot/route.js";
 import {handleBoosteroOrder} from "../../../../lib/boosteroOrderHandler.mjs";
+import {boosteroProduction} from "../../../../lib/boosteroReadOnly.mjs";
+import {parseCuratedId,resolveCuratedSupplier} from "../../../../lib/curatedCatalog.mjs";
+import {boosteroDestination} from "../../../../lib/boosteroFulfillment.mjs";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 export const maxDuration=60;
@@ -16,13 +19,47 @@ export async function POST(request){
  if(request.headers.get("origin")!==new URL(request.url).origin)
   return Response.json({error:"same_origin_required",chargeAttempted:false},{status:403});
  const id=String(data?.serviceId||"");
- if(!/^(?:litix|boostero)_[0-9]{1,12}$/.test(id)){
+ const curated=parseCuratedId(id);
+ if(curated&&!["followers","likes","views","comments","shares","saves"].includes(curated.kind))
+  return Response.json({error:"This package requires a different delivery format and is not available in quick checkout.",chargeAttempted:false},{status:409});
+ if(!curated&&!/^(?:litix|boostero)_[0-9]{1,12}$/.test(id)){
   // No retired supplier fallback, no card or supplier request.
   return Response.json({error:"Only available Litix services can be purchased. No charge attempted."},{status:409});
  }
- const body={...data,serviceId:id.split("_")[1],destination:data?.link,action:"card_purchase"};
+ let supplierId=id.split("_")[1];
+ if(curated){
+  try{
+   const rows=await boosteroProduction("services");
+   const current=resolveCuratedSupplier(rows,curated.platform,curated.kind,curated.tier);
+   if(!current||!/^[0-9]{1,12}$/.test(String(current.service)))
+    return Response.json({error:"This package is temporarily unavailable. No payment attempted.",chargeAttempted:false},{status:409});
+   // Profile services must use public profiles; engagement needs a matching
+   // public post/video URL, not an unrelated social media URL.
+   const kind=curated.kind,platform=curated.platform.toLowerCase();
+   const strictKind=kind==="followers"?"followers":"likes";
+   const normalized=boosteroDestination(data?.link,platform,strictKind);
+   if(!normalized)
+    return Response.json({error:"Enter the correct public profile or post URL for this service. No payment attempted.",chargeAttempted:false},{status:422});
+   supplierId=String(current.service);
+   data={...data,link:normalized};
+  }catch{
+   return Response.json({error:"The selected service cannot be verified right now. No payment attempted.",chargeAttempted:false},{status:503});
+  }
+ }
+ const body={...data,serviceId:supplierId,destination:data?.link,action:"card_purchase"};
  const url=new URL(request.url);
- return handleBoosteroOrder(new Request(url,{method:"POST",headers:{"content-type":"application/json",
+ const result=await handleBoosteroOrder(new Request(url,{method:"POST",headers:{"content-type":"application/json",
    ...(request.headers.get("origin")?{"origin":request.headers.get("origin")}:{})},
    body:JSON.stringify(body)}),{adminOnly:false});
+ if(!curated||result.status<400)return result;
+ try{
+  const payload=await result.json();
+  if(typeof payload.error!=="string")return Response.json(payload,{status:result.status});
+  const clean=payload.error.replace(/\bBoostero(?:'s)?\b/gi,"Litix");
+  return Response.json({...payload,error:clean},{status:result.status,
+   headers:{"cache-control":"no-store","referrer-policy":"no-referrer"}});
+ }catch{
+  return Response.json({error:"Secure checkout is temporarily unavailable",chargeAttempted:false},
+   {status:503,headers:{"cache-control":"no-store"}});
+ }
 }

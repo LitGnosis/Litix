@@ -3,7 +3,7 @@ import {retiredAutoLikesService} from "./retiredAutolikes.mjs";
 import {boosteroProductionReady} from "./boosteroFulfillment.mjs";
 import {publicServiceCardName} from "./serviceCardDisplay.mjs";
 import {matchesServiceQuickKind} from "./catalogSort.mjs";
-import {litixRetailPer1000Cents,litixOrderCents,litixPurchasableDefault} from "./litixRetail60.mjs";
+import {litixRetailPer1000Cents,litixOrderCents,litixPurchasableDefault,litixCuratedPricingActive} from "./litixRetail60.mjs";
 import {createResilientCatalogCache} from "./litixCatalogResilience.mjs";
 export {litixPlatform,litixKind} from "./litixServiceClassify.mjs";
 import {litixPlatform,litixKind} from "./litixServiceClassify.mjs";
@@ -24,6 +24,7 @@ async function fetchFreshBoosteroCards(){
    if(!/^\d{1,12}$/.test(supplierId)||unique.has(supplierId))continue;
    const retailCents=litixRetailPer1000Cents(item.rate,item);
    const minimum=litixPurchasableDefault(item);
+   const pricingRule=litixCuratedPricingActive(item)?"nearest":"ceil";
    if(!minimum||!retailCents)continue;
    const platform=litixPlatform(item.name,item.category),kind=litixKind(item.name,item.category);
    const name=String(item.name||"").slice(0,200);
@@ -31,7 +32,7 @@ async function fetchFreshBoosteroCards(){
    unique.set(supplierId,{
     id:"boostero_"+supplierId,name,category,platform,kind,type:"Default",
     min:minimum,supplierMin:Number(item.min),max:Number(item.max),unitStep:1,
-    per1000:retailCents/100,startingAmountCents:litixOrderCents(retailCents,minimum),
+    per1000:retailCents/100,pricingRule,startingAmountCents:litixOrderCents(retailCents,minimum,pricingRule),
     pricingReview:false,purchasable:true,
     refill:item.refill===true||String(item.refill)==="1",noDrop:false,
     pricingPolicy:"Boostero live cost + 60% markup",supplier:"Boostero"

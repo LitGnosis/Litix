@@ -23,6 +23,7 @@ function dedupe(items,platform){
    platform,kind:String(source.kind),
    min:Number(source.min),max:Number(source.max),
    unitStep:Number(source.unitStep||1),per1000:Number(source.per1000),
+   pricingRule:source.pricingRule==="nearest"?"nearest":"ceil",
    startingAmountCents:Number(source.startingAmountCents),purchasable:true,
    ...(source.variantQuality?{variantQuality:String(source.variantQuality).slice(0,60)}:{}),
    ...(source.variantPace?{variantPace:String(source.variantPace).slice(0,60)}:{})

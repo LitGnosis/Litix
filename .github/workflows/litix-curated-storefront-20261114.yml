@@ -1,0 +1,63 @@
+name: Litix curated storefront - no-charge build and browser QA
+on:
+  push:
+    branches:
+      - feature/litix-curated-ig-tiktok-fast-checkout-20261114
+  pull_request:
+    branches:
+      - main
+    paths:
+      - src/components/CuratedFastCheckout.jsx
+      - src/config/curatedServices.mjs
+      - src/lib/tiktokCatalog.mjs
+      - src/lib/curatedCatalog.mjs
+      - src/lib/litixRetail60.mjs
+      - src/lib/boosteroFulfillment.mjs
+      - src/app/api/checkout/**
+      - src/app/api/catalog/curated/**
+      - src/app/page.jsx
+      - src/app/quick-checkout.css
+      - src/tests/litix-curated-storefront-20261114.test.mjs
+      - src/tests/litix-curated-storefront-browser-20261114.mjs
+      - .github/workflows/litix-curated-storefront-20261114.yml
+permissions:
+  contents: read
+jobs:
+  curated-no-charge:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: src
+    env:
+      NEXT_PUBLIC_LITIX_CURATED_STOREFRONT_ENABLED: "true"
+      LITIX_CURATED_TIKTOK_35_ENABLED: "true"
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: src/package-lock.json
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Run pricing, catalog safety and current checkout regression tests
+        run: node --test tests/litix-curated-storefront-20261114.test.mjs tests/litix-customer-only-catalog.test.mjs
+      - name: Build Next.js production app
+        run: npm run build
+      - name: Install isolated browser test runner
+        run: npm install --no-save --ignore-scripts playwright@1.56.1
+      - name: Check curated homepage at 390px and 1280px without any live charge
+        run: |
+          npm run start -- --port 3100 >/tmp/litix-curated-ui.log 2>&1 &
+          app_pid=$!
+          trap 'kill $app_pid || true' EXIT
+          for i in $(seq 1 40); do
+            if curl --fail --silent --output /dev/null http://localhost:3100/; then break; fi
+            sleep 1
+          done
+          export CHROME_PATH="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
+          if [ -z "$CHROME_PATH" ]; then npx playwright install chromium; fi
+          node tests/litix-curated-storefront-browser-20261114.mjs

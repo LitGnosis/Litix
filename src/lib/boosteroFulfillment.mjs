@@ -3,7 +3,7 @@ import {neon} from "@neondatabase/serverless";
 import {createHash,randomUUID,timingSafeEqual} from "node:crypto";
 import {boosteroProduction,boosteroCompatibleServices} from "./boosteroReadOnly.mjs";
 import {retiredAutoLikesService} from "./retiredAutolikes.mjs";
-import {litixRetailPer1000Cents,litixOrderCents,litixPurchasableDefault,litixSupplierSafeLink} from "./litixRetail60.mjs";
+import {litixRetailPer1000Cents,litixOrderCents,litixPurchasableDefault,litixSupplierSafeLink,litixCuratedPricingActive} from "./litixRetail60.mjs";
 import {litixPlatform,litixKind} from "./litixServiceClassify.mjs";
 import {publicServiceCardName} from "./serviceCardDisplay.mjs";
 import {queueCustomerDeliveryChange,sendCustomerDeliveryUpdates} from "./litixCustomerUpdates.mjs";
@@ -67,15 +67,17 @@ export function boosteroQuote({service,quantity}){
   throw Error("boostero_quantity_or_type_not_supported");
  const rate=Number(service?.rate);
  const retailPer1000Cents=litixRetailPer1000Cents(rate,service);
- const amountCents=litixOrderCents(retailPer1000Cents,qty);
+ const pricingRule=litixCuratedPricingActive(service)?"nearest":"ceil";
+ const amountCents=litixOrderCents(retailPer1000Cents,qty,pricingRule);
  const costUSD=rate*qty/1000;
  const wholesaleCents=Math.ceil(costUSD*100-1e-8);
  if(!Number.isSafeInteger(amountCents)||amountCents<100||amountCents>100000000||
-    !Number.isFinite(costUSD)||costUSD<=0||amountCents<Math.ceil(costUSD*160-1e-8))
-  throw Error("boostero_price_must_cover_60_percent_markup");
+    !Number.isFinite(costUSD)||costUSD<=0||
+    amountCents<(pricingRule==="nearest"?Math.round(costUSD*135):Math.ceil(costUSD*160-1e-8)))
+  throw Error("boostero_retail_margin_invariant_failed");
  const name=String(service.name||"Service").slice(0,200);
  const category=String(service.category||"Other").slice(0,140);
- return {quantity:qty,amountCents,wholesaleCents,costUSD,retailPer1000Cents,
+ return {quantity:qty,amountCents,wholesaleCents,costUSD,retailPer1000Cents,pricingRule,
   platform:litixPlatform(name,category),serviceId:id,serviceName:name,
   kind:litixKind(name,category),supplierMin:min,minimum:lowest,type:"Default"};
 }
@@ -203,7 +205,10 @@ export async function dispatchBoostero(orderId,{sql=boosteroSQL(),operation=boos
    if(Number(orders[0].supplier_cost_cents)!==quote.wholesaleCents||
       Number(orders[0].amount_cents)<quote.wholesaleCents)
     throw Error("boostero_wholesale_changed_after_payment");
-  }else if(Number(orders[0].amount_cents)<Math.ceil(quote.costUSD*160-1e-8))
+  }else if(Number(orders[0].amount_cents)<
+     (quote.pricingRule==="nearest"
+      ?Math.round(quote.costUSD*135)
+      :Math.ceil(quote.costUSD*160-1e-8)))
    throw Error("boostero_wholesale_changed_after_payment");
   const balance=await operation("balance");
   if(!Number.isFinite(Number(balance.balance))||Number(balance.balance)<quote.costUSD)throw Error("boostero_insufficient_balance");

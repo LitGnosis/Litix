@@ -24,6 +24,7 @@ export const litixPublicCard=item=>{
   unitStep:item.unitStep||1,
   type:item.type==="Default"?"Standard":item.type,
   per1000:item.per1000,
+  pricingRule:item.pricingRule==="nearest"?"nearest":"ceil",
   startingAmountCents:item.startingAmountCents,
   purchasable:item.purchasable===true,
   pricingReview:item.pricingReview===true,
