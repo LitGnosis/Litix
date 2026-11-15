@@ -32,7 +32,7 @@ export default function CuratedFastCheckout({selected,quantity,onChoose,onQuanti
  useEffect(()=>{
   if(status!=="ready"){if(status==="error")onChoose(null);return;}
   if(!current){
-   if(selected?.id?.startsWith("curated_"))onChoose(null);
+   if(selected?.id)onChoose(null);
    return;
   }
   if(selected?.id!==current.id||
