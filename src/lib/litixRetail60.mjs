@@ -1,4 +1,4 @@
-// One pricing policy for the Litix public directory and live supplier checkout.
+// Shared retail policies for the Litix public directory and live supplier checkout.\n// Exact TikTok 35% offers are enabled only by an explicit server-side release flag.
 import {litixPlatform,litixKind} from "./litixServiceClassify.mjs";
 import {strictTikTok35Service,curatedTikTokRateCents,curatedTikTokTotalCents} from "./tiktokCatalog.mjs";
 // A 60% markup means 1.6x the supplier's price (NOT a 60% gross margin).
