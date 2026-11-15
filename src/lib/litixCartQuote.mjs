@@ -1,14 +1,20 @@
 import {boosteroProduction} from "./boosteroReadOnly.mjs";
 import {boosteroQuote,boosteroDestination} from "./boosteroFulfillment.mjs";
 import {parseCuratedId,resolveCuratedSupplier} from "./curatedCatalog.mjs";
+import {resolveTikTokVideoLink} from "./tiktokVideoLinks.mjs";
 
 import {CART_BUMP_QTY,cartBumpKind} from "./cartBumpConfig.mjs";
 export const cartBumpAvailable=()=>process.env.LITIX_CART_BUMPS_ENABLED==="true";
-export const safeCartDestination=(target,platform,kind)=>{
+export async function safeCartDestination(target,platform,kind){
  const p=String(platform||"").toLowerCase();
  if(!["instagram","tiktok"].includes(p))return null;
+ if(p==="tiktok"&&kind!=="followers"){
+  try{const canonical=await resolveTikTokVideoLink(target);
+   return boosteroDestination(canonical,p,"likes");
+  }catch{return null;}
+ }
  return boosteroDestination(target,p,kind==="followers"?"followers":"likes");
-};
+}
 export async function quoteCuratedCart({serviceId,quantity,includeBump=false,bumpTarget="",mainTarget="",operation=boosteroProduction}){
  const parsed=parseCuratedId(serviceId);
  if(!parsed||!["followers","likes","views"].includes(parsed.kind))
@@ -20,7 +26,7 @@ export async function quoteCuratedCart({serviceId,quantity,includeBump=false,bum
  const mainService=resolveCuratedSupplier(raw,parsed.platform,parsed.kind,parsed.tier);
  if(!mainService)throw Error("main_service_unavailable");
  const main=boosteroQuote({service:mainService,quantity:qty});
- const mainDestination=mainTarget?safeCartDestination(mainTarget,parsed.platform,parsed.kind):null;
+ const mainDestination=mainTarget?await safeCartDestination(mainTarget,parsed.platform,parsed.kind):null;
  if(mainTarget&&!mainDestination)throw Error("invalid_main_destination");
  if(!includeBump)return {serviceId,quantity:qty,main:{service:mainService,quote:main,destination:mainDestination},totalCents:main.amountCents,bump:null};
  if(!cartBumpAvailable())throw Error("cart_bump_disabled");
@@ -32,7 +38,7 @@ export async function quoteCuratedCart({serviceId,quantity,includeBump=false,bum
  const bumpQty=CART_BUMP_QTY[kind];
  const bump=boosteroQuote({service:bumpService,quantity:bumpQty});
  const target=bumpTarget||(["likes","views"].includes(parsed.kind)?mainTarget:"");
- const bumpDestination=target?safeCartDestination(target,parsed.platform,kind):null;
+ const bumpDestination=target?await safeCartDestination(target,parsed.platform,kind):null;
  if(bumpTarget&&!bumpDestination)throw Error("invalid_bump_destination");
  const totalCents=main.amountCents+bump.amountCents;
  if(!Number.isSafeInteger(totalCents)||totalCents>100000000)throw Error("invalid_cart_amount");
