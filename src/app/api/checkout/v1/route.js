@@ -48,7 +48,18 @@ export async function POST(request){
  }
  const body={...data,serviceId:supplierId,destination:data?.link,action:"card_purchase"};
  const url=new URL(request.url);
- return handleBoosteroOrder(new Request(url,{method:"POST",headers:{"content-type":"application/json",
+ const result=await handleBoosteroOrder(new Request(url,{method:"POST",headers:{"content-type":"application/json",
    ...(request.headers.get("origin")?{"origin":request.headers.get("origin")}:{})},
    body:JSON.stringify(body)}),{adminOnly:false});
+ if(!curated||result.status<400)return result;
+ try{
+  const payload=await result.json();
+  if(typeof payload.error!=="string")return Response.json(payload,{status:result.status});
+  const clean=payload.error.replace(/\bBoostero(?:'s)?\b/gi,"Litix");
+  return Response.json({...payload,error:clean},{status:result.status,
+   headers:{"cache-control":"no-store","referrer-policy":"no-referrer"}});
+ }catch{
+  return Response.json({error:"Secure checkout is temporarily unavailable",chargeAttempted:false},
+   {status:503,headers:{"cache-control":"no-store"}});
+ }
 }
