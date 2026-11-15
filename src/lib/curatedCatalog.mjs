@@ -60,10 +60,11 @@ export function curatedPublicProduct(raw,platform,kind,tier="standard"){
   minimum=first?.quantity||Number(service.min);
  }
  const quote=boosteroQuote({service,quantity:cards.find(x=>x.available).quantity});
+ if(kind==="likes"&&quote.retailPer1000Cents<600)return null;
  const sku=platform.toLowerCase()+"_"+kind;
  return {
   id:"curated_"+sku+"_"+tier,
-  sku,platform,kind,tier,name:kind==="story_views"?"Story Views":kind[0].toUpperCase()+kind.slice(1),
+  sku,platform,kind,tier,name:platform+" "+(kind==="story_views"?"Story Views":kind[0].toUpperCase()+kind.slice(1)),
   label:platform==="TikTok"?tiktokTierLabel(sku):tier==="vip"?"Real-Look / Active listing":"High Quality",
   min:minimum,max:Number(service.max),unitStep:1,per1000:quote.retailPer1000Cents/100,
   pricingRule:quote.pricingRule,startingAmountCents:quote.amountCents,
@@ -78,7 +79,7 @@ export async function curatedPublicCatalog(){
     const product=curatedPublicProduct(raw,platform,kind,tier);
     if(product)products.push(product);
    }
- for(const kind of ["shares","saves","story_views"]){
+ for(const kind of ["shares","saves"]){
   const product=curatedPublicProduct(raw,"TikTok",kind,"standard");
   if(product)products.push(product);
  }
