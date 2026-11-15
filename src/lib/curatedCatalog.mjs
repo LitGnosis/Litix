@@ -26,8 +26,7 @@ function chooseInstagram(raw,kind,tier){
  const qual=row=>String(row.name||"");
  const eligible=available.filter(row=>tier==="vip"
   ? /\b(?:super real accounts|real accounts|active-looking|active accounts)\b/i.test(qual(row))
-  : /\b(?:high quality|premium quality)\b/i.test(qual(row))||
-   !/\b(?:super real accounts|real accounts|active-looking|active accounts)\b/i.test(qual(row)));
+  : /\b(?:high quality|premium quality)\b/i.test(qual(row)));
  return eligible.sort((a,b)=>{
   const usa=x=>/\bUSA\b/i.test(String(x.name)+" "+String(x.category))?0:1;
   return usa(a)-usa(b)||Number(a.rate)-Number(b.rate)||Number(a.service)-Number(b.service);
