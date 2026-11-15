@@ -87,7 +87,8 @@ test("selector routes opaque IDs through existing payment handler and refuses fa
  ]);
  assert.match(home,/NEXT_PUBLIC_LITIX_CURATED_STOREFRONT_ENABLED/);
  assert.match(home,/CuratedFastCheckout/);
- assert.match(home,/checkoutRoute==="catalog"/);
+ assert.match(home,/checkoutRoute==="curated"/);
+ assert.match(home,/LitixCheckoutSelector selected=\{selected\}/);
  assert.match(selector,/Choose Platform/);
  assert.match(selector,/Choose Service/);
  assert.match(selector,/Custom amount/);
