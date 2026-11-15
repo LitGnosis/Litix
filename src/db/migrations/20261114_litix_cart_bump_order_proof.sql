@@ -51,6 +51,22 @@ CREATE TABLE IF NOT EXISTS public.litix_order_proof_events (
  CONSTRAINT litix_order_proof_events_line CHECK (ordinal IS NULL OR ordinal BETWEEN 1 AND 2)
 );
 
+CREATE TABLE IF NOT EXISTS public.litix_cart_receipts (
+ order_id text PRIMARY KEY REFERENCES public.litix_v2_orders(id) ON DELETE RESTRICT,
+ state text NOT NULL DEFAULT 'PENDING_PAYMENT'
+  CHECK (state IN ('PENDING_PAYMENT','queued','sending','sent','failed')),
+ attempts integer NOT NULL DEFAULT 0 CHECK (attempts BETWEEN 0 AND 8),
+ leased_at timestamptz,
+ next_attempt_at timestamptz NOT NULL DEFAULT now(),
+ sent_at timestamptz,
+ last_error text,
+ created_at timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS litix_cart_receipts_recovery
+ ON public.litix_cart_receipts(state,next_attempt_at)
+ WHERE state IN ('queued','sending');
+
 CREATE INDEX IF NOT EXISTS litix_order_proof_events_history
  ON public.litix_order_proof_events (order_id,occurred_at,id);
 
