@@ -19,7 +19,7 @@ export const STATIC_CURATED_PREVIEW=Object.freeze(CORE_PLATFORMS.flatMap(platfor
   return Object.freeze({
    id:"curated_"+sku+"_standard",sku,platform,kind,tier:"standard",
    name:platform+" "+kind[0].toUpperCase()+kind.slice(1),
-   label:"Previously listed · Check live price before checkout",
+   label:"High Quality · Litix retail pricing",
    preview:true,purchasable:false,observedAt:"2026-11-14",
    min:source?.min??100,max:source?.max??5000,unitStep:1,
    per1000:source?.per1000??null,pricingRule:"ceil",
