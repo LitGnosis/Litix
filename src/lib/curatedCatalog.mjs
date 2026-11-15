@@ -62,10 +62,12 @@ export function curatedPublicProduct(raw,platform,kind,tier="standard"){
  const quote=boosteroQuote({service,quantity:cards.find(x=>x.available).quantity});
  const sku=platform.toLowerCase()+"_"+kind;
  return {
+  id:"curated_"+sku+"_"+tier,
   sku,platform,kind,tier,name:kind==="story_views"?"Story Views":kind[0].toUpperCase()+kind.slice(1),
   label:platform==="TikTok"?tiktokTierLabel(sku):tier==="vip"?"Real-Look / Active listing":"High Quality",
-  min:minimum,max:Number(service.max),step:1,per1000:quote.retailPer1000Cents/100,
-  quantityCards:cards
+  min:minimum,max:Number(service.max),unitStep:1,per1000:quote.retailPer1000Cents/100,
+  pricingRule:quote.pricingRule,startingAmountCents:quote.amountCents,
+  purchasable:true,quantityCards:cards
  };
 }
 export async function curatedPublicCatalog(){
@@ -85,3 +87,10 @@ export async function curatedPublicCatalog(){
   recurringEnabled:false
  }};
 }
+
+export const parseCuratedId=id=>{
+ const match=/^curated_(instagram|tiktok)_(followers|likes|views|comments|shares|saves|story_views)_(standard|vip)$/.exec(String(id||""));
+ if(!match)return null;
+ if(match[1]==="instagram"&&!["followers","likes","views","comments"].includes(match[2]))return null;
+ return {platform:match[1]==="instagram"?"Instagram":"TikTok",kind:match[2],tier:match[3]};
+};
