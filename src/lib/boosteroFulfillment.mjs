@@ -7,6 +7,7 @@ import {litixRetailPer1000Cents,litixOrderCents,litixPurchasableDefault,litixSup
 import {litixPlatform,litixKind} from "./litixServiceClassify.mjs";
 import {publicServiceCardName} from "./serviceCardDisplay.mjs";
 import {queueCustomerDeliveryChange,sendCustomerDeliveryUpdates} from "./litixCustomerUpdates.mjs";
+import {recordProofEvent} from "./litixOrderProof.mjs";
 
 export const boosteroDatabaseURL=()=>process.env.LITIX_BOOSTERO_DATABASE_URL||process.env.LITIX_V2_DATABASE_URL||
  process.env.DATABASE_URL||process.env.POSTGRES_URL||"";
@@ -271,7 +272,7 @@ export async function syncBoosteroStatuses({sql=boosteroSQL(),operation=boostero
    const name=String(res.status||"").toLowerCase();
    const state=/^completed|complete|finished$/.test(name)?"COMPLETED":/^(canceled|cancelled|failed|error)$/.test(name)?"FAILED":"SUBMITTED";
    const snapshot={provider:"boostero",status:String(res.status||"Unknown").slice(0,80),
-    remains:res.remains??null,checked_at:new Date().toISOString()};
+    remains:res.remains??null,start_count:res.start_count??null,checked_at:new Date().toISOString()};
    // Record meaningful changes before overwriting the previous snapshot. If the outbox
    // is unavailable, the next poll retries instead of silently dropping the update.
    const info=await sql.query("select quantity from public.litix_v2_orders where id=$1 and payment_state=\'paid\'",[item.litix_order_id]);
@@ -284,6 +285,11 @@ export async function syncBoosteroStatuses({sql=boosteroSQL(),operation=boostero
    const customerState=state==="COMPLETED"?"completed":state==="FAILED"?"failed":"processing";
    await sql.query("update public.litix_v2_orders set fulfillment_state=$3,last_supplier_status=$4::jsonb,updated_at=now() where id=$1 and supplier_order_id=$2 and payment_state='paid'",
     [item.litix_order_id,String(item.supplier_order_id),customerState,JSON.stringify(snapshot)]);
+   const proofEvent=state==="COMPLETED"?"DELIVERY_COMPLETED":
+    state==="FAILED"?"REVIEW_REQUIRED":"DELIVERY_STATUS_RECORDED";
+   await recordProofEvent({sql,orderId:item.litix_order_id,eventType:proofEvent,
+    details:{supplierOrderId:String(item.supplier_order_id),status:snapshot.status,
+     startCount:snapshot.start_count,remains:snapshot.remains,observedAt:snapshot.checked_at}}).catch(()=>{});
    if(state==="FAILED"||(state==="SUBMITTED"&&item.attempted_at&&Date.now()-Date.parse(item.attempted_at)>86400000))
     await boosteroNotice(item.litix_order_id,null).catch(()=>{});
    checked++;
