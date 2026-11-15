@@ -2,12 +2,15 @@
 import {useEffect,useMemo,useState} from "react";
 import {CORE_KINDS,CORE_PLATFORMS,CORE_QUANTITIES,TIKTOK_EXTRA_KINDS} from "../config/curatedServices.mjs";
 import {STATIC_CURATED_PREVIEW} from "../lib/curatedStaticPreview.mjs";
+import {DEFAULT_CURATED_SKU,initialCuratedOffer,formatCuratedUnitRange} from "../lib/litixCuratedFirstPaint.mjs";
+import {curatedQuantityBadge} from "../lib/litixCuratedSavings.mjs";
 
 const usd=cents=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(Number(cents||0)/100);
 const friendly=kind=>kind==="story_views"?"Story Views":kind[0].toUpperCase()+kind.slice(1);
 
-export default function CuratedFastCheckout({selected,quantity,onChoose,onQuantityChange}){
- const [platform,setPlatform]=useState("Instagram");
+export default function CuratedFastCheckout({selected,quantity,onChoose,onQuantityChange,initialServiceId=DEFAULT_CURATED_SKU}){
+ const initial=initialCuratedOffer(initialServiceId);
+ const [platform,setPlatform]=useState(initial?.platform||"Instagram");
  useEffect(()=>{
   const params=new URLSearchParams(window.location.search);
   const match=/^curated_(instagram|tiktok)_(followers|likes|views|comments)_(standard|vip)$/.exec(params.get("service")||"");
@@ -15,8 +18,8 @@ export default function CuratedFastCheckout({selected,quantity,onChoose,onQuanti
   setPlatform(match[1]==="instagram"?"Instagram":"TikTok");
   setKind(match[2]);setTier(match[3]);
  },[]);
- const [kind,setKind]=useState("followers");
- const [tier,setTier]=useState("standard");
+ const [kind,setKind]=useState(initial?.kind||"followers");
+ const [tier,setTier]=useState(initial?.tier||"standard");
  const [products,setProducts]=useState(STATIC_CURATED_PREVIEW);
  const [status,setStatus]=useState("preview");
  const [retry,setRetry]=useState(0);
@@ -52,8 +55,9 @@ export default function CuratedFastCheckout({selected,quantity,onChoose,onQuanti
  },[status,current?.id,current?.per1000,current?.min,current?.max]);
  const go=(p,k,t="standard")=>{
   setPlatform(p);setKind(k);setTier(t);setCustomOpen(false);setExtraMessage("");
-  const next=live(p,k,t)||live(p,k,"standard");
-  if(next)onChoose(next);
+  const next=live(p,k,t)||live(p,k,"standard")||
+    (status==="ready"?null:find(p,k,t)||find(p,k,"standard"));
+  onChoose(next);
  };
  const exactQuantity=CORE_QUANTITIES.find(x=>x===quantity);
  const selectedPrice=exactQuantity!==undefined?current?.quantityCards?.find(x=>x.quantity===quantity):null;
@@ -121,13 +125,16 @@ export default function CuratedFastCheckout({selected,quantity,onChoose,onQuanti
   {status==="ready"&&!current&&<p role="status" className="litix-curated-notice">This service is currently unavailable in quick checkout. Try another service or browse the full catalog.</p>}
   {current&&<div className="litix-curated-packages">
    <div className="litix-curated-heading"><span>04</span><strong>Choose Quantity</strong></div>
-   <p className="litix-curated-tier-description">{current.label} · {Number(current.min).toLocaleString()}–{Number(current.max).toLocaleString()} units</p>
+   <p className="litix-curated-tier-description">{current.label} · <span className="litix-curated-range">{formatCuratedUnitRange(current.min,current.max)}</span></p>
    <div role="group" aria-label="Quantity package cards" className="litix-curated-package-grid">
     {current.quantityCards.map(card=><button key={card.quantity} type="button"
      className={quantity===card.quantity?"is-selected":""}
      aria-pressed={quantity===card.quantity} disabled={status==="ready"&&!card.available}
      onClick={()=>{onQuantityChange(card.quantity);setCustomOpen(false);}}>
-     {card.quantity===1000&&<span className="litix-curated-featured">FEATURED</span>}
+     {curatedQuantityBadge(current.quantityCards,card.quantity,{live:status==="ready"})&&
+      <span className="litix-curated-featured">
+       {curatedQuantityBadge(current.quantityCards,card.quantity,{live:status==="ready"})}
+      </span>}
      <strong>{card.quantity.toLocaleString()}</strong><span>{friendly(kind)}</span>
      <b>{card.totalCents!==null&&card.totalCents!==undefined?usd(card.totalCents):status==="ready"?"Unavailable":"Check live price"}</b>
     </button>)}
