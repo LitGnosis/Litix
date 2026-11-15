@@ -129,7 +129,7 @@ export async function boosteroNotice(orderId,secret){
  const allocationLines=allocations.map((p,i)=>
   (postPlatform==="Instagram"?"Post ":"Video ")+(i+1)+": "+String(p.link||"")+" — "+Number(p.quantity||0).toLocaleString()+" likes");
  const publicService=publicServiceCardName({name:o.service_name});
- const publicLink=secret?"https://www.litix.net/track?track="+encodeURIComponent(orderId)+"&token="+encodeURIComponent(secret):null;
+ const publicLink=secret?(o.metadata?.cart===true?"https://www.litix.net/track/"+encodeURIComponent(secret):"https://www.litix.net/track?track="+encodeURIComponent(orderId)+"&token="+encodeURIComponent(secret)):null;
  // Customer and owner emails are Litix-branded. Sensitive supplier IDs remain
  // in the internal ledger and are never included in email bodies or subject lines.
  const amount="USD $"+(Number(o.amount_cents)/100).toFixed(2);
