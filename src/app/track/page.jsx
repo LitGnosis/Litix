@@ -123,6 +123,24 @@ export default function OrderTracker(){
      {order.status&&<div><small>Latest Litix status</small><strong>{order.status}</strong></div>}
     </div>
     <p className="ltx-track-service"><b>Service:</b> {litixCustomerServiceName(order.service)}</p>
+    {Array.isArray(order.cartItems)&&order.cartItems.length>0&&
+     <section aria-label="Individual cart deliveries" style={{padding:"14px 0"}}>
+      <h3 style={{fontSize:18,margin:"0 0 12px"}}>Your cart deliveries</h3>
+      <div style={{display:"grid",gap:10}}>{order.cartItems.map(item=>
+       <article key={item.index} style={{border:"1px solid #4c99cc80",background:"#091f35",padding:14,borderRadius:12}}>
+        <div style={{display:"flex",justifyContent:"space-between",gap:10,flexWrap:"wrap"}}>
+         <strong>{item.service}</strong><span>{item.status||"Processing"}</span>
+        </div>
+        <p className="small">{Number(item.quantity).toLocaleString()} units ·
+         {" "}{new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(Number(item.amountCents||0)/100)}</p>
+        {item.startCount!==null&&item.startCount!==undefined&&
+         <p className="small">Initial recorded count: {Number(item.startCount).toLocaleString()}</p>}
+        {item.remains!==null&&item.remains!==undefined&&
+         <p className="small">Remaining: {Number(item.remains).toLocaleString()}</p>}
+        {item.checkedAt&&<p className="small">Last supplier report: {new Date(item.checkedAt).toLocaleString()}</p>}
+        {item.completedAt&&<p className="small">Completion reported: {new Date(item.completedAt).toLocaleString()}</p>}
+       </article>)}</div>
+     </section>}
     {Array.isArray(order.posts)&&order.posts.length>0&&<section aria-label="Individual post delivery status" style={{padding:"14px 0"}}>
       <h3 style={{fontSize:17,margin:"0 0 12px"}}>Your selected posts</h3>
       {order.posts.some(p=>Number.isSafeInteger(p.delivered))&&<p className="ltx-track-meta">
@@ -149,6 +167,9 @@ export default function OrderTracker(){
      </section>}
 
     {order.checkedAt&&<p className="ltx-track-meta">Status updated: {new Date(order.checkedAt).toLocaleString()} {order.liveSupplierStatus?"(live update)":"(last recorded update)"}</p>}
+    {order.payment==="paid"&&typeof order.reorderUrl==="string"&&order.reorderUrl.startsWith("/?")&&
+     <p><a className="ltx-track-btn" href={order.reorderUrl}>Reorder Same Package in 1 Click</a>
+      <span className="ltx-track-meta" style={{display:"block",marginTop:9}}>Pre-fills your public target and quantity. You'll review today's price and authorize a new payment before any order is placed.</span></p>}
     <div className="ltx-track-actions"><button type="button" className="ltx-track-btn" disabled={busy} onClick={()=>runStatus(method)}>{busy?"Checking status…":"Refresh status"}</button><a className="ltx-track-btn ltx-track-btn-secondary" href={helpUrl} target="_blank" rel="noreferrer noopener">Get order help</a></div>
     <p className="ltx-track-footnote">Payment confirmation and actual follower delivery are separate steps. Litix displays the latest recorded delivery update; followers will be confirmed when delivery is reported complete.</p>
    </section>}

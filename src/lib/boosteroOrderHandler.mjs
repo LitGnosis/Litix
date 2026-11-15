@@ -4,6 +4,7 @@ import {resolveTikTokVideoLink} from "./tiktokVideoLinks.mjs";
 import {stageBoosteroPostChildren,releasePaidBoosteroPosts,dispatchBoosteroMultiPosts} from "./boosteroMultiPostFulfillment.mjs";
 import {boosteroProduction,boosteroCompatibleServices} from "./boosteroReadOnly.mjs";
 import {retiredAutoLikesService} from "./retiredAutolikes.mjs";
+import {litixProofEnabled,recordOrderProof,recordProofEvent} from "./litixOrderProof.mjs";
 import {boosteroAdminAuthorized,boosteroProductionReady,boosteroSQL,boosteroDestination,verifyBoosteroQuote,
  boosteroOrderId,boosteroToken,hashBoostero,dispatchBoostero,boosteroNotice,boosteroQuote} from "./boosteroFulfillment.mjs";
 const send=(body,status=200)=>Response.json(body,{status,headers:{"cache-control":"no-store","referrer-policy":"no-referrer","x-content-type-options":"nosniff"}});
@@ -194,6 +195,15 @@ export async function handleBoosteroOrder(request,{adminOnly=true}={}){
   return send({error:"Cannot create safe order ledger; no charge attempted",chargeAttempted:false,orderCreated:false},503);
  }
  if(!inserted)return send({error:"Checkout already submitted; no repeat charge or purchase",chargeAttempted:false},409);
+ if(litixProofEnabled()){
+  try{
+   await recordOrderProof({sql,request,orderId,source:"single_checkout"});
+   await recordProofEvent({sql,orderId,eventType:"CHECKOUT_CREATED",details:{quantity,amountCents:chargeCents}});
+  }catch{
+   await sql.query("update public.litix_v2_orders set payment_state='review' where id=$1 and payment_state='processing'",[orderId]).catch(()=>{});
+   return send({error:"Order evidence log unavailable; no card charge attempted.",chargeAttempted:false},503);
+  }
+ }
  if(autoMulti){
   try{await stageBoosteroPostChildren(orderId,id,verifiedPosts,{sql})}
   catch{
@@ -212,10 +222,12 @@ export async function handleBoosteroOrder(request,{adminOnly=true}={}){
    response=Object.fromEntries(new URLSearchParams(await r.text()));
   }catch{
    await sql.query("update public.litix_v2_orders set payment_state='review' where id=$1",[orderId]).catch(()=>{});
+   await recordProofEvent({sql,orderId,eventType:"PAYMENT_UNCERTAIN"}).catch(()=>{});
    return send({orderId,payment:"review",message:"Payment outcome unknown: do not submit another purchase"},202);
   }
   if(String(response.response)!=="1"){
    await sql.query("update public.litix_v2_orders set payment_state='declined' where id=$1",[orderId]).catch(()=>{});
+   await recordProofEvent({sql,orderId,eventType:"PAYMENT_DECLINED"}).catch(()=>{});
    return send({orderId,payment:"declined",message:"Card declined; no order was placed"},402);
   }
   const transaction=String(response.transactionid||"");
@@ -228,6 +240,7 @@ export async function handleBoosteroOrder(request,{adminOnly=true}={}){
     "with verified as (update public.litix_v2_orders set payment_state='paid',payment_transaction_id=$2,fulfillment_state=$3,updated_at=now() where id=$1 and payment_state='processing' returning id) update public.litix_boostero_fulfillment set state=$4,updated_at=now() where litix_order_id in(select id from verified) and state='PENDING_PAYMENT' returning litix_order_id",
     [orderId,transaction,multiple?"manual_review":"pending",multiple?"MANUAL_REVIEW":"QUEUED"]);
    if(marked.length!==1)throw Error("payment_persist_mismatch");
+   await recordProofEvent({sql,orderId,eventType:"PAYMENT_APPROVED",details:{transactionId:transaction,amountCents:chargeCents}}).catch(()=>{});
    if(autoMulti){
     const released=await releasePaidBoosteroPosts(orderId,{sql});
     if(released!==verifiedPosts.length)throw Error("child_payment_release_incomplete");
@@ -241,6 +254,8 @@ export async function handleBoosteroOrder(request,{adminOnly=true}={}){
   ?await dispatchBoosteroMultiPosts(orderId,{sql}).catch(()=>({submitted:false,state:"MANUAL_REVIEW",requiresReview:true}))
   :multiple?{submitted:false,state:"MANUAL_REVIEW",requiresReview:false}:
   await dispatchBoostero(orderId).catch(()=>({submitted:false,state:"UNKNOWN_OUTCOME",requiresReview:true}));
+ await recordProofEvent({sql,orderId,eventType:attempt.submitted?"SUPPLIER_SUBMITTED":"REVIEW_REQUIRED",
+  details:{supplierOrderId:attempt.supplierOrderId||null,state:attempt.state}}).catch(()=>{});
  after(async()=>{await Promise.allSettled([
   boosteroNotice(orderId,paymentMode==="card"?secret:null),
   ...(attempt.requiresReview?[boosteroNotice(orderId,null)]:[])

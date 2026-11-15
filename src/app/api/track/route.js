@@ -18,6 +18,8 @@ export async function GET(request){
      status:x.supplierStatus,remains:x.remains,
      checkedAt:x.lastChecked||((Array.isArray(x.posts)?x.posts:[]).map(p=>p.checkedAt).filter(Boolean).sort().at(-1)||null),
      posts:Array.isArray(x.posts)?x.posts:[],
+     cartItems:Array.isArray(x.cartItems)?x.cartItems:[],
+     reorderUrl:typeof x.reorderUrl==="string"?x.reorderUrl:null,
      deliveryConfirmed:x.fulfillment==="COMPLETED",liveSupplierStatus:false,
      statusNote:"Latest recorded Litix delivery status. A submitted order is not yet a completed delivery."}},
      {headers:{"cache-control":"no-store","referrer-policy":"no-referrer"}});
