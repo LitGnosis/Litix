@@ -19,7 +19,7 @@ export function tiktokSkuForService(row){
  const name=String(row?.name||"").trim(),category=String(row?.category||"").trim();
  if(!/\btiktok\b/i.test(name+" "+category))return null;
  for(const [sku,pattern] of Object.entries(TIKTOK_EXACT_MATCH))
-  if(pattern.test(name))return sku;
+  if(pattern.test(name)||pattern.test(category))return sku;
  return null;
 }
 export const strictTikTok35Service=row=>activeSupplierRow(row)&&
