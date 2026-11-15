@@ -149,7 +149,8 @@ export function defaultCheckoutQuantity(service){
 export function quoteCentsForQuantity(service,quantity){
  if(!service||!Number.isSafeInteger(Number(quantity))||Number(quantity)<Number(service.min)||
   Number(quantity)>Number(service.max)||((Number(quantity)-Number(service.min))%Number(service.unitStep||1))!==0)return null;
- return Math.ceil(Number(service.per1000)*Number(quantity)/10-1e-8);
+ const cents=Number(service.per1000)*Number(quantity)/10;
+ return service.pricingRule==="nearest"?Math.max(99,Math.round(cents)):Math.ceil(cents-1e-8);
 }
 export function checkoutQuantityEligible(service,quantity){
  const cents=quoteCentsForQuantity(service,quantity);
