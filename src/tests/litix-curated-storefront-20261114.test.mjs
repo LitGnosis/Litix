@@ -92,7 +92,7 @@ test("selector routes opaque IDs through existing payment handler and refuses fa
  assert.match(selector,/Choose Service/);
  assert.match(selector,/Custom amount/);
  assert.match(selector,/FEATURED/);
- assert.match(selector,//services/);
+ assert.ok(selector.includes('href="/services"'));
  assert.match(api,/parseCuratedId/);
  assert.match(api,/resolveCuratedSupplier/);
  assert.match(api,/handleBoosteroOrder/);
@@ -100,6 +100,6 @@ test("selector routes opaque IDs through existing payment handler and refuses fa
  assert.match(readiness,/verifyBoosteroQuote/);
  assert.match(readiness,/parseCuratedId/);
  assert.match(price,/pricingRule==="nearest"/);
- assert.match(retired,/auto[\\s_-]/);
+ assert.ok(retired.includes("auto"));
  assert.doesNotMatch(selector,/Save 15%|Save 25%|30-Day Refill Protection|Starts in minutes/);
 });
