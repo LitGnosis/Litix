@@ -8,6 +8,13 @@ const friendly=kind=>kind==="story_views"?"Story Views":kind[0].toUpperCase()+ki
 
 export default function CuratedFastCheckout({selected,quantity,onChoose,onQuantityChange}){
  const [platform,setPlatform]=useState("Instagram");
+ useEffect(()=>{
+  const params=new URLSearchParams(window.location.search);
+  const match=/^curated_(instagram|tiktok)_(followers|likes|views|comments)_(standard|vip)$/.exec(params.get("service")||"");
+  if(!match)return;
+  setPlatform(match[1]==="instagram"?"Instagram":"TikTok");
+  setKind(match[2]);setTier(match[3]);
+ },[]);
  const [kind,setKind]=useState("followers");
  const [tier,setTier]=useState("standard");
  const [products,setProducts]=useState(STATIC_CURATED_PREVIEW);
