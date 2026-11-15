@@ -70,4 +70,18 @@ CREATE INDEX IF NOT EXISTS litix_cart_receipts_recovery
 CREATE INDEX IF NOT EXISTS litix_order_proof_events_history
  ON public.litix_order_proof_events (order_id,occurred_at,id);
 
+CREATE OR REPLACE FUNCTION public.litix_proof_events_no_rewrite()
+RETURNS trigger LANGUAGE plpgsql AS $
+BEGIN
+ RAISE EXCEPTION 'Litix order proof events are append-only';
+END;
+$;
+
+DROP TRIGGER IF EXISTS litix_proof_events_append_only
+ ON public.litix_order_proof_events;
+
+CREATE TRIGGER litix_proof_events_append_only
+ BEFORE UPDATE OR DELETE ON public.litix_order_proof_events
+ FOR EACH ROW EXECUTE FUNCTION public.litix_proof_events_no_rewrite();
+
 COMMIT;
