@@ -18,8 +18,12 @@ export const activeSupplierRow=row=>row&&
 export function tiktokSkuForService(row){
  const name=String(row?.name||"").trim(),category=String(row?.category||"").trim();
  if(!/\btiktok\b/i.test(name+" "+category))return null;
- for(const [sku,pattern] of Object.entries(TIKTOK_EXACT_MATCH))
+ const explicitKind=/\b(followers|likes|views|comments|shares|saves)\b/i.exec(name)?.[1]?.toLowerCase()||"";
+ for(const [sku,pattern] of Object.entries(TIKTOK_EXACT_MATCH)){
+  const kind=sku.replace(/^tiktok_/,"").replace(/^custom_/,"");
+  if(explicitKind&&explicitKind!==kind)continue;
   if(pattern.test(name)||pattern.test(category))return sku;
+ }
  return null;
 }
 export const strictTikTok35Service=row=>activeSupplierRow(row)&&
