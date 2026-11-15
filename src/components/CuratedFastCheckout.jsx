@@ -131,7 +131,10 @@ export default function CuratedFastCheckout({selected,quantity,onChoose,onQuanti
      className={quantity===card.quantity?"is-selected":""}
      aria-pressed={quantity===card.quantity} disabled={status==="ready"&&!card.available}
      onClick={()=>{onQuantityChange(card.quantity);setCustomOpen(false);}}>
-     {curatedQuantityBadge(current.quantityCards,card.quantity,{live:status==="ready"})&&
+     {card.quantity===1000&&<span className="litix-curated-featured">
+      {curatedQuantityBadge(current.quantityCards,card.quantity,{live:status==="ready"})||"FEATURED"}
+     </span>}
+     {[2500,5000].includes(card.quantity)&&
       <span className="litix-curated-featured">
        {curatedQuantityBadge(current.quantityCards,card.quantity,{live:status==="ready"})}
       </span>}
