@@ -97,9 +97,8 @@ export default function CuratedFastCheckout({selected,quantity,onChoose,onQuanti
    {platform==="TikTok"&&<div className="litix-curated-extras">
     <span>More TikTok options</span>
     <div role="group" aria-label="More TikTok service options">
-     {TIKTOK_EXTRA_KINDS.map(x=><button key={x.kind} type="button"
-      aria-pressed={kind===x.kind}
-      disabled={["auto_likes","auto_views"].includes(x.kind)}
+     {TIKTOK_EXTRA_KINDS.filter(x=>!["auto_likes","auto_views"].includes(x.kind))
+      .map(x=><button key={x.kind} type="button" aria-pressed={kind===x.kind}
       onClick={()=>extraClick(x)}>{x.label}</button>)}
     </div>
     <a href="/services?platform=TikTok">Monthly growth and engagement packages in full catalog →</a>

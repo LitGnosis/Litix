@@ -625,12 +625,9 @@ export default function Home({landingServiceId=null}){
   <p className="small">This package is not currently available for purchase. Select another service or contact Litix support.</p>}
  {selected?.purchasable&&checkoutAuthorized&&config.ready&&!cardReady&&<button type="button" className="alt" onClick={()=>{setNotice("Retrying secure card fields…");setCardRetry(v=>v+1)}}>Retry secure fields</button>}
  </>:null}
- {checkoutRoute==="curated"&&selected&&<div className="litix-curated-fulfillment">
-  ⚡ Automated order submission after verified payment · Start times vary · No social password required
-  <label style={{display:"block",marginTop:9,opacity:.7}}>
-   <input type="checkbox" disabled checked={false} readOnly/> Add 30-Day Auto-Likes (currently unavailable)
-  </label>
- </div>}
+ {checkoutRoute==="curated"&&selected&&<p className="litix-curated-fulfillment">
+  Eligible orders are submitted after confirmed payment. Start times vary by service.
+ </p>}
  <PremiumInlineCheckout
   showFields={Boolean(selected?.purchasable&&checkoutAuthorized&&config.ready&&config.publicKey)}
   cardReady={cardReady}

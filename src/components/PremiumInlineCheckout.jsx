@@ -62,10 +62,9 @@ export default function PremiumInlineCheckout({
         <li><span aria-hidden="true">✓</span> Live service verification</li>
         <li><span aria-hidden="true">✓</span> Private order tracking</li>
         <li><span aria-hidden="true">✓</span> PayKings-hosted card fields</li>
+        <li><span aria-hidden="true">✓</span> No social passwords required</li>
       </ul>
-      <p className="premium-checkout-security">
-        Encrypted PayKings checkout · Instant live verification before any charge · No social passwords required
-      </p>
+
     </div>
   );
 }
