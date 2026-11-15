@@ -2,7 +2,7 @@ import {boosteroProduction} from "./boosteroReadOnly.mjs";
 import {boosteroQuote} from "./boosteroFulfillment.mjs";
 import {retiredAutoLikesService} from "./retiredAutolikes.mjs";
 import {CORE_KINDS,CORE_PLATFORMS,CORE_QUANTITIES} from "../config/curatedServices.mjs";
-import {activeSupplierRow,resolveExactTikTokServices,tiktokTierLabel} from "./tiktokCatalog.mjs";
+import {activeSupplierRow,resolveExactTikTokServices,tiktokSkuForService,tiktokTierLabel} from "./tiktokCatalog.mjs";
 import {litixPlatform,litixKind} from "./litixServiceClassify.mjs";
 
 let cached=null,expiry=0,pending=null;
@@ -32,21 +32,40 @@ function chooseInstagram(raw,kind,tier){
   return usa(a)-usa(b)||Number(a.rate)-Number(b.rate)||Number(a.service)-Number(b.service);
  })[0]||null;
 }
+function liveTikTokFallback(raw,kind){
+ // Match the supplier item's own name: a broad category can contain the
+ // wrong engagement type or a product that requires an unsupported input.
+ const forbidden=/\b(?:auto(?:matic)?|monthly|growth|packages?|subscriptions?|story|stories|custom|live\s*stream)\b/i;
+ const candidates=(Array.isArray(raw)?raw:[]).filter(row=>{
+  const name=String(row?.name||"").trim();
+  return activeSupplierRow(row)&&!retiredAutoLikesService(row)&&
+   /^\s*(?:NEW\s+)?TikTok\b/i.test(name)&&!forbidden.test(name)&&
+   litixKind(name,"")===kind&&litixPlatform(name,"")==="TikTok";
+ });
+ return candidates.sort((a,b)=>{
+  const quality=x=>/\b(?:High Quality|Premium Quality)\b/i.test(String(x.name||""))?0:1;
+  return quality(a)-quality(b)||Number(a.rate)-Number(b.rate)||
+   Number(a.service)-Number(b.service);
+ })[0]||null;
+}
 export function resolveCuratedSupplier(raw,platform,kind,tier="standard"){
  if(!CORE_PLATFORMS.includes(platform)||!["standard","vip"].includes(tier))return null;
  if(!CORE_KINDS.includes(kind)&&!(platform==="TikTok"&&
   ["shares","saves","story_views"].includes(kind)))return null;
  if(platform==="TikTok"){
-  const primary=resolveExactTikTokServices(raw)["tiktok_"+kind]||null;
-  if(tier==="standard")return primary;
-  // VIP is available only if a distinct live Default listing explicitly
-  // advertises active-look accounts; otherwise the switch stays disabled.
+  const preferred=resolveExactTikTokServices(raw)["tiktok_"+kind]||null;
+  const standard=preferred||liveTikTokFallback(raw,kind);
+  if(tier==="standard")return standard;
+  if(!standard)return null;
+  // VIP must be another currently available Default service, never the
+  // same supplier listing shown twice at different prices.
   return (Array.isArray(raw)?raw:[]).filter(row=>activeSupplierRow(row)&&
-   !retiredAutoLikesService(row)&&String(row.service)!==String(primary?.service)&&
-   litixPlatform(row.name,row.category)==="TikTok"&&
-   litixKind(row.name,row.category)===kind&&
+   !retiredAutoLikesService(row)&&String(row.service)!==String(standard.service)&&
+   litixPlatform(row.name,"")==="TikTok"&&
+   litixKind(row.name,"")===kind&&
+   !/\b(?:auto(?:matic)?|monthly|growth|packages?|subscriptions?|story|stories|custom|live\s*stream)\b/i.test(String(row.name||""))&&
    /\b(?:Real Accounts|Active Accounts|Super Real Accounts)\b/i.test(String(row.name||"")))
-   .sort((x,y)=>Number(x.rate)-Number(y.rate)||Number(x.service)-Number(y.service))[0]||null;
+   .sort((a,b)=>Number(a.rate)-Number(b.rate)||Number(a.service)-Number(b.service))[0]||null;
  }
  return chooseInstagram(Array.isArray(raw)?raw:[],kind,tier);
 }
@@ -72,7 +91,12 @@ export function curatedPublicProduct(raw,platform,kind,tier="standard"){
  return {
   id:"curated_"+sku+"_"+tier,
   sku,platform,kind,tier,name:platform+" "+(kind==="story_views"?"Story Views":kind[0].toUpperCase()+kind.slice(1)),
-  label:tier==="vip"?"Active-look listing":platform==="TikTok"?tiktokTierLabel(sku):"High Quality",
+  label:tier==="vip"?"Active-look listing":platform==="TikTok"
+   ?(tiktokSkuForService(service)===sku?tiktokTierLabel(sku):
+    /\b(?:Real Accounts|Active Accounts|Super Real Accounts)\b/i.test(String(service.name||""))
+     ?"Active-look service":/\b(?:High Quality|Premium Quality)\b/i.test(String(service.name||""))
+     ?"High Quality":"Standard service")
+   :"High Quality",
   min:minimum,max:Number(service.max),unitStep:1,per1000:quote.retailPer1000Cents/100,
   pricingRule:quote.pricingRule,startingAmountCents:quote.amountCents,
   purchasable:true,quantityCards:cards
