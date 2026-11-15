@@ -1,5 +1,6 @@
 import {GET as smmTracking} from "../[action]/route.js";
 import {GET as boosteroTracking} from "../internal/boostero/track/route.js";
+import {publicServiceCardName} from "../../../lib/serviceCardDisplay.mjs";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 export const maxDuration=60;
@@ -12,7 +13,7 @@ export async function GET(request){
    const r=await boosteroTracking(new Request(url,request));
    if(r.ok){
     const payload=await r.json(),x=payload.order;
-    return Response.json({order:{id:x.id,service:x.service,quantity:Number(x.quantity),
+    return Response.json({order:{id:x.id,service:publicServiceCardName({name:x.service}),quantity:Number(x.quantity),
      amount:(Number(x.amountCents)/100).toFixed(2),payment:x.payment,fulfillment:x.fulfillment,
      status:x.supplierStatus,remains:x.remains,
      checkedAt:x.lastChecked||((Array.isArray(x.posts)?x.posts:[]).map(p=>p.checkedAt).filter(Boolean).sort().at(-1)||null),
