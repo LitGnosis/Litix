@@ -113,7 +113,11 @@ export default function CuratedFastCheckout({selected,quantity,onChoose,onQuanti
    <div className="litix-curated-tiers" role="group" aria-label="Choose quality">
     <button type="button" className={tier==="standard"?"is-selected":""}
      aria-pressed={tier==="standard"} disabled={status==="ready"&&!find(platform,kind,"standard")}
-     onClick={()=>go(platform,kind,"standard")}>High Quality <small>Standard</small></button>
+     onClick={()=>go(platform,kind,"standard")}>
+     {status==="ready"&&live(platform,kind,"standard")?.label==="Active-look service"
+      ?"Active / Real-Look":"High Quality"}
+     <small>Standard</small>
+    </button>
     {live(platform,kind,"vip")&&<button type="button" className={tier==="vip"?"is-selected":""}
      aria-pressed={tier==="vip"}
      onClick={()=>go(platform,kind,"vip")}>Real / Active <small>VIP quality</small></button>}

@@ -554,7 +554,13 @@ export default function Home({landingServiceId=null}){
    <div className="litix-purchase-layout"><section id="checkout" className="panel sticky"><div className="kicker">SECURE PAYKINGS CHECKOUT</div><h2>Your order</h2><ol className="checkout-steps" aria-label="Checkout steps"><li className={selected?"step-done":"step-current"}>Choose service</li><li className={selected&&link?"step-current":"step-pending"}>Order details</li><li className={cardReady?"step-done":"step-pending"}>Secure payment</li></ol><form onSubmit={submit} className="form">
  {checkoutRoute==="curated"?
  <CuratedFastCheckout selected={selected} quantity={qty} initialServiceId={landingServiceId||DEFAULT_CURATED_SKU}
-  onChoose={service=>{setSelected(service);setQty(service?.preview?curatedPresetQuantity(service):defaultCheckoutQuantity(service));setReceipt(null);setNotice("");setKey(crypto.randomUUID())}}
+  onChoose={service=>{
+   const sameService=Boolean(service&&selected?.id===service.id);
+   const preferredQuantity=sameService&&checkoutQuantityEligible(service,qty)
+    ?qty:service?.preview?curatedPresetQuantity(service):defaultCheckoutQuantity(service);
+   setSelected(service);setQty(preferredQuantity);setReceipt(null);
+   setNotice("");setKey(crypto.randomUUID());
+  }}
   onQuantityChange={setQty}/>:
  <LitixCheckoutSelector selected={selected} onChoose={service=>{setSelected(service);setQty(defaultCheckoutQuantity(service));setReceipt(null);setNotice("");setKey(crypto.randomUUID())}}/>}
  {!multiMode&&<label className="litix-early-link" style={{display:"block",margin:"14px 0"}}>
