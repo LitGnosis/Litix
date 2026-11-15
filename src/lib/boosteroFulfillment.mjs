@@ -89,13 +89,27 @@ export async function verifyBoosteroQuote(serviceId,quantity,_sql=boosteroSQL())
  return {quote:boosteroQuote({service,quantity}),service};
 }
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function litixEmailHtml(subject,body){
+ const text=esc(body).replace(/\n/g,"<br>");
+ const url=body.match(/^Track your order:\s*(https:\/\/\S+)$/m)?.[1]||null;
+ const track=url?
+  '<p style="margin:24px 0"><a href="'+esc(url)+'" style="display:inline-block;padding:14px 20px;border-radius:12px;background:#1a82c3;color:#fff;text-decoration:none;font-weight:700">Track your Litix order</a></p>':"";
+ return '<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"></head>'+
+  '<body style="margin:0;padding:28px 12px;background:#061426;font-family:Arial,sans-serif;color:#e8f4ff">'+
+  '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width:600px;margin:auto;border:1px solid #285e87;border-radius:16px;background:#0b243d"><tr><td style="padding:28px 20px">'+
+  '<div style="font-size:15px;font-weight:800;letter-spacing:2px;color:#83d8ff">LITIX</div>'+
+  '<h1 style="font-size:24px;line-height:1.3;margin:18px 0;color:#fff">'+esc(subject)+'</h1>'+
+  '<div style="font-size:14px;line-height:1.8;overflow-wrap:anywhere">'+text+'</div>'+track+
+  '<div style="margin-top:28px;border-top:1px solid #31516d;padding-top:15px;color:#a8ccdf;font-size:12px">Litix · Secure checkout · No social passwords required</div>'+
+  '</td></tr></table></body></html>';
+}
 async function resend({to,subject,text,key}){
  const credential=process.env.RESEND_API_KEY||process.env.LITIX_RESEND_API_KEY;
  if(!credential)throw Error("resend_unavailable");
  const r=await fetch("https://api.resend.com/emails",{method:"POST",cache:"no-store",signal:AbortSignal.timeout(8500),
   headers:{"authorization":"Bearer "+credential,"content-type":"application/json","Idempotency-Key":key},
   body:JSON.stringify({from:"Litix <orders@litix.net>",to:Array.isArray(to)?to:[to],subject,text,
-   html:"<div style='font-family:Arial,sans-serif;white-space:pre-wrap'>"+esc(text)+"</div>"})});
+   html:litixEmailHtml(subject,text)})});
  if(!r.ok)throw Error("resend_http_"+r.status);
 }
 export async function boosteroNotice(orderId,secret){
@@ -103,6 +117,12 @@ export async function boosteroNotice(orderId,secret){
  const orders=await sql.query("select o.id,o.email,o.service_name,o.quantity,o.amount_cents,o.payment_state,o.destination,o.metadata,f.state,f.supplier_order_id,f.supplier_status,f.payment_mode from public.litix_v2_orders o join public.litix_boostero_fulfillment f on o.id=f.litix_order_id where o.id=$1",[orderId]);
  if(orders.length!==1)return false;
  const o=orders[0];
+ const cartLines=o.metadata?.cart===true?
+  await sql.query("select ordinal,service_name,quantity,retail_cents,state from public.litix_cart_lines where order_id=$1 order by ordinal",[orderId]):[];
+ const cartDescriptions=cartLines.map(item=>
+  "Item "+item.ordinal+": "+publicServiceCardName({name:item.service_name})+
+  " · "+Number(item.quantity).toLocaleString("en-US")+" units · USD $"+
+  (Number(item.retail_cents)/100).toFixed(2));
  const allocations=Array.isArray(o.metadata?.postAllocations)?o.metadata.postAllocations.slice(0,5):[];
  const postPlatform=o.metadata?.postPlatform==="instagram"?"Instagram":"TikTok";
  const automatedMulti=allocations.length>1&&o.metadata?.fulfillmentMode==="boostero_child_order_dispatch";
@@ -122,6 +142,7 @@ export async function boosteroNotice(orderId,secret){
   "Litix Order: "+orderId,
   "Service: "+publicService,
   "Quantity: "+o.quantity,
+  ...(cartDescriptions.length?["Cart line items:",...cartDescriptions]:[]),
   ...(allocations.length?["Your selected "+postPlatform+" posts:",...allocationLines,
    "Litix will coordinate separate delivery for each post."]:[]),
   "Total paid: "+amount,
@@ -138,6 +159,7 @@ export async function boosteroNotice(orderId,secret){
   "Litix Order: "+orderId,
   "Service: "+publicService,
   "Quantity: "+o.quantity,
+  ...(cartDescriptions.length?["Cart line items:",...cartDescriptions]:[]),
   ...(allocations.length?(automatedMulti?[
     "AUTOMATED MULTI-POST FULFILLMENT: Review each child delivery status in the internal Litix operations dashboard.",
     "Do NOT submit any selected post manually unless its prior supplier outcome is independently confirmed not accepted. Unknown outcomes require reconciliation.",
@@ -154,11 +176,12 @@ export async function boosteroNotice(orderId,secret){
   ownerLink?"Private tracking URL: "+ownerLink:null
  ].filter(Boolean).join("\n");
  if(secret&&o.payment_state==="paid"){
-  await Promise.allSettled([
+  const outcomes=await Promise.allSettled([
    resend({to:o.email,subject:"Litix — Payment confirmed and order tracking",text:customerBody,key:"litix-boostero-customer/"+orderId}),
    resend({to:["litixsocial@gmail.com","litgnosisllc@gmail.com"],
     subject:"Litix — New paid order "+orderId,text:ownerBody,key:"litix-boostero-owner/"+orderId})
   ]);
+  if(outcomes[0].status==="rejected")throw outcomes[0].reason;
  }else{
   // A supplier-accepted owner-wallet order is NOT a fulfillment incident.
   // Only actual failed/unknown/manual-review outcomes use the urgent subject.
