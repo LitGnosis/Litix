@@ -62,6 +62,7 @@ export function resolveCuratedSupplier(raw,platform,kind,tier="standard"){
   // same supplier listing shown twice at different prices.
   return (Array.isArray(raw)?raw:[]).filter(row=>activeSupplierRow(row)&&
    !retiredAutoLikesService(row)&&String(row.service)!==String(standard.service)&&
+   String(row.name||"").trim().toLowerCase()!==String(standard.name||"").trim().toLowerCase()&&
    litixPlatform(row.name,"")==="TikTok"&&
    litixKind(row.name,"")===kind&&
    !/\b(?:auto(?:matic)?|monthly|growth|packages?|subscriptions?|story|stories|custom|live\s*stream)\b/i.test(String(row.name||""))&&
