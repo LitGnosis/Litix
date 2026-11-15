@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import LitixIcon from "./LitixIcon";
 
 /**
  * PayKings/NMI Collect.js hosted fields. Raw card details never touch Litix.
@@ -13,13 +14,16 @@ export default function PremiumInlineCheckout({
   buttonLabel,
   showFields = false,
   helperText = "",
+  totalLabel = "",
+  selectedLabel = "",
+  showSticky = false,
 }) {
   return (
-    <div className="premium-inline-checkout" aria-label="Secure card checkout">
+    <div id="litix-secure-payment" className="premium-inline-checkout" aria-label="Secure card checkout">
       {showFields && (
         <>
           <div className="premium-checkout-heading">
-            <span className="premium-checkout-mark" aria-hidden="true">◆</span>
+            <span className="premium-checkout-mark" aria-hidden="true"><LitixIcon name="lock" size={20}/></span>
             <div>
               <p className="premium-checkout-title">Secure card checkout</p>
               <p className="premium-checkout-subtitle">Encrypted payment fields hosted by PayKings</p>
@@ -59,12 +63,24 @@ export default function PremiumInlineCheckout({
         <span>{buttonLabel}</span>
       </button>
       <ul className="litix-checkout-trust" aria-label="Checkout safeguards">
-        <li><span aria-hidden="true">✓</span> Live service verification</li>
-        <li><span aria-hidden="true">✓</span> Private order tracking</li>
-        <li><span aria-hidden="true">✓</span> PayKings-hosted card fields</li>
-        <li><span aria-hidden="true">✓</span> No social passwords required</li>
+        <li><LitixIcon name="shield-check" size={15}/> Verified price before payment</li>
+        <li><LitixIcon name="receipt" size={15}/> Private order tracking</li>
+        <li><LitixIcon name="lock" size={15}/> Hosted PayKings fields; no social password</li>
       </ul>
-
+      {showSticky&&<aside className="litix-mobile-checkout-bar" aria-label="Mobile checkout shortcut">
+        <div className="litix-mobile-checkout-total">
+          <small>{selectedLabel||"Selected service"}</small>
+          <strong>{totalLabel}</strong>
+        </div>
+        {canPay&&cardReady?
+          <button type="submit" className="litix-mobile-checkout-button" disabled={busy} aria-busy={busy}>
+           {busy?"Processing…":"Pay securely"}
+          </button>:
+          <button type="button" className="litix-mobile-checkout-button" disabled={busy}
+           onClick={()=>document.getElementById("litix-secure-payment")?.scrollIntoView({behavior:"smooth",block:"center"})}>
+           Continue to checkout
+          </button>}
+      </aside>}
     </div>
   );
 }

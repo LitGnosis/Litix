@@ -1,5 +1,4 @@
 "use client";
-import LitixVerifiedActivity from "./LitixVerifiedActivity";
 
 export default function LitixQuickShop(){
  const curated=process.env.NEXT_PUBLIC_LITIX_CURATED_STOREFRONT_ENABLED==="true";
@@ -16,7 +15,6 @@ export default function LitixQuickShop(){
 
   {process.env.NEXT_PUBLIC_LITIX_FREE_TRIAL_ENABLED==="true"&&
     <p className="litix-trial-entry"><a href="/free-trial">Try 20 free Likes or Views</a></p>}
-  <LitixVerifiedActivity/>
   <div className="litix-hero-steps" aria-label="Three steps to checkout">
    <span><b>01</b> Choose your package</span>
    <span><b>02</b> Paste a public link</span>
