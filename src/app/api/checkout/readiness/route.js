@@ -1,4 +1,4 @@
-import {boosteroProductionReady,verifyBoosteroQuote} from "../../../../lib/boosteroFulfillment.mjs";
+import {boosteroProductionReady,verifyBoosteroQuote,boosteroQuote} from "../../../../lib/boosteroFulfillment.mjs";
 import {boosteroProduction} from "../../../../lib/boosteroReadOnly.mjs";
 import {parseCuratedId,resolveCuratedSupplier} from "../../../../lib/curatedCatalog.mjs";
 export const runtime="nodejs";
@@ -38,7 +38,8 @@ export async function GET(request){
    :null;
   if(curated&&!resolved)return reply({ready:false,error:"The selected service is temporarily unavailable. No payment attempted.",
    chargeAttempted:false,retryable:true},409);
-  const {quote}=await timeout(verifyBoosteroQuote(serviceId||String(resolved.service),quantity),3400);
+  const {quote}=curated?{quote:boosteroQuote({service:resolved,quantity})}:
+   await timeout(verifyBoosteroQuote(serviceId,quantity),3400);
   if(quote.amountCents!==expectedAmountCents)
    return reply({ready:false,error:"The price or service limits have changed. Refresh package details before paying.",
     expectedAmountCents,currentAmountCents:quote.amountCents,
