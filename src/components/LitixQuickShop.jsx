@@ -1,4 +1,5 @@
 "use client";
+import LitixVerifiedActivity from "./LitixVerifiedActivity";
 
 export default function LitixQuickShop(){
  const curated=process.env.NEXT_PUBLIC_LITIX_CURATED_STOREFRONT_ENABLED==="true";
@@ -20,6 +21,7 @@ export default function LitixQuickShop(){
    <span className="litix-proof-separator" aria-hidden="true">·</span>
    PayKings-hosted card fields
   </p>
+  <LitixVerifiedActivity/>
   <div className="litix-hero-steps" aria-label="Three steps to checkout">
    <span><b>01</b> Choose your package</span>
    <span><b>02</b> Paste a public link</span>

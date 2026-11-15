@@ -16,6 +16,7 @@ import {newTikTokPost} from "../components/TikTokMultiPostChooser";
 import {readCustomDraft,CUSTOM_DRAFT_PREFIX} from "../lib/customQuote.mjs";
 import SocialMultiPostChooser from "../components/SocialMultiPostChooser";
 import LitixQuickShop from "../components/LitixQuickShop";
+import {DEFAULT_CURATED_SKU,initialCuratedOffer,curatedPresetQuantity} from "../lib/litixCuratedFirstPaint.mjs";
 const money=n=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD",currencyDisplay:"code"}).format(n/100);
 const cardMoney=n=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(n/100); // display-only: preserve stored cents
 const INITIAL_FAST_CHOICES=choicesForPlatform("Instagram");
@@ -30,8 +31,9 @@ const validOrderDetails=(service,url,email,quantity)=>{
 };
 const whatsappNumber=(process.env.NEXT_PUBLIC_WHATSAPP_NUMBER||"").replace(/\D/g,"");
 const publicCollectKey=process.env.NEXT_PUBLIC_PAYKINGS_NMI_COLLECT_PUBLIC_KEY||"";
-export default function Home(){
- const [services,setServices]=useState([]),[categories,setCategories]=useState([]),[recentServices,setRecentServices]=useState([]),[savedOrders,setSavedOrders]=useState([]),[workspaceReady,setWorkspaceReady]=useState(false),[cat,setCat]=useState(""),[query,setQuery]=useState(""),[platform,setPlatform]=useState("All platforms"),[quickKind,setQuickKind]=useState(""),[favoritesOnly,setFavoritesOnly]=useState(false),[compareIds,setCompareIds]=useState([]),[pg,setPg]=useState(1),[catalogRetry,setCatalogRetry]=useState(0),[catalogState,setCatalogState]=useState("loading"),[catalogSource,setCatalogSource]=useState("unavailable"),[catalogCheckoutEnabled,setCatalogCheckoutEnabled]=useState(false),[count,setCount]=useState(0),[total,setTotal]=useState(0),[selected,setSelected]=useState(CURATED_HOME_ENABLED?null:INITIAL_FAST_SERVICE),[qty,setQty]=useState(CURATED_HOME_ENABLED?1000:INITIAL_FAST_QUANTITY),[email,setEmail]=useState(""),[link,setLink]=useState(""),[config,setConfig]=useState({ready:false}),[cardReady,setCardReady]=useState(false),[cardRetry,setCardRetry]=useState(0),[busy,setBusy]=useState(false),[notice,setNotice]=useState(""),[receipt,setReceipt]=useState(null),[privateUrl,setPrivateUrl]=useState(""),[tracked,setTracked]=useState(null),[key,setKey]=useState("");const done=useRef(null),submittedKey=useRef(""),checkoutLaunchRef=useRef(false);
+export default function Home({landingServiceId=null}){
+ const firstPaintOffer=initialCuratedOffer(landingServiceId||DEFAULT_CURATED_SKU);
+ const [services,setServices]=useState([]),[categories,setCategories]=useState([]),[recentServices,setRecentServices]=useState([]),[savedOrders,setSavedOrders]=useState([]),[workspaceReady,setWorkspaceReady]=useState(false),[cat,setCat]=useState(""),[query,setQuery]=useState(""),[platform,setPlatform]=useState("All platforms"),[quickKind,setQuickKind]=useState(""),[favoritesOnly,setFavoritesOnly]=useState(false),[compareIds,setCompareIds]=useState([]),[pg,setPg]=useState(1),[catalogRetry,setCatalogRetry]=useState(0),[catalogState,setCatalogState]=useState("loading"),[catalogSource,setCatalogSource]=useState("unavailable"),[catalogCheckoutEnabled,setCatalogCheckoutEnabled]=useState(false),[count,setCount]=useState(0),[total,setTotal]=useState(0),[selected,setSelected]=useState(CURATED_HOME_ENABLED?firstPaintOffer:INITIAL_FAST_SERVICE),[qty,setQty]=useState(CURATED_HOME_ENABLED?curatedPresetQuantity(firstPaintOffer):INITIAL_FAST_QUANTITY),[email,setEmail]=useState(""),[link,setLink]=useState(""),[config,setConfig]=useState({ready:false}),[cardReady,setCardReady]=useState(false),[cardRetry,setCardRetry]=useState(0),[busy,setBusy]=useState(false),[notice,setNotice]=useState(""),[receipt,setReceipt]=useState(null),[privateUrl,setPrivateUrl]=useState(""),[tracked,setTracked]=useState(null),[key,setKey]=useState("");const done=useRef(null),submittedKey=useRef(""),checkoutLaunchRef=useRef(false);
  const [lookupId,setLookupId]=useState(""),[lookupEmail,setLookupEmail]=useState(""),[lookupBusy,setLookupBusy]=useState(false),[lookupNotice,setLookupNotice]=useState("");
  const [checkoutRoute,setCheckoutRoute]=useState(CURATED_HOME_ENABLED?"curated":"catalog");
  useEffect(()=>{
@@ -39,7 +41,10 @@ export default function Home(){
   const params=new URLSearchParams(location.search);
   const isCatalogDeepLink=/^(?:litix|boostero)_\d{1,12}$/.test(params.get("service")||"");
   setCheckoutRoute(isCatalogDeepLink?"catalog":"curated");
-  if(!isCatalogDeepLink){setSelected(null);setQty(0);}
+  if(!isCatalogDeepLink){
+   const picked=initialCuratedOffer(landingServiceId||DEFAULT_CURATED_SKU);
+   setSelected(picked);setQty(curatedPresetQuantity(picked));
+  }
  },[]);
  const [verifiedQuote,setVerifiedQuote]=useState(null);
  const [checkoutPhase,setCheckoutPhase]=useState("idle");
@@ -155,7 +160,7 @@ export default function Home(){
   ?verifiedMultiPosts&&Number.isSafeInteger(orderQuantity)&&orderQuantity<=1000000
   :checkoutQuantityEligible(selected,qty)&&
    (Number(qty)-Number(selected?.supplierMin??selected?.min??0))%Number(selected?.unitStep||1)===0;
- const checkoutFieldHint=!selected?"Choose a package to continue.":
+ const checkoutFieldHint=selected?.preview?"":!selected?"Choose your service to continue.":
   !selected.purchasable?"Select an available package to continue.":
   !linkReadyForCheckout?(multiMode?
    "Select and verify your public posts to continue.":
@@ -544,12 +549,12 @@ export default function Home(){
  useEffect(()=>{if(location.search.includes("track=")){setPrivateUrl(location.href);track(location.href)}},[]);
  return <main className="wrap"><nav className="nav litix-home-nav"><a className="brand" href="/" aria-label="Litix home"><img src="/assets/brand/litix-logo.webp" alt="Litix — Innovation, Ignited." className="litix-new-logo" /></a><div><a href="/services">Services</a><a href="#tracking">Track order</a><a href="/workspace">Workspace</a></div></nav>
  
- <LitixQuickShop/>
+ {!landingServiceId&&<LitixQuickShop/>}
 
    <div className="litix-purchase-layout"><section id="checkout" className="panel sticky"><div className="kicker">SECURE PAYKINGS CHECKOUT</div><h2>Your order</h2><ol className="checkout-steps" aria-label="Checkout steps"><li className={selected?"step-done":"step-current"}>Choose service</li><li className={selected&&link?"step-current":"step-pending"}>Order details</li><li className={cardReady?"step-done":"step-pending"}>Secure payment</li></ol><form onSubmit={submit} className="form">
  {checkoutRoute==="curated"?
- <CuratedFastCheckout selected={selected} quantity={qty}
-  onChoose={service=>{setSelected(service);setQty(defaultCheckoutQuantity(service));setReceipt(null);setNotice("");setKey(crypto.randomUUID())}}
+ <CuratedFastCheckout selected={selected} quantity={qty} initialServiceId={landingServiceId||DEFAULT_CURATED_SKU}
+  onChoose={service=>{setSelected(service);setQty(service?.preview?curatedPresetQuantity(service):defaultCheckoutQuantity(service));setReceipt(null);setNotice("");setKey(crypto.randomUUID())}}
   onQuantityChange={setQty}/>:
  <LitixCheckoutSelector selected={selected} onChoose={service=>{setSelected(service);setQty(defaultCheckoutQuantity(service));setReceipt(null);setNotice("");setKey(crypto.randomUUID())}}/>}
  {!multiMode&&<label className="litix-early-link" style={{display:"block",margin:"14px 0"}}>
@@ -610,9 +615,10 @@ export default function Home(){
   <div className="total">{cardMoney(price)}</div>
  </div>
  {checkoutError&&checkoutPhase==="error"&&<p className="small" role="alert">{checkoutError}</p>}
- {selected&&!selected.purchasable&&<p className="small">This package needs additional details before purchase. Contact Litix Concierge for help.</p>}
+ {selected&&!selected.purchasable&&!selected.preview&&
+  <p className="small">This package is not currently available for purchase. Select another service or contact Litix support.</p>}
  {selected?.purchasable&&checkoutAuthorized&&config.ready&&!cardReady&&<button type="button" className="alt" onClick={()=>{setNotice("Retrying secure card fields…");setCardRetry(v=>v+1)}}>Retry secure fields</button>}
- </>:<div className="litix-pick-first" role="status"><strong>Choose a package in Step 03.</strong><p>You can paste your public profile or post link above at any time. The total appears after a package is selected.</p></div>}
+ </>:null}
  {checkoutRoute==="curated"&&selected&&<div className="litix-curated-fulfillment">
   ⚡ Automated order submission after verified payment · Start times vary · No social password required
   <label style={{display:"block",marginTop:9,opacity:.7}}>
@@ -626,7 +632,7 @@ export default function Home(){
   canPay={Boolean(selected?.purchasable&&checkoutAuthorized&&detailsReady&&cardReady&&!busy&&config.ready&&config.publicKey)}
   buttonLabel={busy?(checkoutPhase==="validating"?"Verifying live price…":"Processing securely…"):
    detailsReady&&selected?.purchasable?"Pay with PayKings — "+cardMoney(price)+" USD":
-   selected?"Continue to Secure Checkout — "+cardMoney(price):"Choose a package to continue"}
+   selected?"Continue to Secure Checkout — "+cardMoney(price):"Choose your service"}
   helperText={checkoutFieldHint}
  />
  {selected?.purchasable&&detailsReady&&!checkoutAuthorized&&checkoutPhase!=="validating"&&config.ready&&<button type="button" className="alt" onClick={()=>setVerificationRetry(value=>value+1)}>Retry price verification</button>}

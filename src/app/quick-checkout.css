@@ -281,3 +281,63 @@ footer.end .legal-links a:focus-visible{outline:2px solid #80d5ff;outline-offset
  .litix-curated-package-grid strong{font-size:20px}
  .litix-curated-package-grid b{font-size:15px}
 }
+
+
+/* Fast Checkout: avoid fragmented service limits and wide quantity badges. */
+.litix-curated-range{white-space:nowrap}
+.litix-curated-featured{
+ max-width:calc(100% - 6px);white-space:normal;text-align:center;
+ line-height:1.1;overflow-wrap:normal
+}
+.litix-verified-activity{
+ display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:7px;
+ margin:10px auto 0;max-width:620px;width:fit-content;
+ border:1px solid #68c3e97d;border-radius:99px;
+ padding:8px 13px;background:#08375788;
+ font-size:12px;font-weight:750;color:#d2f3ff;text-align:center;
+}
+.litix-verified-activity>span{color:#a1efc9;font-size:15px}
+@media(max-width:575px){
+ .litix-curated-featured{font-size:8px;padding:4px 5px}
+ .litix-curated-package-grid button{padding-top:24px}
+ .litix-verified-activity{border-radius:14px}
+}
+
+/* Four server-rendered SEO entry points reuse the same verified checkout. */
+.litix-seo-hero{margin:24px auto 8px;padding:clamp(23px,4vw,42px);
+ border:1px solid #4d96bd85;border-radius:24px;
+ background:linear-gradient(145deg,#0b3558,#051c30 80%);color:#eef9ff}
+.litix-seo-hero h1{font-size:clamp(28px,4.2vw,48px);line-height:1.12;
+ letter-spacing:-.035em;margin:12px 0;max-width:800px}
+.litix-seo-intro{max-width:790px;font-size:clamp(16px,1.75vw,19px);
+ color:#ddf4ff;line-height:1.65}
+.litix-seo-summary{font-size:14px;line-height:1.65;color:#b5dbee;max-width:760px}
+.litix-seo-actions{display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin:24px 0 16px}
+.litix-seo-actions>a{display:inline-flex;align-items:center;justify-content:center;
+ border:1px solid #7ac6ed;border-radius:11px;padding:12px 16px;
+ color:#fff;text-decoration:none;font-weight:750}
+.litix-seo-actions>a.primary{background:linear-gradient(130deg,#1a85c8,#11649f);color:#fff}
+.litix-seo-category-links{display:flex;gap:8px;flex-wrap:wrap}
+.litix-seo-category-links a{font-size:12px;padding:7px 10px;
+ border:1px solid #577f9f80;border-radius:99px;color:#bde7ff;text-decoration:none}
+.litix-seo-details{display:grid;gap:16px;margin:22px auto 48px}
+.litix-seo-details .panel{max-width:none}
+.litix-seo-details h2{font-size:clamp(22px,2.8vw,30px);line-height:1.25;margin:12px 0}
+.litix-seo-details p{line-height:1.65}
+.litix-seo-table-scroll{overflow-x:auto;max-width:100%}
+.litix-seo-comparison table{width:100%;border-collapse:collapse;min-width:600px;text-align:left}
+.litix-seo-comparison th,.litix-seo-comparison td{padding:14px;border-bottom:1px solid #4c81a86a;
+ vertical-align:top;font-size:13px;line-height:1.55}
+.litix-seo-comparison th{color:#effbff}
+.litix-seo-comparison td{color:#c5e3f4}
+.litix-seo-faq details{border-top:1px solid #4c81a86a;padding:14px 0}
+.litix-seo-faq summary{cursor:pointer;font-weight:750;color:#f4fbff}
+.litix-seo-faq details p{color:#bfdcf0}
+.litix-seo-faq a{color:#9cdeff}
+@media(max-width:575px){
+ .litix-seo-hero{margin:12px auto 8px;padding:18px;border-radius:15px}
+ .litix-seo-actions{display:grid}
+ .litix-seo-actions>a{width:100%;box-sizing:border-box}
+ .litix-seo-category-links a{font-size:11px}
+ .litix-seo-comparison th,.litix-seo-comparison td{padding:10px}
+}
