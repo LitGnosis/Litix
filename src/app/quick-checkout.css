@@ -281,3 +281,17 @@ footer.end .legal-links a:focus-visible{outline:2px solid #80d5ff;outline-offset
  .litix-curated-package-grid strong{font-size:20px}
  .litix-curated-package-grid b{font-size:15px}
 }
+
+/* Contextual cart bump uses the original Litix PayKings checkout, not separate card fields. */
+.litix-cart-bump{display:grid;gap:12px;margin:12px 0;padding:14px;border:1px solid #68c9f281;border-radius:15px;
+ background:linear-gradient(145deg,#083757,#071e33);color:#eaf8ff;min-width:0}
+.litix-cart-bump-toggle{display:flex;align-items:flex-start;gap:12px;cursor:pointer;min-width:0;line-height:1.4}
+.litix-cart-bump-toggle input{width:21px;height:21px;flex:none;margin:2px 0 0;accent-color:#47b7ed}
+.litix-cart-bump-toggle span{display:grid;gap:4px;min-width:0}
+.litix-cart-bump-toggle strong{font-size:14px}
+.litix-cart-bump-toggle small{font-size:12px;color:#c0e3f8;overflow-wrap:anywhere}
+.litix-cart-bump-link{display:grid;gap:8px;font-size:13px;font-weight:700}
+.litix-cart-bump-link input{min-width:0;width:100%;box-sizing:border-box;padding:12px;border:1px solid #90ccee;
+ background:#051e32;border-radius:10px;color:#f6fbff;font-size:16px}
+.litix-cart-bump .small{margin:0;font-size:12px;line-height:1.5;color:#c2def0}
+@media(max-width:575px){.litix-cart-bump{padding:12px}.litix-cart-bump-toggle strong{font-size:13px}}
