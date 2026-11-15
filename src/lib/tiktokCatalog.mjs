@@ -15,8 +15,18 @@ export const activeSupplierRow=row=>row&&
  Number.isSafeInteger(Number(row.min))&&Number(row.min)>0&&
  Number.isSafeInteger(Number(row.max))&&Number(row.max)>=Number(row.min)&&
  Number(row.max)<=1000000&&Number.isFinite(Number(row.rate))&&Number(row.rate)>0;
+export function normalizeTikTokSupplierName(value){
+ const raw=String(value||"").trim();
+ const at=raw.search(/\b(?:NEW\s+)?TikTok\b/i);
+ const prefix=at>=0?raw.slice(0,at):"";
+ // Supplier titles often start with an emoji and use a decorative arrow
+ // between the service name and the quality bracket. Keep names that have
+ // a meaningful textual prefix (e.g. country/emergency/custom) unchanged.
+ const name=at>=0&&at<48&&!/[A-Za-z0-9]/.test(prefix)?raw.slice(at):raw;
+ return name.replace(/\s*(?:➡️|➡|→|➜|➔)\s*/g," ").trim();
+}
 export function tiktokSkuForService(row){
- const name=String(row?.name||"").trim(),category=String(row?.category||"").trim();
+ const name=normalizeTikTokSupplierName(row?.name),category=String(row?.category||"").trim();
  if(!/\btiktok\b/i.test(name+" "+category))return null;
  const explicitKind=/\b(followers|likes|views|comments|shares|saves)\b/i.exec(name)?.[1]?.toLowerCase()||"";
  for(const [sku,pattern] of Object.entries(TIKTOK_EXACT_MATCH)){

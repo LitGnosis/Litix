@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - fix/litix-live-curated-service-fallback-20261115
+      - fix/litix-boostero-emoji-catalog-20261115
   pull_request:
     branches:
       - main
@@ -37,7 +38,7 @@ jobs:
       - name: Install locked dependencies
         run: npm ci --no-audit --no-fund
       - name: Test verified supplier choices, legacy pricing and SEO checkout
-        run: node --test tests/litix-live-fallback-20261115.test.mjs tests/litix-curated-storefront-20261114.test.mjs tests/litix-seo-first-paint-20261114.test.mjs tests/litix-curated-copy-cleanup-20261115.test.mjs
+        run: node --test tests/litix-boostero-emoji-catalog-20261115.test.mjs tests/litix-live-fallback-20261115.test.mjs tests/litix-curated-storefront-20261114.test.mjs tests/litix-seo-first-paint-20261114.test.mjs tests/litix-curated-copy-cleanup-20261115.test.mjs
       - name: Build production Next.js
         run: npm run build
       - name: Install isolated browser runner

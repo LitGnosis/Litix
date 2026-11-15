@@ -2,7 +2,7 @@ import {boosteroProduction} from "./boosteroReadOnly.mjs";
 import {boosteroQuote} from "./boosteroFulfillment.mjs";
 import {retiredAutoLikesService} from "./retiredAutolikes.mjs";
 import {CORE_KINDS,CORE_PLATFORMS,CORE_QUANTITIES} from "../config/curatedServices.mjs";
-import {activeSupplierRow,resolveExactTikTokServices,tiktokSkuForService,tiktokTierLabel} from "./tiktokCatalog.mjs";
+import {activeSupplierRow,resolveExactTikTokServices,tiktokSkuForService,tiktokTierLabel,normalizeTikTokSupplierName} from "./tiktokCatalog.mjs";
 import {litixPlatform,litixKind} from "./litixServiceClassify.mjs";
 
 let cached=null,expiry=0,pending=null;
@@ -37,7 +37,7 @@ function liveTikTokFallback(raw,kind){
  // wrong engagement type or a product that requires an unsupported input.
  const forbidden=/\b(?:auto(?:matic)?|monthly|growth|packages?|subscriptions?|story|stories|custom|live\s*stream)\b/i;
  const candidates=(Array.isArray(raw)?raw:[]).filter(row=>{
-  const name=String(row?.name||"").trim();
+  const name=normalizeTikTokSupplierName(row?.name);
   return activeSupplierRow(row)&&!retiredAutoLikesService(row)&&
    /^\s*(?:NEW\s+)?TikTok\b/i.test(name)&&!forbidden.test(name)&&
    /^\s*(?:NEW\s+)?TikTok\s+(?:Random\s+)?(Followers|Likes|Views|Comments)\b/i.exec(name)?.[1]?.toLowerCase()===kind&&
