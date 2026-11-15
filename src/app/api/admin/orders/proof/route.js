@@ -21,6 +21,13 @@ export function orderProofCSV(proof){
  put("PayKings Transaction",o.payment_transaction_id);
  put("Total Paid USD",(Number(o.amount_cents)/100).toFixed(2));
  put("Checkout Timestamp",o.created_at);
+ const single=proof.single||null;
+ if(single){
+  put("Single Supplier Order",single.supplier_order_id);
+  put("Single Reported Start Count",single.supplier_status?.start_count);
+  put("Single Delivery Status",single.supplier_status?.status||single.state);
+  put("Completion Observed At",single.state==="COMPLETED"?single.checked_at:"");
+ }
  for(const line of proof.lines||[]){
   put("Line "+line.ordinal+" Service",line.service_name);
   put("Line "+line.ordinal+" Quantity",line.quantity);
@@ -45,14 +52,15 @@ export async function GET(request){
   return Response.json({error:"Invalid order number"},{status:422,headers:noStore});
  try{
   const sql=boosteroSQL();
-  const [orders,proof,lines,events]=await Promise.all([
+  const [orders,proof,lines,events,single]=await Promise.all([
    sql.query("select id,email,service_name,destination,quantity,amount_cents,payment_state,payment_transaction_id,created_at from public.litix_v2_orders where id=$1 limit 1",[id]),
    sql.query("select buyer_ip::text,user_agent,checkout_source,captured_at from public.litix_order_proof where order_id=$1",[id]),
    sql.query("select ordinal,service_name,quantity,supplier_order_id,start_count,supplier_status,state,checked_at,completed_at from public.litix_cart_lines where order_id=$1 order by ordinal",[id]),
-   sql.query("select ordinal,event_type,details,occurred_at from public.litix_order_proof_events where order_id=$1 order by occurred_at,id",[id])
+   sql.query("select ordinal,event_type,details,occurred_at from public.litix_order_proof_events where order_id=$1 order by occurred_at,id",[id]),
+   sql.query("select supplier_order_id,supplier_status,state,checked_at from public.litix_boostero_fulfillment where litix_order_id=$1 limit 1",[id])
   ]);
   if(orders.length!==1)return Response.json({error:"Order not found"},{status:404,headers:noStore});
-  const summary={order:orders[0],proof:proof[0]||null,lines,events};
+  const summary={order:orders[0],proof:proof[0]||null,lines,events,single:single[0]||null};
   if(url.searchParams.get("format")==="csv")
    return new Response(orderProofCSV(summary),{status:200,headers:{...noStore,
     "content-type":"text/csv; charset=utf-8",
