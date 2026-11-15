@@ -1,0 +1,66 @@
+name: Litix default checkout and four static SEO pages - no-charge QA
+on:
+  push:
+    branches:
+      - feature/litix-seo-first-paint-trust-20261114
+  pull_request:
+    branches:
+      - main
+    paths:
+      - src/app/page.jsx
+      - src/app/sitemap.js
+      - src/app/quick-checkout.css
+      - src/app/buy-*/page.jsx
+      - src/components/CuratedFastCheckout.jsx
+      - src/components/LitixQuickShop.jsx
+      - src/components/LitixSeoLanding.jsx
+      - src/components/LitixVerifiedActivity.jsx
+      - src/lib/litixCuratedFirstPaint.mjs
+      - src/lib/litixCuratedSavings.mjs
+      - src/lib/litixSeoLandings.mjs
+      - src/app/api/public-activity/route.js
+      - src/tests/litix-seo-first-paint-20261114.test.mjs
+      - src/tests/litix-seo-first-paint-browser-20261114.mjs
+      - .github/workflows/litix-seo-first-paint-20261114.yml
+permissions:
+  contents: read
+jobs:
+  checkout-seo-no-charge:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 24
+    defaults:
+      run:
+        working-directory: src
+    env:
+      NEXT_PUBLIC_LITIX_CURATED_STOREFRONT_ENABLED: "true"
+      NEXT_PUBLIC_LITIX_CART_BUMPS_ENABLED: "false"
+      LITIX_CART_BUMPS_ENABLED: "false"
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: src/package-lock.json
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Verify first paint, truthful badges, unique SEO and legacy curated pricing
+        run: node --test tests/litix-seo-first-paint-20261114.test.mjs tests/litix-curated-storefront-20261114.test.mjs
+      - name: Build production Next.js pages
+        run: npm run build
+      - name: Install no-charge browser test
+        run: npm install --no-save --ignore-scripts playwright@1.56.1
+      - name: Check 390px and 1280px homepage and four service routes
+        run: |
+          npm run start -- --port 3100 >/tmp/litix-seo-first-paint.log 2>&1 &
+          app_pid=$!
+          trap 'kill $app_pid || true' EXIT
+          for i in $(seq 1 40); do
+            if curl --fail --silent --output /dev/null http://localhost:3100/; then break; fi
+            sleep 1
+          done
+          export CHROME_PATH="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
+          if [ -z "$CHROME_PATH" ]; then npx playwright install chromium; fi
+          node tests/litix-seo-first-paint-browser-20261114.mjs
