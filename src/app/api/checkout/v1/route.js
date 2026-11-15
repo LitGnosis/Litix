@@ -18,6 +18,12 @@ export async function POST(request){
  }
  if(request.headers.get("origin")!==new URL(request.url).origin)
   return Response.json({error:"same_origin_required",chargeAttempted:false},{status:403});
+ // One-time payment route cannot silently accept an unavailable subscription add-on.
+ // Recurring billing and future-post delivery have a separate release gate.
+ if(data?.autoLikes===true||data?.auto_likes===true||data?.autoLikes30Days===true||
+    data?.recurring===true||data?.subscription===true||
+    (Array.isArray(data?.addons)&&data.addons.some(v=>/auto.?likes|recurring/i.test(String(v)))))
+  return Response.json({error:"Recurring Auto-Likes is not currently available. No payment attempted.",chargeAttempted:false},{status:409});
  const id=String(data?.serviceId||"");
  const curated=parseCuratedId(id);
  if(curated&&!["followers","likes","views","comments","shares","saves"].includes(curated.kind))

@@ -132,7 +132,7 @@ export async function boosteroProduction(action,parameters={},options={}){
   response=await (options.fetcher||fetch)(endpoint(),{
    method:"POST",headers:{"content-type":"application/x-www-form-urlencoded"},
    body:new URLSearchParams({key:process.env.BOOSTERO_API_KEY,action:action==="subscription"||action==="prepaid_subscription"?"add":action,...params}).toString(),
-   cache:"no-store",redirect:"error",signal:AbortSignal.timeout(action==="services"?20000:15000)
+   cache:"no-store",redirect:"error",signal:AbortSignal.timeout(15000)
   });
  }catch{throw Error("boostero_network_unknown_outcome");}
  if(!response.ok)throw Error("boostero_http_"+response.status+(["add","subscription","prepaid_subscription"].includes(action)?"_unknown_outcome":""));

@@ -341,3 +341,39 @@ footer.end .legal-links a:focus-visible{outline:2px solid #80d5ff;outline-offset
  .litix-seo-category-links a{font-size:11px}
  .litix-seo-comparison th,.litix-seo-comparison td{padding:10px}
 }
+
+
+/* Accessible purchase selectors; each actual supplier tier is separately outlined. */
+.litix-curated-tiers button{display:grid;justify-content:start;align-content:center;gap:7px;text-align:left;padding:13px 16px;min-height:74px}
+.litix-curated-tiers .litix-tier-name{display:block;font-size:15px;line-height:1.25;letter-spacing:.01em}
+.litix-curated-tiers small{display:block;font-size:11px;line-height:1.5;color:#c9e9fb}
+.litix-quality-disclosure{display:flex;align-items:flex-start;gap:8px;margin:0;color:#c2dcef;font-size:12px;line-height:1.55}
+.litix-quality-disclosure svg{flex:0 0 auto;margin-top:2px;color:#95def9}
+.litix-curated-unit-price{display:block;font-weight:700;font-size:10px;color:#b8e5f5;text-align:center}
+.litix-curated-package-grid button>small{line-height:1.35}
+.litix-curated-slider{display:grid;gap:10px;padding:14px;border:1px solid #4d91b999;border-radius:14px;background:#092c4588}
+.litix-curated-slider>span{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:12px;color:#dceefb}
+.litix-curated-slider strong{color:#fff}
+.litix-curated-slider input[type=range]{width:100%;accent-color:#79d4fc;min-height:32px;cursor:pointer}
+.litix-curated-slider small{font-size:11px;line-height:1.4;color:#b1dced}
+.litix-checkout-trust svg{flex:0 0 auto;color:#a7e9d0}
+.litix-verified-activity svg{flex:0 0 auto;color:#a2ecd0}
+.trust-panel .tags span{display:inline-flex;align-items:center;gap:7px}
+.trust-panel .tags svg{color:#9fe3ff;flex:none}
+.litix-profile-preview{display:flex;gap:12px;align-items:center;border:1px solid #5798b983;background:#09314e91;border-radius:14px;padding:11px 13px;margin:0 0 12px}
+.litix-profile-preview img{width:44px;height:44px;object-fit:cover;flex:none;border-radius:50%;border:1px solid #6db0d2}
+.litix-profile-preview .litix-profile-placeholder{display:grid;place-items:center;width:44px;height:44px;border-radius:50%;background:#164d71}
+.litix-profile-preview .litix-profile-details{display:grid;min-width:0;gap:3px}
+.litix-profile-preview .litix-profile-details strong{font-size:14px;color:#eef9ff;overflow-wrap:anywhere}
+.litix-profile-preview .litix-profile-details small{font-size:11px;color:#afd9f1}
+.litix-mobile-checkout-bar{display:none}
+@media(max-width:640px){
+ .litix-mobile-checkout-bar{position:fixed;z-index:90;bottom:0;left:0;right:0;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px max(14px,env(safe-area-inset-right)) calc(11px + env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left));box-sizing:border-box;background:#051b2af4;border-top:1px solid #72b9d0;box-shadow:0 -8px 28px #0009;backdrop-filter:blur(12px)}
+ .litix-mobile-checkout-total{display:grid;gap:3px;min-width:0;flex:1}
+ .litix-mobile-checkout-total small{font-size:10px;color:#afddf1;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ .litix-mobile-checkout-total strong{font-size:18px;color:#f0fbff;white-space:nowrap}
+ .litix-mobile-checkout-button{min-height:46px;max-width:57%;padding:11px 15px;border:1px solid #8edaff;border-radius:11px;background:linear-gradient(130deg,#2095c7,#155b99);color:#fff;font-weight:850;line-height:1.25;cursor:pointer}
+ .litix-mobile-checkout-button:focus-visible{outline:3px solid #fff;outline-offset:2px}
+ .litix-mobile-checkout-button:disabled{opacity:.58;cursor:not-allowed}
+ body{padding-bottom:calc(86px + env(safe-area-inset-bottom))}
+}

@@ -32,14 +32,13 @@ try{
  await page.route("**/api/checkout/v1",route=>{throw Error("No-charge UI regression must not submit a token");});
  await page.goto("http://localhost:3100/",{waitUntil:"domcontentloaded"});
  const trust=page.locator("#checkout .litix-checkout-trust li");
- assert.equal(await trust.count(),3,"three source-grounded trust indicators beneath PayKings CTA");
+ assert.equal(await trust.count(),4,"four source-grounded trust indicators beneath PayKings CTA");
  assert.match(await trust.allInnerTexts().then(v=>v.join(" | ").replace(/\s+/g," ")),/Live service verification.*Private order tracking.*PayKings-hosted card fields/);
  assert.equal(await page.locator("#checkout input[aria-label='Public profile or post link']").getAttribute("placeholder"),
   "e.g. @username or https://instagram.com");
  assert.equal(await page.locator("#litix-link-feedback").innerText(),"","no duplicate URL prompt before input");
  const heroProof=page.locator(".litix-hero-shop .litix-hero-proof");
- assert.equal(await heroProof.count(),1,"homepage has one concise trust line");
- assert.match(await heroProof.innerText(),/For creators & agencies.*No social passwords required.*PayKings-hosted card fields/s);
+ assert.equal(await heroProof.count(),0,"single checkout trust strip avoids duplicated hero proof");
  assert.equal(await page.getByText(/4\.9\/5 Rated by Creators/).count(),0,"no unsupported customer rating");
  const cta=page.locator("#checkout button.premium-pay-button");
  await cta.waitFor();
@@ -78,7 +77,7 @@ try{
   assert.equal(await page.locator(`#faq a[href="${href}"]`).count(),0);
  }
  assert.equal(await page.locator(".checkout-hint").count(),0);
- assert.equal(await page.locator(".premium-checkout-security").count(),1);
+ assert.equal(await page.locator(".premium-checkout-security").count(),0);
  assert.deepEqual(errors,[]);
  console.log("PASS checkout CRO: visible invalid CTA, enabled valid CTA, live preflight, no charge");
  await context.close();

@@ -4,6 +4,7 @@ import {CORE_KINDS,CORE_PLATFORMS,CORE_QUANTITIES,TIKTOK_EXTRA_KINDS} from "../c
 import {STATIC_CURATED_PREVIEW} from "../lib/curatedStaticPreview.mjs";
 import {DEFAULT_CURATED_SKU,initialCuratedOffer,formatCuratedUnitRange} from "../lib/litixCuratedFirstPaint.mjs";
 import {curatedQuantityBadge} from "../lib/litixCuratedSavings.mjs";
+import LitixIcon from "./LitixIcon";
 
 const usd=cents=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(Number(cents||0)/100);
 const friendly=kind=>kind==="story_views"?"Story Views":kind[0].toUpperCase()+kind.slice(1);
@@ -66,11 +67,9 @@ export default function CuratedFastCheckout({selected,quantity,onChoose,onQuanti
   Number.isSafeInteger(quantity)&&
   (selectedPrice?selectedPrice.available:true);
  const preview=status!=="ready";
+ const sliderCards=(current?.quantityCards||[]).filter(card=>card.available===true&&Number.isSafeInteger(card.totalCents)&&card.totalCents>=100);
+ const sliderIndex=Math.max(0,sliderCards.reduce((best,card,i)=>Math.abs(card.quantity-quantity)<Math.abs(sliderCards[best]?.quantity-quantity)?i:best,0));
  const extraClick=entry=>{
-  if(["auto_likes","auto_views"].includes(entry.kind)){
-   setExtraMessage("Recurring Auto Likes and Views are currently unavailable for new purchases.");
-   return;
-  }
   if(find("TikTok",entry.kind,"standard"))go("TikTok",entry.kind);
   else setExtraMessage("This add-on is not currently available for quick checkout. Browse the full catalog for alternatives.");
  };
@@ -97,14 +96,12 @@ export default function CuratedFastCheckout({selected,quantity,onChoose,onQuanti
    {platform==="TikTok"&&<div className="litix-curated-extras">
     <span>More TikTok options</span>
     <div role="group" aria-label="More TikTok service options">
-     {TIKTOK_EXTRA_KINDS.map(x=><button key={x.kind} type="button"
-      aria-pressed={kind===x.kind}
-      disabled={["auto_likes","auto_views"].includes(x.kind)}
+     {TIKTOK_EXTRA_KINDS.filter(x=>!["auto_likes","auto_views"].includes(x.kind))
+      .map(x=><button key={x.kind} type="button" aria-pressed={kind===x.kind}
       onClick={()=>extraClick(x)}>{x.label}</button>)}
     </div>
     <a href="/services?platform=TikTok">Monthly growth and engagement packages in full catalog →</a>
-    <button type="button" className="litix-curated-subtle" disabled
-     title="Custom Comments needs a verified non-Default supplier delivery flow">Custom Comments · Not yet available</button>
+
    </div>}
    {extraMessage&&<p className="litix-curated-notice" role="status">{extraMessage}</p>}
   </div>
@@ -112,16 +109,20 @@ export default function CuratedFastCheckout({selected,quantity,onChoose,onQuanti
    <div className="litix-curated-heading"><span>03</span><strong>Quality</strong></div>
    <div className="litix-curated-tiers" role="group" aria-label="Choose quality">
     <button type="button" className={tier==="standard"?"is-selected":""}
-     aria-pressed={tier==="standard"} disabled={status==="ready"&&!find(platform,kind,"standard")}
+     aria-pressed={tier==="standard"} aria-label="Standard verified service"
+     disabled={status==="ready"&&!find(platform,kind,"standard")}
      onClick={()=>go(platform,kind,"standard")}>
-     {status==="ready"&&live(platform,kind,"standard")?.label==="Active-look service"
-      ?"Active / Real-Look":"High Quality"}
-     <small>Standard</small>
+     <span className="litix-tier-name">Standard</span>
+     <small>{status==="ready"?((live(platform,kind,"standard")?.label==="Active-look service"?"Active / Real-Look":live(platform,kind,"standard")?.label)||"Catalog-verified listing"):"Live listing checked at checkout"}</small>
     </button>
     {live(platform,kind,"vip")&&<button type="button" className={tier==="vip"?"is-selected":""}
-     aria-pressed={tier==="vip"}
-     onClick={()=>go(platform,kind,"vip")}>Real / Active <small>VIP quality</small></button>}
+     aria-pressed={tier==="vip"} aria-label="Separate Active service option"
+     onClick={()=>go(platform,kind,"vip")}>
+     <span className="litix-tier-name">Active option</span>
+     <small>{live(platform,kind,"vip")?.label||"Separate verified listing"}</small>
+    </button>}
    </div>
+   <p className="litix-quality-disclosure"><LitixIcon name="info" size={15}/> Quality names describe listed services, not verified drop rates, profile pictures or refill guarantees.</p>
   </div>
   <p className="litix-curated-notice" role="status" aria-live="polite">
    {status==="ready"&&current?
@@ -142,17 +143,26 @@ export default function CuratedFastCheckout({selected,quantity,onChoose,onQuanti
      className={quantity===card.quantity?"is-selected":""}
      aria-pressed={quantity===card.quantity} disabled={status==="ready"&&!card.available}
      onClick={()=>{onQuantityChange(card.quantity);setCustomOpen(false);}}>
-     {card.quantity===1000&&<span className="litix-curated-featured">
-      {curatedQuantityBadge(current.quantityCards,card.quantity,{live:status==="ready"})||"FEATURED"}
-     </span>}
-     {[2500,5000].includes(card.quantity)&&
+     {(card.quantity===1000||[2500,5000].includes(card.quantity))&&
       <span className="litix-curated-featured">
-       {curatedQuantityBadge(current.quantityCards,card.quantity,{live:status==="ready"})}
+       {card.quantity===5000&&status==="ready"&&curatedQuantityBadge(current.quantityCards,card.quantity,{live:true})?.startsWith("Save ")
+        ?"BEST VALUE · ":""}
+       {curatedQuantityBadge(current.quantityCards,card.quantity,{live:status==="ready"})||
+        (card.quantity===1000?"FEATURED":"")}
       </span>}
      <strong>{card.quantity.toLocaleString()}</strong><span>{friendly(kind)}</span>
      <b>{card.totalCents!==null&&card.totalCents!==undefined?usd(card.totalCents):status==="ready"?"Unavailable":"Check live price"}</b>
+     {status==="ready"&&card.available&&Number.isSafeInteger(card.totalCents)&&
+      <small className="litix-curated-unit-price">{usd(Math.round(card.totalCents*1000/card.quantity))} / 1,000</small>}
     </button>)}
    </div>
+   {status==="ready"&&sliderCards.length>1&&<label className="litix-curated-slider">
+    <span>Quick quantity slider <strong>{sliderCards[sliderIndex].quantity.toLocaleString("en-US")} {friendly(kind).toLowerCase()}</strong></span>
+    <input type="range" min="0" max={sliderCards.length-1} step="1" value={sliderIndex}
+     aria-label="Choose a verified quantity package" aria-valuetext={sliderCards[sliderIndex].quantity.toLocaleString("en-US")+" "+friendly(kind)}
+     onChange={e=>{onQuantityChange(sliderCards[Number(e.target.value)].quantity);setCustomOpen(false);}}/>
+    <small>Live-quoted package sizes only; custom amounts below.</small>
+   </label>}
    <button type="button" className="litix-curated-custom-toggle" aria-expanded={customOpen}
     onClick={()=>setCustomOpen(v=>!v)}>Custom amount {customOpen?"−":"+"}</button>
    {customOpen&&<label className="litix-curated-custom" htmlFor="litix-quantity-custom">Custom quantity

@@ -30,6 +30,18 @@
     {
       "path": "/api/checkout/settlement/cron",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/internal/boostero/monitor",
+      "schedule": "*/2 * * * *"
+    },
+    {
+      "path": "/api/internal/boostero/catalog",
+      "schedule": "*/30 * * * *"
+    },
+    {
+      "path": "/api/internal/boostero/balance",
+      "schedule": "*/15 * * * *"
     }
   ]
 }

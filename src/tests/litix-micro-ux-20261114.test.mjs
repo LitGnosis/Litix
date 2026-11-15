@@ -68,14 +68,12 @@ test("checkout trust text remains accurate and avoids unsupported promises",asyn
  assert.equal(defaultCheckoutQuantity(first),1000);
 });
 
-test("homepage trust line follows hero subtitle without invented review figures",async()=>{
+test("hero avoids repeating checkout trust claims or inventing review figures",async()=>{
  const hero=await source("../components/LitixQuickShop.jsx");
  const styles=await source("../app/quick-checkout.css");
  assert.match(hero,/litix-hero-subtitle/);
- assert.match(hero,/litix-hero-proof/);
- assert.ok(hero.indexOf("litix-hero-proof")>hero.indexOf("litix-hero-subtitle"));
- for(const text of ["For creators &amp; agencies","No social passwords required","PayKings-hosted card fields"])
-  assert.ok(hero.includes(text),text);
+ assert.doesNotMatch(hero,/litix-hero-proof/);
+ assert.doesNotMatch(hero,/PayKings-hosted card fields/);
  assert.doesNotMatch(hero,/4\.9\/5|Rated by Creators|★★★★★|100% Password-Free/);
  assert.match(styles,/\.litix-hero-shop \.litix-hero-proof/);
 });

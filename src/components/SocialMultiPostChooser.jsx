@@ -10,6 +10,7 @@ const eachCents=(service,quantity)=>Math.ceil(Number(service?.per1000||0)*Number
 export default function SocialMultiPostChooser({service,platform,posts,onChange}){
  const [username,setUsername]=useState("");
  const [gallery,setGallery]=useState([]);
+ const [profile,setProfile]=useState(null);
  const [loading,setLoading]=useState(false);
  const [running,setRunning]=useState("");
  const [message,setMessage]=useState("");
@@ -21,7 +22,7 @@ export default function SocialMultiPostChooser({service,platform,posts,onChange}
  useEffect(()=>{
   if(!profileHandle){
    activeLookup.current?.abort();
-   setLoading(false);setGallery([]);setMessage("");
+   setLoading(false);setGallery([]);setProfile(null);setMessage("");
    return;
   }
   const key=platform+":"+profileHandle;
@@ -43,11 +44,15 @@ export default function SocialMultiPostChooser({service,platform,posts,onChange}
   activeLookup.current?.abort();
   const controller=new AbortController();
   activeLookup.current=controller;
-  setLoading(true);setMessage("");setGallery([]);
+  setLoading(true);setMessage("");setGallery([]);setProfile(null);
   try{
    const q=new URLSearchParams({platform,username:handle});
-   const r=await fetch("/api/post-picker?"+q,{cache:"no-store",signal:controller.signal});
+   let r=await fetch("/api/social/preview?"+q,{cache:"no-store",signal:controller.signal});
+   // Preserve the existing verified post-link picker until Redis and the
+   // richer profile adapter are configured on production.
+   if(r.status===503)r=await fetch("/api/post-picker?"+q,{cache:"no-store",signal:controller.signal});
    const body=await r.json();if(!r.ok)throw Error(body.error||"Public gallery unavailable");
+   setProfile(body.publicProfileVerified?body:null);
    if(controller.signal.aborted)return;
    const eligible=(body.posts||[]).filter(p=>
     isTikTok?/\/video\/[0-9]{10,25}$/.test(p.url):/^https:\/\/www\.instagram\.com\/(?:p|reel)\//.test(p.url)
@@ -63,10 +68,16 @@ export default function SocialMultiPostChooser({service,platform,posts,onChange}
  function toggle(post){
   onChange(current=>{
    const exists=current.some(p=>p.status==="verified"&&p.verifiedUrl===post.url);
-   if(exists)return current.filter(p=>p.verifiedUrl!==post.url);
    const nonempty=current.filter(p=>String(p.link||"").trim());
-   if(nonempty.length>=5)return current;
-   return [...nonempty,newTikTokPost({link:post.url,quantity:minimum,verifiedUrl:post.url})];
+   const next=exists?nonempty.filter(p=>p.verifiedUrl!==post.url):
+    nonempty.length>=5?nonempty:[...nonempty,newTikTokPost({link:post.url,quantity:minimum,verifiedUrl:post.url})];
+   if(!next.length)return [newTikTokPost({quantity:minimum})];
+   const total=Math.max(next.length*minimum,nonempty.reduce((sum,p)=>sum+(Number(p.quantity)||0),0));
+   const step=Math.max(1,unitStep);
+   const legalTotal=next.length*minimum+Math.floor((total-next.length*minimum)/step)*step;
+   const extraSteps=Math.max(0,(legalTotal-next.length*minimum)/step);
+   const each=Math.floor(extraSteps/next.length),remainder=extraSteps%next.length;
+   return next.map((p,i)=>({...p,quantity:Math.min(maximum,minimum+(each+(i<remainder?1:0))*step)}));
   });
  }
  async function verify(p){
@@ -96,10 +107,16 @@ export default function SocialMultiPostChooser({service,platform,posts,onChange}
     <h3>Choose Your Posts</h3>
     <p>Optional: enter your public {isTikTok?"TikTok":"Instagram"} username or profile URL to browse posts. You can also paste links directly below without entering a username.</p>
     <div className="litix-picker-search">
-      <input value={username} placeholder={isTikTok?"@yourtiktok or TikTok profile link":"@yourinstagram or Instagram profile link"} aria-label={isTikTok?"Public TikTok username or profile link":"Public Instagram username or profile link"} autoCapitalize="none" autoCorrect="off" spellCheck={false} onChange={e=>{lastAutomaticLookup.current="";setUsername(e.target.value);setGallery([]);setMessage("");activeLookup.current?.abort();setLoading(false)}} onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();if(profileHandle)lookup(e)}}} />
+      <input value={username} placeholder={isTikTok?"@yourtiktok or TikTok profile link":"@yourinstagram or Instagram profile link"} aria-label={isTikTok?"Public TikTok username or profile link":"Public Instagram username or profile link"} autoCapitalize="none" autoCorrect="off" spellCheck={false} onChange={e=>{lastAutomaticLookup.current="";setUsername(e.target.value);setGallery([]);setProfile(null);setMessage("");activeLookup.current?.abort();setLoading(false)}} onKeyDown={e=>{if(e.key==="Enter"){e.preventDefault();if(profileHandle)lookup(e)}}} />
       <button type="button" onClick={lookup} className="alt" disabled={loading||!profileHandle}>{loading?"Loading your posts…":gallery.length?"Refresh posts":"Retry / load posts"}</button>
     </div>
     {message&&<p className="small" role="status">{message}</p>}
+    {profile&&<div className="litix-picker-profile" role="status" style={{display:"flex",alignItems:"center",gap:12,margin:"12px 0"}}>
+      {profile.avatar&&<img src={profile.avatar} width="48" height="48" alt="" style={{borderRadius:"50%"}} referrerPolicy="no-referrer"/>}
+      <span><strong>@{profile.username}</strong>
+       <small style={{display:"block"}}>{profile.followerCount===null?"Follower count not supplied":profile.followerCount.toLocaleString("en-US")+" public followers"}</small>
+      </span>
+     </div>}
     {gallery.length>0&&<>
       <div className="litix-picker-heading"><strong>Tap the posts to add likes</strong><span>{selected.size} selected</span></div>
       <div className="litix-picker-gallery" role="group" aria-label="Select public social posts">

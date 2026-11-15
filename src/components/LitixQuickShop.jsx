@@ -1,5 +1,4 @@
 "use client";
-import LitixVerifiedActivity from "./LitixVerifiedActivity";
 
 export default function LitixQuickShop(){
  const curated=process.env.NEXT_PUBLIC_LITIX_CURATED_STOREFRONT_ENABLED==="true";
@@ -13,15 +12,9 @@ export default function LitixQuickShop(){
    {curated?"Start with Instagram or TikTok, choose Followers, Likes, Views or Comments, then tap a package card.":"Pick Instagram, TikTok, YouTube, Facebook or X in the Fast Checkout below."}
    {" "}Paste your public link and review the USD total before secure checkout.
   </p>
-  <p className="litix-hero-proof" aria-label="Checkout trust information">
-   <span aria-hidden="true">✓</span>
-   <strong>For creators &amp; agencies</strong>
-   <span className="litix-proof-separator" aria-hidden="true">·</span>
-   No social passwords required
-   <span className="litix-proof-separator" aria-hidden="true">·</span>
-   PayKings-hosted card fields
-  </p>
-  <LitixVerifiedActivity/>
+
+  {process.env.NEXT_PUBLIC_LITIX_FREE_TRIAL_ENABLED==="true"&&
+    <p className="litix-trial-entry"><a href="/free-trial">Try 20 free Likes or Views</a></p>}
   <div className="litix-hero-steps" aria-label="Three steps to checkout">
    <span><b>01</b> Choose your package</span>
    <span><b>02</b> Paste a public link</span>

@@ -47,9 +47,9 @@ test("volume savings badges never advertise nonexistent percentage discounts",()
   {quantity:2500,totalCents:4000,available:true},
   {quantity:5000,totalCents:7500,available:true}
  ];
- assert.equal(curatedQuantityBadge(discounted,1000,{live:true}),"Save 10%");
- assert.equal(curatedQuantityBadge(discounted,2500,{live:true}),"Save 20%");
- assert.equal(curatedQuantityBadge(discounted,5000,{live:true}),"BEST VALUE · Save 25%");
+ assert.equal(curatedQuantityBadge(discounted,1000,{live:true}),"Save $2.00 (10%)");
+ assert.equal(curatedQuantityBadge(discounted,2500,{live:true}),"Save $10.00 (20%)");
+ assert.equal(curatedQuantityBadge(discounted,5000,{live:true}),"Save $25.00 (25%)");
 });
 test("4 canonical SEO pages are static, unique, visible FAQ JSON-LD, and share real checkout",async()=>{
  const slugs=["buy-instagram-followers","buy-instagram-likes","buy-tiktok-followers","buy-tiktok-likes"];
@@ -85,6 +85,6 @@ test("activity ticker requires observed successful payment and supplier IDs, nev
  assert.match(api,/o.payment_state='paid'/);
  assert.match(api,/f.supplier_order_id is not null/);
  assert.match(api,/count<5/);
- assert.match(proof,/data\?\.available===true/);
+ assert.match(proof,/body\?\.available===true/);
  assert.doesNotMatch(proof,/4\.9|1,400|Verified order: 2,500/);
 });

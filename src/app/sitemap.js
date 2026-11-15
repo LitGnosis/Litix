@@ -2,6 +2,7 @@ import {SHOP_CATEGORIES} from "../lib/litixShopRoutes.mjs";
 import {GLOBAL_CODES,GLOBAL_LANG_ALTERNATES} from "../lib/globalLocales.mjs";
 import {LITIX_SOLUTION_SLUGS} from "../lib/litixSolutions.mjs";
 import {LITIX_SEO_LANDINGS} from "../lib/litixSeoLandings.mjs";
+import {LITIX_ADDITIONAL_SEO} from "../lib/litixAdditionalSeo.mjs";
 export default function sitemap() {
   const base = "https://www.litix.net";
   const localAlternates={languages:Object.fromEntries(
@@ -22,6 +23,7 @@ export default function sitemap() {
     {url:base+"/tools/tiktok-engagement",changeFrequency:"monthly",priority:0.7},
     {url:base+"/services",changeFrequency:"daily",priority:0.9},
     ...Object.keys(LITIX_SEO_LANDINGS).map(slug=>({url:base+"/"+slug,changeFrequency:"weekly",priority:0.9})),
+    ...Object.keys(LITIX_ADDITIONAL_SEO).map(slug=>({url:base+"/"+slug,changeFrequency:"weekly",priority:0.85})),
     {url:base+"/track",changeFrequency:"monthly",priority:0.4},
     {url:base+"/bundles",changeFrequency:"weekly",priority:0.8},
     ...SHOP_CATEGORIES.map(item=>({url:base+item.href,changeFrequency:"weekly",priority:0.8})),

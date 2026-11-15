@@ -1,22 +1,41 @@
-const THRESHOLDS=Object.freeze({1000:10,2500:18,5000:25});
-
+// A savings claim may only be shown when live, purchasable card amounts prove it.
+// Promo labels and discounts are never inferred from quantities alone.
+const THRESHOLDS=Object.freeze({500:1,1000:1,2500:1,5000:1});
 export function verifiedVolumeSavings(cards,quantity){
  const qty=Number(quantity);
  if(!Object.hasOwn(THRESHOLDS,qty)||!Array.isArray(cards))return null;
  const valid=cards.filter(x=>x?.available===true&&Number.isSafeInteger(x.quantity)&&
   x.quantity>0&&Number.isSafeInteger(x.totalCents)&&x.totalCents>=100);
- const candidate=valid.find(x=>x.quantity===qty);
- const baseline=valid.find(x=>x.quantity<qty);
- if(!candidate||!baseline)return null;
- const pct=100*(1-(candidate.totalCents/candidate.quantity)/(baseline.totalCents/baseline.quantity));
- const rounded=Math.floor(pct+1e-8);
- return Number.isFinite(rounded)&&rounded>=THRESHOLDS[qty]&&rounded<=90?rounded:null;
+ const item=valid.find(x=>x.quantity===qty);
+ const base=valid.find(x=>x.quantity===100)||valid.find(x=>x.quantity===250)||
+  valid.find(x=>x.quantity<qty);
+ if(!item||!base||base.quantity>=qty)return null;
+ // Use cents-based integer rounding so the visual badge matches the quote.
+ const benchmark=Math.ceil(base.totalCents*qty/base.quantity-1e-8);
+ const saved=benchmark-item.totalCents;
+ const percent=Math.floor(100*saved/benchmark);
+ if(saved<1||percent<THRESHOLDS[qty]||percent>90)return null;
+ return percent;
 }
-
+export function verifiedSavingsDetails(cards,quantity){
+ const percentage=verifiedVolumeSavings(cards,quantity);
+ if(percentage===null)return null;
+ const item=cards.find(x=>x.quantity===Number(quantity));
+ const base=cards.find(x=>x.quantity===100&&x.available)||
+  cards.find(x=>x.quantity===250&&x.available)||
+  cards.find(x=>x.quantity<Number(quantity)&&x.available);
+ if(!item||!base)return null;
+ const benchmark=Math.ceil(base.totalCents*Number(quantity)/base.quantity-1e-8);
+ const savedCents=benchmark-item.totalCents;
+ return savedCents>0?{savedCents,percent:percentage}:null;
+}
 export function curatedQuantityBadge(cards,quantity,{live=false}={}){
  const qty=Number(quantity);
- const verified=live?verifiedVolumeSavings(cards,qty):null;
- if(verified!==null)return qty===5000?`BEST VALUE · Save ${verified}%`:`Save ${verified}%`;
+ const details=live?verifiedSavingsDetails(cards,qty):null;
+ if(details!==null){
+  const amount=(details.savedCents/100).toFixed(2);
+  return `Save $${amount} (${details.percent}%)`;
+ }
  if(qty===1000)return "FEATURED";
  if(qty===2500)return "MORE REACH";
  if(qty===5000)return "MAX REACH";
