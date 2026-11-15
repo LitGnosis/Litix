@@ -40,7 +40,8 @@ function liveTikTokFallback(raw,kind){
   const name=String(row?.name||"").trim();
   return activeSupplierRow(row)&&!retiredAutoLikesService(row)&&
    /^\s*(?:NEW\s+)?TikTok\b/i.test(name)&&!forbidden.test(name)&&
-   litixKind(name,"")===kind&&litixPlatform(name,"")==="TikTok";
+   /^\s*(?:NEW\s+)?TikTok\s+(?:Random\s+)?(Followers|Likes|Views|Comments)\b/i.exec(name)?.[1]?.toLowerCase()===kind&&
+   litixPlatform(name,"")==="TikTok";
  });
  return candidates.sort((a,b)=>{
   const quality=x=>/\b(?:High Quality|Premium Quality)\b/i.test(String(x.name||""))?0:1;
