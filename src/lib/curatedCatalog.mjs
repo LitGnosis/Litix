@@ -37,8 +37,16 @@ export function resolveCuratedSupplier(raw,platform,kind,tier="standard"){
  if(!CORE_KINDS.includes(kind)&&!(platform==="TikTok"&&
   ["shares","saves","story_views"].includes(kind)))return null;
  if(platform==="TikTok"){
-  if(tier==="vip")return null;
-  return resolveExactTikTokServices(raw)["tiktok_"+kind]||null;
+  const primary=resolveExactTikTokServices(raw)["tiktok_"+kind]||null;
+  if(tier==="standard")return primary;
+  // VIP is available only if a distinct live Default listing explicitly
+  // advertises active-look accounts; otherwise the switch stays disabled.
+  return (Array.isArray(raw)?raw:[]).filter(row=>activeSupplierRow(row)&&
+   !retiredAutoLikesService(row)&&String(row.service)!==String(primary?.service)&&
+   litixPlatform(row.name,row.category)==="TikTok"&&
+   litixKind(row.name,row.category)===kind&&
+   /\b(?:Real Accounts|Active Accounts|Super Real Accounts)\b/i.test(String(row.name||"")))
+   .sort((x,y)=>Number(x.rate)-Number(y.rate)||Number(x.service)-Number(y.service))[0]||null;
  }
  return chooseInstagram(Array.isArray(raw)?raw:[],kind,tier);
 }
@@ -64,7 +72,7 @@ export function curatedPublicProduct(raw,platform,kind,tier="standard"){
  return {
   id:"curated_"+sku+"_"+tier,
   sku,platform,kind,tier,name:platform+" "+(kind==="story_views"?"Story Views":kind[0].toUpperCase()+kind.slice(1)),
-  label:platform==="TikTok"?tiktokTierLabel(sku):tier==="vip"?"Real-Look / Active listing":"High Quality",
+  label:tier==="vip"?"Active-look listing":platform==="TikTok"?tiktokTierLabel(sku):"High Quality",
   min:minimum,max:Number(service.max),unitStep:1,per1000:quote.retailPer1000Cents/100,
   pricingRule:quote.pricingRule,startingAmountCents:quote.amountCents,
   purchasable:true,quantityCards:cards
