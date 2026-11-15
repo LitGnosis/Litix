@@ -1,0 +1,55 @@
+name: Litix curated instant first paint - no-charge QA
+on:
+  push:
+    branches:
+      - fix/litix-curated-first-paint-no-spinner-20261114
+  pull_request:
+    branches:
+      - main
+    paths:
+      - src/lib/curatedStaticPreview.mjs
+      - src/components/CuratedFastCheckout.jsx
+      - src/app/page.jsx
+      - src/tests/litix-instant-first-paint-browser-20261114.mjs
+      - .github/workflows/litix-instant-first-paint-20261114.yml
+permissions:
+  contents: read
+jobs:
+  instant-first-paint:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    defaults:
+      run:
+        working-directory: src
+    env:
+      NEXT_PUBLIC_LITIX_CURATED_STOREFRONT_ENABLED: "true"
+      NEXT_PUBLIC_LITIX_CART_BUMPS_ENABLED: "false"
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: src/package-lock.json
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Curated services and legacy checkout regression
+        run: node --test tests/litix-curated-storefront-20261114.test.mjs
+      - name: Compile production app
+        run: npm run build
+      - name: Install browser test runtime
+        run: npm install --no-save --ignore-scripts playwright@1.56.1
+      - name: Validate instant 390px and 1280px first paint with blocked card checkout
+        run: |
+          npm run start -- --port 3100 >/tmp/instant-paint.log 2>&1 &
+          app_pid=$!
+          trap 'kill $app_pid || true' EXIT
+          for i in $(seq 1 40); do
+            if curl --fail --silent --output /dev/null http://localhost:3100/; then break; fi
+            sleep 1
+          done
+          export CHROME_PATH="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
+          if [ -z "$CHROME_PATH" ]; then npx playwright install chromium; fi
+          node tests/litix-instant-first-paint-browser-20261114.mjs
