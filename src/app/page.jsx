@@ -16,17 +16,19 @@ import {newTikTokPost} from "../components/TikTokMultiPostChooser";
 import {readCustomDraft,CUSTOM_DRAFT_PREFIX} from "../lib/customQuote.mjs";
 import SocialMultiPostChooser from "../components/SocialMultiPostChooser";
 import LitixQuickShop from "../components/LitixQuickShop";
+import {cartBumpKind,CART_BUMP_QTY} from "../lib/litixCartQuote.mjs";
 const money=n=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD",currencyDisplay:"code"}).format(n/100);
 const cardMoney=n=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(n/100); // display-only: preserve stored cents
 const INITIAL_FAST_CHOICES=choicesForPlatform("Instagram");
 const INITIAL_FAST_SERVICE=firstPackageFor(INITIAL_FAST_CHOICES,"followers");
 const INITIAL_FAST_QUANTITY=defaultCheckoutQuantity(INITIAL_FAST_SERVICE);
 const CURATED_HOME_ENABLED=process.env.NEXT_PUBLIC_LITIX_CURATED_STOREFRONT_ENABLED==="true";
+const CART_BUMP_UI_ENABLED=process.env.NEXT_PUBLIC_LITIX_CART_BUMPS_ENABLED==="true";
 // Collect.js is documented as a global named CollectJS. Some script builds expose
 // that binding without a window property, so resolve both forms consistently.
 const getCollectJS=()=>{try{if(typeof CollectJS!=="undefined")return CollectJS}catch{};return typeof window!=="undefined"?window.CollectJS:undefined};
 const validOrderDetails=(service,url,email,quantity)=>{
- try{const u=new URL(url);return !!service?.purchasable&&["https:","http:"].includes(u.protocol)&&!u.username&&!u.password&&u.hostname.includes(".")&&!/^(localhost|127\.|10\.|192\.168\.|169\.254\.|\[)/i.test(u.hostname)&&/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)&&Number.isSafeInteger(quantity)&&quantity>=service.min&&quantity<=service.max&&Number.isSafeInteger(Number(service.unitStep||1))&&((quantity-Number(service.supplierMin??service.min))%Number(service.unitStep||1)===0)&&Math.ceil(service.per1000*quantity/10-1e-8)>=100}catch{return false}
+ try{const u=new URL(url);return !!service?.purchasable&&["https:","http:"].includes(u.protocol)&&!u.username&&!u.password&&u.hostname.includes(".")&&!/^(localhost|127\.|10\.|192\.168\.|169\.254\.|\[)/i.test(u.hostname)&&/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)&&Number.isSafeInteger(quantity)&&quantity>=service.min&&quantity<=service.max&&Number.isSafeInteger(Number(service.unitStep||1))&&((quantity-Number(service.supplierMin??service.min))%Number(service.unitStep||1)===0)&&quoteCentsForQuantity(service,quantity)>=100}catch{return false}
 };
 const whatsappNumber=(process.env.NEXT_PUBLIC_WHATSAPP_NUMBER||"").replace(/\D/g,"");
 const publicCollectKey=process.env.NEXT_PUBLIC_PAYKINGS_NMI_COLLECT_PUBLIC_KEY||"";
@@ -41,6 +43,11 @@ export default function Home(){
   setCheckoutRoute(isCatalogDeepLink?"catalog":"curated");
   if(!isCatalogDeepLink){setSelected(null);setQty(0);}
  },[]);
+ const [bumpWanted,setBumpWanted]=useState(false);
+ const [bumpLink,setBumpLink]=useState("");
+ const [bumpPricing,setBumpPricing]=useState(null);
+ const [bumpBusy,setBumpBusy]=useState(false);
+ const [bumpError,setBumpError]=useState("");
  const [verifiedQuote,setVerifiedQuote]=useState(null);
  const [checkoutPhase,setCheckoutPhase]=useState("idle");
  const [checkoutError,setCheckoutError]=useState("");
@@ -210,9 +217,41 @@ export default function Home(){
  const price=selected?(multiMode?multiPosts.reduce((sum,p)=>
   sum+Math.max(0,quoteCentsForQuantity(selected,Number(p.quantity))||0),0)
   :(quoteCentsForQuantity(selected,qty)??0)):0;
+ const bumpKind=CART_BUMP_UI_ENABLED&&checkoutRoute==="curated"&&
+  String(selected?.id||"").startsWith("curated_")&&!multiMode?
+   cartBumpKind(selected?.kind):null;
+ const bumpKey=[selected?.id,qty,normalizedOrderLink,bumpLink,bumpWanted].join("|");
+ const bumpReady=!bumpWanted||Boolean(bumpPricing&&bumpPricing.key===bumpKey&&bumpPricing.mainAmountCents===price);
+ const bumpTargetReady=!bumpWanted||Boolean(
+  selected?.kind!=="followers"||validateLitixCheckoutTarget(bumpLink,{platform:selected.platform,kind:"likes"}).ok);
+ const totalPrice=bumpWanted&&bumpReady?bumpPricing.totalCents:price;
+ useEffect(()=>{
+  if(!bumpWanted||!bumpKind||!selected?.id){setBumpPricing(null);setBumpError("");return;}
+  let active=true;
+  const controller=new AbortController();
+  setBumpBusy(true);setBumpPricing(null);setBumpError("");
+  const timer=setTimeout(()=>controller.abort("bump_deadline"),7500);
+  fetch("/api/checkout/cart-quote",{
+   method:"POST",headers:{"content-type":"application/json"},
+   body:JSON.stringify({serviceId:selected.id,quantity:qty,includeBump:true,
+    link:normalizedOrderLink,bumpLink:selected.kind==="followers"?bumpLink:""}),
+   signal:controller.signal,cache:"no-store"
+  }).then(async r=>{const body=await r.json();if(!r.ok||body.ready!==true||!body.bump)
+   throw Error(body.error||"The added service is unavailable");
+   return body;
+  }).then(body=>{
+   if(!active)return;
+   if(body.mainAmountCents!==price)throw Error("Base package price changed");
+   setBumpPricing({...body,key:bumpKey});
+  }).catch(error=>{if(active)setBumpError(String(error.message||"Unable to verify add-on").slice(0,140));})
+   .finally(()=>{clearTimeout(timer);if(active)setBumpBusy(false);});
+  return()=>{active=false;clearTimeout(timer);controller.abort()};
+ },[bumpWanted,bumpKind,bumpKey]);
+
  const checkoutAuthorized=multiMode?catalogCheckoutEnabled:
    !!verifiedQuote&&verifiedQuote.serviceId===selected?.id&&
-   verifiedQuote.quantity===orderQuantity&&verifiedQuote.amountCents===price;
+   verifiedQuote.quantity===orderQuantity&&verifiedQuote.amountCents===totalPrice&&
+   bumpReady&&bumpTargetReady;
  // Independent read-only checkout preflight; neither saved listing nor a
  // successful tokenization alone authorizes the server to charge a card.
  useEffect(()=>{
@@ -231,7 +270,8 @@ export default function Home(){
    return;
   }
   if(!Number.isSafeInteger(orderQuantity)||orderQuantity<1||
-     !Number.isSafeInteger(price)||price<100){
+     !Number.isSafeInteger(totalPrice)||totalPrice<100||
+     !bumpReady||!bumpTargetReady){
    setCheckoutPhase("idle");setCheckoutError("");return;
   }
   let active=true;
@@ -240,19 +280,25 @@ export default function Home(){
   setCheckoutPhase("validating");setCheckoutError("");
   const params=new URLSearchParams({
    serviceId:selected.id,quantity:String(orderQuantity),
-   expectedAmountCents:String(price)
+   expectedAmountCents:String(totalPrice)
   });
-  fetch("/api/checkout/readiness?"+params,{cache:"no-store",signal:controller.signal})
+  fetch(bumpWanted?"/api/checkout/cart-quote":"/api/checkout/readiness?"+params,{
+   cache:"no-store",signal:controller.signal,
+   ...(bumpWanted?{method:"POST",headers:{"content-type":"application/json"},
+    body:JSON.stringify({serviceId:selected.id,quantity:orderQuantity,includeBump:true,
+     link:normalizedOrderLink,bumpLink:selected.kind==="followers"?bumpLink:""})}:{})
+  })
    .then(async response=>{
     const body=await response.json().catch(()=>({}));
     if(!response.ok||body.ready!==true)throw Error(body.error||"Current checkout availability could not be verified.");
-    if(body.serviceId!==selected.id||body.amountCents!==price||
+    if(body.serviceId!==selected.id||
+       (bumpWanted?body.totalCents:body.amountCents)!==totalPrice||
        body.quantity!==orderQuantity)throw Error("Package quote changed. Check the total and retry.");
     return body;
    })
    .then(body=>{
     if(!active)return;
-    setVerifiedQuote({serviceId:body.serviceId,amountCents:body.amountCents,quantity:body.quantity});
+    setVerifiedQuote({serviceId:body.serviceId,amountCents:totalPrice,quantity:body.quantity});
     setCheckoutPhase("ready");
    })
    .catch(error=>{
@@ -265,8 +311,9 @@ export default function Home(){
    })
    .finally(()=>clearTimeout(timeout));
   return()=>{active=false;clearTimeout(timeout);controller.abort()};
- },[selected?.id,selected?.purchasable,orderQuantity,price,multiMode,
-    catalogCheckoutEnabled,config.ready,config.publicKey,verificationRetry]);
+ },[selected?.id,selected?.purchasable,orderQuantity,totalPrice,multiMode,
+    catalogCheckoutEnabled,config.ready,config.publicKey,verificationRetry,
+    bumpReady,bumpTargetReady,bumpWanted,bumpKey]);
 
  useEffect(()=>{
   if(!checkoutAuthorized||!config.publicKey||!config.ready||!selected?.purchasable){setCardReady(false);return;}
@@ -453,7 +500,10 @@ export default function Home(){
   submittedKey.current=key;
   setCheckoutPhase("processing");
   try{
-   const r=await fetch("/api/checkout/v1",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({serviceId:selected.id,quantity:orderQuantity,email,link:normalizedOrderLink,...(multiMode?{postAllocations:multiPosts.map(p=>({link:p.verifiedUrl,quantity:Number(p.quantity)}))}:{}),paymentToken:token,idempotencyKey:key,expectedAmountCents:price}),signal:AbortSignal.timeout(60000)});
+   const r=await fetch("/api/checkout/v1",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({serviceId:selected.id,quantity:orderQuantity,email,link:normalizedOrderLink,
+   ...(multiMode?{postAllocations:multiPosts.map(p=>({link:p.verifiedUrl,quantity:Number(p.quantity)}))}:{}),
+   ...(bumpWanted?{bump:{enabled:true},bumpLink:selected.kind==="followers"?bumpLink:""}:{}),
+   paymentToken:token,idempotencyKey:key,expectedAmountCents:totalPrice}),signal:AbortSignal.timeout(60000)});
    const v=await r.json();
    // Ambiguous checkout outcomes reuse the original idempotency key to avoid accidental duplicate charges.
    if(!r.ok&&r.status!==202)throw Error(v.error||"Payment processing failed");
@@ -468,7 +518,7 @@ export default function Home(){
     if(v.payment==="paid"){
      let stored=false;
      try{
-      sessionStorage.setItem("litix:last-confirmation",JSON.stringify({orderId:v.orderId,trackingUrl,payment:v.payment,fulfillment:v.fulfillment||"pending",amountCents:price,service:selected?checkoutDisplay(selected).title:"Social media service",quantity:orderQuantity,destination:normalizedOrderLink,createdAt:item.createdAt}));
+      sessionStorage.setItem("litix:last-confirmation",JSON.stringify({orderId:v.orderId,trackingUrl,payment:v.payment,fulfillment:v.fulfillment||"pending",amountCents:totalPrice,service:selected?checkoutDisplay(selected).title:"Social media service",quantity:orderQuantity,destination:normalizedOrderLink,createdAt:item.createdAt}));
       stored=true;
      }catch{}
      if(stored){location.assign("/confirmation?order="+encodeURIComponent(v.orderId));return}
@@ -479,6 +529,19 @@ export default function Home(){
  }
  done.current=purchase;
  async function verifyQuoteBeforePayment(){
+  if(bumpWanted){
+   const r=await fetch("/api/checkout/cart-quote",{
+    method:"POST",headers:{"content-type":"application/json"},
+    body:JSON.stringify({serviceId:selected.id,quantity:orderQuantity,includeBump:true,
+     link:normalizedOrderLink,bumpLink:selected.kind==="followers"?bumpLink:""}),
+    cache:"no-store",signal:AbortSignal.timeout(10000)
+   });
+   const body=await r.json().catch(()=>({}));
+   if(!r.ok||body.ready!==true||body.totalCents!==totalPrice||
+      body.mainAmountCents!==price||body.bump?.targetRequired)
+    throw Error("The additional item or total could not be verified. No charge attempted.");
+   return;
+  }
   const allocations=multiMode?multiPosts.map(post=>Number(post.quantity)):[Number(orderQuantity)];
   const checked=await Promise.all(allocations.map(async quantity=>{
    const amountCents=quoteCentsForQuantity(selected,quantity);
@@ -492,7 +555,7 @@ export default function Home(){
     throw Error("This package's price or quantity changed. Review your selection and retry.");
    return result.amountCents;
   }));
-  if(checked.reduce((sum,amount)=>sum+amount,0)!==price)
+  if(checked.reduce((sum,amount)=>sum+amount,0)!==totalPrice)
    throw Error("The current package price changed. Review the total and retry.");
  }
  const submit=async e=>{
@@ -607,12 +670,30 @@ export default function Home(){
  <label>Email<input type="email" required placeholder="you@example.com" value={email} onChange={e=>setEmail(e.target.value)}/></label>
  <div className="totalbox" aria-live="polite">
   <div className="small">Total (USD)</div>
-  <div className="total">{cardMoney(price)}</div>
+  <div className="total">{cardMoney(totalPrice)}</div>
  </div>
  {checkoutError&&checkoutPhase==="error"&&<p className="small" role="alert">{checkoutError}</p>}
  {selected&&!selected.purchasable&&<p className="small">This package needs additional details before purchase. Contact Litix Concierge for help.</p>}
  {selected?.purchasable&&checkoutAuthorized&&config.ready&&!cardReady&&<button type="button" className="alt" onClick={()=>{setNotice("Retrying secure card fields…");setCardRetry(v=>v+1)}}>Retry secure fields</button>}
  </>:<div className="litix-pick-first" role="status"><strong>Choose a package in Step 03.</strong><p>You can paste your public profile or post link above at any time. The total appears after a package is selected.</p></div>}
+ {bumpKind&&selected&&<div className="litix-cart-bump" aria-label="Optional order add-on">
+   <label className="litix-cart-bump-toggle">
+    <input type="checkbox" checked={bumpWanted} disabled={busy}
+     onChange={e=>{setBumpWanted(e.target.checked);setKey(crypto.randomUUID());}}/>
+    <span><strong>Add {CART_BUMP_QTY[bumpKind].toLocaleString()} matching {bumpKind==="likes"?"Likes":"Views"}</strong>
+     <small>{bumpWanted&&bumpReady?" + "+cardMoney(bumpPricing.bump.amountCents):
+      " · Live add-on price confirmed before payment"}</small></span>
+   </label>
+   {bumpWanted&&selected.kind==="followers"&&<label className="litix-cart-bump-link">
+    Public post or reel for the added Likes
+    <input type="url" placeholder={checkoutTargetPlaceholder({platform:selected.platform,kind:"likes"})}
+     value={bumpLink} onChange={e=>setBumpLink(e.target.value)}
+     autoCapitalize="none" spellCheck={false} required/>
+   </label>}
+   {bumpWanted&&bumpBusy&&<p role="status" className="small">Verifying the add-on price…</p>}
+   {bumpWanted&&bumpError&&<p role="status" className="small">{bumpError}</p>}
+   {bumpWanted&&bumpReady&&<p className="small">One secure card payment covers both items. Each delivery is tracked separately under the same order.</p>}
+  </div>}
  {checkoutRoute==="curated"&&selected&&<div className="litix-curated-fulfillment">
   ⚡ Automated order submission after verified payment · Start times vary · No social password required
   <label style={{display:"block",marginTop:9,opacity:.7}}>
@@ -623,10 +704,10 @@ export default function Home(){
   showFields={Boolean(selected?.purchasable&&checkoutAuthorized&&config.ready&&config.publicKey)}
   cardReady={cardReady}
   busy={busy}
-  canPay={Boolean(selected?.purchasable&&checkoutAuthorized&&detailsReady&&cardReady&&!busy&&config.ready&&config.publicKey)}
+  canPay={Boolean(selected?.purchasable&&checkoutAuthorized&&detailsReady&&bumpReady&&bumpTargetReady&&cardReady&&!busy&&config.ready&&config.publicKey)}
   buttonLabel={busy?(checkoutPhase==="validating"?"Verifying live price…":"Processing securely…"):
-   detailsReady&&selected?.purchasable?"Pay with PayKings — "+cardMoney(price)+" USD":
-   selected?"Continue to Secure Checkout — "+cardMoney(price):"Choose a package to continue"}
+   detailsReady&&selected?.purchasable?"Pay with PayKings — "+cardMoney(totalPrice)+" USD":
+   selected?"Continue to Secure Checkout — "+cardMoney(totalPrice):"Choose a package to continue"}
   helperText={checkoutFieldHint}
  />
  {selected?.purchasable&&detailsReady&&!checkoutAuthorized&&checkoutPhase!=="validating"&&config.ready&&<button type="button" className="alt" onClick={()=>setVerificationRetry(value=>value+1)}>Retry price verification</button>}
