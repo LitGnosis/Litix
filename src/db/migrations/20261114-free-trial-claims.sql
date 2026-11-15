@@ -34,7 +34,9 @@ BEGIN
     p_profile_hash !~ '^[a-f0-9]{64}$' THEN
    RAISE EXCEPTION 'trial_validation_failed';
  END IF;
- -- Serialize claims on all 3 dimensions in a stable sequence. Multiple
+ -- Serialize the global daily cap AND all 3 individual dimensions.
+ PERFORM pg_advisory_xact_lock(hashtextextended('litix-trial-global-daily-cap', 0));
+ -- Multiple
  -- concurrent POSTs cannot bypass the 30-day eligibility window.
  PERFORM pg_advisory_xact_lock(hashtextextended('trial-ip:' || p_ip_hash, 0));
  PERFORM pg_advisory_xact_lock(hashtextextended('trial-email:' || p_email_hash, 0));

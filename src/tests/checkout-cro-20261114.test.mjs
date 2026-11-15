@@ -57,6 +57,8 @@ test("Pricing and footer copy are unified",async()=>{
  const brand="LITIX · Innovation, Ignited. Direct Social Media Growth & Campaign Workflows · Encrypted PayKings Checkout";
  assert.ok(page.includes(brand));
  assert.ok(services.includes(brand));
- assert.match(component,/Encrypted PayKings checkout · Instant live verification before any charge · No social passwords required/);
+ assert.match(component,/litix-checkout-trust/);
+ assert.match(component,/No social passwords required/);
+ assert.doesNotMatch(component,/premium-checkout-security/);
  assert.equal((page.match(/Analytics Amplified|Metrics that Move|Data Driven Discovery/g)||[]).length,0);
 });
