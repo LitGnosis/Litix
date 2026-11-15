@@ -2,8 +2,7 @@ import {boosteroProduction} from "./boosteroReadOnly.mjs";
 import {boosteroQuote,boosteroDestination} from "./boosteroFulfillment.mjs";
 import {parseCuratedId,resolveCuratedSupplier} from "./curatedCatalog.mjs";
 
-export const CART_BUMP_QTY=Object.freeze({likes:500,views:1000});
-export const cartBumpKind=kind=>(["followers","views"].includes(kind)?"likes":kind==="likes"?"views":null);
+import {CART_BUMP_QTY,cartBumpKind} from "./cartBumpConfig.mjs";
 export const cartBumpAvailable=()=>process.env.LITIX_CART_BUMPS_ENABLED==="true";
 export const safeCartDestination=(target,platform,kind)=>{
  const p=String(platform||"").toLowerCase();
