@@ -1,4 +1,5 @@
 import {boosteroProduction} from "./boosteroReadOnly.mjs";
+import {boosteroResilientRead} from "./boosteroResilientRead.mjs";
 import {boosteroSQL,boosteroProductionReady,deliverLitixCustomerUpdates} from "./boosteroFulfillment.mjs";
 import {normalizeBoosteroStatus} from "./boosteroStatusBatch.mjs";
 import {queueCustomerDeliveryChange} from "./litixCustomerUpdates.mjs";
@@ -6,7 +7,7 @@ import {queueCustomerDeliveryChange} from "./litixCustomerUpdates.mjs";
 // Operations-only monitor: NO supplier add, refill, charge or automatic replacement.
 const hasConfig=()=>boosteroProductionReady();
 const positive=id=>/^\d{1,24}$/.test(String(id));
-export async function pollPaidOrders({sql=boosteroSQL(),operation=boosteroProduction,limit=100}={}){
+export async function pollPaidOrders({sql=boosteroSQL(),operation=boosteroResilientRead,limit=100}={}){
  if(!hasConfig())return {skipped:"provider_disabled"};
  // Atomic claim prevents concurrent cron invocations polling the same records.
  const work=await sql.query(`WITH chosen AS (
@@ -76,7 +77,7 @@ export async function pollPaidOrders({sql=boosteroSQL(),operation=boosteroProduc
  return {checked,updated,failed,manualReview,emails};
 }
 
-export async function synchronizeCatalog({sql=boosteroSQL(),operation=boosteroProduction}={}){
+export async function synchronizeCatalog({sql=boosteroSQL(),operation=boosteroResilientRead}={}){
  if(!hasConfig())return {skipped:"provider_disabled"};
  // A failed services API call never marks services disabled; stale listings
  // cannot authorize an order because the checkout verifies a LIVE quote.
@@ -106,7 +107,7 @@ export async function synchronizeCatalog({sql=boosteroSQL(),operation=boosteroPr
  return {checked,paused,activeSupplierListings:rows.length};
 }
 
-export async function checkBalance({operation=boosteroProduction,fetcher=fetch}={}){
+export async function checkBalance({operation=boosteroResilientRead,fetcher=fetch}={}){
  if(!hasConfig())return {skipped:"provider_disabled"};
  const b=await operation("balance");
  const dollars=Number(b?.balance);
