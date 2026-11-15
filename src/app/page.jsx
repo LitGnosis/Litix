@@ -3,8 +3,9 @@
 import {useEffect,useRef,useState} from "react";
 import PremiumInlineCheckout from "../components/PremiumInlineCheckout";
 import LitixCheckoutSelector from "../components/LitixCheckoutSelector";
+import CuratedFastCheckout from "../components/CuratedFastCheckout";
 import {choicesForPlatform,firstPackageFor} from "../lib/litixCheckoutBootstrap.mjs";
-import {checkoutDisplay,defaultCheckoutQuantity,clampCheckoutQuantity,checkoutQuantityEligible,QUANTITY_PRESETS} from "../lib/litixCheckoutDisplay.mjs";
+import {checkoutDisplay,defaultCheckoutQuantity,clampCheckoutQuantity,checkoutQuantityEligible,quoteCentsForQuantity,QUANTITY_PRESETS} from "../lib/litixCheckoutDisplay.mjs";
 import {profilePlatformForService,normalizeProfileDestination,checkoutProfileLabel,checkoutTargetPlaceholder,validateLitixCheckoutTarget} from "../lib/litixOrderTarget.mjs";
 import {restrictedSocialKind} from "../lib/publicBoosteroOnly.mjs";
 import {sortServicesPer1000} from "../lib/catalogSort.mjs";
@@ -20,6 +21,7 @@ const cardMoney=n=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD
 const INITIAL_FAST_CHOICES=choicesForPlatform("Instagram");
 const INITIAL_FAST_SERVICE=firstPackageFor(INITIAL_FAST_CHOICES,"followers");
 const INITIAL_FAST_QUANTITY=defaultCheckoutQuantity(INITIAL_FAST_SERVICE);
+const CURATED_HOME_ENABLED=process.env.NEXT_PUBLIC_LITIX_CURATED_STOREFRONT_ENABLED==="true";
 // Collect.js is documented as a global named CollectJS. Some script builds expose
 // that binding without a window property, so resolve both forms consistently.
 const getCollectJS=()=>{try{if(typeof CollectJS!=="undefined")return CollectJS}catch{};return typeof window!=="undefined"?window.CollectJS:undefined};
@@ -31,6 +33,14 @@ const publicCollectKey=process.env.NEXT_PUBLIC_PAYKINGS_NMI_COLLECT_PUBLIC_KEY||
 export default function Home(){
  const [services,setServices]=useState([]),[categories,setCategories]=useState([]),[recentServices,setRecentServices]=useState([]),[savedOrders,setSavedOrders]=useState([]),[workspaceReady,setWorkspaceReady]=useState(false),[cat,setCat]=useState(""),[query,setQuery]=useState(""),[platform,setPlatform]=useState("All platforms"),[quickKind,setQuickKind]=useState(""),[favoritesOnly,setFavoritesOnly]=useState(false),[compareIds,setCompareIds]=useState([]),[pg,setPg]=useState(1),[catalogRetry,setCatalogRetry]=useState(0),[catalogState,setCatalogState]=useState("loading"),[catalogSource,setCatalogSource]=useState("unavailable"),[catalogCheckoutEnabled,setCatalogCheckoutEnabled]=useState(false),[count,setCount]=useState(0),[total,setTotal]=useState(0),[selected,setSelected]=useState(INITIAL_FAST_SERVICE),[qty,setQty]=useState(INITIAL_FAST_QUANTITY),[email,setEmail]=useState(""),[link,setLink]=useState(""),[config,setConfig]=useState({ready:false}),[cardReady,setCardReady]=useState(false),[cardRetry,setCardRetry]=useState(0),[busy,setBusy]=useState(false),[notice,setNotice]=useState(""),[receipt,setReceipt]=useState(null),[privateUrl,setPrivateUrl]=useState(""),[tracked,setTracked]=useState(null),[key,setKey]=useState("");const done=useRef(null),submittedKey=useRef(""),checkoutLaunchRef=useRef(false);
  const [lookupId,setLookupId]=useState(""),[lookupEmail,setLookupEmail]=useState(""),[lookupBusy,setLookupBusy]=useState(false),[lookupNotice,setLookupNotice]=useState("");
+ const [checkoutRoute,setCheckoutRoute]=useState(CURATED_HOME_ENABLED?"checking":"catalog");
+ useEffect(()=>{
+  if(!CURATED_HOME_ENABLED)return;
+  const params=new URLSearchParams(location.search);
+  const isCatalogDeepLink=/^(?:litix|boostero)_\d{1,12}$/.test(params.get("service")||"");
+  setCheckoutRoute(isCatalogDeepLink?"catalog":"curated");
+  if(!isCatalogDeepLink){setSelected(null);setQty(0);}
+ },[]);
  const [verifiedQuote,setVerifiedQuote]=useState(null);
  const [checkoutPhase,setCheckoutPhase]=useState("idle");
  const [checkoutError,setCheckoutError]=useState("");
@@ -198,8 +208,8 @@ export default function Home(){
  useEffect(()=>{if(!workspaceReady)return;try{localStorage.setItem("litix:recent-services",JSON.stringify(recentServices.slice(0,8)));localStorage.setItem("litix:saved-orders",JSON.stringify(savedOrders.slice(0,12)));}catch{}},[workspaceReady,recentServices,savedOrders]);
 
  const price=selected?(multiMode?multiPosts.reduce((sum,p)=>
-  sum+Math.max(0,Math.ceil(selected.per1000*(Number(p.quantity)||0)/10-1e-8)),0)
-  :Math.ceil(selected.per1000*qty/10-1e-8)):0;
+  sum+Math.max(0,quoteCentsForQuantity(selected,Number(p.quantity))||0),0)
+  :(quoteCentsForQuantity(selected,qty)??0)):0;
  const checkoutAuthorized=multiMode?catalogCheckoutEnabled:
    !!verifiedQuote&&verifiedQuote.serviceId===selected?.id&&
    verifiedQuote.quantity===orderQuantity&&verifiedQuote.amountCents===price;
@@ -471,7 +481,7 @@ export default function Home(){
  async function verifyQuoteBeforePayment(){
   const allocations=multiMode?multiPosts.map(post=>Number(post.quantity)):[Number(orderQuantity)];
   const checked=await Promise.all(allocations.map(async quantity=>{
-   const amountCents=Math.ceil(Number(selected.per1000)*quantity/10-1e-8);
+   const amountCents=quoteCentsForQuantity(selected,quantity);
    const params=new URLSearchParams({serviceId:selected.id,quantity:String(quantity),expectedAmountCents:String(amountCents)});
    const response=await fetch("/api/checkout/readiness?"+params.toString(),{
     cache:"no-store",signal:AbortSignal.timeout(10000)
@@ -536,7 +546,13 @@ export default function Home(){
  
  <LitixQuickShop/>
 
-   <div className="litix-purchase-layout"><section id="checkout" className="panel sticky"><div className="kicker">SECURE PAYKINGS CHECKOUT</div><h2>Your order</h2><ol className="checkout-steps" aria-label="Checkout steps"><li className={selected?"step-done":"step-current"}>Choose service</li><li className={selected&&link?"step-current":"step-pending"}>Order details</li><li className={cardReady?"step-done":"step-pending"}>Secure payment</li></ol><form onSubmit={submit} className="form"><LitixCheckoutSelector selected={selected} onChoose={service=>{setSelected(service);setQty(defaultCheckoutQuantity(service));setReceipt(null);setNotice("");setKey(crypto.randomUUID())}}/>
+   <div className="litix-purchase-layout"><section id="checkout" className="panel sticky"><div className="kicker">SECURE PAYKINGS CHECKOUT</div><h2>Your order</h2><ol className="checkout-steps" aria-label="Checkout steps"><li className={selected?"step-done":"step-current"}>Choose service</li><li className={selected&&link?"step-current":"step-pending"}>Order details</li><li className={cardReady?"step-done":"step-pending"}>Secure payment</li></ol><form onSubmit={submit} className="form">
+ {checkoutRoute==="checking"?<p className="litix-curated-notice" role="status">Preparing the focused checkout…</p>:
+ checkoutRoute==="curated"?
+ <CuratedFastCheckout selected={selected} quantity={qty}
+  onChoose={service=>{setSelected(service);setQty(defaultCheckoutQuantity(service));setReceipt(null);setNotice("");setKey(crypto.randomUUID())}}
+  onQuantityChange={setQty}/>:
+ <LitixCheckoutSelector selected={selected} onChoose={service=>{setSelected(service);setQty(defaultCheckoutQuantity(service));setReceipt(null);setNotice("");setKey(crypto.randomUUID())}}/>}
  {!multiMode&&<label className="litix-early-link" style={{display:"block",margin:"14px 0"}}>
   {selected?(profilePlatformForService(selected)?
    checkoutProfileLabel(profilePlatformForService(selected)):
@@ -572,7 +588,7 @@ export default function Home(){
    }
   }}>Choose multiple posts</button>
  </div>}
- {multiMode?<SocialMultiPostChooser service={selected} platform={String(selected?.platform||"").toLowerCase()} posts={multiPosts} onChange={setMultiPosts}/>:<><div className="litix-quantity-control" aria-label="Set order quantity">
+ {multiMode?<SocialMultiPostChooser service={selected} platform={String(selected?.platform||"").toLowerCase()} posts={multiPosts} onChange={setMultiPosts}/>:<>{checkoutRoute!=="curated"&&<div className="litix-quantity-control" aria-label="Set order quantity">
  <div className="litix-quantity-heading"><strong>Quantity</strong><span>Choose a preset or enter a custom amount</span></div>
  <div className="litix-quantity-presets" role="group" aria-label="Quick quantity presets">
  {QUANTITY_PRESETS.map(preset=><button type="button" key={preset}
@@ -588,7 +604,7 @@ export default function Home(){
   required value={qty} onChange={e=>setQty(Number(e.target.value))}
   onBlur={()=>setQty(clampCheckoutQuantity(qty,selected))}/></label>
 
- </div>{selected&&qty<selected.min&&<div className="checkout-quantity-warning" role="alert"><strong>Minimum quantity for this service: {selected.min.toLocaleString()}.</strong><p>You entered {qty.toLocaleString()}. The $1 minimum order does not override the service's quantity requirement. The lowest eligible total for this service is {money(Math.ceil(selected.per1000*selected.min/10-1e-8))}.</p><button type="button" className="alt" onClick={()=>setQty(selected.min)}>Use minimum: {selected.min.toLocaleString()} units</button></div>}</>}
+ </div>}{selected&&qty<selected.min&&<div className="checkout-quantity-warning" role="alert"><strong>Minimum quantity for this service: {selected.min.toLocaleString()}.</strong><p>You entered {qty.toLocaleString()}. The $1 minimum order does not override the service's quantity requirement. The lowest eligible total for this service is {money(Math.ceil(selected.per1000*selected.min/10-1e-8))}.</p><button type="button" className="alt" onClick={()=>setQty(selected.min)}>Use minimum: {selected.min.toLocaleString()} units</button></div>}</>}
  <label>Email<input type="email" required placeholder="you@example.com" value={email} onChange={e=>setEmail(e.target.value)}/></label>
  <div className="totalbox" aria-live="polite">
   <div className="small">Total (USD)</div>
@@ -598,6 +614,12 @@ export default function Home(){
  {selected&&!selected.purchasable&&<p className="small">This package needs additional details before purchase. Contact Litix Concierge for help.</p>}
  {selected?.purchasable&&checkoutAuthorized&&config.ready&&!cardReady&&<button type="button" className="alt" onClick={()=>{setNotice("Retrying secure card fields…");setCardRetry(v=>v+1)}}>Retry secure fields</button>}
  </>:<div className="litix-pick-first" role="status"><strong>Choose a package in Step 03.</strong><p>You can paste your public profile or post link above at any time. The total appears after a package is selected.</p></div>}
+ {checkoutRoute==="curated"&&selected&&<div className="litix-curated-fulfillment">
+  ⚡ Automated order submission after verified payment · Start times vary · No social password required
+  <label style={{display:"block",marginTop:9,opacity:.7}}>
+   <input type="checkbox" disabled checked={false} readOnly/> Add 30-Day Auto-Likes (currently unavailable)
+  </label>
+ </div>}
  <PremiumInlineCheckout
   showFields={Boolean(selected?.purchasable&&checkoutAuthorized&&config.ready&&config.publicKey)}
   cardReady={cardReady}
