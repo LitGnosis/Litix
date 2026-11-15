@@ -16,7 +16,7 @@ import {newTikTokPost} from "../components/TikTokMultiPostChooser";
 import {readCustomDraft,CUSTOM_DRAFT_PREFIX} from "../lib/customQuote.mjs";
 import SocialMultiPostChooser from "../components/SocialMultiPostChooser";
 import LitixQuickShop from "../components/LitixQuickShop";
-import {cartBumpKind,CART_BUMP_QTY} from "../lib/litixCartQuote.mjs";
+import {cartBumpKind,CART_BUMP_QTY} from "../lib/cartBumpConfig.mjs";
 const money=n=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD",currencyDisplay:"code"}).format(n/100);
 const cardMoney=n=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(n/100); // display-only: preserve stored cents
 const INITIAL_FAST_CHOICES=choicesForPlatform("Instagram");
