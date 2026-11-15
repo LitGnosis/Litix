@@ -113,7 +113,7 @@ export default function CuratedFastCheckout({selected,quantity,onChoose,onQuanti
      disabled={status==="ready"&&!find(platform,kind,"standard")}
      onClick={()=>go(platform,kind,"standard")}>
      <span className="litix-tier-name">Standard</span>
-     <small>{status==="ready"?(live(platform,kind,"standard")?.label||"Catalog-verified listing"):"Live listing checked at checkout"}</small>
+     <small>{status==="ready"?((live(platform,kind,"standard")?.label==="Active-look service"?"Active / Real-Look":live(platform,kind,"standard")?.label)||"Catalog-verified listing"):"Live listing checked at checkout"}</small>
     </button>
     {live(platform,kind,"vip")&&<button type="button" className={tier==="vip"?"is-selected":""}
      aria-pressed={tier==="vip"} aria-label="Separate Active service option"

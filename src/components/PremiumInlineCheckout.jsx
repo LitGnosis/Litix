@@ -63,9 +63,9 @@ export default function PremiumInlineCheckout({
         <span>{buttonLabel}</span>
       </button>
       <ul className="litix-checkout-trust" aria-label="Checkout safeguards">
-        <li><LitixIcon name="shield-check" size={15}/> Verified price before payment</li>
+        <li><LitixIcon name="shield-check" size={15}/> Live service verification</li>
         <li><LitixIcon name="receipt" size={15}/> Private order tracking</li>
-        <li><LitixIcon name="lock" size={15}/> Hosted PayKings fields; no social password</li>
+        <li><LitixIcon name="lock" size={15}/> PayKings-hosted card fields · No social passwords required</li>
       </ul>
       {showSticky&&<aside className="litix-mobile-checkout-bar" aria-label="Mobile checkout shortcut">
         <div className="litix-mobile-checkout-total">
