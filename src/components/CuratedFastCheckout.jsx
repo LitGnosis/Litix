@@ -43,6 +43,7 @@ export default function CuratedFastCheckout({selected,quantity,onChoose,onQuanti
  const current=useMemo(()=>find(platform,kind,tier)||find(platform,kind,"standard"),[products,platform,kind,tier]);
  useEffect(()=>{
   if(status!=="ready"){return;}
+  if(tier==="vip"&&!find(platform,kind,"vip"))setTier("standard");
   if(!current){
    if(selected?.id)onChoose(null);
    return;
@@ -113,19 +114,25 @@ export default function CuratedFastCheckout({selected,quantity,onChoose,onQuanti
     <button type="button" className={tier==="standard"?"is-selected":""}
      aria-pressed={tier==="standard"} disabled={status==="ready"&&!find(platform,kind,"standard")}
      onClick={()=>go(platform,kind,"standard")}>High Quality <small>Standard</small></button>
-    <button type="button" className={tier==="vip"?"is-selected":""}
-     aria-pressed={tier==="vip"} disabled={!live(platform,kind,"vip")}
-     onClick={()=>go(platform,kind,"vip")}>Real / Active VIP <small>{find(platform,kind,"vip")?"Alternate tier":"Not currently verified"}</small></button>
+    {live(platform,kind,"vip")&&<button type="button" className={tier==="vip"?"is-selected":""}
+     aria-pressed={tier==="vip"}
+     onClick={()=>go(platform,kind,"vip")}>Real / Active <small>VIP quality</small></button>}
    </div>
   </div>
-  {status!=="ready"&&<p className="litix-curated-notice" role="status">
-    {status==="error"?"Live pricing could not be refreshed. Shown prices are historical estimates; payment remains disabled.":"Price estimates from a saved catalog. Live USD prices and service availability are being verified."}
-   </p>}
+  <p className="litix-curated-notice" role="status" aria-live="polite">
+   {status==="ready"&&current?
+    "Verified Litix pricing · Automated dispatch after secure payment":
+    status==="error"?
+    "Secure price verification is unavailable. Retry to continue.":
+    "Litix pricing · Final USD total verified before payment"}
+  </p>
   {status==="error"&&<button className="litix-curated-custom-toggle" type="button" onClick={()=>setRetry(i=>i+1)}>Retry live pricing</button>}
   {status==="ready"&&!current&&<p role="status" className="litix-curated-notice">This service is currently unavailable in quick checkout. Try another service or browse the full catalog.</p>}
   {current&&<div className="litix-curated-packages">
    <div className="litix-curated-heading"><span>04</span><strong>Choose Quantity</strong></div>
-   <p className="litix-curated-tier-description">{current.label} · <span className="litix-curated-range">{formatCuratedUnitRange(current.min,current.max)}</span></p>
+   <p className="litix-curated-tier-description">
+    {current.preview?"High Quality":current.label} · <span className="litix-curated-range">{formatCuratedUnitRange(current.min,current.max)}</span>
+   </p>
    <div role="group" aria-label="Quantity package cards" className="litix-curated-package-grid">
     {current.quantityCards.map(card=><button key={card.quantity} type="button"
      className={quantity===card.quantity?"is-selected":""}
