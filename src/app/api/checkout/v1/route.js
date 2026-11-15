@@ -1,5 +1,6 @@
 import {POST as ownedDollarCheckout} from "../pilot/route.js";
 import {handleBoosteroOrder} from "../../../../lib/boosteroOrderHandler.mjs";
+import {handleCartPurchase} from "../../../../lib/litixCartCheckout.mjs";
 import {boosteroProduction} from "../../../../lib/boosteroReadOnly.mjs";
 import {parseCuratedId,resolveCuratedSupplier} from "../../../../lib/curatedCatalog.mjs";
 import {boosteroDestination} from "../../../../lib/boosteroFulfillment.mjs";
@@ -9,6 +10,7 @@ export const maxDuration=60;
 export async function POST(request){
  let data;
  try{data=await request.clone().json()}catch{return Response.json({error:"Invalid JSON"},{status:400})}
+ if(data?.bump?.enabled===true)return handleCartPurchase(request);
  if(data?.product==="website_preview"){
   if(data.serviceId!=null||data.link!=null||data.postAllocations!=null||
      data.serviceKind!=null||data.amountCents!==100)
