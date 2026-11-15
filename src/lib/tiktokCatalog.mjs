@@ -20,7 +20,7 @@ export function tiktokSkuForService(row){
  if(!/\btiktok\b/i.test(name+" "+category))return null;
  const explicitKind=/\b(followers|likes|views|comments|shares|saves)\b/i.exec(name)?.[1]?.toLowerCase()||"";
  for(const [sku,pattern] of Object.entries(TIKTOK_EXACT_MATCH)){
-  const kind=sku.replace(/^tiktok_/,"").replace(/^custom_/,"");
+  const kind=sku.replace(/^tiktok_/,"").replace(/^custom_/,"").replace(/^story_/,"");
   if(explicitKind&&explicitKind!==kind)continue;
   if(pattern.test(name)||pattern.test(category))return sku;
  }
