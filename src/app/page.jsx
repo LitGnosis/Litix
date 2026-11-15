@@ -563,9 +563,9 @@ export default function Home({landingServiceId=null}){
    selected.platform==="Instagram"?"Public Instagram post or reel link":
    selected.platform==="TikTok"?"Public TikTok video link":
    "Public "+selected.platform+" post or page link"):"Public profile or post link"}
-  <input aria-label="Public profile or post link" type="text"
+  <input key={String(selected?.platform||"")+"-"+String(selected?.kind||"")} aria-label="Public profile or post link" type="text"
    value={link} onChange={e=>setLink(e.target.value)}
-   placeholder={checkoutTargetPlaceholder(selected)}
+   placeholder={checkoutTargetPlaceholder(selected)} autoComplete="off"
    autoCapitalize="none" autoCorrect="off" spellCheck={false}
    aria-invalid={Boolean(link.trim()&&selected&&!targetFeedback.ok)}
    aria-describedby="litix-link-feedback"/>
