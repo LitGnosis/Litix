@@ -2,6 +2,8 @@ import {timingSafeEqual} from "node:crypto";
 import {syncBoosteroMultiStatuses,resumeBoosteroMultiQueue} from "../../../../../lib/boosteroMultiPostFulfillment.mjs";
 import {boosteroCronPhase,BOOSTERO_CRON_PHASE_LABELS} from "../../../../../lib/litixOperationalSchedule.mjs";
 import {syncBoosteroStatuses,boosteroProductionReady,deliverLitixCustomerUpdates} from "../../../../../lib/boosteroFulfillment.mjs";
+import {syncCartOrderStatuses} from "../../../../../lib/litixCartTracking.mjs";
+import {sendPendingCartReceipts} from "../../../../../lib/litixCartReceipts.mjs";
 
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
@@ -28,14 +30,19 @@ export async function GET(req){
    process.env.LITIX_MULTIPOST_AUTO_FULFILL_ENABLED==="true"?
     resumeBoosteroMultiQueue({limitParents:1}):
     Promise.resolve({skipped:"multi_post_disabled"});
-  const outcomes=await Promise.allSettled([task,sendUpdates]);
+  const cartEnabled=process.env.LITIX_CART_BUMPS_ENABLED==="true";
+  const cart=cartEnabled
+   ?(phase===1?syncCartOrderStatuses({limit:4}):sendPendingCartReceipts({limit:2}))
+   :Promise.resolve({skipped:"cart_disabled"});
+  const outcomes=await Promise.allSettled([task,sendUpdates,cart]);
   const work=outcomes[0].status==="fulfilled"?outcomes[0].value:{failed:1};
   const customerNotifications=outcomes[1].status==="fulfilled"?outcomes[1].value:{failed:1};
+  const cartAutomation=outcomes[2].status==="fulfilled"?outcomes[2].value:{failed:1};
   if(outcomes.some(x=>x.status==="rejected"))return send({
-   ok:false,phase:BOOSTERO_CRON_PHASE_LABELS[phase],work,customerNotifications,
+   ok:false,phase:BOOSTERO_CRON_PHASE_LABELS[phase],work,customerNotifications,cartAutomation,
    error:"Litix supplier reconciliation temporarily unavailable"
   },503);
-  return send({ok:true,phase:BOOSTERO_CRON_PHASE_LABELS[phase],work,customerNotifications});
+  return send({ok:true,phase:BOOSTERO_CRON_PHASE_LABELS[phase],work,customerNotifications,cartAutomation});
  }catch{
   return send({ok:false,error:"Private supplier polling unavailable"},503);
  }
