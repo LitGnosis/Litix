@@ -41,7 +41,13 @@ export default function Home(){
   const params=new URLSearchParams(location.search);
   const isCatalogDeepLink=/^(?:litix|boostero)_\d{1,12}$/.test(params.get("service")||"");
   setCheckoutRoute(isCatalogDeepLink?"catalog":"curated");
-  if(!isCatalogDeepLink){setSelected(null);setQty(0);}
+  if(!isCatalogDeepLink){
+   setSelected(null);
+   const requestedQty=Number(params.get("qty")||params.get("quantity")||1000);
+   setQty(Number.isSafeInteger(requestedQty)&&requestedQty>=1&&requestedQty<=1000000?requestedQty:1000);
+   const requestedLink=String(params.get("link")||"").slice(0,1100);
+   if(requestedLink)setLink(requestedLink);
+  }
  },[]);
  const [bumpWanted,setBumpWanted]=useState(false);
  const [bumpLink,setBumpLink]=useState("");
@@ -612,7 +618,14 @@ export default function Home(){
    <div className="litix-purchase-layout"><section id="checkout" className="panel sticky"><div className="kicker">SECURE PAYKINGS CHECKOUT</div><h2>Your order</h2><ol className="checkout-steps" aria-label="Checkout steps"><li className={selected?"step-done":"step-current"}>Choose service</li><li className={selected&&link?"step-current":"step-pending"}>Order details</li><li className={cardReady?"step-done":"step-pending"}>Secure payment</li></ol><form onSubmit={submit} className="form">
  {checkoutRoute==="curated"?
  <CuratedFastCheckout selected={selected} quantity={qty}
-  onChoose={service=>{setSelected(service);setQty(defaultCheckoutQuantity(service));setReceipt(null);setNotice("");setKey(crypto.randomUUID())}}
+  onChoose={service=>{
+   const params=new URLSearchParams(window.location.search);
+   const wanted=Number(params.get("qty")||params.get("quantity"));
+   const chosenQty=service&&params.get("service")===service.id&&
+    checkoutQuantityEligible(service,wanted)?wanted:defaultCheckoutQuantity(service);
+   setSelected(service);setQty(chosenQty);setBumpWanted(false);
+   setReceipt(null);setNotice("");setKey(crypto.randomUUID());
+  }}
   onQuantityChange={setQty}/>:
  <LitixCheckoutSelector selected={selected} onChoose={service=>{setSelected(service);setQty(defaultCheckoutQuantity(service));setReceipt(null);setNotice("");setKey(crypto.randomUUID())}}/>}
  {!multiMode&&<label className="litix-early-link" style={{display:"block",margin:"14px 0"}}>
