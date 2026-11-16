@@ -1,5 +1,6 @@
 import {boosteroProduction} from "./boosteroReadOnly.mjs";
 import {boosteroQuote} from "./boosteroFulfillment.mjs";
+import {curatedRetailQuote} from "./curatedVolumePricing.mjs";
 import {retiredAutoLikesService} from "./retiredAutolikes.mjs";
 import {CORE_KINDS,CORE_PLATFORMS,CORE_QUANTITIES} from "../config/curatedServices.mjs";
 import {activeSupplierRow,resolveExactTikTokServices,tiktokSkuForService,tiktokTierLabel,normalizeTikTokSupplierName} from "./tiktokCatalog.mjs";
@@ -26,6 +27,8 @@ function chooseInstagram(raw,kind,tier){
  const qual=row=>String(row.name||"");
  const eligible=available.filter(row=>tier==="vip"
   ? /\b(?:super real accounts|real accounts|active-looking|active accounts)\b/i.test(qual(row))
+  : tier==="value"
+  ? !/\b(?:high quality|premium quality|super real accounts|real accounts|active accounts|active-looking)\b/i.test(qual(row))
   : /\b(?:high quality|premium quality)\b/i.test(qual(row)));
  return eligible.sort((a,b)=>{
   const usa=x=>/\bUSA\b/i.test(String(x.name)+" "+String(x.category))?0:1;
@@ -50,7 +53,7 @@ function liveTikTokFallback(raw,kind){
  })[0]||null;
 }
 export function resolveCuratedSupplier(raw,platform,kind,tier="standard"){
- if(!CORE_PLATFORMS.includes(platform)||!["standard","vip"].includes(tier))return null;
+ if(!CORE_PLATFORMS.includes(platform)||!["standard","value","vip"].includes(tier))return null;
  if(!CORE_KINDS.includes(kind)&&!(platform==="TikTok"&&
   ["shares","saves","story_views"].includes(kind)))return null;
  if(platform==="TikTok"){
@@ -58,6 +61,12 @@ export function resolveCuratedSupplier(raw,platform,kind,tier="standard"){
   const standard=preferred||liveTikTokFallback(raw,kind);
   if(tier==="standard")return standard;
   if(!standard)return null;
+  if(tier==="value")return (Array.isArray(raw)?raw:[]).filter(row=>{
+   const name=normalizeTikTokSupplierName(row?.name);
+   return activeSupplierRow(row)&&!retiredAutoLikesService(row)&&String(row.service)!==String(standard.service)&&
+    litixPlatform(name,"")==="TikTok"&&litixKind(name,"")===kind&&
+    !/\b(?:auto(?:matic)?|monthly|growth|packages?|subscriptions?|story|stories|custom|live\s*stream|high quality|premium quality|real accounts|active accounts)\b/i.test(name);
+  }).sort((a,b)=>Number(a.rate)-Number(b.rate)||Number(a.service)-Number(b.service))[0]||null;
   // VIP must be another currently available Default service, never the
   // same supplier listing shown twice at different prices.
   return (Array.isArray(raw)?raw:[]).filter(row=>activeSupplierRow(row)&&
@@ -76,8 +85,8 @@ export function curatedPublicProduct(raw,platform,kind,tier="standard"){
  if(!service)return null;
  const cards=CORE_QUANTITIES.map(quantity=>{
   try{
-   const q=boosteroQuote({service,quantity});
-   return {quantity,totalCents:q.amountCents,available:true};
+   const q=curatedRetailQuote(boosteroQuote({service,quantity}));
+   return {quantity,totalCents:q.amountCents,available:true,volumeDiscountPercent:q.volumeDiscountPercent};
   }catch{return {quantity,totalCents:null,available:false};}
  });
  if(!cards.some(x=>x.available))return null;
@@ -87,13 +96,13 @@ export function curatedPublicProduct(raw,platform,kind,tier="standard"){
   const first=cards.find(x=>x.available);
   minimum=first?.quantity||Number(service.min);
  }
- const quote=boosteroQuote({service,quantity:cards.find(x=>x.available).quantity});
+ const quote=curatedRetailQuote(boosteroQuote({service,quantity:cards.find(x=>x.available).quantity}));
  if(kind==="likes"&&quote.retailPer1000Cents<600)return null;
  const sku=platform.toLowerCase()+"_"+kind;
  return {
   id:"curated_"+sku+"_"+tier,
   sku,platform,kind,tier,name:platform+" "+(kind==="story_views"?"Story Views":kind[0].toUpperCase()+kind.slice(1)),
-  label:tier==="vip"?"Active-look listing":platform==="TikTok"
+  label:tier==="vip"?"Active-look listing":tier==="value"?"Standard · Value Rate":platform==="TikTok"
    ?(tiktokSkuForService(service)===sku?tiktokTierLabel(sku):
     /\b(?:Real Accounts|Active Accounts|Super Real Accounts)\b/i.test(String(service.name||""))
      ?"Active-look service":/\b(?:High Quality|Premium Quality)\b/i.test(String(service.name||""))
@@ -108,7 +117,7 @@ export async function curatedPublicCatalog(){
  const raw=await curatedSupplierSnapshot(),products=[];
  for(const platform of CORE_PLATFORMS)
   for(const kind of CORE_KINDS)
-   for(const tier of ["standard","vip"]){
+   for(const tier of ["standard","value","vip"]){
     const product=curatedPublicProduct(raw,platform,kind,tier);
     if(product)products.push(product);
    }
@@ -123,7 +132,7 @@ export async function curatedPublicCatalog(){
 }
 
 export const parseCuratedId=id=>{
- const match=/^curated_(instagram|tiktok)_(followers|likes|views|comments|shares|saves|story_views)_(standard|vip)$/.exec(String(id||""));
+ const match=/^curated_(instagram|tiktok)_(followers|likes|views|comments|shares|saves|story_views)_(standard|value|vip)$/.exec(String(id||""));
  if(!match)return null;
  if(match[1]==="instagram"&&!["followers","likes","views","comments"].includes(match[2]))return null;
  return {platform:match[1]==="instagram"?"Instagram":"TikTok",kind:match[2],tier:match[3]};

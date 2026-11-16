@@ -341,3 +341,9 @@ footer.end .legal-links a:focus-visible{outline:2px solid #80d5ff;outline-offset
  .litix-seo-category-links a{font-size:11px}
  .litix-seo-comparison th,.litix-seo-comparison td{padding:10px}
 }
+
+/* Ensure a visible 10px gap and readable descriptions on phone and desktop. */
+.litix-curated-tiers{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,145px),1fr));gap:10px!important}
+.litix-curated-tiers button{display:flex;flex-direction:column;align-items:flex-start;gap:5px;min-height:66px;min-width:0;text-align:left;white-space:normal}
+.litix-curated-tiers button>span{font-size:14px;line-height:1.25}
+.litix-curated-tiers button>small{font-size:11px;line-height:1.35;white-space:normal}

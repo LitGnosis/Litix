@@ -206,8 +206,8 @@ export async function dispatchBoostero(orderId,{sql=boosteroSQL(),operation=boos
       Number(orders[0].amount_cents)<quote.wholesaleCents)
     throw Error("boostero_wholesale_changed_after_payment");
   }else if(Number(orders[0].amount_cents)<
-     (quote.pricingRule==="nearest"
-      ?Math.round(quote.costUSD*135)
+     (orders[0].metadata?.curatedPricing===true||quote.pricingRule==="nearest"
+      ?Math.ceil(quote.costUSD*135-1e-8)
       :Math.ceil(quote.costUSD*160-1e-8)))
    throw Error("boostero_wholesale_changed_after_payment");
   const balance=await operation("balance");

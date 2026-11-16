@@ -551,7 +551,7 @@ export default function Home({landingServiceId=null}){
  
  {!landingServiceId&&<LitixQuickShop/>}
 
-   <div className="litix-purchase-layout"><section id="checkout" className="panel sticky"><div className="kicker">SECURE PAYKINGS CHECKOUT</div><h2>Your order</h2><ol className="checkout-steps" aria-label="Checkout steps"><li className={selected?"step-done":"step-current"}>Choose service</li><li className={selected&&link?"step-current":"step-pending"}>Order details</li><li className={cardReady?"step-done":"step-pending"}>Secure payment</li></ol><form onSubmit={submit} className="form">
+   <div className="litix-purchase-layout"><section id="checkout" className="panel sticky"><div className="kicker">SECURE PAYKINGS CHECKOUT</div><h2>Your order</h2><form onSubmit={submit} className="form">
  {checkoutRoute==="curated"?
  <CuratedFastCheckout selected={selected} quantity={qty} initialServiceId={landingServiceId||DEFAULT_CURATED_SKU}
   onChoose={service=>{
@@ -625,12 +625,6 @@ export default function Home({landingServiceId=null}){
   <p className="small">This package is not currently available for purchase. Select another service or contact Litix support.</p>}
  {selected?.purchasable&&checkoutAuthorized&&config.ready&&!cardReady&&<button type="button" className="alt" onClick={()=>{setNotice("Retrying secure card fields…");setCardRetry(v=>v+1)}}>Retry secure fields</button>}
  </>:null}
- {checkoutRoute==="curated"&&selected&&<div className="litix-curated-fulfillment">
-  ⚡ Automated order submission after verified payment · Start times vary · No social password required
-  <label style={{display:"block",marginTop:9,opacity:.7}}>
-   <input type="checkbox" disabled checked={false} readOnly/> Add 30-Day Auto-Likes (currently unavailable)
-  </label>
- </div>}
  <PremiumInlineCheckout
   showFields={Boolean(selected?.purchasable&&checkoutAuthorized&&config.ready&&config.publicKey)}
   cardReady={cardReady}

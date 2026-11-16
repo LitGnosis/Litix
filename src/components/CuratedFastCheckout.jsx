@@ -13,7 +13,7 @@ export default function CuratedFastCheckout({selected,quantity,onChoose,onQuanti
  const [platform,setPlatform]=useState(initial?.platform||"Instagram");
  useEffect(()=>{
   const params=new URLSearchParams(window.location.search);
-  const match=/^curated_(instagram|tiktok)_(followers|likes|views|comments)_(standard|vip)$/.exec(params.get("service")||"");
+  const match=/^curated_(instagram|tiktok)_(followers|likes|views|comments)_(standard|value|vip)$/.exec(params.get("service")||"");
   if(!match)return;
   setPlatform(match[1]==="instagram"?"Instagram":"TikTok");
   setKind(match[2]);setTier(match[3]);
@@ -43,7 +43,7 @@ export default function CuratedFastCheckout({selected,quantity,onChoose,onQuanti
  const current=useMemo(()=>find(platform,kind,tier)||find(platform,kind,"standard"),[products,platform,kind,tier]);
  useEffect(()=>{
   if(status!=="ready"){return;}
-  if(tier==="vip"&&!find(platform,kind,"vip"))setTier("standard");
+  if(tier!=="standard"&&!find(platform,kind,tier))setTier("standard");
   if(!current){
    if(selected?.id)onChoose(null);
    return;
@@ -114,22 +114,16 @@ export default function CuratedFastCheckout({selected,quantity,onChoose,onQuanti
     <button type="button" className={tier==="standard"?"is-selected":""}
      aria-pressed={tier==="standard"} disabled={status==="ready"&&!find(platform,kind,"standard")}
      onClick={()=>go(platform,kind,"standard")}>
-     {status==="ready"&&live(platform,kind,"standard")?.label==="Active-look service"
-      ?"Active / Real-Look":"High Quality"}
-     <small>Standard</small>
+     <span>High Quality</span><small>Recommended · Fast Start</small>
     </button>
+    {live(platform,kind,"value")&&<button type="button" className={tier==="value"?"is-selected":""}
+     aria-pressed={tier==="value"} onClick={()=>go(platform,kind,"value")}>
+     <span>Standard</span><small>Essential · Value Rate</small></button>}
     {live(platform,kind,"vip")&&<button type="button" className={tier==="vip"?"is-selected":""}
-     aria-pressed={tier==="vip"}
-     onClick={()=>go(platform,kind,"vip")}>Real / Active <small>VIP quality</small></button>}
+     aria-pressed={tier==="vip"} onClick={()=>go(platform,kind,"vip")}>Real / Active <small>Active-look listing</small></button>}
    </div>
   </div>
-  <p className="litix-curated-notice" role="status" aria-live="polite">
-   {status==="ready"&&current?
-    "Verified Litix pricing · Automated dispatch after secure payment":
-    status==="error"?
-    "Secure price verification is unavailable. Retry to continue.":
-    "Litix pricing · Final USD total verified before payment"}
-  </p>
+  {status==="error"&&<p className="litix-curated-notice" role="alert">Secure price verification is unavailable. Retry to continue.</p>}
   {status==="error"&&<button className="litix-curated-custom-toggle" type="button" onClick={()=>setRetry(i=>i+1)}>Retry live pricing</button>}
   {status==="ready"&&!current&&<p role="status" className="litix-curated-notice">This service is currently unavailable in quick checkout. Try another service or browse the full catalog.</p>}
   {current&&<div className="litix-curated-packages">

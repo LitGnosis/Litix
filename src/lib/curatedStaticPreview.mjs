@@ -1,4 +1,5 @@
 import {CORE_KINDS,CORE_PLATFORMS,CORE_QUANTITIES} from "../config/curatedServices.mjs";
+import {curatedPreviewCents,CURATED_VOLUME_DISCOUNT_PERCENT} from "./curatedVolumePricing.mjs";
 
 // Public retail-only historical values from the Nov 14 verified Litix snapshot.
 // Never expose supplier IDs or use an old quote to authorize a card charge.
@@ -12,7 +13,7 @@ const PREVIEW_RETAIL=Object.freeze({
  tiktok_views:null,
  tiktok_comments:{min:5,max:250,per1000:504.18}
 });
-const quote=(rate,quantity)=>Math.ceil(Number(rate)*quantity/10-1e-8);
+const quote=curatedPreviewCents;
 export const STATIC_CURATED_PREVIEW=Object.freeze(CORE_PLATFORMS.flatMap(platform=>
  CORE_KINDS.map(kind=>{
   const sku=platform.toLowerCase()+"_"+kind,source=PREVIEW_RETAIL[sku];
@@ -22,9 +23,9 @@ export const STATIC_CURATED_PREVIEW=Object.freeze(CORE_PLATFORMS.flatMap(platfor
    label:"High Quality · Litix retail pricing",
    preview:true,purchasable:false,observedAt:"2026-11-14",
    min:source?.min??100,max:source?.max??5000,unitStep:1,
-   per1000:source?.per1000??null,pricingRule:"ceil",
+   per1000:source?.per1000??null,pricingRule:"curated",
    quantityCards:CORE_QUANTITIES.map(quantity=>({
-    quantity,available:true,
+    quantity,available:true,volumeDiscountPercent:CURATED_VOLUME_DISCOUNT_PERCENT[quantity]||0,
     totalCents:source&&quantity>=source.min&&quantity<=source.max&&quote(source.per1000,quantity)>=100
      ?quote(source.per1000,quantity):null
    }))
