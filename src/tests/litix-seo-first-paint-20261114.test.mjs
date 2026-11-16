@@ -47,9 +47,9 @@ test("volume savings badges never advertise nonexistent percentage discounts",()
   {quantity:2500,totalCents:4000,available:true},
   {quantity:5000,totalCents:7500,available:true}
  ];
- assert.equal(curatedQuantityBadge(discounted,1000,{live:true}),"Save 10%");
- assert.equal(curatedQuantityBadge(discounted,2500,{live:true}),"Save 20%");
- assert.equal(curatedQuantityBadge(discounted,5000,{live:true}),"BEST VALUE · Save 25%");
+ assert.equal(curatedQuantityBadge(discounted,1000,{live:true}),"FEATURED");
+ assert.equal(curatedQuantityBadge(discounted,2500,{live:true}),"SAVE 11%");
+ assert.equal(curatedQuantityBadge(discounted,5000,{live:true}),"BEST VALUE · SAVE 17%");
 });
 test("4 canonical SEO pages are static, unique, visible FAQ JSON-LD, and share real checkout",async()=>{
  const slugs=["buy-instagram-followers","buy-instagram-likes","buy-tiktok-followers","buy-tiktok-likes"];
