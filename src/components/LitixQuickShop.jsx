@@ -27,8 +27,5 @@ export default function LitixQuickShop(){
    <span><b>02</b> Paste a public link</span>
    <span><b>03</b> Review secure checkout</span>
   </div>
-  <p className="litix-hero-footnote">
-   The final price and service availability are independently verified before payment.
-  </p>
  </section>;
 }

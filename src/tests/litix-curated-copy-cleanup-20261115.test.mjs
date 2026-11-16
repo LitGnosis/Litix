@@ -37,8 +37,7 @@ test("unverified VIP pill is not displayed; prices use truthful phase-based lang
  assert.doesNotMatch(selector,/Not currently verified/);
  assert.doesNotMatch(selector,/Price estimates from a saved catalog/);
  assert.doesNotMatch(selector,/Previously listed · Check live price/);
- assert.match(selector,/Verified Litix pricing · Automated dispatch after secure payment/);
- assert.match(selector,/Litix pricing · Final USD total verified before payment/);
+ assert.doesNotMatch(selector,/Litix pricing · Final USD total verified before payment/);
  assert.doesNotMatch(preview,/Previously listed · Check live price before checkout/);
  assert.equal(formatCuratedUnitRange(90,5000),"90–5,000 units");
  assert.match(selector,/formatCuratedUnitRange\(current.min,current.max\)/);

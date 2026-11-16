@@ -56,7 +56,7 @@ try{
   const choose250=grid.getByRole("button",{name:/250\s+Followers/});
   await choose250.click();
   assert.match(await page.locator(".totalbox .total").innerText(),/\$2\.76/);
-  await page.waitForFunction(()=>document.querySelector(".litix-curated-notice")?.textContent?.includes("Verified Litix pricing"),null,{timeout:10000});
+  await page.waitForFunction(()=>document.querySelector(".litix-curated-tier-description")?.textContent?.includes("10,000"),null,{timeout:10000});
   assert.equal(await grid.locator('button[aria-pressed="true"]').count(),1);
   assert.match(await grid.locator('button[aria-pressed="true"]').innerText(),/250/);
   assert.match(await page.locator(".totalbox .total").innerText(),/\$2\.76/,

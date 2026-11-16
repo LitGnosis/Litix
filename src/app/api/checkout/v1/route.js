@@ -50,7 +50,7 @@ export async function POST(request){
  const url=new URL(request.url);
  const result=await handleBoosteroOrder(new Request(url,{method:"POST",headers:{"content-type":"application/json",
    ...(request.headers.get("origin")?{"origin":request.headers.get("origin")}:{})},
-   body:JSON.stringify(body)}),{adminOnly:false});
+   body:JSON.stringify(body)}),{adminOnly:false,curatedPricing:!!curated});
  if(!curated||result.status<400)return result;
  try{
   const payload=await result.json();

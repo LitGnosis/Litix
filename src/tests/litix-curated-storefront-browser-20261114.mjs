@@ -60,8 +60,8 @@ try{
   await platforms.getByRole("button",{name:"TikTok"}).click();
   await types.getByRole("button",{name:"Views"}).click();
   assert.match(await page.locator(".totalbox .total").innerText(),/3\.00/);
-  const vip=root.getByRole("button",{name:/Real \/ Active VIP/});
-  assert.equal(await vip.isDisabled(),true);
+  assert.equal(await root.getByRole("button",{name:/Real \/ Active/}).count(),0,
+   "Do not invent a VIP tier when no live distinct VIP offer exists");
   assert.equal(await root.getByRole("button",{name:"Auto Likes"}).isDisabled(),true);
   assert.equal(await page.getByRole("link",{name:/Browse full catalog/}).getAttribute("href"),"/services");
   const pay=page.locator("#checkout button.premium-pay-button");

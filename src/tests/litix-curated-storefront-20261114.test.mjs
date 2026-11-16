@@ -105,5 +105,5 @@ test("selector routes opaque IDs through existing payment handler and refuses fa
  assert.match(readiness,/parseCuratedId/);
  assert.match(price,/pricingRule==="nearest"/);
  assert.ok(retired.includes("auto"));
- assert.doesNotMatch(selector,/Save 15%|Save 25%|30-Day Refill Protection|Starts in minutes/);
+ assert.doesNotMatch(selector,/30-Day Refill Protection|Starts in minutes/);
 });

@@ -80,8 +80,8 @@ test("first paint selects USA variant and 1000 quantity with a USD total",async(
  const page=await source("../app/page.jsx");
  const bootstrap=await source("../lib/litixCheckoutBootstrap.mjs");
  assert.match(page,/INITIAL_FAST_SERVICE=firstPackageFor\(INITIAL_FAST_CHOICES,"followers"\)/);
- assert.match(page,/\[selected,setSelected\]=useState\(INITIAL_FAST_SERVICE\)/);
- assert.match(page,/\[qty,setQty\]=useState\(INITIAL_FAST_QUANTITY\)/);
+ assert.match(page,/\[selected,setSelected\]=useState\(CURATED_HOME_ENABLED\?firstPaintOffer:INITIAL_FAST_SERVICE\)/);
+ assert.match(page,/\[qty,setQty\]=useState\(CURATED_HOME_ENABLED\?curatedPresetQuantity\(firstPaintOffer\):INITIAL_FAST_QUANTITY\)/);
  assert.match(page,/className="litix-quantity-presets"/);
  assert.match(page,/aria-label="Custom quantity"/);
  assert.match(page,/onBlur=\{\(\)=>setQty\(clampCheckoutQuantity\(qty,selected\)\)\}/);

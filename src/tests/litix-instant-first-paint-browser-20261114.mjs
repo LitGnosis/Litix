@@ -34,7 +34,8 @@ try{
   assert.equal(await page.locator(".litix-curated-kinds button").count(),4);
   assert.equal(await page.locator(".litix-curated-package-grid button").count(),6);
   assert.equal(await page.locator(".litix-curated-browse").getAttribute("href"),"/services");
-  assert.ok((await page.locator(".litix-curated-notice").first().innerText()).includes("Price estimates"));
+  assert.equal(await page.locator(".litix-curated-notice").count(),0,
+   "Preview need not repeat payment verification claims");
   await page.waitForFunction(()=>document.querySelector(".litix-curated-tier-description")?.textContent?.includes("High Quality"),null,{timeout:10000});
   assert.equal(await page.locator(".premium-pay-button").isDisabled(),true);
   assert.deepEqual(errors,[]);
