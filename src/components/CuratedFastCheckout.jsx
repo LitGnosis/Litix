@@ -114,7 +114,8 @@ export default function CuratedFastCheckout({selected,quantity,onChoose,onQuanti
     <button type="button" className={tier==="standard"?"is-selected":""}
      aria-pressed={tier==="standard"} disabled={status==="ready"&&!find(platform,kind,"standard")}
      onClick={()=>go(platform,kind,"standard")}>
-     <span>High Quality</span><small>Recommended · Fast Start</small>
+     <span>{live(platform,kind,"standard")?.label==="Active-look service"?"Active / Real-Look":"High Quality"}</span>
+     <small>{live(platform,kind,"standard")?.label==="Active-look service"?"Source-listed active profiles":"Recommended · Fast Start"}</small>
     </button>
     {live(platform,kind,"value")&&<button type="button" className={tier==="value"?"is-selected":""}
      aria-pressed={tier==="value"} onClick={()=>go(platform,kind,"value")}>
