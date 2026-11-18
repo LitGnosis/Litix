@@ -37,6 +37,15 @@ try{
     item("TikTok","comments","standard",7.00),
     item("TikTok","shares","standard",3.00)
    ],extras:{autoLikesEnabled:false,autoViewsEnabled:false}})}));
+  await page.route("**/api/catalog/curated/quote?*",route=>{
+   const url=new URL(route.request().url());
+   const quantity=Number(url.searchParams.get("quantity"));
+   const serviceId=url.searchParams.get("serviceId");
+   const eligible=serviceId==="curated_instagram_followers_standard"&&quantity===3000;
+   route.fulfill({status:eligible?200:409,contentType:"application/json",
+    body:JSON.stringify(eligible?{ready:true,serviceId,quantity,totalCents:3042,
+     volumeDiscountPercent:8,chargeAttempted:false}:{ready:false,chargeAttempted:false})});
+  });
   await page.route("**/api/catalog/v1?*",route=>route.fulfill({status:200,contentType:"application/json",
    body:JSON.stringify({items:[],total:0,allCount:0,checkoutEnabled:false})}));
   await page.route("**/api/checkout/readiness?*",route=>route.fulfill({status:503,contentType:"application/json",
@@ -57,6 +66,12 @@ try{
   assert.match(await cards.nth(3).innerText(),/1,000.*Followers.*\$11\.02/s);
   await cards.nth(1).click();
   assert.match(await page.locator(".totalbox .total").innerText(),/2\.76/);
+  await root.getByRole("button",{name:/Custom amount/}).click();
+  await root.getByRole("spinbutton",{name:"Custom quantity"}).fill("3000");
+  await page.waitForFunction(()=>document.querySelector(".totalbox .total")?.textContent?.includes("$30.42"),null,{timeout:10000});
+  assert.match(await root.getByText(/Volume savings applied/).innerText(),/8% off/);
+  assert.equal(await page.locator("#checkout button.premium-pay-button").isDisabled(),true,
+   "A verified display quote is not a verified card charge");
   await platforms.getByRole("button",{name:"TikTok"}).click();
   await types.getByRole("button",{name:"Views"}).click();
   assert.match(await page.locator(".totalbox .total").innerText(),/3\.00/);

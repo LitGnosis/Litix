@@ -64,7 +64,8 @@ try{
   assert.equal(await page.locator(".premium-pay-button").isDisabled(),true);
   await page.getByRole("group",{name:"Choose social platform"}).getByRole("button",{name:"TikTok"}).click();
   assert.match(await page.locator(".totalbox .total").innerText(),/\$9\.00/);
-  assert.match(await page.locator(".litix-curated-tiers").innerText(),/Active \/ Real-Look/);
+  assert.match(await page.locator(".litix-curated-tiers").innerText(),/^Active\b/m);
+  assert.doesNotMatch(await page.locator(".litix-curated-tiers").innerText(),/Real \/|Real-Look/);
   assert.equal(await page.locator(".litix-curated-tiers button").count(),1,
    "Do not display the same supplier as an imaginary duplicate VIP");
   await page.getByRole("group",{name:"Choose service type"}).getByRole("button",{name:"Likes"}).click();

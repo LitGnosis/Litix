@@ -153,6 +153,13 @@ export function quoteCentsForQuantity(service,quantity){
  if(curated){
   const card=service.quantityCards?.find(c=>c.quantity===Number(quantity));
   if(card)return card.available===true&&Number.isSafeInteger(card.totalCents)?card.totalCents:null;
+  const quote=service.quantityQuote;
+  if(quote?.quantity===Number(quantity)&&Number.isSafeInteger(quote.totalCents)&&
+     quote.totalCents>=100)return quote.totalCents;
+  // The server may limit a discount to protect supplier cost. An unsampled
+  // custom amount cannot be calculated reliably from per-1K display pricing.
+  // Never let an unverified customer-side estimate authorize a card charge.
+  if(Array.isArray(service.quantityCards))return null;
  }
  const cents=Number(service.per1000)*Number(quantity)/10;
  return curated||service.pricingRule==="nearest"?Math.max(99,Math.round(cents)):Math.ceil(cents-1e-8);

@@ -11,9 +11,9 @@ const row=(id,name,kind,rate="2.00",min=250)=>({
 });
 const live=[
  row(991101,"TikTok Followers [ Real Accounts | 2K/Day ]","Followers"),
- row(991102,"TikTok Likes [ Real Accounts | 5K/Day ]","Likes"),
+ row(991102,"TikTok Likes [ Real Accounts | 5K/Day ]","Likes","8.00"),
  row(991103,"TikTok Random Comments [ Real Accounts | 500/Day ]","Comments","9.00",100),
- row(991104,"TikTok Likes [ Real Accounts | 5K/Day ]","Followers"),
+ row(991104,"TikTok Likes [ Real Accounts | 5K/Day ]","Followers","8.00"),
  row(991105,"TikTok Followers Monthly Growth Package","Followers"),
  row(991106,"TikTok Auto Followers [ Real Accounts ]","Followers"),
  row(991107,"TikTok Views [ Real Accounts | 5K/Day ]","Views","1.50")
@@ -32,7 +32,11 @@ test("TikTok exact-preferred service absent: live named Default service becomes 
   assert.equal(publicProduct?.id,"curated_tiktok_"+kind+"_standard");
   assert.equal(publicProduct?.purchasable,true);
   assert.equal(publicProduct?.tier,"standard");
-  assert.equal(publicProduct?.quantityCards.length,6);
+  assert.equal(publicProduct?.quantityCards.length,7,
+   "Live supplier maximum of 10,000 is displayed beyond the six base presets");
+  assert.equal(publicProduct?.max,10000);
+  assert.equal(publicProduct?.quantityCards.at(-1)?.quantity,10000);
+  assert.equal(publicProduct?.quantityCards.at(-1)?.available,true);
   assert.equal(publicProduct?.quantityCards.find(x=>x.quantity===1000)?.available,true);
   const actual=boosteroQuote({service:resolved,quantity:1000});
   assert.equal(publicProduct?.quantityCards.find(x=>x.quantity===1000)?.totalCents,actual.amountCents);

@@ -83,7 +83,14 @@ export function resolveCuratedSupplier(raw,platform,kind,tier="standard"){
 export function curatedPublicProduct(raw,platform,kind,tier="standard"){
  const service=resolveCuratedSupplier(raw,platform,kind,tier);
  if(!service)return null;
- const cards=CORE_QUANTITIES.map(quantity=>{
+ // This is the actual limit of the selected live Boostero service, not a
+ // hardcoded 5K storefront ceiling. The existing supplier checkout caps at 1M.
+ const supplierMaximum=Math.min(1000000,Number(service.max));
+ if(!Number.isSafeInteger(supplierMaximum)||supplierMaximum<1)return null;
+ const offeredQuantities=[...CORE_QUANTITIES];
+ if(supplierMaximum>5000&&!offeredQuantities.includes(supplierMaximum))
+  offeredQuantities.push(supplierMaximum);
+ const cards=offeredQuantities.map(quantity=>{
   try{
    const q=curatedRetailQuote(boosteroQuote({service,quantity}));
    return {quantity,totalCents:q.amountCents,available:true,volumeDiscountPercent:q.volumeDiscountPercent};
@@ -108,7 +115,7 @@ export function curatedPublicProduct(raw,platform,kind,tier="standard"){
      ?"Active-look service":/\b(?:High Quality|Premium Quality)\b/i.test(String(service.name||""))
      ?"High Quality":"Standard service")
    :"High Quality",
-  min:minimum,max:Number(service.max),unitStep:1,per1000:quote.retailPer1000Cents/100,
+  min:minimum,max:supplierMaximum,unitStep:1,per1000:quote.retailPer1000Cents/100,
   pricingRule:quote.pricingRule,startingAmountCents:quote.amountCents,
   purchasable:true,quantityCards:cards
  };
