@@ -45,11 +45,16 @@ export async function GET(request){
    if(status&&status.remains!==null&&status.remains>Number(x.quantity))throw Error("invalid_remaining_quantity");
    if(status){
     const next=boosteroChildState(status.status);
+    const previousCount=x.supplier_status?.start_count;
+    const incomingCount=raw?.start_count;
+    const startCount=[incomingCount,previousCount].map(Number)
+     .find(n=>Number.isSafeInteger(n)&&n>=0&&n<=1000000000000);
+    const recordedStatus=startCount===undefined?status:{...status,start_count:startCount};
     await sql.query(
-     "update public.litix_boostero_fulfillment set supplier_status=$2::jsonb,checked_at=now(),state=case when $3='COMPLETED' then 'COMPLETED' else state end,updated_at=now() where litix_order_id=$1 and supplier_order_id=$4 and state in ('SUBMITTED','COMPLETED')",
-     [id,JSON.stringify(status),next,String(x.supplier_order_id)]);
-    x.supplier_status=status;x.checked_at=new Date();
-    if(next==="COMPLETED")x.state="COMPLETED";
+     "update public.litix_boostero_fulfillment set supplier_status=$2::jsonb,checked_at=now(),state=case when $3='COMPLETED' then 'COMPLETED' when $3='MANUAL_REVIEW' then 'MANUAL_REVIEW' else state end,updated_at=now() where litix_order_id=$1 and supplier_order_id=$4 and state in ('SUBMITTED','COMPLETED')",
+     [id,JSON.stringify(recordedStatus),next,String(x.supplier_order_id)]);
+    x.supplier_status=recordedStatus;x.checked_at=new Date();
+    if(next==="COMPLETED"||next==="MANUAL_REVIEW")x.state=next;
     liveStatus=true;
    }
   }catch{/* Preserve the last recorded status; no retries or new fulfillment. */}
