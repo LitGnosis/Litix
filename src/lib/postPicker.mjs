@@ -83,3 +83,30 @@ export function divideLikes(total,count,minimum=1){
   const base=Math.floor(total/count),rem=total%count;
   return Array.from({length:count},(_,i)=>base+(i<rem?1:0));
 }
+
+// Public preview metadata is optional; never invent counts or match a
+// different profile when a scraper returns related accounts.
+export function publicProfileFromRows(platform,handle,rows){
+ const blank={username:handle,avatarUrl:null,followersCount:null,likesCount:null};
+ for(const row of Array.isArray(rows)?rows:[]){
+  const candidates=[row?.owner,row?.authorMeta,row?.channel,row?.author,row?.user,row?.profile].filter(v=>v&&typeof v==="object");
+  for(const entry of candidates){
+   const name=String(entry.username||entry.name||entry.uniqueId||"").replace(/^@/,"").toLowerCase();
+   if(name!==handle)continue;
+   const rawAvatar=entry.profilePicUrlHD||entry.profilePicUrl||entry.avatarUrl||entry.avatar||
+    entry.avatarThumb||entry.profilePictureUrl||entry.profilePicture||null;
+   let avatarUrl=null;
+   try{const u=new URL(String(rawAvatar));if(u.protocol==="https:"&&!u.username&&!u.password)
+      avatarUrl=u.toString()}catch{}
+   const safeCount=(...values)=>{
+    for(const v of values){if(v===null||v===undefined||v==="")continue;
+     const n=Number(v);if(Number.isSafeInteger(n)&&n>=0&&n<=1000000000000)return n;}
+    return null;
+   };
+   return {username:handle,avatarUrl,
+    followersCount:safeCount(entry.followersCount,entry.followers,entry.fans,entry.followerCount),
+    likesCount:safeCount(entry.likesCount,entry.heartCount,entry.diggCount,entry.heart)};
+  }
+ }
+ return blank;
+}
