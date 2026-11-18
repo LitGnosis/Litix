@@ -20,13 +20,13 @@ function friendlyStatus(order){
  const children=Array.isArray(order.posts)?order.posts:[];
  if(children.some(p=>/^(in progress|in_progress|processing)$/i.test(String(p.status||"")))&&
    !["completed","failed","canceled"].includes(s))
-  return {title:"Litix delivery in progress",description:"Your selected posts are receiving delivery. View the latest Litix order progress below.",kind:"progress",step:2};
+  return {title:"Litix delivery in progress",description:"Your selected posts are receiving delivery. View the latest Litix order progress below.",kind:"progress",step:3};
  if(["in progress","in_progress","processing"].includes(latest)&&!["completed","failed","canceled"].includes(s))
-  return {title:"Litix delivery in progress",description:"Your order is still processing. The latest update may show a remaining quantity; final delivery has not been confirmed.",kind:"progress",step:2};
- if(s==="completed")return {title:"Delivery reported complete",description:"Litix has received a completed delivery status. If anything is missing, contact support with your Litix order number.",kind:"success",step:3};
- if(["partial","partially_completed"].includes(s))return {title:"Partially completed",description:"Litix has received a partial delivery update. Check the remaining quantity and contact support if delivery stops.",kind:"warning",step:2};
+  return {title:"Litix delivery in progress",description:"Your order is still processing. The latest update may show a remaining quantity; final delivery has not been confirmed.",kind:"progress",step:3};
+ if(s==="completed")return {title:"Delivery reported complete",description:"Litix has received a completed delivery status. If anything is missing, contact support with your Litix order number.",kind:"success",step:4};
+ if(["partial","partially_completed"].includes(s))return {title:"Partially completed",description:"Litix has received a partial delivery update. Check the remaining quantity and contact support if delivery stops.",kind:"warning",step:3};
  if(["failed","canceled","cancelled","refunded","manual_review","review"].includes(s))return {title:"Delivery needs support",description:"Your payment was recorded, but fulfillment needs review. Do not place a duplicate order.",kind:"warning",step:1};
- if(["in_progress","processing"].includes(s))return {title:"Litix is processing your order",description:"Your Litix order is still being processed. Followers may arrive in stages; delivery has not yet been confirmed.",kind:"progress",step:2};
+ if(["in_progress","processing"].includes(s))return {title:"Litix is processing your order",description:"Your Litix order is still being processed. Followers may arrive in stages; delivery has not yet been confirmed.",kind:"progress",step:3};
  if(["submitted","dispatching","pending","queued"].includes(s))return {title:"Litix order submitted",description:"Your payment and order submission are confirmed. Delivery is still pending; check back for an updated Litix status.",kind:"progress",step:2};
  return {title:"Awaiting Litix update",description:"Your order has been received. Check back for delivery progress or contact Litix support.",kind:"pending",step:1};
 }
@@ -40,6 +40,7 @@ export default function OrderTracker(){
  const [busy,setBusy]=useState(false);
  const [method,setMethod]=useState(null);
  const [lastChecked,setLastChecked]=useState(null);
+  const [refillBusy,setRefillBusy]=useState(false);
  useEffect(()=>{
   document.title="Track your order | Litix";
   let records=[];
@@ -99,6 +100,20 @@ export default function OrderTracker(){
   if(!credentials){setNotice("Paste the full Litix private tracking link, including its token.");return}
   runStatus({kind:"private",...credentials});
  }
+ async function requestRefill(){
+   if(refillBusy||busy||!order?.refillEligible||method?.kind!=="private")return;
+   setRefillBusy(true);setNotice("");
+   try{
+    const response=await fetch("/api/track/refill",{method:"POST",
+     headers:{"content-type":"application/json"},
+     body:JSON.stringify({orderId:method.id,token:method.token}),cache:"no-store"});
+    const result=await response.json().catch(()=>({}));
+    if(!response.ok)throw Error(result.error||"Refill request could not be verified.");
+    setOrder(current=>current?{...current,refillEligible:false}:current);
+    setNotice(result.message||"Your refill request was received.");
+   }catch(error){setNotice(error.message||"Contact Litix support for help with this order.")}
+   finally{setRefillBusy(false)}
+  }
  const status=friendlyStatus(order);
  const money=order?new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(Number(order.amount||0)):null;
  const helpUrl="https://wa.me/19452106315?text="+encodeURIComponent("Hi Litix, I need help with my paid order "+(order?.id||orderId||"")+". The delivery is not showing on my account.");
@@ -112,17 +127,28 @@ export default function OrderTracker(){
     <h2 className="ltx-track-order-id">{order.id}</h2>
     <p className="ltx-track-status-desc">{status.description}</p>
     <div className="ltx-track-steps" aria-label="Order progress">
-     {["Payment approved","Order processing","Delivery completed"].map((label,i)=><div key={label} className={"ltx-track-step "+(i<status.step?"ltx-track-step-done":"")}><span className="ltx-track-step-bullet">{i<status.step?"✓":i+1}</span><span>{label}</span></div>)}
+     {["Payment Verified","Queued","Delivering","Completed"].map((label,i)=><div key={label} className={"ltx-track-step "+(i<status.step?"ltx-track-step-done":"")}><span className="ltx-track-step-bullet">{i<status.step?"✓":i+1}</span><span>{label}</span></div>)}
     </div>
     <div className="ltx-track-facts">
      <div><small>Payment</small><strong>{order.payment==="paid"?"Paid":order.payment||"Pending"}</strong></div>
      <div><small>Quantity</small><strong>{Number(order.quantity||0).toLocaleString()}</strong></div>
      <div><small>Total</small><strong>{money}</strong></div>
      
+     {order.startCount!==null&&order.startCount!==undefined&&<div><small>Start count</small><strong>{Number(order.startCount).toLocaleString()}</strong></div>}
+     {Number.isSafeInteger(order.delivered)&&
+      <div><small>Reported delivered</small><strong>{Number(order.delivered).toLocaleString()}</strong></div>}
      {order.remains!==null&&order.remains!==undefined&&<div><small>Remaining to deliver</small><strong>{Number(order.remains).toLocaleString()}</strong></div>}
      {order.status&&<div><small>Latest Litix status</small><strong>{order.status}</strong></div>}
     </div>
     <p className="ltx-track-service"><b>Service:</b> {litixCustomerServiceName(order.service)}</p>
+    {Number.isSafeInteger(order.delivered)&&Number(order.quantity)>0&&
+     <div className="ltx-track-delivery-progress">
+      <div role="progressbar" aria-label="Reported delivery progress" aria-valuemin={0}
+       aria-valuemax={Number(order.quantity)} aria-valuenow={Math.min(Number(order.quantity),order.delivered)}>
+       <span style={{width:Math.max(0,Math.min(100,100*order.delivered/Number(order.quantity)))+"%"}}/>
+      </div>
+      <small>{order.delivered.toLocaleString("en-US")} of {Number(order.quantity).toLocaleString("en-US")} units reported delivered</small>
+     </div>
     {Array.isArray(order.posts)&&order.posts.length>0&&<section aria-label="Individual post delivery status" style={{padding:"14px 0"}}>
       <h3 style={{fontSize:17,margin:"0 0 12px"}}>Your selected posts</h3>
       {order.posts.some(p=>Number.isSafeInteger(p.delivered))&&<p className="ltx-track-meta">
@@ -149,7 +175,10 @@ export default function OrderTracker(){
      </section>}
 
     {order.checkedAt&&<p className="ltx-track-meta">Status updated: {new Date(order.checkedAt).toLocaleString()} {order.liveSupplierStatus?"(live update)":"(last recorded update)"}</p>}
-    <div className="ltx-track-actions"><button type="button" className="ltx-track-btn" disabled={busy} onClick={()=>runStatus(method)}>{busy?"Checking status…":"Refresh status"}</button><a className="ltx-track-btn ltx-track-btn-secondary" href={helpUrl} target="_blank" rel="noreferrer noopener">Get order help</a></div>
+    <div className="ltx-track-actions"><button type="button" className="ltx-track-btn" disabled={busy} onClick={()=>runStatus(method)}>{busy?"Checking status…":"Refresh status"}</button>
+     {order.refillEligible===true&&method?.kind==="private"&&
+      <button className="ltx-track-btn" type="button" disabled={refillBusy||busy} onClick={requestRefill}>{refillBusy?"Sending refill request…":"Request Free Refill"}</button>}
+     <a className="ltx-track-btn ltx-track-btn-secondary" href={helpUrl} target="_blank" rel="noreferrer noopener">Get order help</a></div>
     <p className="ltx-track-footnote">Payment confirmation and actual follower delivery are separate steps. Litix displays the latest recorded delivery update; followers will be confirmed when delivery is reported complete.</p>
    </section>}
    {recent.length>0&&<section className="ltx-track-card">
