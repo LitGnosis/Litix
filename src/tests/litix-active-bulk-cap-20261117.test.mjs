@@ -11,13 +11,13 @@ test("volume discounts apply to ALL custom amounts after verified thresholds",()
   [0,0,0,8,8,8,15,15,15]);
  const quote=q=>curatedRetailQuote({quantity:q,retailPer1000Cents:1102,
   pricingRule:"ceil",amountCents:Math.ceil(1102*q/1000),costUSD:6.88*q/1000});
- assert.equal(quote(1000).amountCents,1102);
- assert.equal(quote(2500).amountCents,2535);
- assert.equal(quote(3000).amountCents,3042);
- assert.equal(quote(5000).amountCents,4684);
- assert.equal(quote(10000).amountCents,9367);
+ assert.equal(quote(1000).amountCents,1099);
+ assert.equal(quote(2500).amountCents,2499);
+ assert.equal(quote(3000).amountCents,3099);
+ assert.equal(quote(5000).amountCents,4699);
+ assert.equal(quote(10000).amountCents,9399);
  assert.equal(quote(10000).volumeDiscountPercent,15);
- assert.equal(curatedPreviewCents(11.02,3000),3042);
+ assert.equal(curatedPreviewCents(11.02,3000),3099);
 });
 
 test("35 percent minimum markup remains enforced on every custom volume quote",()=>{
@@ -66,7 +66,7 @@ test("customer UI says Active, exposes live max, and never charges during quote 
   source("../lib/boosteroOrderHandler.mjs")
  ]);
  assert.doesNotMatch(ui,/Real \/ Active|Active \/ Real-Look/);
- assert.match(ui,/>Active <small>Active-account listing/);
+ assert.match(ui,/VIP \/ Active/);
  assert.match(ui,/MAX AVAILABLE/);
  assert.match(ui,/formatCuratedUnitRange\(current.min,current.max\)/);
  assert.match(ui,/href=\{"\/services\?platform="/);

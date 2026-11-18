@@ -42,9 +42,9 @@ try{
   const total=page.locator(".totalbox .total");
   assert.match(await total.innerText(),/11\.02/);
   const options=await selector.locator("option").allTextContents();
-  assert.ok(options.some(t=>t.includes("High quality")&&t.includes("4K/day")));
-  assert.ok(options.some(t=>t.includes("Premium quality")&&t.includes("5K/day")));
-  assert.ok(options.some(t=>t.includes("Active-look")&&t.includes("5K/day")));
+  assert.ok(options.some(t=>t.includes("High quality")&&t.includes("Up to 4,000/day")));
+  assert.ok(options.some(t=>t.includes("Premium quality")&&t.includes("Up to 5,000/day")));
+  assert.ok(options.some(t=>t.includes("Real-Look Profiles")&&t.includes("Up to 5,000/day")));
   assert.ok(options.some(t=>t.includes("Instagram Colombia Followers")));
   assert.ok(!options.some(t=>t.includes("Columbia")));
   assert.ok(!options.some(t=>t.includes("1,244")));

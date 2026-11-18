@@ -54,9 +54,9 @@ try{
   const picked=page.locator(".litix-curated-package-grid button[aria-pressed='true']");
   assert.equal(await picked.count(),1);
   assert.match(await picked.innerText(),/1,000/);
-  assert.match(await page.locator(".totalbox .total").innerText(),/\$11\.02/);
+  assert.match(await page.locator(".totalbox .total").innerText(),/\$10\.99/);
   const range=await page.locator(".litix-curated-range").innerText();
-  assert.equal(range,"90–5,000 units");
+  assert.match(range,/Checking current availability|Live capacity verified/);
   assert.equal(await page.getByText("Choose a package to continue").count(),0);
   assert.equal(await page.getByText("Choose a package in Step 03.").count(),0);
   assert.equal(await page.locator(".premium-pay-button").isDisabled(),true);

@@ -44,7 +44,8 @@ try{
   const primary=page.getByRole("button",{name:/Pay with PayKings|Continue to Secure Checkout/});
   assert.equal(await primary.count(),1,"one primary checkout button is always visible");
   assert.equal(await primary.isDisabled(),true,"checkout stays disabled without verified gateway");
-  assert.equal(await page.getByText("Final USD total and service availability are verified before payment. No social passwords required.").count(),1);
+  assert.equal(await page.getByText("Final price and service availability are verified before payment.").count(),1);
+   assert.equal(await page.getByText("No social passwords required").count(),1);
   await picks.getByRole("button",{name:"TikTok Followers"}).click();
   assert.equal(await page.locator("#litix-platform").inputValue(),"TikTok");
   assert.ok((await page.locator("#litix-service-choice option").count())>=1);

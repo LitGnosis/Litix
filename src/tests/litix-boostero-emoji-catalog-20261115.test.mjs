@@ -4,6 +4,7 @@ import {readFile} from "node:fs/promises";
 import {normalizeTikTokSupplierName,tiktokSkuForService,resolveExactTikTokServices} from "../lib/tiktokCatalog.mjs";
 import {curatedPublicProduct,resolveCuratedSupplier} from "../lib/curatedCatalog.mjs";
 import {boosteroQuote} from "../lib/boosteroFulfillment.mjs";
+import {curatedRetailQuote} from "../lib/curatedVolumePricing.mjs";
 
 const item=(service,name,kind,rate="2.50",min="100")=>({
  service,name,category:"TikTok - "+kind,type:"Default",rate,min,max:"10000",refill:false
@@ -43,7 +44,7 @@ test("all four core TikTok choices resolve live supplier IDs server-only, with i
   assert.equal(preview?.id,"curated_tiktok_"+kind+"_standard");
   assert.equal(preview?.purchasable,true);
   assert.equal(preview?.quantityCards.find(x=>x.quantity===1000)?.available,true);
-  const real=boosteroQuote({service:row,quantity:1000});
+  const real=curatedRetailQuote(boosteroQuote({service:row,quantity:1000}));
   assert.equal(preview.quantityCards.find(x=>x.quantity===1000).totalCents,real.amountCents);
   assert.ok(!JSON.stringify(preview).includes('"service":'+id));
   for(const secret of ["wholesaleRate","supplierCost","boosteroServiceId","markup"])

@@ -51,10 +51,12 @@ export default function CuratedFastCheckout({selected,quantity,onChoose,onQuanti
   }
   if(selected?.id!==current.id||
      selected?.per1000!==current.per1000||
+     selected?.quantityCards?.find(c=>c.quantity===quantity)?.totalCents!==
+      current.quantityCards?.find(c=>c.quantity===quantity)?.totalCents||
      selected?.min!==current.min||selected?.max!==current.max){
    onChoose(current);
   }
- },[status,current?.id,current?.per1000,current?.min,current?.max]);
+ },[status,current?.id,current?.per1000,current?.min,current?.max,current?.quantityCards,quantity]);
  const go=(p,k,t="standard")=>{
   setPlatform(p);setKind(k);setTier(t);setCustomOpen(false);
   const next=live(p,k,t)||live(p,k,"standard")||
@@ -91,8 +93,8 @@ export default function CuratedFastCheckout({selected,quantity,onChoose,onQuanti
  const preview=status!=="ready";
  return <section className="litix-curated" aria-label="Quick Instagram and TikTok checkout">
   <header className="litix-curated-intro">
-   <span className="kicker">FAST CHECKOUT · TWO EASY CHOICES</span>
-   <p>Choose your platform and service. Your package price appears below.</p>
+   <span className="kicker">YOUR LITIX ORDER · LIVE PRICING</span>
+   <p>Choose your service, quality and quantity. Review your live total before payment.</p>
   </header>
   <div className="litix-curated-step">
    <div className="litix-curated-heading"><span>01</span><strong>Choose Platform</strong></div>
@@ -125,13 +127,12 @@ export default function CuratedFastCheckout({selected,quantity,onChoose,onQuanti
      aria-pressed={tier==="standard"} disabled={status==="ready"&&!find(platform,kind,"standard")}
      onClick={()=>go(platform,kind,"standard")}>
      <span>{live(platform,kind,"standard")?.label==="Active-look service"?"Active":"High Quality"}</span>
-     <small>{live(platform,kind,"standard")?.label==="Active-look service"?"Source-listed active profiles":"Recommended · Fast Start"}</small>
+     <small>Recommended · High-quality service</small>
+     <span className="litix-tier-benefit">Standard queue · Refill options depend on service eligibility</span>
     </button>
-    {live(platform,kind,"value")&&<button type="button" className={tier==="value"?"is-selected":""}
-     aria-pressed={tier==="value"} onClick={()=>go(platform,kind,"value")}>
-     <span>Standard</span><small>Essential · Value Rate</small></button>}
     {live(platform,kind,"vip")&&<button type="button" className={tier==="vip"?"is-selected":""}
-     aria-pressed={tier==="vip"} onClick={()=>go(platform,kind,"vip")}>Active <small>Active-account listing</small></button>}
+     aria-pressed={tier==="vip"} onClick={()=>go(platform,kind,"vip")}><span>VIP / Active</span><small>Active-profile listing · Current service price</small>
+      <span className="litix-tier-benefit">Delivery and refill terms shown only where verified</span></button>}
    </div>
   </div>
   {status==="error"&&<p className="litix-curated-notice" role="alert">Secure price verification is unavailable. Retry to continue.</p>}
@@ -140,7 +141,7 @@ export default function CuratedFastCheckout({selected,quantity,onChoose,onQuanti
   {current&&<div className="litix-curated-packages">
    <div className="litix-curated-heading"><span>04</span><strong>Choose Quantity</strong></div>
    <p className="litix-curated-tier-description">
-    {current.preview?"High Quality":current.label} · <span className="litix-curated-range">{status==="ready"?formatCuratedUnitRange(current.min,current.max):"Checking live supplier limits"}</span>
+    {current.preview?"High Quality":current.label} · <span className="litix-curated-range">{status==="ready"?"● Live capacity verified · "+formatCuratedUnitRange(current.min,current.max):"Checking current availability"}</span>
    </p>
    <div role="group" aria-label="Quantity package cards" className="litix-curated-package-grid">
     {current.quantityCards.map(card=><button key={card.quantity} type="button"
@@ -174,7 +175,7 @@ export default function CuratedFastCheckout({selected,quantity,onChoose,onQuanti
    </label>}
    {selected?.quantityQuote?.quantity===quantity&&selected.quantityQuote.volumeDiscountPercent>0&&
     <p role="status" className="litix-curated-notice">Volume savings applied: {selected.quantityQuote.volumeDiscountPercent}% off this quantity.</p>}
-   {customQuotePending&&<p role="status" className="litix-curated-notice">Checking your custom-volume price against the live supplier…</p>}
+   {customQuotePending&&<p role="status" className="litix-curated-notice">Checking your custom price against current availability…</p>}
    {customQuoteError&&<p role="alert" className="litix-curated-notice">{customQuoteError} <button type="button" onClick={()=>setQuoteRetry(v=>v+1)}>Retry price</button></p>}
    {!preview&&!isEligible&&<p role="alert" className="litix-curated-notice">Choose a quantity within the verified limits. Unavailable package cards cannot be purchased.</p>}
   </div>}

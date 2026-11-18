@@ -1,4 +1,4 @@
-import {normalizeProfile,normalizePosts} from "../../../lib/postPicker.mjs";
+import {normalizeProfile,normalizePosts,publicProfileFromRows} from "../../../lib/postPicker.mjs";
 
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
@@ -43,12 +43,13 @@ export async function GET(request){
 
   // Server-only validated inputs prevent cross-site requests and API-key leaks.
   const input=platform==="instagram"
-    ?{profiles:[handle],resultsLimit:12,includeOwnerDetails:false,includeMediaUrls:true}
+    ?{profiles:[handle],resultsLimit:12,includeOwnerDetails:true,includeMediaUrls:true}
     :{profiles:[handle],resultsType:"posts",resultsPerPage:12,includeVideoDetails:false,maxItems:12};
-  let posts=[],primaryFailed=false,fallbackFailed=false;
+  let posts=[],profile={username:handle,avatarUrl:null,followersCount:null,likesCount:null},primaryFailed=false,fallbackFailed=false;
   try{
     const primary=await actorRows(actors[platform],input,platform==="tiktok"?25000:44000);
     posts=normalizePosts(platform,handle,primary).slice(0,12);
+    profile=publicProfileFromRows(platform,handle,primary);
   }catch(error){
     primaryFailed=true;
     console.warn("Litix post discovery primary unavailable",platform,String(error?.name||"provider_error").slice(0,32));
@@ -59,6 +60,7 @@ export async function GET(request){
         profiles:[handle],resultsPerPage:12,maxResults:12,profileSorting:"latest",mode:"auto"
       },31500);
       posts=normalizePosts("tiktok",handle,rows).slice(0,12);
+        profile=publicProfileFromRows("tiktok",handle,rows);
     }catch(error){
       fallbackFailed=true;
       console.warn("Litix TikTok secondary discovery unavailable",String(error?.name||"provider_error").slice(0,32));
@@ -68,7 +70,7 @@ export async function GET(request){
     return json({error:"TikTok videos are temporarily unavailable for this profile. Retry or paste your video links below; no charge was attempted."},503);
   if(!posts.length&&(primaryFailed||fallbackFailed))
     return json({error:"Instagram post lookup is temporarily unavailable. Retry or enter post links below; no charge was attempted."},503);
-  const value={platform,username:handle,posts,
+  const value={platform,username:handle,profile,posts,
     message:posts.length?"Select one or more public posts.":
       "No publicly accessible posts were returned. Try again or enter direct post links below."};
   if(posts.length>0)cached.set(cacheKey,{time:Date.now(),value});

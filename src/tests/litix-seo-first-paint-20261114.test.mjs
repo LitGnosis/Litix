@@ -6,7 +6,7 @@ import {verifiedVolumeSavings,curatedQuantityBadge} from "../lib/litixCuratedSav
 import {LITIX_SEO_LANDINGS,seoLanding,seoLandingMetadata} from "../lib/litixSeoLandings.mjs";
 const source=(path)=>readFile(new URL(path,import.meta.url),"utf8");
 
-test("default featured Instagram 1,000 starts at $11.02 before any API response",async()=>{
+test("default featured Instagram 1,000 displays curated $10.99 before live price verification",async()=>{
  assert.equal(DEFAULT_CURATED_SKU,"curated_instagram_followers_standard");
  const selected=initialCuratedOffer();
  assert.equal(selected.platform,"Instagram");
@@ -15,7 +15,7 @@ test("default featured Instagram 1,000 starts at $11.02 before any API response"
  assert.equal(selected.purchasable,false);
  assert.equal(selected.per1000,11.02);
  assert.equal(curatedPresetQuantity(selected),1000);
- assert.equal(selected.quantityCards.find(x=>x.quantity===1000).totalCents,1102);
+ assert.equal(selected.quantityCards.find(x=>x.quantity===1000).totalCents,1099);
  assert.equal(formatCuratedUnitRange(90,5000),"90–5,000 units");
  const [home,selector]=await Promise.all([source("../app/page.jsx"),source("../components/CuratedFastCheckout.jsx")]);
  assert.match(home,/useState\(CURATED_HOME_ENABLED\?firstPaintOffer:INITIAL_FAST_SERVICE\)/);

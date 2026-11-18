@@ -1,0 +1,54 @@
+/* Litix blue-first CRO surfaces: isolated from live payment and dispatch code. */
+.litix-curated .litix-tier-benefit{display:block;margin-top:6px;color:#9ad9ff;font-size:11px;line-height:1.5}
+.litix-curated-tier-description .litix-curated-range{color:#b6e7ff}
+.litix-profile-preview{margin:2px 0 15px;padding:15px;border:1px solid #68c7fb7a;
+ border-radius:15px;background:linear-gradient(145deg,#0d304c,#061a2d);
+ box-shadow:inset 0 1px #e7f8ff12}
+.litix-profile-line{display:flex;align-items:center;gap:12px;min-width:0}
+.litix-profile-line strong{color:#f1faff;font-size:14px}
+.litix-profile-line small{display:block;margin-top:4px;color:#a6cce4;font-size:12px;line-height:1.45}
+.litix-profile-avatar{display:grid;place-items:center;width:45px;height:45px;flex:none;
+ border-radius:50%;overflow:hidden;border:1px solid #74c8ff8c;background:#155180;color:#bceaff;font-weight:900}
+.litix-profile-avatar img{width:100%;height:100%;object-fit:cover}
+.litix-profile-stats{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0 0;font-size:12px;color:#abddff}
+.litix-profile-stats span{border:1px solid #5ab9f044;border-radius:18px;padding:5px 10px;background:#1e6aaa21}
+.litix-profile-gallery{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:12px}
+.litix-profile-gallery button{display:block;padding:0;overflow:hidden;aspect-ratio:1;border:1px solid #74c8ff72;border-radius:10px;background:#0b263c}
+.litix-profile-gallery button img{width:100%;height:100%;object-fit:cover}
+.litix-profile-gallery button:hover,.litix-profile-gallery button:focus-visible{outline:2px solid #b3ebff;outline-offset:2px;transform:translateY(-1px)}
+.litix-profile-footnote{margin:9px 0 0;color:#afd2e8;font-size:11px;line-height:1.5}
+.litix-wallets{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.litix-wallet-option{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+ min-height:49px;border:1px solid #70bfe17a;border-radius:11px;color:#ccecff;background:linear-gradient(130deg,#133751,#081b2e);
+ font-size:13px;font-weight:850;cursor:pointer}
+.litix-wallet-option small{font-size:10px;color:#a8cce6;font-weight:550}
+.litix-wallet-option:disabled{cursor:not-allowed;opacity:.6}
+.litix-wallet-option:not(:disabled):hover{border-color:#c7ecff;box-shadow:0 0 0 3px #3ca9ed30}
+.litix-mobile-checkout-bar{display:none}
+.litix-activity-toast{position:fixed;z-index:75;left:18px;bottom:18px;display:flex;align-items:flex-start;gap:8px;
+ width:min(345px,calc(100vw - 40px));padding:13px 11px 13px 14px;border:1px solid #83d5ff99;border-radius:15px;
+ background:linear-gradient(135deg,#0e3453f5,#071b2ff8);box-shadow:0 15px 40px #0009;color:#ddf5ff}
+.litix-activity-toast>span{color:#8de3ff;font-size:14px}
+.litix-activity-toast p{margin:0;font-size:12px;line-height:1.55;flex:1}
+.litix-activity-toast p strong{display:block;color:#fff}
+.litix-activity-toast button{padding:0 3px;border:0;background:transparent;color:#def4ff;font-size:20px;line-height:1}
+@media(max-width:767px){
+ body:has(.litix-mobile-checkout-bar){padding-bottom:calc(105px + env(safe-area-inset-bottom))}
+ .litix-mobile-checkout-bar{position:fixed;display:flex;align-items:center;justify-content:space-between;
+  gap:12px;left:0;right:0;bottom:0;z-index:9000;padding:11px max(12px,env(safe-area-inset-right))
+  calc(11px + env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));
+  border-top:1px solid #75c9f0ac;background:linear-gradient(115deg,#07172af7,#0d3151fc);
+  box-shadow:0 -8px 25px #0008;backdrop-filter:blur(14px)}
+ .litix-mobile-summary{min-width:0;flex:1}
+ .litix-mobile-summary strong{display:block;color:#e9f9ff;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .litix-mobile-summary small{display:block;color:#acd7f4;font-size:11px;margin-top:4px}
+ .litix-mobile-checkout-bar button{border:1px solid #a5e8ff;border-radius:11px;padding:12px 11px;
+  min-height:46px;max-width:52%;color:#05213b;background:linear-gradient(120deg,#e4f8ff,#72c9ff);
+  font-size:12px;font-weight:850}
+ .litix-mobile-checkout-bar button:focus-visible{outline:2px solid white;outline-offset:2px}
+ .litix-activity-toast{bottom:calc(176px + env(safe-area-inset-bottom));left:10px;width:min(300px,calc(100vw - 20px));z-index:8000}
+ .lxai-shell:not(.lxai-open){bottom:calc(100px + env(safe-area-inset-bottom));z-index:9500}
+ #checkout .premium-inline-checkout{scroll-margin-bottom:calc(110px + env(safe-area-inset-bottom))}
+}
+@media(max-width:380px){.litix-mobile-checkout-bar button{font-size:11px;max-width:49%}.litix-activity-toast{max-width:250px}}
+@media(prefers-reduced-motion:reduce){.litix-profile-gallery button{transform:none!important}}

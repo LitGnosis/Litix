@@ -4,6 +4,7 @@ import {readFile} from "node:fs/promises";
 import {curatedPublicProduct,resolveCuratedSupplier,parseCuratedId} from "../lib/curatedCatalog.mjs";
 import {quoteCentsForQuantity,checkoutQuantityEligible,defaultCheckoutQuantity} from "../lib/litixCheckoutDisplay.mjs";
 import {boosteroQuote} from "../lib/boosteroFulfillment.mjs";
+import {curatedRetailQuote} from "../lib/curatedVolumePricing.mjs";
 
 const row=(id,name,kind,rate="2.00",min=250)=>({
  service:id,name,category:"TikTok - "+kind,rate,
@@ -38,7 +39,7 @@ test("TikTok exact-preferred service absent: live named Default service becomes 
   assert.equal(publicProduct?.quantityCards.at(-1)?.quantity,10000);
   assert.equal(publicProduct?.quantityCards.at(-1)?.available,true);
   assert.equal(publicProduct?.quantityCards.find(x=>x.quantity===1000)?.available,true);
-  const actual=boosteroQuote({service:resolved,quantity:1000});
+  const actual=curatedRetailQuote(boosteroQuote({service:resolved,quantity:1000}));
   assert.equal(publicProduct?.quantityCards.find(x=>x.quantity===1000)?.totalCents,actual.amountCents);
   assert.equal(quoteCentsForQuantity(publicProduct,1000),actual.amountCents);
   assert.ok(!JSON.stringify(publicProduct).includes(String(id)),"Supplier ID exposed in public payload");

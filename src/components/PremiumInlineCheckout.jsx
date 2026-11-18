@@ -13,6 +13,7 @@ export default function PremiumInlineCheckout({
   buttonLabel,
   showFields = false,
   helperText = "",
+  walletHandlers = {},
 }) {
   return (
     <div className="premium-inline-checkout" aria-label="Secure card checkout">
@@ -25,6 +26,17 @@ export default function PremiumInlineCheckout({
               <p className="premium-checkout-subtitle">Encrypted payment fields hosted by PayKings</p>
             </div>
             <span className="premium-checkout-badge">SECURE</span>
+          </div>
+          <div className="litix-wallets" aria-label="Express wallet options">
+            {["apple","google"].map(wallet=>{
+              const enabled=typeof walletHandlers[wallet]==="function"&&!busy;
+              return <button key={wallet} type="button" className="litix-wallet-option"
+                disabled={!enabled} aria-label={(wallet==="apple"?"Apple Pay":"Google Pay")+(enabled?" express checkout":" not activated")}
+                onClick={()=>walletHandlers[wallet]?.()}>
+                <span>{wallet==="apple"?"Apple Pay":"Google Pay"}</span>
+                {!enabled&&<small>Not activated</small>}
+              </button>;
+            })}
           </div>
           <div className="premium-card-fields">
             <label className="premium-card-field">
@@ -61,9 +73,9 @@ export default function PremiumInlineCheckout({
       <ul className="litix-checkout-trust" aria-label="Checkout safeguards">
         <li><span aria-hidden="true">✓</span> Live service verification</li>
         <li><span aria-hidden="true">✓</span> Private order tracking</li>
-        <li><span aria-hidden="true">✓</span> PayKings-hosted card fields</li>
+        <li><span aria-hidden="true">✓</span> No social passwords required</li>
       </ul>
-      <p className="premium-checkout-security">Final USD total and service availability are verified before payment. No social passwords required.</p>
+      <p className="premium-checkout-security">Final price and service availability are verified before payment.</p>
     </div>
   );
 }

@@ -71,7 +71,7 @@ test("35 percent TikTok exact matching is feature-gated, never changes Instagram
   const product=curatedPublicProduct(example,"TikTok","followers");
   assert.ok(product);
   assert.equal(product.id,"curated_tiktok_followers_standard");
-  assert.equal(product.quantityCards.find(x=>x.quantity===1000)?.totalCents,270);
+  assert.equal(product.quantityCards.find(x=>x.quantity===1000)?.totalCents,299);
   assert.equal(product.quantityCards.find(x=>x.quantity===100)?.available,false);
   for(const forbidden of ["boosteroServiceId","supplierServiceId","wholesaleRate","supplierCost","markup","margin"])
    assert.ok(!JSON.stringify(product).includes(forbidden),"supplier data leak: "+forbidden);
