@@ -47,7 +47,7 @@ export async function GET(request){
     const next=boosteroChildState(status.status);
     const previousCount=x.supplier_status?.start_count;
     const incomingCount=raw?.start_count;
-    const startCount=[incomingCount,previousCount].map(Number)
+    const startCount=[incomingCount,previousCount].filter(v=>v!==null&&v!==undefined&&v!=="").map(Number)
      .find(n=>Number.isSafeInteger(n)&&n>=0&&n<=1000000000000);
     const recordedStatus=startCount===undefined?status:{...status,start_count:startCount};
     await sql.query(

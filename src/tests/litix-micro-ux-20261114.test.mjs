@@ -55,7 +55,7 @@ test("checkout trust text remains accurate and avoids unsupported promises",asyn
  assert.match(page,/checkoutTargetPlaceholder\(selected\)/);
  assert.match(page,/link\.trim\(\)\?targetFeedback\.message/);
  assert.doesNotMatch(page,/checkoutProfilePlaceholder/);
- for(const value of ["Live service verification","Private order tracking","Hosted payment fields"])
+ for(const value of ["Live service verification","Private order tracking","No social passwords required"])
   assert.ok(premium.includes(value));
  assert.doesNotMatch(premium,/30.Day Refill Guarantee|Instant Automated Start|256.Bit PayKings Encryption/i);
  assert.match(premium,/premium-pay-button/);

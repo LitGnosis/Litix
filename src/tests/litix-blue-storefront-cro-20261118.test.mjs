@@ -64,4 +64,6 @@ test("only genuine provider refills are offered; wallet buttons do not claim liv
  assert.doesNotMatch(hero,/4\.9\/5|12,400\+|Someone in Dallas/i);
  assert.match(activity,/verifiedDispatchedOrders24h/);
  assert.match(publicApi,/normalizeProfile/);
+ assert.match(await source("../components/LitixProfilePreview.jsx"),/Search public profile for posts/);
+ assert.match(await source("../app/page.jsx"),/onChoosePost=\{postUrl=>/);
 });

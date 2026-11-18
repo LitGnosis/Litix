@@ -60,7 +60,7 @@ test("each public link field uses current platform and service placeholders",asy
  }
  const home=await file("../app/page.jsx");
  assert.match(home,/placeholder=\{checkoutTargetPlaceholder\(selected\)\}/);
- assert.match(home,/key=\{String\(selected\?\.platform\|\|""\)\+"-"\+String\(selected\?\.kind\|\|""\)\}/);
+ assert.doesNotMatch(home,/key=\{String\(selected\?\.platform/);
 });
 test("unverified volume discount labels never display fake percentage savings",()=>{
  const cards=[100,250,500,1000,2500,5000].map(q=>({
