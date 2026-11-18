@@ -160,7 +160,7 @@ export default function CuratedFastCheckout({selected,quantity,onChoose,onQuanti
      <b>{card.totalCents!==null&&card.totalCents!==undefined?usd(card.totalCents):status==="ready"?"Unavailable":"Check live price"}</b>
     </button>)}
    </div>
-   <p className="litix-curated-notice">Eligible bulk discounts apply automatically to larger packages and custom quantities. The final total is verified live.</p>
+   {status==="ready"&&<p className="litix-curated-notice">Eligible bulk discounts apply automatically to larger packages and custom quantities. The final total is verified live.</p>}
    {status==="ready"&&<a className="litix-curated-browse"
     href={"/services?platform="+encodeURIComponent(platform)+"&kind="+encodeURIComponent(kind)}>
     Need a higher limit? Browse other {platform} {friendly(kind)} options →</a>}
