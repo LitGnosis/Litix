@@ -215,6 +215,11 @@ export default function Home({landingServiceId=null}){
  const price=selected?(multiMode?multiPosts.reduce((sum,p)=>
   sum+Math.max(0,quoteCentsForQuantity(selected,Number(p.quantity))||0),0)
   :(quoteCentsForQuantity(selected,qty)??0)):0;
+ const customCuratedQuotePending=!multiMode&&String(selected?.id||"").startsWith("curated_")&&
+  Array.isArray(selected?.quantityCards)&&
+  !selected.quantityCards.some(card=>card.quantity===qty)&&
+  Number.isSafeInteger(qty)&&qty>=Number(selected.min)&&qty<=Number(selected.max)&&
+  !(selected.quantityQuote?.quantity===qty&&price>=100);
  const checkoutAuthorized=multiMode?catalogCheckoutEnabled:
    !!verifiedQuote&&verifiedQuote.serviceId===selected?.id&&
    verifiedQuote.quantity===orderQuantity&&verifiedQuote.amountCents===price;
@@ -618,7 +623,7 @@ export default function Home({landingServiceId=null}){
  <label>Email<input type="email" required placeholder="you@example.com" value={email} onChange={e=>setEmail(e.target.value)}/></label>
  <div className="totalbox" aria-live="polite">
   <div className="small">Total (USD)</div>
-  <div className="total">{cardMoney(price)}</div>
+  <div className="total">{customCuratedQuotePending?"Verifying custom price…":cardMoney(price)}</div>
  </div>
  {checkoutError&&checkoutPhase==="error"&&<p className="small" role="alert">{checkoutError}</p>}
  {selected&&!selected.purchasable&&!selected.preview&&
@@ -631,6 +636,7 @@ export default function Home({landingServiceId=null}){
   busy={busy}
   canPay={Boolean(selected?.purchasable&&checkoutAuthorized&&detailsReady&&cardReady&&!busy&&config.ready&&config.publicKey)}
   buttonLabel={busy?(checkoutPhase==="validating"?"Verifying live price…":"Processing securely…"):
+   customCuratedQuotePending?"Verifying custom price…":
    detailsReady&&selected?.purchasable?"Pay with PayKings — "+cardMoney(price)+" USD":
    selected?"Continue to Secure Checkout — "+cardMoney(price):"Choose your service"}
   helperText={checkoutFieldHint}
