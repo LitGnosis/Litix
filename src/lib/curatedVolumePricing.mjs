@@ -31,7 +31,7 @@ export function curatedRetailQuote(base){
  const normal=base.pricingRule==="nearest"?base.amountCents:Math.round(base.retailPer1000Cents*base.quantity/1000);
  // Preserve the 35% wholesale cushion, the $1 charge floor, and public retail
  // per-1k floors even if a rounded price or volume discount would undercut them.
- const floor=Math.max(100,Math.ceil(base.costUSD*135-1e-8),floorForKind(base));
+ const floor=Math.max(100,Math.ceil(base.costUSD*135-1e-8),base.pricingRule==="nearest"?0:floorForKind(base));
  if(!Number.isSafeInteger(normal)||normal<floor)throw Error("curated_markup_floor");
  const target=curatedVolumeDiscountPercent(base.quantity);
  const discounted=Math.round(normal*(100-target)/100);
