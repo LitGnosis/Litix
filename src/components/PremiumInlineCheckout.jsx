@@ -75,7 +75,7 @@ export default function PremiumInlineCheckout({
         <li><span aria-hidden="true">✓</span> Private order tracking</li>
         <li><span aria-hidden="true">✓</span> Hosted payment fields</li>
       </ul>
-      <p className="premium-checkout-security">Final price and service availability are verified before payment. No social passwords required.</p>
+      <p className="premium-checkout-security">Final price and service availability are verified before payment.</p>
     </div>
   );
 }
