@@ -26,7 +26,7 @@ export async function GET(request){
   return reply({ready:true,serviceId,quantity,totalCents:q.amountCents,
    volumeDiscountPercent:q.volumeDiscountPercent,currency:"USD",chargeAttempted:false});
  }catch{
-  return reply({error:"Live price or supplier quantity limit unavailable",
+  return reply({error:"Live price or package quantity limit unavailable",
    ready:false,chargeAttempted:false},409);
  }
 }
