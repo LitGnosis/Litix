@@ -46,5 +46,7 @@ export function curatedPreviewCents(retailUsdPer1000,quantity){
  const rate=Math.round(Number(retailUsdPer1000)*100);
  if(!Number.isSafeInteger(rate)||rate<1||!Number.isSafeInteger(quantity)||quantity<1)return null;
  const normal=Math.round(rate*quantity/1000);
- return Math.round(normal*(100-curatedVolumeDiscountPercent(quantity))/100);
+ // Preview is not purchasable. Match the curated display aesthetic while
+ // relying on the live quote for margin verification and final checkout.
+ return curatedPsychologicalCents(Math.round(normal*(100-curatedVolumeDiscountPercent(quantity))/100));
 }
