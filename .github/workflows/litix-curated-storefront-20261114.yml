@@ -21,6 +21,7 @@ on:
       - src/app/api/catalog/global/route.js
       - src/tests/boostero-option-coverage-20261117.test.mjs
       - src/tests/litix-directory-cached-fallback-20261117.test.mjs
+      - src/tests/litix-customer-only-catalog.test.mjs
       - src/app/api/checkout/**
       - src/app/api/catalog/curated/**
       - src/app/page.jsx
