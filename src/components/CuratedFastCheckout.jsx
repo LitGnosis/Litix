@@ -172,6 +172,8 @@ export default function CuratedFastCheckout({selected,quantity,onChoose,onQuanti
      onChange={e=>onQuantityChange(Number(e.target.value))}
      onBlur={()=>onQuantityChange(Math.max(current.min,Math.min(current.max,Number(quantity)||current.min)))}/>
    </label>}
+   {selected?.quantityQuote?.quantity===quantity&&selected.quantityQuote.volumeDiscountPercent>0&&
+    <p role="status" className="litix-curated-notice">Volume savings applied: {selected.quantityQuote.volumeDiscountPercent}% off this quantity.</p>}
    {customQuotePending&&<p role="status" className="litix-curated-notice">Checking your custom-volume price against the live supplier…</p>}
    {customQuoteError&&<p role="alert" className="litix-curated-notice">{customQuoteError} <button type="button" onClick={()=>setQuoteRetry(v=>v+1)}>Retry price</button></p>}
    {!preview&&!isEligible&&<p role="alert" className="litix-curated-notice">Choose a quantity within the verified limits. Unavailable package cards cannot be purchased.</p>}
