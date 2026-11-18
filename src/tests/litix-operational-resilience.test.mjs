@@ -24,17 +24,18 @@ test("private supplier cron is bounded, authenticated and cannot blindly retry a
  assert.match(route,/timingSafeEqual/);
  assert.match(route,/process\.env\.VERCEL_ENV!=="production"/);
  assert.match(route,/syncBoosteroStatuses\(\{limit:3\}\)/);
- assert.match(route,/syncBoosteroMultiStatuses\(\{limit:2\}\)/);
+ assert.match(route,/syncBoosteroMultiStatuses\(\{limit:5\}\)/);
  assert.match(route,/resumeBoosteroMultiQueue\(\{limitParents:1\}\)/);
  assert.match(route,/deliverLitixCustomerUpdates\(\{limit:2\}\)/);
  assert.doesNotMatch(route,/boosteroProduction\("add"\)|dispatchBoostero\(/);
 });
-test("prepaid customers cannot be charged without durable database preflight",()=>{
+test("retired prepaid checkout cannot charge and preserves historical order records",()=>{
  const route=source("app/api/autolikes/prepaid/checkout/route.js");
- assert.match(route,/select id from public\.litix_autolikes_prepaid_orders where false/);
- assert.match(route,/idempotency_key/);
- assert.match(route,/payment_status='PAID'/);
+ assert.match(route,/chargeAttempted: false/);
+ assert.match(route,/checkoutEnabled: false/);
+ assert.match(route,/status: 409/);
+ assert.doesNotMatch(route,/paymentToken|transact\\.php|boosteroProduction\\("add"/);
  const migration=source("db/migrations/20261101-autolikes-prepaid-single-pay.sql");
- assert.match(migration,/ALTER TABLE public\.litix_autolikes_prepaid_orders ENABLE ROW LEVEL SECURITY/);
+ assert.match(migration,/ALTER TABLE public\\.litix_autolikes_prepaid_orders ENABLE ROW LEVEL SECURITY/);
  assert.match(migration,/supplier_order_id text UNIQUE/);
 });
