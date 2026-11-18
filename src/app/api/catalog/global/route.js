@@ -47,7 +47,9 @@ async function directory(){
   // catalog. The previous directory fetched the complete supplier inventory
   // and then fetched the approved cards a second time on every cold start.
   // Only live-validated, purchasable cards are ever exposed.
-  let snapshot=await allBoosteroCardsSnapshot();
+  let snapshot={items:[],status:"unavailable"};
+  try{snapshot=await allBoosteroCardsSnapshot();}
+  catch{/* Supplier read failed; public snapshot may still support safe browsing. */}
   if(!Array.isArray(snapshot.items)||!snapshot.items.length)
    snapshot=await readDurableCatalog();
   if(!Array.isArray(snapshot.items)||!snapshot.items.length)throw Error("catalog_unavailable");
