@@ -24,6 +24,8 @@ export default function CuratedFastCheckout({selected,quantity,onChoose,onQuanti
  const [status,setStatus]=useState("preview");
  const [retry,setRetry]=useState(0);
  const [customOpen,setCustomOpen]=useState(false);
+ const [customQuoteError,setCustomQuoteError]=useState("");
+ const [quoteRetry,setQuoteRetry]=useState(0);
  useEffect(()=>{
   let active=true;
   const controller=new AbortController();
@@ -60,7 +62,29 @@ export default function CuratedFastCheckout({selected,quantity,onChoose,onQuanti
   onChoose(next);
  };
  const exactQuantity=CORE_QUANTITIES.find(x=>x===quantity);
- const selectedPrice=exactQuantity!==undefined?current?.quantityCards?.find(x=>x.quantity===quantity):null;
+ const selectedPrice=current?.quantityCards?.find(x=>x.quantity===quantity)||null;
+ const customQuotePending=status==="ready"&&!!current&&!selectedPrice&&
+  Number.isSafeInteger(quantity)&&quantity>=Number(current.min)&&quantity<=Number(current.max)&&
+  selected?.quantityQuote?.quantity!==quantity;
+ useEffect(()=>{
+  setCustomQuoteError("");
+  if(status!=="ready"||!current||!customQuotePending)return;
+  const controller=new AbortController();
+  const timer=setTimeout(()=>{
+   const query=new URLSearchParams({serviceId:current.id,quantity:String(quantity)});
+   fetch("/api/catalog/curated/quote?"+query,{signal:controller.signal,cache:"no-store"})
+    .then(async r=>{const data=await r.json();if(!r.ok||data.ready!==true||
+     data.serviceId!==current.id||data.quantity!==quantity||
+     !Number.isSafeInteger(data.totalCents)||data.totalCents<100)throw Error("quote_unavailable");return data;})
+    .then(data=>{
+     if(!controller.signal.aborted)
+      onChoose({...current,quantityQuote:{quantity:data.quantity,totalCents:data.totalCents,
+       volumeDiscountPercent:data.volumeDiscountPercent||0}});
+    })
+    .catch(()=>{if(!controller.signal.aborted)setCustomQuoteError("Could not verify this custom quantity. Retry the live quote before paying.");});
+  },280);
+  return()=>{clearTimeout(timer);controller.abort()};
+ },[status,current?.id,quantity,customQuotePending,quoteRetry]);
  const isEligible=quantity>=Number(current?.min)&&quantity<=Number(current?.max)&&
   Number.isSafeInteger(quantity)&&
   (selectedPrice?selectedPrice.available:true);
@@ -100,14 +124,14 @@ export default function CuratedFastCheckout({selected,quantity,onChoose,onQuanti
     <button type="button" className={tier==="standard"?"is-selected":""}
      aria-pressed={tier==="standard"} disabled={status==="ready"&&!find(platform,kind,"standard")}
      onClick={()=>go(platform,kind,"standard")}>
-     <span>{live(platform,kind,"standard")?.label==="Active-look service"?"Active / Real-Look":"High Quality"}</span>
+     <span>{live(platform,kind,"standard")?.label==="Active-look service"?"Active":"High Quality"}</span>
      <small>{live(platform,kind,"standard")?.label==="Active-look service"?"Source-listed active profiles":"Recommended · Fast Start"}</small>
     </button>
     {live(platform,kind,"value")&&<button type="button" className={tier==="value"?"is-selected":""}
      aria-pressed={tier==="value"} onClick={()=>go(platform,kind,"value")}>
      <span>Standard</span><small>Essential · Value Rate</small></button>}
     {live(platform,kind,"vip")&&<button type="button" className={tier==="vip"?"is-selected":""}
-     aria-pressed={tier==="vip"} onClick={()=>go(platform,kind,"vip")}>Real / Active <small>Active-look listing</small></button>}
+     aria-pressed={tier==="vip"} onClick={()=>go(platform,kind,"vip")}>Active <small>Active-account listing</small></button>}
    </div>
   </div>
   {status==="error"&&<p className="litix-curated-notice" role="alert">Secure price verification is unavailable. Retry to continue.</p>}
@@ -116,7 +140,7 @@ export default function CuratedFastCheckout({selected,quantity,onChoose,onQuanti
   {current&&<div className="litix-curated-packages">
    <div className="litix-curated-heading"><span>04</span><strong>Choose Quantity</strong></div>
    <p className="litix-curated-tier-description">
-    {current.preview?"High Quality":current.label} · <span className="litix-curated-range">{formatCuratedUnitRange(current.min,current.max)}</span>
+    {current.preview?"High Quality":current.label} · <span className="litix-curated-range">{status==="ready"?formatCuratedUnitRange(current.min,current.max):"Checking live supplier limits"}</span>
    </p>
    <div role="group" aria-label="Quantity package cards" className="litix-curated-package-grid">
     {current.quantityCards.map(card=><button key={card.quantity} type="button"
@@ -130,10 +154,16 @@ export default function CuratedFastCheckout({selected,quantity,onChoose,onQuanti
       <span className="litix-curated-featured">
        {curatedQuantityBadge(current.quantityCards,card.quantity,{live:status==="ready"})}
       </span>}
+     {card.quantity>5000&&card.quantity===Number(current.max)&&
+      <span className="litix-curated-featured">MAX AVAILABLE{status==="ready"&&card.volumeDiscountPercent>0?" · SAVE "+card.volumeDiscountPercent+"%":""}</span>}
      <strong>{card.quantity.toLocaleString()}</strong><span>{friendly(kind)}</span>
      <b>{card.totalCents!==null&&card.totalCents!==undefined?usd(card.totalCents):status==="ready"?"Unavailable":"Check live price"}</b>
     </button>)}
    </div>
+   <p className="litix-curated-notice">Eligible bulk discounts apply automatically to larger packages and custom quantities. The final total is verified live.</p>
+   {status==="ready"&&<a className="litix-curated-browse"
+    href={"/services?platform="+encodeURIComponent(platform)+"&kind="+encodeURIComponent(kind)}>
+    Need a higher limit? Browse other {platform} {friendly(kind)} options →</a>}
    <button type="button" className="litix-curated-custom-toggle" aria-expanded={customOpen}
     onClick={()=>setCustomOpen(v=>!v)}>Custom amount {customOpen?"−":"+"}</button>
    {customOpen&&<label className="litix-curated-custom" htmlFor="litix-quantity-custom">Custom quantity
@@ -142,6 +172,8 @@ export default function CuratedFastCheckout({selected,quantity,onChoose,onQuanti
      onChange={e=>onQuantityChange(Number(e.target.value))}
      onBlur={()=>onQuantityChange(Math.max(current.min,Math.min(current.max,Number(quantity)||current.min)))}/>
    </label>}
+   {customQuotePending&&<p role="status" className="litix-curated-notice">Checking your custom-volume price against the live supplier…</p>}
+   {customQuoteError&&<p role="alert" className="litix-curated-notice">{customQuoteError} <button type="button" onClick={()=>setQuoteRetry(v=>v+1)}>Retry price</button></p>}
    {!preview&&!isEligible&&<p role="alert" className="litix-curated-notice">Choose a quantity within the verified limits. Unavailable package cards cannot be purchased.</p>}
   </div>}
  </section>;
