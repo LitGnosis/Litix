@@ -29,7 +29,7 @@ test("AI has a visible working launcher and explicitly guided fallback",async()=
  const ai=await source("../components/LitixAI.jsx");
  const api=await source("../app/api/litix-ai/route.js");
  const css=await source("../app/litix-ai.css");
- assert.match(hero,/Choose a service\. See your price/);
+ assert.match(hero,/Social Growth for Creators, Brands & Agencies/);
  assert.match(ai,/addEventListener\("litix:open-ai"/);
  assert.match(ai,/setOpen\(true\)/);
  assert.match(api,/available:true,mode:configured\(\)\?"ai":"guided"/);
@@ -48,7 +48,7 @@ test("guidance never invents live order status or processes payment",()=>{
 test("Facebook is a working hero tab and homepage removes repetitive CTAs",async()=>{
  const hero=await source("../components/LitixQuickShop.jsx");
  const home=await source("../app/page.jsx");
- assert.match(hero,/Facebook or X in the Fast Checkout/);
+ assert.match(hero,/Facebook or X service/);
  const selector=await source("../components/LitixCheckoutSelector.jsx");
  assert.match(selector,/CHECKOUT_PLATFORMS/);
  assert.match(selector,/LITIX_CUSTOM_QUICK_PICKS/);
@@ -59,5 +59,5 @@ test("Facebook is a working hero tab and homepage removes repetitive CTAs",async
  assert.match(home,/href="\/workspace"/);
  assert.match(ws,/7-day content sprint/);
  assert.match(ws,/Client outreach/);
- assert.match(home,/Full order tracking center/);
+ assert.match(home,/Open full order tracking/);
 });
