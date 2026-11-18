@@ -1,6 +1,6 @@
 "use client";
 import {useEffect,useMemo,useState} from "react";
-import {CORE_KINDS,CORE_PLATFORMS,CORE_QUANTITIES,TIKTOK_EXTRA_KINDS} from "../config/curatedServices.mjs";
+import {CORE_KINDS,CORE_PLATFORMS,CORE_QUANTITIES} from "../config/curatedServices.mjs";
 import {STATIC_CURATED_PREVIEW} from "../lib/curatedStaticPreview.mjs";
 import {DEFAULT_CURATED_SKU,initialCuratedOffer,formatCuratedUnitRange} from "../lib/litixCuratedFirstPaint.mjs";
 import {curatedQuantityBadge} from "../lib/litixCuratedSavings.mjs";
@@ -24,7 +24,6 @@ export default function CuratedFastCheckout({selected,quantity,onChoose,onQuanti
  const [status,setStatus]=useState("preview");
  const [retry,setRetry]=useState(0);
  const [customOpen,setCustomOpen]=useState(false);
- const [extraMessage,setExtraMessage]=useState("");
  useEffect(()=>{
   let active=true;
   const controller=new AbortController();
@@ -55,7 +54,7 @@ export default function CuratedFastCheckout({selected,quantity,onChoose,onQuanti
   }
  },[status,current?.id,current?.per1000,current?.min,current?.max]);
  const go=(p,k,t="standard")=>{
-  setPlatform(p);setKind(k);setTier(t);setCustomOpen(false);setExtraMessage("");
+  setPlatform(p);setKind(k);setTier(t);setCustomOpen(false);
   const next=live(p,k,t)||live(p,k,"standard")||
     (status==="ready"?null:find(p,k,t)||find(p,k,"standard"));
   onChoose(next);
@@ -66,14 +65,6 @@ export default function CuratedFastCheckout({selected,quantity,onChoose,onQuanti
   Number.isSafeInteger(quantity)&&
   (selectedPrice?selectedPrice.available:true);
  const preview=status!=="ready";
- const extraClick=entry=>{
-  if(["auto_likes","auto_views"].includes(entry.kind)){
-   setExtraMessage("Recurring Auto Likes and Views are currently unavailable for new purchases.");
-   return;
-  }
-  if(find("TikTok",entry.kind,"standard"))go("TikTok",entry.kind);
-  else setExtraMessage("This add-on is not currently available for quick checkout. Browse the full catalog for alternatives.");
- };
  return <section className="litix-curated" aria-label="Quick Instagram and TikTok checkout">
   <header className="litix-curated-intro">
    <span className="kicker">FAST CHECKOUT · TWO EASY CHOICES</span>
@@ -95,18 +86,13 @@ export default function CuratedFastCheckout({selected,quantity,onChoose,onQuanti
      onClick={()=>go(platform,k)}>{friendly(k)}</button>)}
    </div>
    {platform==="TikTok"&&<div className="litix-curated-extras">
-    <span>More TikTok options</span>
-    <div role="group" aria-label="More TikTok service options">
-     {TIKTOK_EXTRA_KINDS.map(x=><button key={x.kind} type="button"
-      aria-pressed={kind===x.kind}
-      disabled={["auto_likes","auto_views"].includes(x.kind)}
-      onClick={()=>extraClick(x)}>{x.label}</button>)}
+    <span>More TikTok services</span>
+    <div role="group" aria-label="Browse additional TikTok services">
+     <a href="/services?platform=TikTok&kind=shares">TikTok Shares</a>
+     <a href="/services?platform=TikTok&kind=saves">TikTok Saves</a>
     </div>
-    <a href="/services?platform=TikTok">Monthly growth and engagement packages in full catalog →</a>
-    <button type="button" className="litix-curated-subtle" disabled
-     title="Custom Comments needs a verified non-Default supplier delivery flow">Custom Comments · Not yet available</button>
+    <a href="/services?platform=TikTok">Browse all TikTok services →</a>
    </div>}
-   {extraMessage&&<p className="litix-curated-notice" role="status">{extraMessage}</p>}
   </div>
   <div className="litix-curated-step">
    <div className="litix-curated-heading"><span>03</span><strong>Quality</strong></div>
