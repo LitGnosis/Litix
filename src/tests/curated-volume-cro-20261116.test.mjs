@@ -30,8 +30,8 @@ test("upsell and repeated step banners removed; preflight and payment share quot
   read("../app/api/checkout/v1/route.js"),read("../lib/boosteroFulfillment.mjs")]);
  assert.doesNotMatch(home,/Add 30-Day Auto-Likes \(currently unavailable\)/);
  assert.doesNotMatch(home,/className="checkout-steps"/);
- assert.match(ui,/Recommended · Verified package/);
- assert.match(ui,/Essential · Value Rate/);
+ assert.match(ui,/Recommended · High-quality service/);
+ assert.match(ui,/VIP \/ Active/);
  assert.match(ready,/curatedRetailQuote\(boosteroQuote/);
  assert.match(post,/if\(curatedPricing&&!multiple\)/);
  assert.match(api,/curatedPricing:!!curated/);
