@@ -19,6 +19,7 @@ export default function LitixDirectory({standalone=false,initialPlatform="",init
  const [page,setPage]=useState(1);
  const [entries,setEntries]=useState([]);
  const [platforms,setPlatforms]=useState([]);
+ const [platformKinds,setPlatformKinds]=useState([]);
  const [categories,setCategories]=useState([]);
  const [count,setCount]=useState(0);
  const [allCount,setAllCount]=useState(null);
@@ -47,6 +48,7 @@ export default function LitixDirectory({standalone=false,initialPlatform="",init
     if(abort.signal.aborted)return;
     setEntries(Array.isArray(body.items)?body.items:[]);
     setPlatforms(Array.isArray(body.platforms)?body.platforms:[]);
+    setPlatformKinds(Array.isArray(body.platformKinds)?body.platformKinds:[]);
     setCategories(Array.isArray(body.categories)?body.categories:[]);
     setCount(Number(body.total)||0);
     setAllCount(Number(body.allCount)||0);
@@ -85,6 +87,11 @@ export default function LitixDirectory({standalone=false,initialPlatform="",init
    setPlatform(fromUrl);setKind(kindFromUrl);
   }
  },[]);
+ const additionalPlatformKinds=platformKinds.filter(p=>
+  !SERVICE_NAV_GROUPS.some(group=>group.platform===p.name)&&
+  allowedServiceFilter(p.name,"")&&Array.isArray(p.kinds)&&p.kinds.length>0
+ );
+ const kindLabel=kind=>kind==="other"?"More services":kind==="traffic"?"Traffic":kind.charAt(0).toUpperCase()+kind.slice(1);
  const filteredPlatformOptions=[
   ...topFilters.filter(name=>platforms.some(p=>p.name===name)),
   ...platforms.filter(p=>!topFilters.includes(p.name)).map(p=>p.name)
@@ -120,6 +127,24 @@ export default function LitixDirectory({standalone=false,initialPlatform="",init
       onClick={()=>selectFocus(group.platform,item.kind)}>{group.label} {item.label}</button>)}
     </div>
    </div>)}
+   {additionalPlatformKinds.length>0&&<details className="litix-directory-advanced">
+    <summary>More verified platforms ({additionalPlatformKinds.length})</summary>
+    <div className="litix-directory-advanced-grid">
+     {additionalPlatformKinds.map(group=><div className="litix-directory-filter-group"
+      role="group" key={group.name} aria-label={group.name+" service categories"}>
+      <strong className="litix-directory-group-heading">{group.name}</strong>
+      <div className="litix-directory-filter-buttons">
+       <button type="button" className={"litix-directory-fast"+(platform===group.name&&!kind?" is-active":"")}
+        aria-pressed={platform===group.name&&!kind}
+        onClick={()=>selectFocus(group.name,"")}>{group.name} ({group.count})</button>
+       {group.kinds.filter(item=>allowedServiceFilter(group.name,item.kind)).map(item=>
+        <button type="button" className={"litix-directory-fast"+(platform===group.name&&kind===item.kind?" is-active":"")}
+         key={item.kind} aria-pressed={platform===group.name&&kind===item.kind}
+         onClick={()=>selectFocus(group.name,item.kind)}>{kindLabel(item.kind)} ({item.count})</button>)}
+      </div>
+     </div>)}
+    </div>
+   </details>}
   </div>
   <div className="litix-directory-layout">
    <nav aria-label="Litix platform categories" className="litix-directory-rail">
@@ -140,7 +165,7 @@ export default function LitixDirectory({standalone=false,initialPlatform="",init
      <label>Service type
       <select value={kind} onChange={e=>{setKind(e.target.value);setPage(1)}}>
        <option value="">All types</option>
-       {["followers","likes","views","subscribers","retweets","comments","shares","saves","members","plays","traffic","other"].map(x=><option key={x} value={x}>{x[0].toUpperCase()+x.slice(1)}</option>)}
+       {["followers","likes","views","subscribers","retweets","comments","shares","saves","members","plays","listeners","traffic","other"].map(x=><option key={x} value={x}>{x[0].toUpperCase()+x.slice(1)}</option>)}
       </select>
      </label>
      <label>Category
