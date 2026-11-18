@@ -36,6 +36,6 @@ test("retired prepaid checkout cannot charge and preserves historical order reco
  assert.match(route,/status: 409/);
  assert.doesNotMatch(route,/paymentToken|transact|boosteroProduction/);
  const migration=source("db/migrations/20261101-autolikes-prepaid-single-pay.sql");
- assert.match(migration,/ALTER TABLE public\\.litix_autolikes_prepaid_orders ENABLE ROW LEVEL SECURITY/);
+ assert.ok(migration.includes("ALTER TABLE public.litix_autolikes_prepaid_orders ENABLE ROW LEVEL SECURITY"));
  assert.match(migration,/supplier_order_id text UNIQUE/);
 });
