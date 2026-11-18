@@ -9,7 +9,8 @@ const PLATFORMS=[
  "Instagram","TikTok","YouTube","Facebook","Twitter (X)","Spotify","Telegram",
  "LinkedIn","Discord","Snapchat","Pinterest","Website Traffic","Twitch",
  "Clubhouse","Kick","CoinMarketCap","Apple Music","Shopee","Rumble","Reddit",
- "Bluesky","Truth Social","Quora","Tumblr","Medium","GitHub"
+ "Bluesky","Truth Social","Quora","Tumblr","Medium","GitHub",
+ "SoundCloud","Threads","VK"
 ];
 const PLATFORM_PATTERNS=[
  /instagram|\big\b/i,/tik[\s._-]*tok/i,/youtube|\byt\b/i,/facebook|\bfb\b/i,
@@ -51,9 +52,12 @@ async function directory(){
    snapshot.items.filter(s=>s.purchasable===true).map(s=>({...s,provider:"Litix",quoteStatus:"approved"})),
    null,s=>s.per1000==null?Number.POSITIVE_INFINITY:Number(s.per1000)
   );
-  const counts={};const categories={};
+  const counts={};const categories={};const kindsByPlatform=new Map();
   for(const s of items){
    counts[s.platform]=(counts[s.platform]||0)+1;
+   const kinds=kindsByPlatform.get(s.platform)||new Map();
+   kinds.set(s.kind,(kinds.get(s.kind)||0)+1);
+   kindsByPlatform.set(s.platform,kinds);
    {const label=publicServiceCardName({name:s.category});categories[label]=(categories[label]||0)+1;}
   }
   const platformOptions=Object.entries(counts).sort((a,b)=>{
@@ -61,7 +65,12 @@ async function directory(){
    return (ai<0?999:ai)-(bi<0?999:bi);
   }).map(([name,count])=>({name,count}));
   const categoryOptions=Object.entries(categories).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0])).map(([name,count])=>({name,count}));
-  memo={items,platformOptions,categoryOptions,liveCount:items.length,approvedCount:items.filter(s=>s.purchasable).length,sourceStatus:snapshot.status};
+  const platformKinds=platformOptions.map(({name,count})=>({
+   name,count,kinds:[...(kindsByPlatform.get(name)||new Map()).entries()]
+    .sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]))
+    .map(([kind,count])=>({kind,count}))
+  }));
+  memo={items,platformOptions,platformKinds,categoryOptions,liveCount:items.length,approvedCount:items.filter(s=>s.purchasable).length,sourceStatus:snapshot.status};
   expireAt=Date.now()+120000;
   return memo;
  })().finally(()=>{inFlight=null});
@@ -83,7 +92,7 @@ export async function GET(request){
   return Response.json({
    brand:"Litix",items:filtered.slice((page-1)*pageSize,page*pageSize).map(litixPublicCard).filter(Boolean),
    total:filtered.length,allCount:data.liveCount,page,pageSize,
-   platforms:data.platformOptions,categories:data.categoryOptions,
+   platforms:data.platformOptions,platformKinds:data.platformKinds,categories:data.categoryOptions,
    verifiedPurchasableCount:data.approvedCount,checkoutPath:"/#checkout",currency:"USD",
    notice:"Browse Litix services and review the final price before secure checkout."
   },{headers:{"cache-control":data.sourceStatus==="live"?"public, s-maxage=30, stale-while-revalidate=60":"public, s-maxage=10, stale-while-revalidate=20","x-content-type-options":"nosniff"}});

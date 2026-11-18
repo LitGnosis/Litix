@@ -62,7 +62,12 @@ try{
   assert.match(await page.locator(".totalbox .total").innerText(),/3\.00/);
   assert.equal(await root.getByRole("button",{name:/Real \/ Active/}).count(),0,
    "Do not invent a VIP tier when no live distinct VIP offer exists");
-  assert.equal(await root.getByRole("button",{name:"Auto Likes"}).isDisabled(),true);
+  assert.equal(await root.getByRole("button",{name:"Auto Likes"}).count(),0);
+  assert.equal(await root.getByRole("button",{name:/Custom Comments/}).count(),0);
+  assert.equal(await root.getByRole("link",{name:"TikTok Shares"}).getAttribute("href"),
+   "/services?platform=TikTok&kind=shares");
+  assert.equal(await root.getByRole("link",{name:"TikTok Saves"}).getAttribute("href"),
+   "/services?platform=TikTok&kind=saves");
   assert.equal(await page.getByRole("link",{name:/Browse full catalog/}).getAttribute("href"),"/services");
   const pay=page.locator("#checkout button.premium-pay-button");
   assert.equal(await pay.count(),1);

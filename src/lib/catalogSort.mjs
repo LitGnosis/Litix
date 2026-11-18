@@ -12,9 +12,13 @@ export function matchesServiceQuickKind(service,kind){
   ["saves",/\bsaves?\b/i],
   ["listeners",/\blisteners?\b/i],
   ["plays",/\bplays?\b/i],
-  ["members",/\bmembers?\b/i]
+  ["members",/\bmembers?\b/i],
+  ["traffic",/\btraffic\b|\bvisitors?\b|\bvisits?\b/i]
  ];
- if(!["retweets","followers","likes","views","subscribers","comments","shares","saves"].includes(kind))return false;
+ // The caller has already checked service.kind==="other". Keep those
+ // legitimately unclassified default services browsable rather than empty.
+ if(kind==="other")return true;
+ if(!["retweets","followers","likes","views","subscribers","comments","shares","saves","listeners","plays","members","traffic"].includes(kind))return false;
  const title=String(service?.name||"");
  const titleMatches=patterns.filter(([,regex])=>regex.test(title)).map(([k])=>k);
  // Explicit titles take priority over broad category labels. A service like

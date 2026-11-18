@@ -10,6 +10,7 @@ import {litixRetailPer1000Cents,litixCuratedPricingActive} from "../lib/litixRet
 import {boosteroQuote} from "../lib/boosteroFulfillment.mjs";
 import {curatedPublicProduct,resolveCuratedSupplier,parseCuratedId} from "../lib/curatedCatalog.mjs";
 import {quoteCentsForQuantity} from "../lib/litixCheckoutDisplay.mjs";
+import {allowedServiceFilter} from "../lib/serviceNavigation.mjs";
 
 const source=path=>readFile(new URL(path,import.meta.url),"utf8");
 const row=(service,name,rate="2.00",kind="default")=>({
@@ -106,4 +107,16 @@ test("selector routes opaque IDs through existing payment handler and refuses fa
  assert.match(price,/pricingRule==="nearest"/);
  assert.ok(retired.includes("auto"));
  assert.doesNotMatch(selector,/30-Day Refill Protection|Starts in minutes/);
+});
+
+test("TikTok quick-shop extras have navigable catalog destinations, not dead purchase controls",async()=>{
+ const ui=await source("../components/CuratedFastCheckout.jsx");
+ const css=await source("../app/quick-checkout.css");
+ assert.equal(allowedServiceFilter("TikTok","shares"),true);
+ assert.equal(allowedServiceFilter("TikTok","saves"),true);
+ assert.match(ui,/href="\/services\?platform=TikTok&kind=shares"/);
+ assert.match(ui,/href="\/services\?platform=TikTok&kind=saves"/);
+ assert.match(ui,/href="\/services\?platform=TikTok"/);
+ assert.match(css,/\.litix-curated-extras>div a/);
+ assert.doesNotMatch(ui,/auto_likes|auto_views|Custom Comments · Not yet available|extraClick|TIKTOK_EXTRA_KINDS/);
 });

@@ -95,3 +95,12 @@
  .litix-directory-filter-buttons .litix-directory-fast{flex-basis:43%;font-size:12px;padding:9px 7px}
  .litix-directory-results{scroll-margin-top:195px}
 }
+
+/* Expand only existing verified long-tail supplier categories; no dead tiles. */
+.litix-directory-advanced{grid-column:1/-1;border:1px solid #345f7d;border-radius:15px;background:#071d30;padding:12px}
+.litix-directory-advanced summary{cursor:pointer;list-style:auto;font-size:14px;font-weight:850;color:#b3e8ff;padding:5px 7px}
+.litix-directory-advanced summary:focus-visible{outline:3px solid #b1e8ff;outline-offset:3px}
+.litix-directory-advanced-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:13px}
+@media(max-width:680px){
+ .litix-directory-advanced-grid{grid-template-columns:1fr}
+}
