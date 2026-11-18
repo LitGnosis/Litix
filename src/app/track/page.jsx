@@ -17,6 +17,8 @@ function friendlyStatus(order){
  if(order.payment!=="paid")return {title:"Payment "+(order.payment||"pending"),description:"Payment approval is not confirmed. Do not submit another charge until support checks your order.",kind:"warning",step:0};
  const s=String(order.fulfillment||"").toLowerCase();
  const latest=String(order.status||"").toLowerCase();
+ if(["canceled","cancelled","failed","error","partial"].includes(latest))
+  return {title:"Delivery needs support",description:"The latest delivery update requires review. Do not place a duplicate order.",kind:"warning",step:2};
  const children=Array.isArray(order.posts)?order.posts:[];
  if(children.some(p=>/^(in progress|in_progress|processing)$/i.test(String(p.status||"")))&&
    !["completed","failed","canceled"].includes(s))
