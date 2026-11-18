@@ -51,10 +51,12 @@ export default function CuratedFastCheckout({selected,quantity,onChoose,onQuanti
   }
   if(selected?.id!==current.id||
      selected?.per1000!==current.per1000||
+     selected?.quantityCards?.find(c=>c.quantity===quantity)?.totalCents!==
+      current.quantityCards?.find(c=>c.quantity===quantity)?.totalCents||
      selected?.min!==current.min||selected?.max!==current.max){
    onChoose(current);
   }
- },[status,current?.id,current?.per1000,current?.min,current?.max]);
+ },[status,current?.id,current?.per1000,current?.min,current?.max,current?.quantityCards,quantity]);
  const go=(p,k,t="standard")=>{
   setPlatform(p);setKind(k);setTier(t);setCustomOpen(false);
   const next=live(p,k,t)||live(p,k,"standard")||
@@ -125,13 +127,12 @@ export default function CuratedFastCheckout({selected,quantity,onChoose,onQuanti
      aria-pressed={tier==="standard"} disabled={status==="ready"&&!find(platform,kind,"standard")}
      onClick={()=>go(platform,kind,"standard")}>
      <span>{live(platform,kind,"standard")?.label==="Active-look service"?"Active":"High Quality"}</span>
-     <small>Recommended · Verified package</small><span className="litix-tier-benefit">Current pricing · Standard processing</span>
+     <small>Recommended · High-quality service</small>
+     <span className="litix-tier-benefit">Standard queue · Refill options depend on service eligibility</span>
     </button>
-    {live(platform,kind,"value")&&<button type="button" className={tier==="value"?"is-selected":""}
-     aria-pressed={tier==="value"} onClick={()=>go(platform,kind,"value")}>
-     <span>Standard</span><small>Essential · Value Rate</small></button>}
     {live(platform,kind,"vip")&&<button type="button" className={tier==="vip"?"is-selected":""}
-     aria-pressed={tier==="vip"} onClick={()=>go(platform,kind,"vip")}><span>VIP / Active</span><small>Alternate active-profile service</small><span className="litix-tier-benefit">Live price · Availability checked</span></button>}
+     aria-pressed={tier==="vip"} onClick={()=>go(platform,kind,"vip")}><span>VIP / Active</span><small>Active-profile listing · Current service price</small>
+      <span className="litix-tier-benefit">Delivery and refill terms shown only where verified</span></button>}
    </div>
   </div>
   {status==="error"&&<p className="litix-curated-notice" role="alert">Secure price verification is unavailable. Retry to continue.</p>}
