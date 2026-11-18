@@ -55,7 +55,7 @@ test("checkout trust text remains accurate and avoids unsupported promises",asyn
  assert.match(page,/checkoutTargetPlaceholder\(selected\)/);
  assert.match(page,/link\.trim\(\)\?targetFeedback\.message/);
  assert.doesNotMatch(page,/checkoutProfilePlaceholder/);
- for(const value of ["Live service verification","Private order tracking","PayKings-hosted card fields"])
+ for(const value of ["Live service verification","Private order tracking","Hosted payment fields"])
   assert.ok(premium.includes(value));
  assert.doesNotMatch(premium,/30.Day Refill Guarantee|Instant Automated Start|256.Bit PayKings Encryption/i);
  assert.match(premium,/premium-pay-button/);
@@ -74,7 +74,7 @@ test("homepage trust line follows hero subtitle without invented review figures"
  assert.match(hero,/litix-hero-subtitle/);
  assert.match(hero,/litix-hero-proof/);
  assert.ok(hero.indexOf("litix-hero-proof")>hero.indexOf("litix-hero-subtitle"));
- for(const text of ["For creators &amp; agencies","No social passwords required","PayKings-hosted card fields"])
+ for(const text of ["For creators &amp; agencies","Secure checkout","Private order tracking"])
   assert.ok(hero.includes(text),text);
  assert.doesNotMatch(hero,/4\.9\/5|Rated by Creators|★★★★★|100% Password-Free/);
  assert.match(styles,/\.litix-hero-shop \.litix-hero-proof/);
