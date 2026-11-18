@@ -22,6 +22,7 @@ export default function LitixCompanyFacts(){
    <p className="kicker">LITIX · COMPANY FACTS</p>
    <h1>About Litix.net</h1>
    <p>Litix is an independent digital-services storefront built around clear service information, customer payment and order tracking, and practical tools for creators and businesses.</p>
+   <p>New AutoLikes purchases are currently paused. Existing orders remain accessible through private order tracking.</p>
    <p>The storefront and custom business-proposal process serve different needs: a listed product may be purchased only where checkout is available, while custom services require manual review before any agreement.</p>
    <div className="partner-actions"><Link className="primary" href="/shop">Browse current services</Link><Link href="/agency-growth">Discuss business workflows</Link></div>
   </section>

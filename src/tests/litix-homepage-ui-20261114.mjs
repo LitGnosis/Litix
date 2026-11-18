@@ -62,12 +62,13 @@ const test=async width=>{
  assert.equal(await page.locator("#workspace").count(),0);
  assert.equal(await page.locator("#growth-studio").count(),0);
  assert.equal(await page.locator(".litix-purchase-layout #checkout").count(),1);
- assert.equal(await page.locator("ol.checkout-steps li").count(),3);
+ assert.equal(await page.locator(".litix-hero-steps span").count(),3);
+ assert.equal(await page.locator(".whatsapp-float").count(),0,"Unified LITIX AI replaces duplicate support button");
  if(width<576){
   const ai=await page.locator(".lxai-launcher").boundingBox();
-  const whats=await page.locator(".whatsapp-float").boundingBox();
-  assert.ok(ai&&whats&&ai.x+ai.width+10<whats.x,
-   "mobile AI and WhatsApp must stay separate");
+  const checkoutBar=await page.locator(".litix-mobile-checkout-bar").boundingBox();
+  assert.ok(ai&&checkoutBar&&ai.y+ai.height<=checkoutBar.y+3,
+   "unified support launcher must clear the mobile checkout bar");
   assert.equal(await page.locator(".lxai-launcher").getByText("Ask LITIX AI").isVisible(),true);
  }
  await page.goto("http://localhost:3100/workspace",{waitUntil:"domcontentloaded"});

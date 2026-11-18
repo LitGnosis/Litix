@@ -73,7 +73,7 @@ export default function PremiumInlineCheckout({
       <ul className="litix-checkout-trust" aria-label="Checkout safeguards">
         <li><span aria-hidden="true">✓</span> Live service verification</li>
         <li><span aria-hidden="true">✓</span> Private order tracking</li>
-        <li><span aria-hidden="true">✓</span> Hosted payment fields</li>
+        <li><span aria-hidden="true">✓</span> No social passwords required</li>
       </ul>
       <p className="premium-checkout-security">Final price and service availability are verified before payment.</p>
     </div>
