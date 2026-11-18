@@ -57,7 +57,8 @@ try{
   assert.equal(await page.getByText("Choose a package in Step 03.").count(),0);
   assert.equal(await page.getByText("Choose a package to continue.").count(),0);
   assert.equal(await page.locator(".litix-curated-tiers button").count(),1);
-  assert.equal(await page.locator(".litix-curated-range").innerText(),"90–5,000 units");
+  assert.ok(["Checking live supplier limits","90–5,000 units"].includes(
+   await page.locator(".litix-curated-range").innerText()));
   assert.equal(await page.locator(".litix-curated-package-grid button[aria-pressed=true]").count(),1);
   assert.match(await page.locator(".litix-curated-package-grid button[aria-pressed=true]").innerText(),/1,000/);
   assert.match(await page.locator(".totalbox .total").innerText(),/\$11\.02/);
@@ -66,6 +67,7 @@ try{
   assert.equal(await page.locator(".premium-pay-button").isDisabled(),true,
    "PayKings cannot charge without verified payment details");
   await page.waitForFunction(()=>!document.querySelector(".litix-curated-tier-description")?.textContent?.includes("Litix retail pricing"),null,{timeout:10000});
+  assert.equal(await page.locator(".litix-curated-range").innerText(),"90–5,000 units");
   assert.equal(await page.locator(".litix-curated-tiers button").count(),1,
    "Unverified VIP is fully hidden");
   const kinds=page.getByRole("group",{name:"Choose service type"});
