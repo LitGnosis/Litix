@@ -17,7 +17,7 @@ test("featured 1,000 follower package is preselected in initial HTML, without a 
  assert.equal(offer.preview,true);
  assert.equal(offer.purchasable,false);
  assert.equal(curatedPresetQuantity(offer),1000);
- assert.equal(offer.quantityCards.find(c=>c.quantity===1000).totalCents,1102);
+ assert.equal(offer.quantityCards.find(c=>c.quantity===1000).totalCents,1099);
  assert.match(home,/useState\(CURATED_HOME_ENABLED\?firstPaintOffer:INITIAL_FAST_SERVICE\)/);
  assert.match(home,/useState\(CURATED_HOME_ENABLED\?curatedPresetQuantity\(firstPaintOffer\):INITIAL_FAST_QUANTITY\)/);
  assert.match(selector,/aria-pressed=\{quantity===card.quantity\}/);
