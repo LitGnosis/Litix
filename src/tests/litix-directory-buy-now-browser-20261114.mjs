@@ -24,7 +24,7 @@ try{
      item("litix_5093",19.32),item("litix_4751",9.99)],
     platforms:[{name:"Instagram",count:1196}],
     categories:[{name:"Instagram - USA Services",count:1196}],
-    total:1196,allCount:1196,verifiedPurchasableCount:1196,page:1,pageSize:24
+    total:1196,allCount:1196,verifiedPurchasableCount:1196,catalogFresh:true,page:1,pageSize:24
    })
   }));
   await page.route("**/api/checkout/v1",()=>{throw Error("UI test must never charge a card");});
