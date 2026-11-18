@@ -160,7 +160,7 @@ export default function LitixAI(){
           <strong>Order verified</strong><p>{order.service}</p>
           <dl><div><dt>Payment</dt><dd>{order.payment}</dd></div><div><dt>Fulfillment</dt><dd>{order.fulfillment}</dd></div>
             <div><dt>Quantity</dt><dd>{order.quantity}</dd></div><div><dt>Total</dt><dd>{cash(order.amount)}</dd></div></dl>
-          <p>{order.statusNote||"Delivery is not guaranteed until confirmed by the supplier."}</p>
+          <p>{order.statusNote||"Delivery is confirmed only when Litix tracking shows completion."}</p>
         </div>}
         <a href="/track">Open the full secure tracking page</a>
       </form>}
