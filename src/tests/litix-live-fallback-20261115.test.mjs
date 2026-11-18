@@ -11,9 +11,9 @@ const row=(id,name,kind,rate="2.00",min=250)=>({
 });
 const live=[
  row(991101,"TikTok Followers [ Real Accounts | 2K/Day ]","Followers"),
- row(991102,"TikTok Likes [ Real Accounts | 5K/Day ]","Likes"),
+ row(991102,"TikTok Likes [ Real Accounts | 5K/Day ]","Likes","8.00"),
  row(991103,"TikTok Random Comments [ Real Accounts | 500/Day ]","Comments","9.00",100),
- row(991104,"TikTok Likes [ Real Accounts | 5K/Day ]","Followers"),
+ row(991104,"TikTok Likes [ Real Accounts | 5K/Day ]","Followers","8.00"),
  row(991105,"TikTok Followers Monthly Growth Package","Followers"),
  row(991106,"TikTok Auto Followers [ Real Accounts ]","Followers"),
  row(991107,"TikTok Views [ Real Accounts | 5K/Day ]","Views","1.50")
