@@ -1,4 +1,5 @@
 import {allBoosteroCardsSnapshot} from "../../../../lib/boosteroCatalog.mjs";
+import {readDurableCatalog} from "../../../../lib/litixDurableCatalog.mjs";
 import {sortServicesPer1000,matchesServiceQuickKind} from "../../../../lib/catalogSort.mjs";
 import {litixPublicCard} from "../../../../lib/publicLitixCatalog.mjs";
 import {publicServiceCardName} from "../../../../lib/serviceCardDisplay.mjs";
@@ -46,7 +47,11 @@ async function directory(){
   // catalog. The previous directory fetched the complete supplier inventory
   // and then fetched the approved cards a second time on every cold start.
   // Only live-validated, purchasable cards are ever exposed.
-  const snapshot=await allBoosteroCardsSnapshot();
+  let snapshot={items:[],status:"unavailable"};
+  try{snapshot=await allBoosteroCardsSnapshot();}
+  catch{/* Supplier read failed; public snapshot may still support safe browsing. */}
+  if(!Array.isArray(snapshot.items)||!snapshot.items.length)
+   snapshot=await readDurableCatalog();
   if(!Array.isArray(snapshot.items)||!snapshot.items.length)throw Error("catalog_unavailable");
   const items=sortServicesPer1000(
    snapshot.items.filter(s=>s.purchasable===true).map(s=>({...s,provider:"Litix",quoteStatus:"approved"})),
@@ -70,7 +75,10 @@ async function directory(){
     .sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]))
     .map(([kind,count])=>({kind,count}))
   }));
-  memo={items,platformOptions,platformKinds,categoryOptions,liveCount:items.length,approvedCount:items.filter(s=>s.purchasable).length,sourceStatus:snapshot.status};
+  const catalogFresh=snapshot.status==="live";
+  memo={items,platformOptions,platformKinds,categoryOptions,liveCount:items.length,
+   approvedCount:catalogFresh?items.filter(s=>s.purchasable).length:0,
+   sourceStatus:snapshot.status};
   expireAt=Date.now()+120000;
   return memo;
  })().finally(()=>{inFlight=null});
@@ -89,13 +97,18 @@ export async function GET(request){
    (!platform||platform==="All platforms"||platform===s.platform)&&(!category||publicServiceCardName({name:s.category})===category)&&
    (!kind||(s.kind===kind&&matchesServiceQuickKind(s,kind)))&&(!onlyReady||s.purchasable===true));
   const pageSize=24;
+  const catalogFresh=data.sourceStatus==="live";
+  // Previously verified supplier cards are for browsing only. Only a fresh
+  // supplier response can present checkout-ready public listings.
+  const cards=filtered.slice((page-1)*pageSize,page*pageSize).map(s=>
+   litixPublicCard({...s,purchasable:catalogFresh&&s.purchasable===true})).filter(Boolean);
   return Response.json({
-   brand:"Litix",items:filtered.slice((page-1)*pageSize,page*pageSize).map(litixPublicCard).filter(Boolean),
-   total:filtered.length,allCount:data.liveCount,page,pageSize,
+   brand:"Litix",items:cards,total:filtered.length,allCount:data.liveCount,page,pageSize,
    platforms:data.platformOptions,platformKinds:data.platformKinds,categories:data.categoryOptions,
-   verifiedPurchasableCount:data.approvedCount,checkoutPath:"/#checkout",currency:"USD",
-   notice:"Browse Litix services and review the final price before secure checkout."
-  },{headers:{"cache-control":data.sourceStatus==="live"?"public, s-maxage=30, stale-while-revalidate=60":"public, s-maxage=10, stale-while-revalidate=20","x-content-type-options":"nosniff"}});
+   verifiedPurchasableCount:data.approvedCount,catalogFresh,checkoutPath:"/#checkout",currency:"USD",
+   notice:catalogFresh?"Browse Litix services and review the final price before secure checkout.":
+    "Displaying recently verified services for browsing. Purchases require a fresh supplier check."
+  },{headers:{"cache-control":catalogFresh?"public, s-maxage=30, stale-while-revalidate=60":"public, s-maxage=10, stale-while-revalidate=20","x-content-type-options":"nosniff"}});
  }catch(err){
   console.error("Litix supplier directory error",String(err?.message||"unknown").slice(0,85));
   return Response.json({brand:"Litix",items:[],total:0,allCount:0,

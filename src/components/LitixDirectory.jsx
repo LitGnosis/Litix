@@ -24,6 +24,7 @@ export default function LitixDirectory({standalone=false,initialPlatform="",init
  const [count,setCount]=useState(0);
  const [allCount,setAllCount]=useState(null);
  const [readyCount,setReadyCount]=useState(null);
+ const [catalogFresh,setCatalogFresh]=useState(false);
  const [status,setStatus]=useState("loading");
  const [problem,setProblem]=useState("");
  const [retry,setRetry]=useState(0);
@@ -53,9 +54,10 @@ export default function LitixDirectory({standalone=false,initialPlatform="",init
     setCount(Number(body.total)||0);
     setAllCount(Number(body.allCount)||0);
     setReadyCount(Number(body.verifiedPurchasableCount)||0);
+    setCatalogFresh(body.catalogFresh===true);
     setStatus("ready");
    })
-   .catch(e=>{if(!abort.signal.aborted){setEntries([]);setStatus("error");setProblem(e.message)}})
+   .catch(e=>{if(!abort.signal.aborted){setEntries([]);setCatalogFresh(false);setStatus("error");setProblem(e.message)}})
    .finally(()=>{});
   return()=>abort.abort();
  },[debounced,platform,kind,category,page,retry]);
@@ -183,14 +185,15 @@ export default function LitixDirectory({standalone=false,initialPlatform="",init
      {status==="ready"&&<span>Page {page} of {Math.max(1,Math.ceil(count/24))} · Prices in USD per 1,000</span>}
     </div>
     {status==="error"&&<div className="litix-directory-error" role="alert">{problem}<button type="button" onClick={()=>setRetry(v=>v+1)}>Retry catalog</button></div>}
+    {status==="ready"&&!catalogFresh&&<div className="litix-directory-error" role="status">Recently verified Litix listings are available for browsing. Live checkout is temporarily unavailable; no payment will be attempted.<button type="button" onClick={()=>setRetry(v=>v+1)}>Retry live availability</button></div>}
     {status==="ready"&&entries.length===0&&<p className="litix-directory-empty">No matching services. Try another platform or clear the filters.</p>}
     <div className="litix-directory-cards">
-     {entries.filter(s=>s.purchasable===true).map(s=>{
-      const approved=s.purchasable===true;
+     {entries.map(s=>{
+      const approved=s.purchasable===true&&catalogFresh;
       const displayPrice=currency(s.per1000);
       const tierLabel=checkoutDisplay(s).tierLabel;
       return <article className="litix-directory-service" key={s.id}>
-       <div className="litix-directory-service-top"><span className="litix-directory-network">{s.platform}</span><span className={approved?"litix-directory-state is-ready":"litix-directory-state"}>Instant checkout</span></div>
+       <div className="litix-directory-service-top"><span className="litix-directory-network">{s.platform}</span><span className={approved?"litix-directory-state is-ready":"litix-directory-state"}>{approved?"Instant checkout":"Browse only"}</span></div>
        <h3>{litixCustomerServiceName(s.name)}</h3>
        <div className="litix-directory-service-meta">
         <p className="litix-directory-service-category">{litixCustomerServiceName(s.category)}</p>
@@ -199,9 +202,10 @@ export default function LitixDirectory({standalone=false,initialPlatform="",init
        <div className="litix-directory-service-price">{displayPrice||"Ask for price"} <small>/ 1,000 {approved?"":"· indicative"}</small></div>
        <div className="litix-directory-service-range">
         {Number.isInteger(s.min)&&Number.isInteger(s.max)?s.min.toLocaleString()+"–"+s.max.toLocaleString()+" units":"Quantity confirmed on request"}
-        <span>Litix verified service</span>
+        <span>{approved?"Litix verified service":"Recently verified listing"}</span>
        </div>
-       <a className="litix-directory-buy" href={"/?service="+encodeURIComponent(s.id)+(["litix_4751","litix_5251"].includes(String(s.id))?"&mode=multi":"")+"#checkout"}>{["litix_4751","litix_5251"].includes(String(s.id))?"Choose Your Posts":"BUY NOW"}</a>
+       {approved?<a className="litix-directory-buy" href={"/?service="+encodeURIComponent(s.id)+(["litix_4751","litix_5251"].includes(String(s.id))?"&mode=multi":"")+"#checkout"}>{["litix_4751","litix_5251"].includes(String(s.id))?"Choose Your Posts":"BUY NOW"}</a>:
+        <span className="litix-directory-manual" aria-label="Purchase temporarily unavailable">Live availability required before purchase</span>}
       </article>
      })}
     </div>

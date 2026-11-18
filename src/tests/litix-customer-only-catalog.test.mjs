@@ -35,7 +35,7 @@ test("checkout, service directory and tracking never disclose supplier costs and
  assert.doesNotMatch(global,/notice:"All displayed rates use supplier cost|markupPercent:60|source:"live_supplier_api"/);
  assert.doesNotMatch(catalog,/boosteroCatalogStatus:|boosteroOnly:true|markupPercent:60/);
  assert.match(catalog,/map\(litixPublicCard\)/);
- assert.match(global,/map\(litixPublicCard\)/);
+ assert.match(global,/litixPublicCard\(\{\.\.\.s,purchasable:catalogFresh&&s\.purchasable===true\}\)/);
  assert.match(checkout,/litix\|boostero/);
  assert.match(tracking,/service:publicServiceCardName/);
 });
