@@ -148,7 +148,7 @@ export default function OrderTracker(){
        <span style={{width:Math.max(0,Math.min(100,100*order.delivered/Number(order.quantity)))+"%"}}/>
       </div>
       <small>{order.delivered.toLocaleString("en-US")} of {Number(order.quantity).toLocaleString("en-US")} units reported delivered</small>
-     </div>
+     </div>}
     {Array.isArray(order.posts)&&order.posts.length>0&&<section aria-label="Individual post delivery status" style={{padding:"14px 0"}}>
       <h3 style={{fontSize:17,margin:"0 0 12px"}}>Your selected posts</h3>
       {order.posts.some(p=>Number.isSafeInteger(p.delivered))&&<p className="ltx-track-meta">
