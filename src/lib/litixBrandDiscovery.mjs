@@ -1,8 +1,8 @@
 // First-party discovery facts. Keep this consistent with Litix's actual public pages.
 // Structured data can aid understanding, but does not guarantee rankings, media, or AI citations.
 export const LITIX_SITE_URL="https://www.litix.net/";
-export const LITIX_DISCOVERY_TITLE="Litix.net | Digital Social Media Services & Business Marketing Workflows";
-export const LITIX_DISCOVERY_DESCRIPTION="Litix.net is an independent digital-services storefront with a live social media services catalog and customer order tracking. Businesses can also request manually reviewed marketing and lead-workflow proposals.";
+export const LITIX_DISCOVERY_TITLE="Litix | Instagram & TikTok Growth Packages for Creators";
+export const LITIX_DISCOVERY_DESCRIPTION="Litix helps creators, brands and agencies explore Instagram, TikTok and other social growth packages with clear pricing, secure checkout and private order tracking.";
 export const LITIX_DISCOVERY_SCHEMA=Object.freeze({
  "@context":"https://schema.org",
  "@graph":[
