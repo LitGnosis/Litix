@@ -5,6 +5,7 @@ import "./catalog.css";
 import "./quick-checkout.css";
 import "./litix-flow.css";
 import "./litix-custom-calculator.css";
+import "./litix-cro.css";
 import LitixAI from "../components/LitixAI";
 import {LITIX_SITE_URL,LITIX_DISCOVERY_TITLE,LITIX_DISCOVERY_DESCRIPTION,LITIX_DISCOVERY_SCHEMA} from "../lib/litixBrandDiscovery.mjs";
 
