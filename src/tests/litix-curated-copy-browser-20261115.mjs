@@ -66,7 +66,7 @@ try{
    "e.g. @username or https://instagram.com");
   assert.equal(await page.locator(".premium-pay-button").isDisabled(),true,
    "PayKings cannot charge without verified payment details");
-  await page.waitForFunction(()=>!document.querySelector(".litix-curated-tier-description")?.textContent?.includes("Litix retail pricing"),null,{timeout:10000});
+  await page.waitForFunction(()=>document.querySelector(".litix-curated-range")?.textContent?.includes("5,000 units"),null,{timeout:10000});
   assert.equal(await page.locator(".litix-curated-range").innerText(),"90–5,000 units");
   assert.equal(await page.locator(".litix-curated-tiers button").count(),1,
    "Unverified VIP is fully hidden");
