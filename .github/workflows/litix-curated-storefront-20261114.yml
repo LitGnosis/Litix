@@ -11,6 +11,11 @@ on:
       - src/config/curatedServices.mjs
       - src/lib/tiktokCatalog.mjs
       - src/lib/curatedCatalog.mjs
+      - src/lib/curatedVolumePricing.mjs
+      - src/lib/litixCheckoutDisplay.mjs
+      - src/tests/litix-active-bulk-cap-20261117.test.mjs
+      - src/tests/litix-live-fallback-20261115.test.mjs
+      - src/tests/curated-volume-cro-20261116.test.mjs
       - src/lib/litixRetail60.mjs
       - src/lib/boosteroFulfillment.mjs
       - src/lib/litixServiceClassify.mjs
@@ -53,7 +58,7 @@ jobs:
       - name: Install locked dependencies
         run: npm ci --no-audit --no-fund
       - name: Run pricing, catalog safety and current checkout regression tests
-        run: node --test tests/litix-curated-storefront-20261114.test.mjs tests/litix-customer-only-catalog.test.mjs tests/boostero-option-coverage-20261117.test.mjs tests/litix-directory-cached-fallback-20261117.test.mjs
+        run: node --test tests/litix-curated-storefront-20261114.test.mjs tests/litix-customer-only-catalog.test.mjs tests/boostero-option-coverage-20261117.test.mjs tests/litix-directory-cached-fallback-20261117.test.mjs tests/curated-volume-cro-20261116.test.mjs tests/litix-live-fallback-20261115.test.mjs tests/litix-active-bulk-cap-20261117.test.mjs
       - name: Build Next.js production app
         run: npm run build
       - name: Install isolated browser test runner
