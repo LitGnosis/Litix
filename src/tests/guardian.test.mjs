@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {readFileSync} from "node:fs";
+import {readFileSync,existsSync} from "node:fs";
 import {nextGuardianState,componentKeys} from "../lib/guardianCore.mjs";
 import {deliverGuardianNotice,bearerAuthorized} from "../lib/guardianRuntime.mjs";
 const file=path=>readFileSync(new URL("../"+path,import.meta.url),"utf8");
@@ -45,8 +45,7 @@ test("usable cached catalog stays degraded, not down; prior outage recovers afte
  const failureTwo=nextGuardianState(failureOne.next,invalid,new Date("2026-10-27T16:40:00Z"));
  assert.equal(failureTwo.next.status,"down");
  assert.deepEqual(failureTwo.events,[{kind:"outage"}]);
- const publicProbe=file("app/api/guardian/probe/route.js");
- assert.match(publicProbe,/c.status==="degraded"/);
+ assert.equal(existsSync(new URL("../app/api/guardian/probe/route.js",import.meta.url)),false);
  assert.match(file("lib/guardianRuntime.mjs"),/CATALOG_CACHED_USABLE/);
 });
 test("not-yet-launched AutoLikes is tracked honestly, never as an outage",()=>{
@@ -56,55 +55,26 @@ test("not-yet-launched AutoLikes is tracked honestly, never as an outage",()=>{
  assert.ok(componentKeys.includes("boostero")&&componentKeys.includes("multi_post")&&componentKeys.includes("email_delivery"));
  assert.ok(!componentKeys.includes("smmglob"));
 });
-test("preview-simulated outage and recovery alert via mocked Resend, with no customer data",async()=>{
- const sent=[];
- const transport=async(url,init)=>{
-  sent.push({url,headers:init.headers,body:JSON.parse(init.body)});
-  return {ok:true};
- };
- for(const kind of ["outage","recovery"]){
-  const payload={time:"2026-10-27T10:00:00.000Z",component:"tiktok",event:kind,
-   code:kind==="outage"?"NO_TIKTOK_SERVICES":"LIVE_SERVICES",
-   detail:"TikTok read-only catalog verification",probableCause:"CATALOG",repair:"Inspect read-only supplier services"};
-  const result=await deliverGuardianNotice({
-   eventKey:"guardian-gi_fixed-"+kind,payload,apiKey:"TEST_ONLY",transport
-  });
-  assert.equal(result,true);
- }
- assert.equal(sent.length,2);
- for(let i=0;i<2;i++){
-  assert.equal(sent[i].url,"https://api.resend.com/emails");
-  assert.equal(sent[i].body.to[0],"Litixsocial@gmail.com");
-  assert.equal(sent[i].headers["idempotency-key"],"guardian-gi_fixed-"+(i===0?"outage":"recovery"));
-  assert.doesNotMatch(JSON.stringify(sent[i].body),/customer_email|tracking_token|card_number|api_key|security_key/);
- }
- assert.match(sent[0].body.subject,/OUTAGE/);
- assert.match(sent[1].body.subject,/RECOVERY/);
+test("retired Guardian cannot send email, even when invoked with an injected transport",async()=>{
+ let calls=0;
+ const sent=await deliverGuardianNotice({eventKey:"old",payload:{event:"outage"},apiKey:"unused",
+  transport:async()=>{calls++;return {ok:true}}});
+ assert.equal(sent,false);
+ assert.equal(calls,0);
 });
-test("cron route and dashboard are authenticated; no public destructive diagnostic endpoints",async()=>{
- const {GET:cron}=await import("../app/api/guardian/cron/route.js");
- const {GET:admin}=await import("../app/api/guardian/admin/route.js");
- const a=await cron(new Request("https://litix.net/api/guardian/cron"));
- const b=await admin(new Request("https://litix.net/api/guardian/admin"));
- assert.equal(a.status,401);assert.equal(b.status,401);
+test("Guardian routes and dashboard are physically absent; customer crons remain",()=>{
+ for(const path of ["app/api/guardian/cron/route.js","app/api/guardian/admin/route.js",
+  "app/api/guardian/probe/route.js","app/guardian/admin/page.jsx","app/guardian/admin/layout.js"]){
+  assert.equal(existsSync(new URL("../"+path,import.meta.url)),false,path+" must not be deployed");
+ }
  assert.equal(bearerAuthorized(new Request("https://litix.net",{headers:{authorization:"Bearer wrong"}}),"a".repeat(32)),false);
- for(const p of ["app/api/guardian/cron/route.js","app/api/guardian/admin/route.js","app/api/guardian/probe/route.js"]){
-  const c=file(p);assert.doesNotMatch(c,/smm\("add"|type:"sale"|markPaid|update\s+litix_v2_orders/);
- }
-});
-test("scheduled monitoring is additive and independent of existing Vercel crons",()=>{
  const crons=JSON.parse(file("vercel.json")).crons;
- assert.deepEqual(crons.filter(x=>x.path==="/api/guardian/cron").map(x=>x.schedule),["*/5 * * * *"]);
- assert.equal(crons.filter(x=>x.path==="/api/bundles/cron").length,1);
- assert.equal(crons.filter(x=>x.path==="/api/v2/cron/sync-catalog").length,1);
+ assert.equal(crons.some(x=>x.path==="/api/guardian/cron"),false);
+ for(const route of ["/api/internal/boostero/cron","/api/checkout/settlement/cron","/api/autolikes/cron"])
+  assert.ok(crons.some(x=>x.path===route),route+" must remain scheduled");
  const runtime=file("lib/guardianRuntime.mjs");
- assert.match(runtime,/boosteroProduction\("balance"\)/);
- assert.doesNotMatch(runtime,/SMMGLOB_API_KEY|smmglob\.com/);
- assert.match(runtime,/select count\(\*\)/);
- assert.match(runtime,/idempotency-key/);
- assert.doesNotMatch(runtime,/action:"add"|type:"sale"|security_key/);
+ assert.doesNotMatch(runtime,/https:\/\/api\.resend\.com\/emails/);
 });
-
 test("Guardian recognizes the live Automatic Likes landing-page text",()=>{
  const runtime=file("lib/guardianRuntime.mjs");
  assert.match(runtime,/t\.includes\("Automatic Likes for Your Next Posts"\)/);

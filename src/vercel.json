@@ -12,10 +12,6 @@
       "schedule": "* * * * *"
     },
     {
-      "path": "/api/guardian/cron",
-      "schedule": "*/5 * * * *"
-    },
-    {
       "path": "/api/internal/boostero/cron",
       "schedule": "*/5 * * * *"
     },

@@ -158,43 +158,15 @@ async function persistObservation(sql,o,at){
   [incidentId,o.component,at.toISOString(),o.code,o.detail]);
  if(event?.kind==="recovery")await sql.query("update public.litix_guardian_incidents set resolved_at=$2,last_seen_at=$2 where id=$1 and resolved_at is null",[event.id,at.toISOString()]);
  if(event?.kind==="escalation")await sql.query("update public.litix_guardian_incidents set last_seen_at=$2 where id=$1",[event.id,at.toISOString()]);
- if(event)await queueAlert(sql,o.component,event,event.id||incidentId,o,at);
+ // Guardian alert outbox retired: persist historical status only, never enqueue emails.
 }
 // Injectable transport allows preview fault and recovery email tests without
 // sending a real email. The production cron supplies the real Resend transport.
-export async function deliverGuardianNotice({eventKey,payload,apiKey,transport=fetch}){
- const p=payload;
- const subject="LITIX Guardian "+(p.event==="recovery"?"RECOVERY":p.event==="escalation"?"ESCALATION":"OUTAGE")+" — "+p.component;
- const text=["Litix Guardian diagnostic alert","Time (UTC): "+p.time,"Component: "+p.component,"Event: "+p.event,
-  "Code: "+p.code,"Details: "+p.detail,"Probable cause: "+p.probableCause,
-  "Suggested repair: "+p.repair,"View protected dashboard: https://www.litix.net/guardian/admin",
-  "No payment or order changes were performed."].join("\\n");
- const result=await transport("https://api.resend.com/emails",{method:"POST",
-  headers:{"authorization":"Bearer "+apiKey,"content-type":"application/json","idempotency-key":eventKey},
-  body:JSON.stringify({from:"Litix Guardian <orders@litix.net>",to:["Litixsocial@gmail.com"],subject,text}),
-  cache:"no-store",signal:AbortSignal.timeout(8000)});
- return result.ok;
-}
-async function sendQueuedAlerts(sql){
- if(process.env.VERCEL_ENV!=="production")return {sent:0,disabled:"preview"};
- const key=process.env.RESEND_API_KEY||process.env.LITIX_RESEND_API_KEY;
- if(!key)return {sent:0,disabled:"resend_not_configured"};
- // Atomic claim prevents competing workers sending the same alert simultaneously.
- const rows=await sql.query("update public.litix_guardian_alert_outbox set status='sending',attempts=attempts+1,last_attempt_at=now() where event_key in (select event_key from public.litix_guardian_alert_outbox where status='pending' or (status='sending' and last_attempt_at<now()-interval '3 minutes') order by created_at limit 2 for update skip locked) returning event_key,payload");
- let sent=0;
- for(const entry of rows){
-  const p=entry.payload;
-  try{
-   const success=await deliverGuardianNotice({eventKey:entry.event_key,payload:p,apiKey:key});
-   if(!success)throw Error("EMAIL_DELIVERY_FAILED");
-   await sql.query("update public.litix_guardian_alert_outbox set status='sent',sent_at=now() where event_key=$1",[entry.event_key]);sent++;
-  }catch(e){
-   await sql.query("update public.litix_guardian_alert_outbox set status='pending' where event_key=$1",[entry.event_key]);
-   console.error("Litix Guardian delivery queued for retry",{component:p.component,code:"ALERT_SEND_UNAVAILABLE"});
-  }
- }
- return {sent};
-}
+// Guardian was retired at the owner's request on 2026-11-18.
+// Keep legacy exports for historical, read-only tests; never send Guardian email
+// or drain the historical Guardian alert outbox, even if code calls this module.
+export async function deliverGuardianNotice(){return false}
+async function sendQueuedAlerts(){return {sent:0,disabled:"guardian_retired"}}
 export async function runGuardianCycle({sql=guardianDb(),now=new Date(),observations=null,sendAlerts=true}={}){
  const at=now instanceof Date?now:new Date(now);
  const previous=await sql.query("select * from public.litix_guardian_components");
@@ -208,7 +180,7 @@ export async function runGuardianCycle({sql=guardianDb(),now=new Date(),observat
   if(batch.some(result=>result.status==="rejected"))
    throw Error("GUARDIAN_PERSISTENCE_INCOMPLETE");
  }
- const delivery=sendAlerts?await sendQueuedAlerts(sql):{sent:0,disabled:"test"};
+ const delivery=await sendQueuedAlerts(sql);
  const id="gr_"+randomUUID();
  await sql.query("insert into public.litix_guardian_runs(id,component_count,unhealthy_count,diag,finished_at) values($1,$2,$3,$4::jsonb,now())",
   [id,checked.length,checked.filter(x=>!x.ok).length,JSON.stringify({codes:checked.map(x=>({component:x.component,code:x.code,ok:x.ok}))})]);

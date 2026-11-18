@@ -25,7 +25,7 @@ test("Native robots preserves old protected routes and blocks owner dashboards",
  assert.equal(data.sitemap,"https://litix.net/sitemap.xml");
  assert.equal(data.host,"https://litix.net");
  const excludes=data.rules[0].disallow;
- for(const path of ["/api/","/account","/signin","/checkout","/guardian/admin","/bundles/admin"]){
+ for(const path of ["/api/","/account","/signin","/checkout","/bundles/admin"]){
   assert.ok(excludes.includes(path),"Crawler exclusion "+path);
  }
  assert.equal(data.rules[0].allow,"/");
