@@ -33,13 +33,13 @@ try{
  await page.goto("http://localhost:3100/",{waitUntil:"domcontentloaded"});
  const trust=page.locator("#checkout .litix-checkout-trust li");
  assert.equal(await trust.count(),3,"three source-grounded trust indicators beneath PayKings CTA");
- assert.match(await trust.allInnerTexts().then(v=>v.join(" | ").replace(/\s+/g," ")),/Live service verification.*Private order tracking.*PayKings-hosted card fields/);
+ assert.match(await trust.allInnerTexts().then(v=>v.join(" | ").replace(/\s+/g," ")),/Live service verification.*Private order tracking.*No social passwords required/);
  assert.equal(await page.locator("#checkout input[aria-label='Public profile or post link']").getAttribute("placeholder"),
   "e.g. @username or https://instagram.com");
  assert.equal(await page.locator("#litix-link-feedback").innerText(),"","no duplicate URL prompt before input");
  const heroProof=page.locator(".litix-hero-shop .litix-hero-proof");
  assert.equal(await heroProof.count(),1,"homepage has one concise trust line");
- assert.match(await heroProof.innerText(),/For creators & agencies.*No social passwords required.*PayKings-hosted card fields/s);
+ assert.match(await heroProof.innerText(),/For creators & agencies.*Secure checkout.*Private order tracking/s);
  assert.equal(await page.getByText(/4\.9\/5 Rated by Creators/).count(),0,"no unsupported customer rating");
  const cta=page.locator("#checkout button.premium-pay-button");
  await cta.waitFor();
@@ -70,8 +70,8 @@ try{
  assert.ok(readinessCount>initialReadiness,"click must re-check live price/eligibility");
  assert.equal(await page.locator(".premium-pay-spinner").count(),1,"CTA displays processing spinner");
  const footer=await page.locator("footer.end").innerText();
- assert.ok(footer.includes("Innovation, Ignited. Direct Social Media Growth & Campaign Workflows"));
- for(const [href,label] of [["/legal/privacy","Privacy Policy"],["/terms","Terms of Service"],["/refunds","Refunds & Order Issues"]]){
+ assert.ok(footer.includes("Social Growth for Creators, Brands & Agencies"));
+ for(const [href,label] of [["/legal/privacy","Privacy"],["/terms","Terms"],["/refunds","Refunds"]]){
   const link=page.locator(`footer.end .legal-links a[href="${href}"]`);
   assert.equal(await link.count(),1,`footer legal link ${href} appears once`);
   assert.equal(await link.innerText(),label);
