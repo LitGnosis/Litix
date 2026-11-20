@@ -103,6 +103,7 @@ export default function CuratedFastCheckout({selected,quantity,onChoose,onQuanti
     {["Instagram","TikTok","YouTube","Facebook","Twitter (X)"].map(p=><button key={p} className={platform===p?"is-selected":""}
      type="button" aria-pressed={platform===p} onClick={()=>CORE_PLATFORMS.includes(p)?go(p,"followers"):onBrowsePlatform?.(p)}>{p==="Twitter (X)"?"X":p}</button>)}
    </div>
+   <a className="litix-curated-browse" href="/services">Explore all services and packages</a>
   </div>
   <div className="litix-curated-step">
    <div className="litix-curated-heading"><span>02</span><strong>Choose Service</strong></div>
