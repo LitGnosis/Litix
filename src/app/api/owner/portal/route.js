@@ -54,8 +54,11 @@ export async function GET(request){
    const providers=results.map((result,i)=>result.status==="fulfilled"?
     {supplier:sources[i],connected:true,...result.value}:
     {supplier:sources[i],connected:false,error:errorCode(result.reason),items:[],wallet:null});
-   return reply({authenticated:true,csrf:owner.csrf,purchasesEnabled:purchasesOn(),
-    maxOrderCents:purchasesOn()?maxCost():null,providers,history:await history(db(),owner.sub)});
+   let entries=[],ledgerReady=false;
+   try{entries=await history(db(),owner.sub);ledgerReady=true}catch{}
+   return reply({authenticated:true,csrf:owner.csrf,purchasesEnabled:purchasesOn()&&ledgerReady,
+    maxOrderCents:purchasesOn()?maxCost():null,providers,history:entries,
+    ledgerReady,notice:ledgerReady?null:"Private order history and purchases unavailable until the ledger is healthy."});
   }
   if(view==="history")return reply({history:await history(db(),owner.sub)});
   if(view==="track"){
