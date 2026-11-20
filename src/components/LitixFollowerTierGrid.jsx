@@ -1,14 +1,34 @@
 "use client";
-import {useState} from "react";
+import {useEffect,useState} from "react";
 
 const PRESETS=Object.freeze([100,250,500,1000,2500,5000,10000,20000]);
 const money=cents=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(cents/100);
 export default function LitixFollowerTierGrid({product,quantity,onQuantityChange,quotedCents,quotePending}){
  const [custom,setCustom]=useState(false);
+ const [verifiedLarge,setVerifiedLarge]=useState({});
  const min=Number(product?.min||0),max=Math.min(20000,Number(product?.max||0));
  const cards=Array.isArray(product?.quantityCards)?product.quantityCards:[];
  const hundred=cards.find(row=>row.quantity===100&&row.available&&Number.isSafeInteger(row.totalCents));
- const cardFor=amount=>cards.find(row=>row.quantity===amount&&row.available&&Number.isSafeInteger(row.totalCents));
+ const cardFor=amount=>cards.find(row=>row.quantity===amount&&row.available&&Number.isSafeInteger(row.totalCents))||
+   verifiedLarge[amount];
+ useEffect(()=>{
+  setVerifiedLarge({});
+  if(!product?.purchasable||!/^curated_(instagram|tiktok)_followers_(standard|vip|value)$/.test(String(product.id||"")))return;
+  const available=PRESETS.filter(q=>q>=min&&q<=max&&!cards.some(x=>x.quantity===q&&x.available&&Number.isSafeInteger(x.totalCents)));
+  if(!available.length)return;
+  const controller=new AbortController();
+  for(const amount of available){
+   const params=new URLSearchParams({serviceId:product.id,quantity:String(amount)});
+   fetch("/api/catalog/curated/quote?"+params.toString(),{signal:controller.signal,cache:"no-store"})
+    .then(async response=>response.ok?response.json():null)
+    .then(data=>{
+      if(controller.signal.aborted||!data||data.ready!==true||data.quantity!==amount||
+        data.serviceId!==product.id||!Number.isSafeInteger(data.totalCents)||data.totalCents<100)return;
+      setVerifiedLarge(old=>({...old,[amount]:{quantity:amount,available:true,totalCents:data.totalCents}}));
+    }).catch(()=>{});
+  }
+  return()=>controller.abort();
+ },[product?.id,product?.purchasable,min,max]);
  const eligible=amount=>Number.isSafeInteger(amount)&&amount>=100&&amount<=20000&&amount>=min&&amount<=max;
  const savingsFor=amount=>{
   const priced=cardFor(amount);
