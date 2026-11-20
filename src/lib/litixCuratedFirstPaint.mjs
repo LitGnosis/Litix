@@ -8,11 +8,11 @@ export function initialCuratedOffer(requested=DEFAULT_CURATED_SKU){
   STATIC_CURATED_PREVIEW.find(item=>item.id===DEFAULT_CURATED_SKU)||null;
 }
 
-export function curatedPresetQuantity(service,requested=1000){
+export function curatedPresetQuantity(service,requested=service?.kind==="followers"?100:1000){
  const amount=Number(requested);
  if(Number.isSafeInteger(amount)&&amount>=Number(service?.min)&&amount<=Number(service?.max))
   return amount;
- return Number(service?.min)>1000?Number(service.min):1000;
+ return service?.kind==="followers"?Number(service?.min||100):Number(service?.min)>1000?Number(service.min):1000;
 }
 
 export function formatCuratedUnitRange(min,max){
