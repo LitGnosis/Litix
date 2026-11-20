@@ -555,9 +555,10 @@ export default function Home({landingServiceId=null}){
   finally{setLookupBusy(false)}
  }
  useEffect(()=>{if(location.search.includes("track=")){setPrivateUrl(location.href);track(location.href)}},[]);
- return <main className="wrap"><nav className="nav litix-home-nav"><a className="brand" href="/" aria-label="Litix home"><img src="/assets/brand/litix-logo.webp" alt="Litix — Innovation, Ignited." className="litix-new-logo" /></a><div><a href="/services">Services</a><a href="#tracking">Track order</a><a href="/workspace">Workspace</a></div></nav>
+ return <main className="wrap"><nav className="nav litix-home-nav"><a className="brand" href="/" aria-label="Litix home"><img src="/assets/brand/litix-logo.webp" alt="Litix — Innovation, Ignited." className="litix-new-logo" /></a><div><a href="#checkout">Start an order</a><a href="/services">Services</a><a href="#tracking">Track order</a><a href="#litix-pro">Litix Pro</a><a href="/workspace">Workspace</a></div></nav>
  
  {!landingServiceId&&<LitixQuickShop/>}
+  {!landingServiceId&&<section className="litix-ignited-divider" aria-label="Litix mission"><span>MORE FOLLOWERS.</span><span>MORE VISIBILITY.</span><span>MORE IMPACT.</span></section>}
 
    <div className="litix-purchase-layout"><section id="checkout" className="panel sticky"><div className="kicker">SECURE PAYKINGS CHECKOUT</div><h2>Your order</h2><form onSubmit={submit} className="form">
  {checkoutRoute==="curated"?
@@ -648,7 +649,21 @@ export default function Home({landingServiceId=null}){
  {selected?.purchasable&&detailsReady&&!checkoutAuthorized&&checkoutPhase!=="validating"&&config.ready&&<button type="button" className="alt" onClick={()=>setVerificationRetry(value=>value+1)}>Retry price verification</button>}
  </form>{notice&&<div className="msg" role="status" aria-live="polite">{notice}</div>}{selected?.purchasable&&checkoutAuthorized&&config.ready&&!cardReady&&<div className="checkout-help"><b>Having trouble entering card details?</b><p className="small">Retry secure card fields. If PayKings remains unavailable, contact Litix support; do not send card numbers or security codes in chat.</p><a className="support-link" href={"https://wa.me/"+(whatsappNumber.length>=8?whatsappNumber:"19452106315")+"?text="+encodeURIComponent("Hi Litix, I need checkout help. The PayKings secure card fields are not loading on my mobile device.")} target="_blank" rel="noopener noreferrer">Get checkout help ↗</a></div>}{receipt&&<div className="msg"><b>{receipt.orderId}</b><p>{receipt.payment} · {receipt.fulfillment||"pending"}</p>{receipt.secret&&<><input readOnly value={privateUrl}/><button className="alt" style={{marginTop:12}} onClick={()=>navigator.clipboard.writeText(privateUrl)}>Copy tracking link</button><a className="alt" style={{display:"inline-block",margin:"10px 0 0 10px"}} href={"/track?order="+encodeURIComponent(receipt.orderId)}>Track this order</a></>}</div>}</section></div>
 
- <section className="panel tracking" id="tracking">
+ {!landingServiceId&&<section className="litix-pro-zone" id="litix-pro" aria-labelledby="litix-pro-heading">
+   <div className="litix-pro-intro"><span className="kicker">FOR TEAMS THAT THINK BIGGER</span><h2 id="litix-pro-heading">Your Brand. Your Audience. Your Next Level.</h2>
+   <p>From your next campaign to your next growth system, Litix helps you move with intention.</p></div>
+   <div className="litix-pro-grid">
+    <article className="litix-pro-card"><span className="litix-pro-label">LITIX PRO</span><h3>One platform. Bigger ambitions.</h3>
+     <p>Explore bulk orders, drip-feed campaign planning and API integration options for qualified teams.</p>
+     <a href="/partners" className="litix-pro-link">Explore Litix Pro <span aria-hidden="true">↗</span></a>
+    </article>
+    <article className="litix-pro-card litix-agency-card"><span className="litix-pro-label">AGENCY & BUSINESS</span><h3>Build a smarter growth plan.</h3>
+     <p>Book a conversation about campaign strategy, tailored marketing proposals and lead-workflow opportunities.</p>
+     <a href="https://calendly.com/spears5417/litix-business-growth-discovery-call" target="_blank" rel="noopener noreferrer" className="litix-pro-link">Book a growth call <span aria-hidden="true">↗</span></a>
+    </article>
+   </div>
+  </section>}
+  <section className="panel tracking" id="tracking">
  <div className="kicker">PRIVATE ORDER LOOKUP</div><h2>Track your order</h2>
  <p className="small">Enter your Litix order number and checkout email to see the latest recorded payment and delivery status.</p>
  <form className="trackingbox" onSubmit={trackByNumber}>
@@ -668,5 +683,17 @@ export default function Home({landingServiceId=null}){
   <p>Payment: {tracked.payment} · Fulfillment: {tracked.fulfillment} · Status: {tracked.status||"Pending"}</p>
  </div>}
  <div className="litix-track-support"><a href="/track">Open full order tracking</a><span>Questions? Open LITIX AI for order help.</span></div>
- </section><section className="panel faq-panel" id="faq"><div className="kicker">HELP CENTER</div><h2>Frequently asked questions</h2><details><summary>What information do I need to place an order?</summary><p>Usually a supported public profile or post URL, the quantity you choose within the service limits, and an email address for order support.</p></details><details><summary>Where can I check my order?</summary><p>Use the Order Number + Checkout Email lookup form above, or open your private tracking link from your order confirmation. Bookmark your private tracking link for one-click status updates—treat it like a private receipt and only share it with people you want viewing your order progress.</p></details><details><summary>When will my order be processed?</summary><p>Payment authorization and service eligibility are verified immediately at checkout. Eligible orders can begin processing within minutes after payment confirmation; exact start times vary based on service type and live network demand. You can monitor the latest recorded progress anytime in the order tracker.</p></details><details><summary>How do I get help?</summary><p>Use the Litix Concierge links in the order tracking bar for questions about purchases and status.</p></details></section><footer className="end"><span>LITIX · Social Growth for Creators, Brands & Agencies</span><nav className="legal-links" aria-label="Litix footer links"><a href="/solutions">Growth Solutions</a><a href="/partners">Partners</a><a href="/global/en" hrefLang="en">Languages</a><a href="/legal/privacy">Privacy</a><a href="/terms">Terms</a><a href="/refunds">Refunds</a><a href="/company">About Litix</a><a href="/press">Press</a><a href="https://calendly.com/spears5417/litix-business-growth-discovery-call">Agency calls</a><a href="mailto:Litixsocial@gmail.com">Support</a></nav></footer><LitixMobileCheckoutBar service={selected?checkoutDisplay(selected).title:null} quantity={orderQuantity} amountCents={price} busy={busy}/><LitixVerifiedActivityToast/></main>
+ </section><section className="panel faq-panel" id="faq"><div className="kicker">HELP CENTER</div><h2>Frequently asked questions</h2><details><summary>What information do I need to place an order?</summary><p>Usually a supported public profile or post URL, the quantity you choose within the service limits, and an email address for order support.</p></details><details><summary>Where can I check my order?</summary><p>Use the Order Number + Checkout Email lookup form above, or open your private tracking link from your order confirmation. Bookmark your private tracking link for one-click status updates—treat it like a private receipt and only share it with people you want viewing your order progress.</p></details><details><summary>When will my order be processed?</summary><p>Payment authorization and service eligibility are verified immediately at checkout. Eligible orders can begin processing within minutes after payment confirmation; exact start times vary based on service type and live network demand. You can monitor the latest recorded progress anytime in the order tracker.</p></details><details><summary>How do I get help?</summary><p>Use the Litix Concierge links in the order tracking bar for questions about purchases and status.</p></details></section><footer className="end litix-ignited-footer" aria-label="Litix footer">
+  <div className="litix-footer-brand"><a href="/" aria-label="Litix home"><img src="/assets/brand/litix-logo.webp" alt="LITIX" /></a><strong>LITIX — Innovation, Ignited.</strong>
+   <p>Your Brand. Your Audience. Your Next Level.</p><small>Level Up Your Social Media with Litix.</small>
+   <a href="https://www.instagram.com/litixsocial/" target="_blank" rel="noopener noreferrer" className="litix-social-link">Instagram · @litixsocial</a>
+  </div>
+  <div className="litix-footer-grid">
+   <div><h3>Platforms</h3><a href="/services?platform=Instagram">Instagram</a><a href="/services?platform=TikTok">TikTok</a><a href="/services?platform=YouTube">YouTube</a><a href="/services?platform=Facebook">Facebook</a><a href="/services?platform=Twitter%20(X)">X</a></div>
+   <div><h3>Tools &amp; Tracking</h3><a href="#checkout">Order services</a><a href="#tracking">Order lookup</a><a href="/track">Private tracking</a><a href="/workspace">Workspace</a><a href="/services">Full catalog</a></div>
+   <div><h3>Agencies &amp; Pro</h3><a href="#litix-pro">Litix Pro</a><a href="/partners">Partners &amp; API</a><a href="/solutions">Growth solutions</a><a href="https://calendly.com/spears5417/litix-business-growth-discovery-call" target="_blank" rel="noopener noreferrer">Agency calls</a><a href="mailto:Litixsocial@gmail.com">Support</a></div>
+   <div><h3>Legal</h3><a href="/terms">Terms</a><a href="/legal/privacy">Privacy</a><a href="/refunds">Refunds</a><a href="/company">About Litix</a><a href="/press">Press</a></div>
+  </div>
+  <div className="litix-footer-bottom"><span>© {new Date().getFullYear()} Litix. All rights reserved.</span><strong>MORE FOLLOWERS. MORE VISIBILITY. MORE IMPACT.</strong></div>
+ </footer><LitixMobileCheckoutBar service={selected?checkoutDisplay(selected).title:null} quantity={orderQuantity} amountCents={price} busy={busy}/><LitixVerifiedActivityToast/></main>
 }
