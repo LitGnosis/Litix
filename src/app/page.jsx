@@ -561,15 +561,13 @@ export default function Home({landingServiceId=null}){
   {!landingServiceId&&<section className="litix-ignited-divider" aria-label="Litix mission"><span>MORE FOLLOWERS.</span><span>MORE VISIBILITY.</span><span>MORE IMPACT.</span></section>}
 
    <div className="litix-purchase-layout"><section id="checkout" className="panel sticky"><div className="kicker">SECURE PAYKINGS CHECKOUT</div><h2>Your order</h2><form onSubmit={submit} className="form">
- {checkoutRoute==="curated"?<><div className="litix-platform-pills litix-curated-five-tabs" role="group" aria-label="Choose one of five platforms">
- {CHECKOUT_PLATFORMS.map(name=><button type="button" key={name} className={"litix-platform-pill"+(selected?.platform===name?" active":"")}
-  aria-pressed={selected?.platform===name} onClick={()=>{
-   const options=choicesForPlatform(name);
-   const next=firstPackageFor(options,"followers")||options.items[0]||null;
+ {checkoutRoute==="curated"?
+ <CuratedFastCheckout selected={selected} quantity={qty} initialServiceId={landingServiceId||DEFAULT_CURATED_SKU}
+  onBrowsePlatform={name=>{
+   const available=choicesForPlatform(name),next=firstPackageFor(available,"followers")||available.items[0]||null;
    setCheckoutRoute("catalog");setSelected(next);setQty(next?defaultCheckoutQuantity(next):0);
    setLink("");setNotice("");setReceipt(null);setKey(crypto.randomUUID());
-  }}>{name==="Twitter (X)"?"X":name}</button>)}
- </div><CuratedFastCheckout selected={selected} quantity={qty} initialServiceId={landingServiceId||DEFAULT_CURATED_SKU}
+  }}
   onChoose={service=>{
    const sameService=Boolean(service&&selected?.id===service.id);
    const preferredQuantity=sameService&&checkoutQuantityEligible(service,qty)
@@ -577,7 +575,7 @@ export default function Home({landingServiceId=null}){
    setSelected(service);setQty(preferredQuantity);setReceipt(null);
    setNotice("");setKey(crypto.randomUUID());
   }}
-  onQuantityChange={setQty}/></>:
+  onQuantityChange={setQty}/>:
  <LitixCheckoutSelector selected={selected} onChoose={service=>{setSelected(service);setQty(defaultCheckoutQuantity(service));setReceipt(null);setNotice("");setKey(crypto.randomUUID())}}/>}
  {!multiMode&&<label className="litix-early-link" style={{display:"block",margin:"14px 0"}}>
   {selected?(profilePlatformForService(selected)?
@@ -660,8 +658,8 @@ export default function Home({landingServiceId=null}){
    <div className="litix-pro-intro"><span className="kicker">FOR TEAMS THAT THINK BIGGER</span><h2 id="litix-pro-heading">Your Brand. Your Audience. Your Next Level.</h2>
    <p>From your next campaign to your next growth system, Litix helps you move with intention.</p></div>
    <div className="litix-pro-grid">
-    <article className="litix-pro-card"><span className="litix-pro-label">LITIX PRO</span><h3>One platform. Bigger ambitions.</h3>
-     <p>Explore bulk orders, drip-feed campaign planning and API integration options for qualified teams.</p>
+    <article className="litix-pro-card"><span className="litix-pro-label">LITIX PRO</span><h3>Litix Workspace. Bigger ambitions.</h3>
+     <p>Explore Workspace tools, bulk orders, drip-feed campaign planning and API integration options for qualified teams.</p>
      <a href="/partners" className="litix-pro-link">Explore Litix Pro <span aria-hidden="true">↗</span></a>
     </article>
     <article className="litix-pro-card litix-agency-card"><span className="litix-pro-label">AGENCY & BUSINESS</span><h3>Build a smarter growth plan.</h3>
@@ -697,9 +695,9 @@ export default function Home({landingServiceId=null}){
   </div>
   <div className="litix-footer-grid">
    <div><h3>Platforms</h3><a href="/services?platform=Instagram">Instagram</a><a href="/services?platform=TikTok">TikTok</a><a href="/services?platform=YouTube">YouTube</a><a href="/services?platform=Facebook">Facebook</a><a href="/services?platform=Twitter%20(X)">X</a></div>
-   <div><h3>Tools &amp; Tracking</h3><a href="#checkout">Order services</a><a href="#tracking">Order lookup</a><a href="/track">Private tracking</a><a href="/workspace">Workspace</a><a href="/services">Full catalog</a></div>
-   <div><h3>Agencies &amp; Pro</h3><a href="#litix-pro">Litix Pro</a><a href="/partners">Partners &amp; API</a><a href="/solutions">Growth solutions</a><a href="https://calendly.com/spears5417/litix-business-growth-discovery-call" target="_blank" rel="noopener noreferrer">Agency calls</a><a href="mailto:Litixsocial@gmail.com">Support</a></div>
-   <div><h3>Legal</h3><a href="/terms">Terms</a><a href="/legal/privacy">Privacy</a><a href="/refunds">Refunds</a><a href="/company">About Litix</a><a href="/press">Press</a></div>
+   <div><h3>Services &amp; Workspace</h3><a href="#checkout">Order services</a><a href="#tracking">Order lookup</a><a href="/track">Private tracking</a><a href="/workspace">Workspace</a><a href="/services">Full catalog</a></div>
+   <div><h3>Company &amp; Agency Calls</h3><a href="#litix-pro">Litix Pro</a><a href="/partners">Partners &amp; API</a><a href="/solutions">Growth solutions</a><a href="https://calendly.com/spears5417/litix-business-growth-discovery-call" target="_blank" rel="noopener noreferrer">Agency calls</a><a href="mailto:Litixsocial@gmail.com">Support</a></div>
+   <div><h3>Legal / Support</h3><a href="/terms">Terms</a><a href="/legal/privacy">Privacy</a><a href="/refunds">Refunds</a><a href="/company">About Litix</a><a href="/press">Press</a></div>
   </div>
   <div className="litix-footer-bottom"><span>© {new Date().getFullYear()} Litix. All rights reserved.</span><strong>MORE FOLLOWERS. MORE VISIBILITY. MORE IMPACT.</strong></div>
  </footer><LitixMobileCheckoutBar service={selected?checkoutDisplay(selected).title:null} quantity={orderQuantity} amountCents={price} busy={busy}/><LitixVerifiedActivityToast/></main>
