@@ -1,0 +1,44 @@
+name: Litix Owner Portal — Auth0 and no-charge safety
+on:
+  push:
+    branches: ['feature/private-owner-auth0-wholesale-20261120']
+    paths:
+      - 'src/app/owner/**'
+      - 'src/app/api/owner/portal/**'
+      - 'src/lib/ownerPortalAuth.mjs'
+      - 'src/lib/ownerSupplierGateway.mjs'
+      - 'src/tests/owner-portal-auth-wholesale.test.mjs'
+      - '.github/workflows/litix-owner-portal-nocharge.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  owner-portal-nocharge:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: src
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: src/package-lock.json
+      - name: Install reviewed locked dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Auth0 identity checks, CSRF and no-charge wholesale safeguards
+        env:
+          LITIX_OWNER_PURCHASES_ENABLED: 'false'
+          LITIX_OWNER_BOOSTERO_ENABLED: 'false'
+          LITIX_OWNER_SMMGLOB_ENABLED: 'false'
+        run: node --test tests/owner-portal-auth-wholesale.test.mjs
+      - name: Build Next.js without activating purchase actions
+        env:
+          LITIX_OWNER_PURCHASES_ENABLED: 'false'
+          LITIX_OWNER_BOOSTERO_ENABLED: 'false'
+          LITIX_OWNER_SMMGLOB_ENABLED: 'false'
+        run: npm run build
