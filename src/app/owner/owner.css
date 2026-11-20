@@ -1,0 +1,71 @@
+/* Isolated owner portal styles. Public Litix layout, checkout, AI and CSS remain untouched. */
+.owner-portal{--owner-bg:#090b10;--owner-card:#121b29;--owner-line:#54748b88;--owner-blue:#66d9ff;--owner-gold:#ffbb75;
+ min-height:100dvh;padding:clamp(12px,2.5vw,32px);background:radial-gradient(circle at 8% 0%,#09486c3a,transparent 35%),var(--owner-bg);
+ color:#eff7ff;font:14px/1.6 Inter,system-ui,sans-serif}
+.owner-portal *{box-sizing:border-box}
+.owner-header{max-width:1260px;margin:0 auto 24px;display:flex;justify-content:space-between;align-items:center;gap:12px;
+ border-bottom:1px solid #546e855e;padding:10px 0 18px}
+.owner-header a{text-decoration:none;color:#90e3ff;font-size:25px;font-weight:950;letter-spacing:.18em}
+.owner-header span{color:#ffc58c;font-size:10px;letter-spacing:.16em;font-weight:850;text-align:right}
+.owner-portal h1,.owner-portal h2,.owner-portal h3{margin:0 0 10px;line-height:1.2;letter-spacing:-.045em;color:#f5fbff}
+.owner-portal h1{font-size:clamp(30px,4.5vw,52px)}
+.owner-portal h2{font-size:clamp(20px,2vw,27px)}
+.owner-portal h3{font-size:20px}
+.owner-content{max-width:1260px;margin:0 auto;display:grid;gap:19px}
+.owner-login{max-width:620px;margin:8vh auto;padding:clamp(24px,4vw,45px);border:1px solid #6abce36b;
+ border-radius:24px;background:linear-gradient(140deg,#10223a,#0b121c)}
+.owner-login p{color:#b9cedb}.owner-login small{display:block;margin-top:18px;color:#9aafc2}
+.owner-eyebrow{font-size:11px!important;letter-spacing:.16em;font-weight:900;color:var(--owner-gold)!important;margin:0 0 9px}
+.owner-intro{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.owner-intro p:not(.owner-eyebrow){color:#b4c9dc;margin:5px 0}
+.owner-box{background:linear-gradient(140deg,#142236,#0d1521);border:1px solid #5797be63;border-radius:18px;padding:clamp(17px,2.3vw,25px);min-width:0}
+.owner-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.owner-status{display:flex;gap:10px;align-items:center;flex-wrap:wrap;color:#bfd7e7;font-size:12px}
+.owner-status>span{padding:6px 11px;border-radius:30px;background:#143147;border:1px solid #588db46b}
+.owner-status .owner-enabled{color:#94f0bb;border-color:#47b4836b}
+.owner-status .owner-disabled{color:#ffd6a6;border-color:#bd916169}
+.owner-wallet-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px}
+.owner-wallet-amount{display:block;font-size:clamp(26px,4vw,38px);line-height:1.2;font-weight:950;color:#e6faff;margin:13px 0 5px}
+.owner-wallet-grid small{display:block;color:#b7d3e6;font-size:11px}
+.owner-wallet-grid p{font-size:12px;color:#a9c2d4}
+.owner-connected,.owner-offline{border-radius:99px;padding:4px 9px;font-size:11px;font-weight:900}
+.owner-connected{color:#96f1c2;background:#143a2b}.owner-offline{color:#ffc8a0;background:#4a281f}
+.owner-portal label{display:grid;gap:7px;color:#e8f4ff;font-size:12px;font-weight:800;min-width:0}
+.owner-portal input:not([type="checkbox"]),.owner-portal select{width:100%;min-width:0;min-height:48px;
+ border:1px solid #678caa;background:#07111f;color:#fff;padding:11px 13px;border-radius:10px;font-size:16px}
+.owner-portal input::placeholder{color:#91adbf}
+.owner-portal button{cursor:pointer;font:inherit}
+.owner-portal button:disabled{opacity:.5;cursor:not-allowed}
+.owner-portal button:focus-visible,.owner-portal a:focus-visible,.owner-portal input:focus-visible,
+.owner-portal select:focus-visible{outline:2px solid #ffd093;outline-offset:3px}
+.owner-primary{display:inline-flex;align-items:center;justify-content:center;min-height:48px;
+ padding:12px 20px;border:1px solid #a3eaff;border-radius:13px;background:linear-gradient(110deg,#e1faff,#67ccff);
+ color:#07263a;text-decoration:none;font-weight:950!important}
+.owner-small{min-height:38px;padding:8px 14px;border:1px solid #70b9da;border-radius:9px;
+ background:#1c3951;color:#ddf2ff;white-space:nowrap}
+.owner-filters{display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:12px;align-items:end;margin:15px 0 20px}
+.owner-checkbox{display:flex!important;align-items:center;gap:9px;font-weight:650!important;line-height:1.4}
+.owner-checkbox input{width:18px;height:18px;flex:none;accent-color:#65d0fe}
+.owner-table-scroll{width:100%;overflow:auto;max-height:500px;border:1px solid #45617980;border-radius:11px}
+.owner-table{border-collapse:collapse;width:100%;min-width:770px;font-size:12px}
+.owner-table th,.owner-table td{text-align:left;padding:12px;vertical-align:middle;border-bottom:1px solid #5c728544}
+.owner-table th{background:#16283a;position:sticky;top:0;color:#82dafe;font-size:11px;white-space:nowrap}
+.owner-table td{color:#cfe1eb}
+.owner-table td strong{display:block;color:#f7fcff;font-weight:800}
+.owner-table td small{display:block;color:#9abacf;font-size:10px}
+.owner-muted{color:#adc9dc;font-size:12px;line-height:1.6}
+.owner-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px;margin:20px 0}
+.owner-full{grid-column:1/-1}
+.owner-review{padding:19px;margin:20px 0;border:1px solid #b4b9737d;border-radius:12px;background:#19303f}
+.owner-review dl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:12px 0}
+.owner-review dt{color:#acc8d5;font-size:11px}
+.owner-review dd{margin:0;color:#fff;font-weight:850;font-size:15px}
+.owner-review .owner-checkbox{margin:17px 0}
+.owner-warning{padding:12px 16px;background:#5b332655;color:#ffcbaf;border:1px solid #e29e7166;border-radius:11px}
+.owner-success{padding:12px 16px;background:#13452d60;color:#bafdd3;border:1px solid #79d6a466;border-radius:11px}
+@media(max-width:850px){.owner-filters{grid-template-columns:1fr 1fr}.owner-wallet-grid{gap:10px}}
+@media(max-width:540px){.owner-intro{flex-direction:column}.owner-wallet-grid,.owner-form,.owner-review dl{grid-template-columns:1fr}
+ .owner-filters{grid-template-columns:1fr}.owner-full{grid-column:auto}.owner-box{padding:15px}
+ .owner-portal{padding:12px}.owner-primary{width:100%}.owner-header span{font-size:9px}
+ .owner-table th,.owner-table td{padding:10px}.owner-review{padding:14px}}
+@media(prefers-reduced-motion:reduce){.owner-portal *{scroll-behavior:auto!important}}
