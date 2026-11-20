@@ -60,3 +60,34 @@ body{background:radial-gradient(ellipse at 13% 2%,#0877c12e,transparent 42%),rad
 @media(max-width:700px){.litix-ignited-hero{margin-top:10px}.litix-pro-grid,.litix-ignited-footer{grid-template-columns:1fr}.litix-pro-card p{min-height:auto}.litix-footer-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.litix-footer-bottom{flex-direction:column}.litix-footer-bottom strong{text-align:left}}
 @media(max-width:500px){.litix-ignited-trust{grid-template-columns:1fr 1fr;gap:13px 9px}.litix-ignited-trust span{font-size:11px}.litix-platform-pills{grid-template-columns:repeat(5,minmax(60px,1fr));overflow-x:auto}.litix-platform-pill{font-size:11px;min-height:44px}.litix-hero-actions>a{width:100%}.litix-ignited-hero h1{font-size:clamp(35px,9vw,48px)}.litix-footer-grid{gap:23px 14px}}
 @media(prefers-reduced-motion:reduce){.litix-hero-cta,.litix-pro-link{transition:none}}
+
+/* Nine-tile follower selector; pricing remains owned by the existing server quote. */
+.litix-followers-nine{margin:16px 0;padding:18px;border:1px solid #65c4f36b;border-radius:17px;background:linear-gradient(145deg,#0b1826,#0a1019)}
+.litix-followers-nine-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 18px;flex-wrap:wrap}
+.litix-followers-nine-heading strong{color:#f3fcff;font-size:19px;letter-spacing:-.035em}
+.litix-followers-nine-heading span{font-size:11px;color:#b4c7d7}
+.litix-followers-nine-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:16px 0}
+.litix-followers-nine-tile{min-width:0;min-height:100px;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;border:2px solid #d2e4e9;border-radius:12px;background:linear-gradient(130deg,#f5f9fb,#d7eaf2);color:#102e40;padding:12px 4px;cursor:pointer}
+.litix-followers-nine-tile strong{font-size:clamp(18px,2.5vw,29px);line-height:1;font-weight:950;letter-spacing:-.04em}
+.litix-followers-nine-tile span{color:#137b50;font-size:11px;font-weight:850}
+.litix-followers-nine-tile.active{color:#fff;background:linear-gradient(140deg,#086c9c,#10365b);border-color:#83e3ff;box-shadow:0 0 0 2px #0476c660}
+.litix-followers-nine-tile.active span{color:#b2fccc}
+.litix-followers-nine-tile:disabled{opacity:.5;cursor:not-allowed}
+.litix-followers-nine-tile em{position:absolute;top:-12px;left:50%;transform:translateX(-50%);border-radius:999px;background:#ffb96f;color:#1f170e;padding:4px 8px;white-space:nowrap;font-size:9px;letter-spacing:.08em;font-weight:950;font-style:normal}
+.litix-followers-nine-custom{display:grid;gap:8px;max-width:440px;margin:16px auto}
+.litix-followers-nine-custom label{font-size:13px;color:#cceeff}
+.litix-followers-nine-custom input{min-height:48px;font-size:16px}
+.litix-followers-nine-custom p{color:#ffb785;font-size:12px}
+.litix-followers-nine-total{text-align:center;margin:13px auto;display:grid;justify-items:center;gap:7px}
+.litix-followers-nine-total div{display:flex;align-items:flex-start;justify-content:center;color:#f5fbff;gap:3px}
+.litix-followers-nine-total div sup{font-size:20px;font-weight:900;margin-top:12px}
+.litix-followers-nine-total div strong{font-size:clamp(48px,6vw,68px);font-weight:950;letter-spacing:-.06em;line-height:1}
+.litix-followers-nine-total p{font-size:13px;color:#69eab0;font-weight:850;margin:0}
+.litix-followers-nine-total small{max-width:430px;color:#a8c5d4;line-height:1.5;font-size:11px}
+.litix-followers-nine-pending{font-size:16px;color:#d0e7fa}
+.litix-followers-nine-buy{display:block;width:min(100%,420px);border-radius:999px;margin:15px auto 2px;min-height:50px;border:1px solid #b0ecff;background:linear-gradient(120deg,#e3faff,#75cefd);color:#092239;font-weight:900}
+.litix-followers-nine-buy:disabled{opacity:.55}
+#checkout:has(.litix-followers-nine) .totalbox{display:none}
+.litix-curated-platforms{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.litix-curated-platforms button{min-width:0;padding:10px 3px;font-size:12px;overflow-wrap:normal}
+@media(max-width:620px){.litix-followers-nine{padding:12px}.litix-followers-nine-grid{gap:7px}.litix-followers-nine-tile{min-height:89px;padding:12px 3px}.litix-followers-nine-tile strong{font-size:19px}.litix-followers-nine-tile em{font-size:8px;padding:4px 5px}.litix-curated-platforms button{font-size:10px}}
