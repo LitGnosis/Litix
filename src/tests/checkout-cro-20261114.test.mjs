@@ -54,7 +54,7 @@ test("Pricing and footer copy are unified",async()=>{
  assert.match(page,/Total \(USD\)/);
  assert.doesNotMatch(page,/Estimated USD total|checked before payment|Review your public link, quantity and email to continue/);
  assert.doesNotMatch(selector,/final price and eligibility are checked before payment/);
- const brand="LITIX · Social Growth for Creators, Brands & Agencies";
+ const brand="LITIX — Innovation, Ignited.";
  assert.ok(page.includes(brand));
  assert.ok(services.includes("Social Growth for Creators, Brands & Agencies"));
  assert.match(component,/Final price and service availability are verified before payment/);

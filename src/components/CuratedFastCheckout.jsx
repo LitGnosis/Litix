@@ -4,11 +4,12 @@ import {CORE_KINDS,CORE_PLATFORMS,CORE_QUANTITIES} from "../config/curatedServic
 import {STATIC_CURATED_PREVIEW} from "../lib/curatedStaticPreview.mjs";
 import {DEFAULT_CURATED_SKU,initialCuratedOffer,formatCuratedUnitRange} from "../lib/litixCuratedFirstPaint.mjs";
 import {curatedQuantityBadge} from "../lib/litixCuratedSavings.mjs";
+import LitixFollowerTierGrid from "./LitixFollowerTierGrid.jsx";
 
 const usd=cents=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(Number(cents||0)/100);
 const friendly=kind=>kind==="story_views"?"Story Views":kind[0].toUpperCase()+kind.slice(1);
 
-export default function CuratedFastCheckout({selected,quantity,onChoose,onQuantityChange,initialServiceId=DEFAULT_CURATED_SKU}){
+export default function CuratedFastCheckout({selected,quantity,onChoose,onQuantityChange,onBrowsePlatform,initialServiceId=DEFAULT_CURATED_SKU}){
  const initial=initialCuratedOffer(initialServiceId);
  const [platform,setPlatform]=useState(initial?.platform||"Instagram");
  useEffect(()=>{
@@ -99,10 +100,10 @@ export default function CuratedFastCheckout({selected,quantity,onChoose,onQuanti
   <div className="litix-curated-step">
    <div className="litix-curated-heading"><span>01</span><strong>Choose Platform</strong></div>
    <div className="litix-curated-platforms" role="group" aria-label="Choose social platform">
-    {CORE_PLATFORMS.map(p=><button key={p} className={platform===p?"is-selected":""}
-     type="button" aria-pressed={platform===p} onClick={()=>go(p,"followers")}>{p}</button>)}
+    {["Instagram","TikTok","YouTube","Facebook","Twitter (X)"].map(p=><button key={p} className={platform===p?"is-selected":""}
+     type="button" aria-pressed={platform===p} onClick={()=>CORE_PLATFORMS.includes(p)?go(p,"followers"):onBrowsePlatform?.(p)}>{p==="Twitter (X)"?"X":p}</button>)}
    </div>
-   <a className="litix-curated-browse" href="/services">Need YouTube, Facebook or X? Browse full catalog →</a>
+   <a className="litix-curated-browse" href="/services">Explore all services and packages</a>
   </div>
   <div className="litix-curated-step">
    <div className="litix-curated-heading"><span>02</span><strong>Choose Service</strong></div>
@@ -141,8 +142,11 @@ export default function CuratedFastCheckout({selected,quantity,onChoose,onQuanti
   {current&&<div className="litix-curated-packages">
    <div className="litix-curated-heading"><span>04</span><strong>Choose Quantity</strong></div>
    <p className="litix-curated-tier-description">
-    {current.preview?"High Quality":current.label} · <span className="litix-curated-range">{status==="ready"?"● Live capacity verified · "+formatCuratedUnitRange(current.min,current.max):"Checking current availability"}</span>
+    {current.preview?"High Quality":current.label} · <span className="litix-curated-range">{status==="ready"?"● Quantity limits checked · "+formatCuratedUnitRange(current.min,current.max):"Pricing preview · verifying current limits"}</span>
    </p>
+   {kind==="followers"?<LitixFollowerTierGrid product={current} quantity={quantity} onQuantityChange={onQuantityChange}
+    quotedCents={selectedPrice?.totalCents??(selected?.quantityQuote?.quantity===quantity?selected.quantityQuote.totalCents:null)}
+    quotePending={customQuotePending}/>:
    <div role="group" aria-label="Quantity package cards" className="litix-curated-package-grid">
     {current.quantityCards.map(card=><button key={card.quantity} type="button"
      className={quantity===card.quantity?"is-selected":""}
@@ -160,14 +164,14 @@ export default function CuratedFastCheckout({selected,quantity,onChoose,onQuanti
      <strong>{card.quantity.toLocaleString()}</strong><span>{friendly(kind)}</span>
      <b>{card.totalCents!==null&&card.totalCents!==undefined?usd(card.totalCents):status==="ready"?"Unavailable":"Check live price"}</b>
     </button>)}
-   </div>
-   {status==="ready"&&<p className="litix-curated-notice">Eligible bulk discounts apply automatically to larger packages and custom quantities. The final total is verified live.</p>}
+   </div>}
+   {status==="ready"&&<p className="litix-curated-notice">Available quantities and discounts come from the current verified Litix service quote. The final total is verified before payment.</p>}
    {status==="ready"&&<a className="litix-curated-browse"
     href={"/services?platform="+encodeURIComponent(platform)+"&kind="+encodeURIComponent(kind)}>
     Need a higher limit? Browse other {platform} {friendly(kind)} options →</a>}
-   <button type="button" className="litix-curated-custom-toggle" aria-expanded={customOpen}
-    onClick={()=>setCustomOpen(v=>!v)}>Custom amount {customOpen?"−":"+"}</button>
-   {customOpen&&<label className="litix-curated-custom" htmlFor="litix-quantity-custom">Custom quantity
+   {kind!=="followers"&&<button type="button" className="litix-curated-custom-toggle" aria-expanded={customOpen}
+    onClick={()=>setCustomOpen(v=>!v)}>Custom amount {customOpen?"−":"+"}</button>}
+   {kind!=="followers"&&customOpen&&<label className="litix-curated-custom" htmlFor="litix-quantity-custom">Custom quantity
     <input type="number" id="litix-quantity-custom" aria-label="Custom quantity"
      value={quantity} min={current.min} max={current.max} step="1"
      onChange={e=>onQuantityChange(Number(e.target.value))}

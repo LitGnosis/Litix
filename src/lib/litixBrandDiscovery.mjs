@@ -1,8 +1,8 @@
 // First-party discovery facts. Keep this consistent with Litix's actual public pages.
 // Structured data can aid understanding, but does not guarantee rankings, media, or AI citations.
 export const LITIX_SITE_URL="https://www.litix.net/";
-export const LITIX_DISCOVERY_TITLE="Litix | Instagram & TikTok Growth Packages for Creators";
-export const LITIX_DISCOVERY_DESCRIPTION="Litix helps creators, brands and agencies explore Instagram, TikTok and other social growth packages with clear pricing, secure checkout and private customer order tracking.";
+export const LITIX_DISCOVERY_TITLE="Litix | Instagram, TikTok, YouTube, Facebook & X Growth for Creators, Brands & Agencies";
+export const LITIX_DISCOVERY_DESCRIPTION="Litix helps creators, brands and agencies explore Instagram, TikTok, YouTube, Facebook and X social growth services with clear pricing, secure checkout and private customer order tracking.";
 export const LITIX_DISCOVERY_SCHEMA=Object.freeze({
  "@context":"https://schema.org",
  "@graph":[

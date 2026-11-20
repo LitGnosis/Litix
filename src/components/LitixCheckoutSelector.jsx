@@ -1,6 +1,6 @@
 "use client";
 import {useEffect,useMemo,useRef,useState} from "react";
-import {LITIX_CUSTOM_QUICK_PICKS,litixPreferredCustomService} from "../lib/litixCustomQuickPick.mjs";
+import {litixPreferredCustomService} from "../lib/litixCustomQuickPick.mjs";
 import {CHECKOUT_PLATFORMS,choicesForPlatform,combineCheckoutChoices,
  defaultKindFor,firstPackageFor} from "../lib/litixCheckoutBootstrap.mjs";
 import {checkoutDisplay} from "../lib/litixCheckoutDisplay.mjs";
@@ -115,12 +115,12 @@ export default function LitixCheckoutSelector({selected,onChoose}){
    <span className="litix-quick-eyebrow">FAST CHECKOUT · 3 STEPS</span>
    <p>Select your platform and service. Your first recommended package and USD total are shown immediately.</p>
   </div>
-  <div className="litix-custom-picks" role="group" aria-label="Quick service selection">
-   {LITIX_CUSTOM_QUICK_PICKS.map(choice=><button
-    key={choice.platform+choice.kind} type="button"
-    className={"litix-custom-pick"+(platform===choice.platform&&kind===choice.kind?" selected":"")}
-    aria-pressed={platform===choice.platform&&kind===choice.kind}
-    onClick={()=>moveTo(choice.platform,choice.kind)}>{choice.label}</button>)}
+  <div className="litix-platform-pills" role="group" aria-label="Choose one of five platforms">
+   {CHECKOUT_PLATFORMS.map(name=><button key={name} type="button"
+    className={"litix-platform-pill"+(platform===name?" active":"")}
+    aria-pressed={platform===name} onClick={()=>moveTo(name,kind)}>
+     {name==="Twitter (X)"?"X":name}
+   </button>)}
   </div>
   <div className="litix-quick-fields">
    <label htmlFor="litix-platform"><span className="litix-quick-number">01</span> Platform

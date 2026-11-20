@@ -65,7 +65,7 @@ test("selector never has a disabled initial loading gate and has 4-second backgr
  assert.match(sourceText,/setTimeout\(\(\)=>ctrl\.abort\("catalog_refresh_deadline"\),4000\)/);
  assert.doesNotMatch(sourceText,/Loading verified services…|Loading Litix packages from our verified catalog…/);
  assert.doesNotMatch(sourceText,/disabled=\{loading\|\|/);
- assert.match(sourceText,/aria-pressed=\{platform===choice\.platform&&kind===choice\.kind\}/);
+ assert.match(sourceText,/aria-pressed=\{platform===name\}/);\n assert.match(sourceText,/CHECKOUT_PLATFORMS\.map/);
  const api=await source("../app/api/catalog/checkout-choices/route.js");
  assert.match(api,/choicesForPlatform\(platform\)/);
  assert.match(api,/readDurableCatalog\(\)/);

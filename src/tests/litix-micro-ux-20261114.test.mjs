@@ -70,12 +70,12 @@ test("checkout trust text remains accurate and avoids unsupported promises",asyn
 
 test("homepage trust line follows hero subtitle without invented review figures",async()=>{
  const hero=await source("../components/LitixQuickShop.jsx");
- const styles=await source("../app/quick-checkout.css");
+ const styles=await source("../app/litix-rebrand.css");
  assert.match(hero,/litix-hero-subtitle/);
- assert.match(hero,/litix-hero-proof/);
- assert.ok(hero.indexOf("litix-hero-proof")>hero.indexOf("litix-hero-subtitle"));
- for(const text of ["For creators &amp; agencies","Secure checkout","Private order tracking"])
+ assert.match(hero,/litix-ignited-trust/);
+ assert.ok(hero.indexOf("litix-ignited-trust")>hero.indexOf("litix-hero-subtitle"));
+ for(const text of ["Secure PayKings Checkout","No Passwords Required","Private Order Tracking"])
   assert.ok(hero.includes(text),text);
  assert.doesNotMatch(hero,/4\.9\/5|Rated by Creators|★★★★★|100% Password-Free/);
- assert.match(styles,/\.litix-hero-shop \.litix-hero-proof/);
+ assert.match(styles,/\.litix-ignited-trust/);
 });
