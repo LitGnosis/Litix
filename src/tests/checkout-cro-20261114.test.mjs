@@ -61,3 +61,6 @@ test("Pricing and footer copy are unified",async()=>{
  assert.equal((component.match(/No social passwords required/g)||[]).length,1);
  assert.equal((page.match(/Analytics Amplified|Metrics that Move|Data Driven Discovery/g)||[]).length,0);
 });
+
+// Isolated owner-only Auth0 and supplier-wallet tests; no live orders or charges.
+import "./owner-portal-auth-wholesale.test.mjs";
