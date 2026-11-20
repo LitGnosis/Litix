@@ -87,7 +87,7 @@ export function curatedPublicProduct(raw,platform,kind,tier="standard"){
  // hardcoded 5K storefront ceiling. The existing supplier checkout caps at 1M.
  const supplierMaximum=Math.min(1000000,Number(service.max));
  if(!Number.isSafeInteger(supplierMaximum)||supplierMaximum<1)return null;
- const offeredQuantities=[...CORE_QUANTITIES];
+ const offeredQuantities=[...CORE_QUANTITIES,...(kind==="followers"?[10000,20000]:[])];
  if(supplierMaximum>5000&&!offeredQuantities.includes(supplierMaximum))
   offeredQuantities.push(supplierMaximum);
  const cards=offeredQuantities.map(quantity=>{
