@@ -4,7 +4,7 @@ import {useEffect,useRef,useState} from "react";
 import PremiumInlineCheckout from "../components/PremiumInlineCheckout";
 import LitixCheckoutSelector from "../components/LitixCheckoutSelector";
 import CuratedFastCheckout from "../components/CuratedFastCheckout";
-import {choicesForPlatform,firstPackageFor} from "../lib/litixCheckoutBootstrap.mjs";
+import {CHECKOUT_PLATFORMS,choicesForPlatform,firstPackageFor} from "../lib/litixCheckoutBootstrap.mjs";
 import {checkoutDisplay,defaultCheckoutQuantity,clampCheckoutQuantity,checkoutQuantityEligible,quoteCentsForQuantity,QUANTITY_PRESETS} from "../lib/litixCheckoutDisplay.mjs";
 import {profilePlatformForService,normalizeProfileDestination,checkoutProfileLabel,checkoutTargetPlaceholder,validateLitixCheckoutTarget} from "../lib/litixOrderTarget.mjs";
 import {restrictedSocialKind} from "../lib/publicBoosteroOnly.mjs";
@@ -561,8 +561,15 @@ export default function Home({landingServiceId=null}){
   {!landingServiceId&&<section className="litix-ignited-divider" aria-label="Litix mission"><span>MORE FOLLOWERS.</span><span>MORE VISIBILITY.</span><span>MORE IMPACT.</span></section>}
 
    <div className="litix-purchase-layout"><section id="checkout" className="panel sticky"><div className="kicker">SECURE PAYKINGS CHECKOUT</div><h2>Your order</h2><form onSubmit={submit} className="form">
- {checkoutRoute==="curated"?
- <CuratedFastCheckout selected={selected} quantity={qty} initialServiceId={landingServiceId||DEFAULT_CURATED_SKU}
+ {checkoutRoute==="curated"?<><div className="litix-platform-pills litix-curated-five-tabs" role="group" aria-label="Choose one of five platforms">
+ {CHECKOUT_PLATFORMS.map(name=><button type="button" key={name} className={"litix-platform-pill"+(selected?.platform===name?" active":"")}
+  aria-pressed={selected?.platform===name} onClick={()=>{
+   const options=choicesForPlatform(name);
+   const next=firstPackageFor(options,"followers")||options.items[0]||null;
+   setCheckoutRoute("catalog");setSelected(next);setQty(next?defaultCheckoutQuantity(next):0);
+   setLink("");setNotice("");setReceipt(null);setKey(crypto.randomUUID());
+  }}>{name==="Twitter (X)"?"X":name}</button>)}
+ </div><CuratedFastCheckout selected={selected} quantity={qty} initialServiceId={landingServiceId||DEFAULT_CURATED_SKU}
   onChoose={service=>{
    const sameService=Boolean(service&&selected?.id===service.id);
    const preferredQuantity=sameService&&checkoutQuantityEligible(service,qty)
@@ -570,7 +577,7 @@ export default function Home({landingServiceId=null}){
    setSelected(service);setQty(preferredQuantity);setReceipt(null);
    setNotice("");setKey(crypto.randomUUID());
   }}
-  onQuantityChange={setQty}/>:
+  onQuantityChange={setQty}/></>:
  <LitixCheckoutSelector selected={selected} onChoose={service=>{setSelected(service);setQty(defaultCheckoutQuantity(service));setReceipt(null);setNotice("");setKey(crypto.randomUUID())}}/>}
  {!multiMode&&<label className="litix-early-link" style={{display:"block",margin:"14px 0"}}>
   {selected?(profilePlatformForService(selected)?
