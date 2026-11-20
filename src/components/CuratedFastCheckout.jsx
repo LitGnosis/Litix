@@ -8,7 +8,7 @@ import {curatedQuantityBadge} from "../lib/litixCuratedSavings.mjs";
 const usd=cents=>new Intl.NumberFormat("en-US",{style:"currency",currency:"USD"}).format(Number(cents||0)/100);
 const friendly=kind=>kind==="story_views"?"Story Views":kind[0].toUpperCase()+kind.slice(1);
 
-export default function CuratedFastCheckout({selected,quantity,onChoose,onQuantityChange,initialServiceId=DEFAULT_CURATED_SKU}){
+export default function CuratedFastCheckout({selected,quantity,onChoose,onQuantityChange,onBrowsePlatform,initialServiceId=DEFAULT_CURATED_SKU}){
  const initial=initialCuratedOffer(initialServiceId);
  const [platform,setPlatform]=useState(initial?.platform||"Instagram");
  useEffect(()=>{
@@ -99,10 +99,9 @@ export default function CuratedFastCheckout({selected,quantity,onChoose,onQuanti
   <div className="litix-curated-step">
    <div className="litix-curated-heading"><span>01</span><strong>Choose Platform</strong></div>
    <div className="litix-curated-platforms" role="group" aria-label="Choose social platform">
-    {CORE_PLATFORMS.map(p=><button key={p} className={platform===p?"is-selected":""}
-     type="button" aria-pressed={platform===p} onClick={()=>go(p,"followers")}>{p}</button>)}
+    {["Instagram","TikTok","YouTube","Facebook","Twitter (X)"].map(p=><button key={p} className={platform===p?"is-selected":""}
+     type="button" aria-pressed={platform===p} onClick={()=>CORE_PLATFORMS.includes(p)?go(p,"followers"):onBrowsePlatform?.(p)}>{p==="Twitter (X)"?"X":p}</button>)}
    </div>
-   <a className="litix-curated-browse" href="/services">Need YouTube, Facebook or X? Browse full catalog →</a>
   </div>
   <div className="litix-curated-step">
    <div className="litix-curated-heading"><span>02</span><strong>Choose Service</strong></div>
@@ -141,7 +140,7 @@ export default function CuratedFastCheckout({selected,quantity,onChoose,onQuanti
   {current&&<div className="litix-curated-packages">
    <div className="litix-curated-heading"><span>04</span><strong>Choose Quantity</strong></div>
    <p className="litix-curated-tier-description">
-    {current.preview?"High Quality":current.label} · <span className="litix-curated-range">{status==="ready"?"● Live capacity verified · "+formatCuratedUnitRange(current.min,current.max):"Checking current availability"}</span>
+    {current.preview?"High Quality":current.label} · <span className="litix-curated-range">{status==="ready"?"● Quantity limits checked · "+formatCuratedUnitRange(current.min,current.max):"Pricing preview · verifying current limits"}</span>
    </p>
    <div role="group" aria-label="Quantity package cards" className="litix-curated-package-grid">
     {current.quantityCards.map(card=><button key={card.quantity} type="button"
