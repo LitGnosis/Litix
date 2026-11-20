@@ -571,7 +571,7 @@ export default function Home({landingServiceId=null}){
   onChoose={service=>{
    const sameService=Boolean(service&&selected?.id===service.id);
    const preferredQuantity=sameService&&checkoutQuantityEligible(service,qty)
-    ?qty:service?.preview?curatedPresetQuantity(service):defaultCheckoutQuantity(service);
+    ?qty:service?.kind==="followers"&&Number(service.min)<=100&&Number(service.max)>=100&&checkoutQuantityEligible(service,100)?100:service?.preview?curatedPresetQuantity(service):defaultCheckoutQuantity(service);
    setSelected(service);setQty(preferredQuantity);setReceipt(null);
    setNotice("");setKey(crypto.randomUUID());
   }}
