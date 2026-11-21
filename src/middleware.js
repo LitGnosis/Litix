@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isBlockedRailwayPreviewRequest } from "./lib/railwayPreviewGuard.mjs";
 
 function decodeBase64Url(value) {
   const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
@@ -41,13 +42,9 @@ function requiredPermission(method) {
 
 export async function middleware(request) {
   const { pathname, searchParams } = request.nextUrl;
-  // The Railway migration preview must not process any mutation, including
-  // payments, webhooks, fulfillment commands or cron POSTs, before go-live approval.
-  // Vercel does not set the Railway project ID, so its current production routes
-  // are completely unaffected by this preview-only guard.
-  if (process.env.RAILWAY_PROJECT_ID &&
-      process.env.RAILWAY_MIGRATION_READONLY === "true" &&
-      !["GET", "HEAD", "OPTIONS"].includes(request.method)) {
+  // Railway preview blocks all mutations and GET-triggered cron/fulfillment routes.
+  // Live Vercel requests are unaffected because they do not carry RAILWAY_PROJECT_ID.
+  if (isBlockedRailwayPreviewRequest({ pathname, method: request.method })) {
     return NextResponse.json(
       { error: "Railway migration preview is read-only.", chargeAttempted: false },
       { status: 403, headers: { "Cache-Control": "no-store" } }
