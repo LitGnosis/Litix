@@ -54,9 +54,12 @@ export async function middleware(request) {
     primaryHosts.add(previewHost);
   }
   const vercelHost = host.endsWith(".vercel.app");
+  // Railway health checks use a fixed Host header. Permit only the public homepage
+  // for that hostname; all protected paths still go through tenant and auth checks.
+  const railwayHealthcheckHome = host === "healthcheck.railway.app" && pathname === "/";
 
   // Custom domains are opt-in. Do not trust arbitrary Host headers or silently serve another tenant.
-  if (!primaryHosts.has(host) && !vercelHost) {
+  if (!primaryHosts.has(host) && !vercelHost && !railwayHealthcheckHome) {
     const resolver = process.env.LITIX_DOMAIN_RESOLUTION_URL || "https://litix.net/api/v2/tenant/resolve";
     if (!resolver) return new NextResponse("Custom domains are not configured.", { status: 503 });
     try {
