@@ -1,0 +1,27 @@
+name: Railway preview safety guard
+on:
+  pull_request:
+    paths:
+      - 'src/middleware.js'
+      - 'src/lib/railwayPreviewGuard.mjs'
+      - 'src/tests/railway-preview-guard.test.mjs'
+      - '.github/workflows/railway-preview-guard.yml'
+  push:
+    branches:
+      - 'fix/railway-preview-get-cron-guard-20261121'
+    paths:
+      - 'src/middleware.js'
+      - 'src/lib/railwayPreviewGuard.mjs'
+      - 'src/tests/railway-preview-guard.test.mjs'
+      - '.github/workflows/railway-preview-guard.yml'
+permissions:
+  contents: read
+jobs:
+  read-only-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test src/tests/railway-preview-guard.test.mjs
