@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "test:railway-preview": "node --test tests/railway-preview-guard.test.mjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.0",
