@@ -2,6 +2,10 @@
 # Non-destructive, automated pg_dump. Do NOT restore, dispatch jobs, or modify live orders here.
 set -Eeuo pipefail
 umask 077
+# Separate Railway service, same image: restore ONLY to isolated recovery databases.
+if [[ "${RAILWAY_STAGING_RESTORE_ONLY:-false}" == "true" ]]; then
+  exec python3 /recovery/restore-staging.py
+fi
 export PGCONNECT_TIMEOUT=12
 export PGSSLMODE=require
 # Explicitly make source sessions read-only at the server transaction layer.
