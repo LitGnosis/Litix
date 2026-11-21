@@ -2,6 +2,7 @@ import {boosteroProductionReady,verifyBoosteroQuote,boosteroQuote} from "../../.
 import {boosteroProduction} from "../../../../lib/boosteroReadOnly.mjs";
 import {parseCuratedId,resolveCuratedSupplier} from "../../../../lib/curatedCatalog.mjs";
 import {curatedRetailQuote} from "../../../../lib/curatedVolumePricing.mjs";
+import {isApprovedProductionCheckoutRuntime} from "../../../../lib/railwayRuntime.mjs";
 export const runtime="nodejs";
 export const dynamic="force-dynamic";
 export const maxDuration=10;
@@ -24,7 +25,7 @@ export async function GET(request){
  // Explicit gateway/supplier configuration checks, never leak API keys.
  const publicKey=process.env.NEXT_PUBLIC_PAYKINGS_NMI_COLLECT_PUBLIC_KEY||
   process.env.PAYKINGS_NMI_COLLECT_PUBLIC_KEY;
- const paymentReady=process.env.VERCEL_ENV==="production"&&
+ const paymentReady=isApprovedProductionCheckoutRuntime()&&
   process.env.NMI_GATEWAY_MODE!=="TEST"&&
   !!process.env.NMI_SECURITY_KEY&&!!publicKey;
  if(!paymentReady||!boosteroProductionReady())
