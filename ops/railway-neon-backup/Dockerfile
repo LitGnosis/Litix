@@ -7,7 +7,7 @@ RUN python3 -m venv /opt/venv \
  && /opt/venv/bin/pip install --no-cache-dir 'boto3>=1.35,<2'
 ENV PATH="/opt/venv/bin:$PATH"
 WORKDIR /recovery
-COPY recovery.sh upload.py ./
+COPY recovery.sh upload.py restore-staging.py ./
 RUN chmod 0755 /recovery/recovery.sh
 USER postgres
 ENTRYPOINT ["/bin/bash", "/recovery/recovery.sh"]
