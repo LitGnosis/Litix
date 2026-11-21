@@ -47,6 +47,12 @@ export async function middleware(request) {
    return NextResponse.redirect(new URL("/legal/privacy",request.url),307);
   const host = (request.headers.get("host") || "").split(":")[0].toLowerCase().replace(/\.$/, "");
   const primaryHosts = new Set(["litix.net", "www.litix.net", "localhost"]);
+  // Only trust an exact Railway preview hostname explicitly configured by the owner.
+  // Do not blanket-trust *.up.railway.app or bypass tenant resolution for other services.
+  const previewHost = String(process.env.LITIX_PRIMARY_PREVIEW_HOST || "").trim().toLowerCase();
+  if (previewHost && previewHost.length <= 253 && /^[a-z0-9-]+(?:\.[a-z0-9-]+)+$/.test(previewHost)) {
+    primaryHosts.add(previewHost);
+  }
   const vercelHost = host.endsWith(".vercel.app");
 
   // Custom domains are opt-in. Do not trust arbitrary Host headers or silently serve another tenant.
