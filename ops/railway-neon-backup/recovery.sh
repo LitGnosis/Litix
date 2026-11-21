@@ -18,9 +18,9 @@ declare -A SOURCE_VARS=(
   [litgnosis_platform]=NEON_SOURCE_LITGNOSIS_PLATFORM_URL
 )
 ORDER=(neondb litixapi litgnosis_platform)
-for db in "\${ORDER[@]}"; do
-  key="\${SOURCE_VARS[$db]}"
-  if [[ -z "\${!key:-}" ]]; then
+for db in "${ORDER[@]}"; do
+  key="${SOURCE_VARS[$db]}"
+  if [[ -z "${!key:-}" ]]; then
     printf 'source_credential_missing db=%s\n' "$db"
     exit 0
   fi
@@ -28,9 +28,9 @@ done
 
 workdir="$(mktemp -d)"
 trap 'rm -rf "$workdir"' EXIT
-for db in "\${ORDER[@]}"; do
-  key="\${SOURCE_VARS[$db]}"
-  conn="\${!key}"
+for db in "${ORDER[@]}"; do
+  key="${SOURCE_VARS[$db]}"
+  conn="${!key}"
   # Never echo a connection string, password, SQL row, or customer PII.
   if ! psql "$conn" --no-psqlrc -A -t -q -c "SELECT 1" >/dev/null 2>&1; then
     printf 'source_not_yet_available db=%s (quota or connection)\n' "$db"
