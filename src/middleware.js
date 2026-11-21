@@ -41,6 +41,18 @@ function requiredPermission(method) {
 
 export async function middleware(request) {
   const { pathname, searchParams } = request.nextUrl;
+  // The Railway migration preview must not process any mutation, including
+  // payments, webhooks, fulfillment commands or cron POSTs, before go-live approval.
+  // Vercel does not set the Railway project ID, so its current production routes
+  // are completely unaffected by this preview-only guard.
+  if (process.env.RAILWAY_PROJECT_ID &&
+      process.env.RAILWAY_MIGRATION_READONLY === "true" &&
+      !["GET", "HEAD", "OPTIONS"].includes(request.method)) {
+    return NextResponse.json(
+      { error: "Railway migration preview is read-only.", chargeAttempted: false },
+      { status: 403, headers: { "Cache-Control": "no-store" } }
+    );
+  }
   // Vercel has been returning a platform 404 for the legacy /privacy path.
   // Redirect at the edge to the independently deployed policy page.
   if(pathname==="/privacy"||pathname==="/privacy/")
