@@ -21,5 +21,6 @@ jobs:
         run: |
           bash -n ops/railway-neon-backup/recovery.sh
           python3 -m py_compile ops/railway-neon-backup/upload.py
+          python3 -m py_compile ops/railway-neon-backup/restore-staging.py
       - name: Build read-only PostgreSQL archive image
         run: docker build --pull -t litix-neon-backup-preflight:ci ops/railway-neon-backup
