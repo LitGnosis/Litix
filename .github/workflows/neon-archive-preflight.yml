@@ -1,0 +1,26 @@
+name: Neon archive recovery checks
+on:
+  push:
+    branches: [ops/neon-to-railway-recovery-20261121]
+    paths:
+      - 'ops/railway-neon-backup/**'
+      - '.github/workflows/neon-archive-preflight.yml'
+  pull_request:
+    paths:
+      - 'ops/railway-neon-backup/**'
+      - '.github/workflows/neon-archive-preflight.yml'
+permissions:
+  contents: read
+jobs:
+  backup-container:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check source script syntax (no credentials)
+        run: |
+          bash -n ops/railway-neon-backup/recovery.sh
+          python3 -m py_compile ops/railway-neon-backup/upload.py
+          python3 -m py_compile ops/railway-neon-backup/restore-staging.py
+      - name: Build read-only PostgreSQL archive image
+        run: docker build --pull -t litix-neon-backup-preflight:ci ops/railway-neon-backup
